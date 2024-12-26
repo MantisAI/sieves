@@ -12,7 +12,7 @@ dependencies = [
     "dspy-ai>=2,<3",
     "chonkie>=0.3",
     "transformers>=4,<5",
-    "loguru>=0.7.3"
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
