@@ -5,9 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sieves"
 dynamic = ["version"]
-description = "Sieves project"
+description = "Document processing pipeline with structured generation"
 requires-python = ">=3.8"
-dependencies = []
+dependencies = [
+    "outlines>=0.0.34",
+    "dspy-ai>=2,<3",
+    "chonkie>=0.3",
+    "transformers>=4,<5",
+    "loguru>=0.7.3"
+]
 
 [project.optional-dependencies]
 test = [
@@ -17,12 +23,12 @@ test = [
 ]
 
 [tool.black]
-line-length = 88
+line-length = 120
 target-version = ['py38']
 include = '\.pyi?$'
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py38"
 
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)
