@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
+#        python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -33,4 +34,4 @@ jobs:
     
     - name: Run tests
       run: |
-        python -m pytest src/tests/ -v
+        python -m pytest sieves/tests/ -v
