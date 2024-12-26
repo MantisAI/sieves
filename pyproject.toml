@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sieves"
 readme = "README.md"
-dynamic = ["version"]
+dynamic = ["version", "authors"]
 description = "Document processing pipeline with structured generation"
 requires-python = ">=3.8"
 dependencies = [
