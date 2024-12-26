@@ -6,9 +6,9 @@ from sieves.data.doc import Doc
 
 
 @dataclasses.dataclass
-class File:
-    """Object representing files that are to be/have been parsed."""
+class Resource:
+    """Object representing resource that is to be/has been parsed."""
 
-    path: Path
+    uri: Path | str
     meta: dict[str, any]
     content: Optional[Doc]

@@ -1,4 +1,4 @@
 from .doc import Doc
-from .file import File
+from .resource import Resource
 
-__all__ = ["Doc", "File"]
+__all__ = ["Doc", "Resource"]

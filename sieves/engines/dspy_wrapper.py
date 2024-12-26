@@ -5,7 +5,7 @@ from sieves.engines.core import Engine
 from sieves.interface import Task
 
 
-class DSPyEngine(Engine):
+class DSPy(Engine):
     """Engine implementation using the dspy library."""
 
     def __init__(self, **kwargs: Any):

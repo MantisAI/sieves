@@ -33,6 +33,7 @@ class Pipeline:
         (2) a pipeline contains <= 1 preprocessing and <= 1 postprocessing steps.
         """
         stage: Literal["pre", "main", "post"] = "pre"
+        task_ids: set[str] = set()
 
         for i, task in enumerate(self._tasks):
             if isinstance(task, CoreTask):
@@ -55,6 +56,9 @@ class Pipeline:
                         "only be used once, and have to be the last task in the pipeline."
                     )
                 stage = "post"
+
+            if task.id in task_ids:
+                raise ValueError("Each task has to have an individual ID. Make sure that's the case.")
 
     def __call__(self, docs: Iterable[Doc], in_place: bool = False) -> Iterable[Doc]:
         """Process a list of documents through all tasks.
