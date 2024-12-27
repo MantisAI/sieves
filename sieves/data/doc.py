@@ -7,7 +7,7 @@ class Doc:
     """A document holding data to be processed."""
 
     content: str
-    chunks: list[str]
+    chunks: Optional[list[str]]
     meta: dict[str, any]
     id: Optional[str] = None
 

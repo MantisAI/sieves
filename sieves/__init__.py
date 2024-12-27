@@ -1,10 +1,9 @@
-import engines
 import tasks
 
-from .data import Doc, Resource
+from .data import Doc, Resource, chunkers
 from .pipeline import Pipeline
 
-__all__ = ["Doc", "engines", "Resource", "tasks", "Pipeline"]
+__all__ = ["chunkers", "Doc", "Resource", "tasks", "Pipeline"]
 
 # todo
 #  - Rethink task architecture - tasks are coupled to engines (engine design, not ours). How to solve this elegantly?
@@ -16,3 +15,4 @@ __all__ = ["Doc", "engines", "Resource", "tasks", "Pipeline"]
 #       5. execute callable objects. parsing happens automatically
 #    -> have Engine in Task, not the other way around, and have Engine class provide primitives and routines for
 #       building those primitives?
+#  - Add few-shot example support

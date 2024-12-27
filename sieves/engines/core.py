@@ -1,30 +1,45 @@
 import abc
-from typing import Any, Iterable, Protocol
+from typing import Any, Generic, Iterable, Protocol, TypeVar
 
-from sieves.data import Doc
-from sieves.tasks import Task
+PromptTemplate = TypeVar("PromptTemplate")
+PromptSignature = TypeVar("PromptSignature")
+ExecutableResult = TypeVar("ExecutableResult")
 
 
-class Engine(Protocol):
+class IExecutable(Protocol[ExecutableResult]):
+    def __call__(self, values: Iterable[dict[str, Any]]) -> Iterable[ExecutableResult]:
+        """
+        Execute prompts.
+        :param values: Sets of values to inject into prompt_template (one for each prompt execution).
+        :return: Task results.
+        """
+
+
+Executable = TypeVar("Executable", bound=IExecutable)
+
+
+class Engine(Generic[PromptTemplate, PromptSignature, Executable]):
+    def __init__(self, model_id: str, model_kwargs: dict[str, Any]):
+        """
+        :param model_id: ID of model to use.
+        :param model_kwargs: Model init arguments.
+        """
+        self._model_id = model_id
+        self._model_kwargs = model_kwargs
+
+    @classmethod
     @abc.abstractmethod
-    def __call__(self, docs: Iterable[Doc], task: Task, **kwargs: Any) -> Iterable[Doc]:
-        """Generate content using the underlying engine.
-
-        :param prompt: The prompt to generate from
-        :param kwargs: Additional engine-specific arguments
-        :returns: The generated content
+    def convert_prompt_template(cls, prompt_template: str) -> PromptTemplate:
+        """Returns string prompt template in engine-native format.
+        :param prompt_template: Template to convert.
+        :returns: Converted prompt template.
         """
 
-
-class Outlines:
-    def __init__(self):
-        pass
-
-    def __call__(self, docs: Iterable[Doc], task: Task, **kwargs: Any) -> Iterable[Doc]:
-        """Generate content using the underlying engine.
-
-        :param prompt: The prompt to generate from
-        :param kwargs: Additional engine-specific arguments
-        :returns: The generated content
+    @abc.abstractmethod
+    def build_executable(self, prompt_template: PromptTemplate, prompt_signature: PromptSignature) -> Executable:
         """
-        raise NotImplementedError
+        Returns prompt executor, i.e. Predict in DSPy, Function in outlines, Jsonformer in jsonformers).
+        :param prompt_template: Prompt template.
+        :param prompt_signature: Expected prompt signature.
+        :return: Prompt executable.
+        """
