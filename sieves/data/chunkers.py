@@ -2,7 +2,7 @@ from typing import Any, Iterable, Protocol
 
 import chonkie
 
-from sieves.data import Doc
+from sieves.data.doc import Doc
 
 
 class Chunker(Protocol):
