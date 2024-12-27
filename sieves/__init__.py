@@ -6,4 +6,6 @@ from .pipeline import Pipeline
 __all__ = ["Doc", "tasks", "Pipeline"]
 
 # todo
-#  - Add few-shot example support
+#  - Add predictive task
+#  - Add few-shot example support for outlines
+#  - Add DSPy engine
