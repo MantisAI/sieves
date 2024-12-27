@@ -51,7 +51,7 @@ class PredictiveTask(Generic[PromptTemplate, PromptSignature, Executable], Task)
         """
         super().__init__(task_id=task_id, show_progress=show_progress)
         self._engine = engine
-        self._prompt_signature: PromptSignature = self._create_prompt_signature()
+        self._prompt_signature = self._create_prompt_signature()
 
     @property
     @abc.abstractmethod
@@ -87,7 +87,7 @@ class PredictiveTask(Generic[PromptTemplate, PromptSignature, Executable], Task)
         prompt_template = self._engine.convert_prompt_template(self.prompt_template)
 
         # 2. Compile expected prompt signatures.
-        signature: PromptSignature = self._create_prompt_signature()
+        signature = self._create_prompt_signature()
 
         # 3. Build executable.
         executable = self._engine.build_executable(prompt_template, signature)

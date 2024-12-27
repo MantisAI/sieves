@@ -1,6 +1,6 @@
 """File parsers for converting raw files into documents."""
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 import docling.document_converter
 from loguru import logger
@@ -14,21 +14,18 @@ from sieves.tasks.core import PreTask
 class DoclingParser(PreTask[Iterable[Resource]]):
     """Parser that uses docling to convert files into documents."""
 
-    def __init__(self, doc_converter: docling.document_converter.DocumentConverter, show_progress: bool = True):
+    def __init__(
+        self,
+        doc_converter: docling.document_converter.DocumentConverter,
+        task_id: Optional[str] = None,
+        show_progress: bool = True,
+    ):
         """Initialize the docling parser.
         :param doc_converter: Docling parser instance.
         :param show_progress: Whether to show progress bar for processed documents
         """
-        super().__init__(show_progress=show_progress)
-        self._id = "docling_parser"
+        super().__init__(task_id=task_id, show_progress=show_progress)
         self._doc_converter = doc_converter
-
-    @property
-    def id(self) -> str:
-        """Returns task ID.
-        :returns: Task ID
-        """
-        return self._id
 
     def __call__(self, resources: Iterable[Resource]) -> Iterable[Doc]:
         """Parse a set of files using docling.
