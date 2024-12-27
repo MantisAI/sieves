@@ -1,6 +1,6 @@
-import tasks
+import sieves.tasks as tasks
+from sieves.data import Doc, Resource, chunkers
 
-from .data import Doc, Resource, chunkers
 from .pipeline import Pipeline
 
 __all__ = ["chunkers", "Doc", "Resource", "tasks", "Pipeline"]

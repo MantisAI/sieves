@@ -1,6 +1,6 @@
 """File parsers for converting raw files into documents."""
-
-from typing import Iterable
+from pathlib import Path
+from typing import Any, Iterable
 
 import docling.document_converter
 from loguru import logger
@@ -11,7 +11,7 @@ from sieves.data.resource import Resource
 from sieves.tasks.core import PreTask
 
 
-class DoclingParser(PreTask):
+class DoclingParser(PreTask[Iterable[Resource]]):
     """Parser that uses docling to convert files into documents."""
 
     def __init__(self, doc_converter: docling.document_converter.DocumentConverter, show_progress: bool = True):
@@ -19,7 +19,6 @@ class DoclingParser(PreTask):
         :param doc_converter: Docling parser instance.
         :param show_progress: Whether to show progress bar for processed documents
         """
-
         super().__init__(show_progress=show_progress)
         self._id = "docling_parser"
         self._doc_converter = doc_converter
@@ -31,7 +30,7 @@ class DoclingParser(PreTask):
         """
         return self._id
 
-    def __call__(self, resources: Iterable[Resource], **kwargs) -> Iterable[Doc]:
+    def __call__(self, resources: Iterable[Resource]) -> Iterable[Doc]:
         """Parse a set of files using docling.
 
         :param resources: Resources to process.
@@ -43,7 +42,11 @@ class DoclingParser(PreTask):
         # Wrap conversion in TQDM if progress should be shown.
         convert = self._doc_converter.convert_all
         if self._show_progress:
-            convert = lambda uris: tqdm(self._doc_converter.convert_all(uris))  # noqa: E731
+
+            def convert_with_progress(uris: Iterable[Path | str]) -> Any:
+                return tqdm(self._doc_converter.convert_all(uris))
+
+            convert = convert_with_progress
 
         parsed_resources = list(convert([resource.uri for resource in resources]))
         assert len(parsed_resources) == len(resources)
@@ -51,7 +54,7 @@ class DoclingParser(PreTask):
         for resource, parsed_resource in zip(resources, parsed_resources):
             try:
                 doc = Doc(
-                    content=parsed_resource.text,
+                    content=parsed_resource,
                     chunks=None,
                     meta={
                         # Preserve existing metadata

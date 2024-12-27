@@ -1,44 +1,44 @@
 import inspect
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 import outlines
 import pydantic
+from engines.core import IExecutable
+from typing_extensions import TypeAlias
 
 from sieves.engines import Engine
 
-Executable = Callable[[Iterable[dict[str, Any]]], Iterable[pydantic.BaseModel]]
+# Define the parameter kind type properly
+ParameterKind: TypeAlias = inspect._ParameterKind
+
+
+class Executable(IExecutable[pydantic.BaseModel]):  # type: ignore[misc]
+    def __call__(self, values: Iterable[dict[str, Any]]) -> Iterable[pydantic.BaseModel]:  # type: ignore[empty-body]
+        ...
 
 
 class Outlines(Engine[outlines.prompts.Prompt, pydantic.BaseModel, Executable]):
     @classmethod
-    def convert_prompt_template(cls, prompt_template: str) -> str:
-        # Nothing to do, outlines works with Jinja 2 templates.
-        return prompt_template
+    def convert_prompt_template(cls, prompt_template: str, variable_names: tuple[str] = ()) -> outlines.prompts.Prompt:  # type: ignore[assignment]
+        # Outlines expect Callable/Signature object to create a bind, so we create a Signature dynamically.
+        signature = cls._create_fn_signature(
+            (var_name, inspect.Parameter.POSITIONAL_OR_KEYWORD, Any, None) for var_name in variable_names
+        )
+        return outlines.prompts.Prompt(prompt_template, signature)
 
-    @classmethod
-    def render_prompts(
-        cls, prompt_template: str, values: Iterable[dict[str, Any]]
-    ) -> Iterable[outlines.prompts.Prompt]:
-        for curr_values in values:
-            # Outlines expect Callable/Signature object to create a bond, so we create a Signature dynamically.
-            signature = cls._create_fn_signature(
-                ((k, inspect.Parameter.POSITIONAL_OR_KEYWORD, Any, None) for k, v in curr_values.items())
-            )
-            yield outlines.prompts.Prompt(prompt_template, signature)
-
-    @outlines.prompt
     def build_executable(
         self, prompt_template: outlines.prompts.Prompt, prompt_signature: pydantic.BaseModel
     ) -> Executable:
         executable = outlines.Function(prompt_template, prompt_signature, self._model_id)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[pydantic.BaseModel]:
-            return (executable(doc_values) for doc_values in values)
+        class _Executable(Executable):
+            def execute(self, values: Iterable[dict[str, Any]]) -> Iterable[pydantic.BaseModel]:
+                return (executable(doc_values) for doc_values in values)
 
-        return execute
+        return _Executable()
 
     @staticmethod
-    def _create_fn_signature(*parameters: Iterable[tuple[str, inspect.Parameter.kind, type, Any]]) -> inspect.Signature:
+    def _create_fn_signature(parameters: Iterable[tuple[str, ParameterKind, Any, Any]]) -> inspect.Signature:
         """
         Create an inspect.Signature object.
         :param parameters: Tuples of (name, kind, annotation, default).

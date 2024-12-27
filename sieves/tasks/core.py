@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Iterable, Optional, TypeVar
+from typing import Any, Generic, Iterable, Optional, TypeVar
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, Executable, ExecutableResult, PromptSignature, PromptTemplate
@@ -28,19 +28,19 @@ class Task(abc.ABC):
         return self._task_id
 
 
-class PreTask(Task):
+class PreTask(Generic[TaskInput], Task):
     @abc.abstractmethod
-    def __call__(self, task_input: TaskInput) -> Doc:
+    def __call__(self, task_input: TaskInput) -> Iterable[Doc]:
         """Parse a set of files.
         :param task_input: Input to process. E.g.: files with `Iterable[sieves.data.File]`.
         :returns: Parsed input in form of documents.
         """
 
 
-class PredictiveTask(Task):
+class PredictiveTask(Generic[PromptTemplate, PromptSignature, Executable], Task):
     def __init__(
         self,
-        engine: Engine[PromptTemplate, PromptSignature, Executable[ExecutableResult]],
+        engine: Engine[PromptTemplate, PromptSignature, Executable],
         task_id: Optional[str] = None,
         show_progress: bool = True,
     ):
@@ -51,7 +51,7 @@ class PredictiveTask(Task):
         """
         super().__init__(task_id=task_id, show_progress=show_progress)
         self._engine = engine
-        self._prompt_signature = self._create_prompt_signature()
+        self._prompt_signature: PromptSignature = self._create_prompt_signature()
 
     @property
     @abc.abstractmethod
@@ -70,7 +70,6 @@ class PredictiveTask(Task):
         :returns: Prompt template as string.
         """
 
-    @property
     @abc.abstractmethod
     def _create_prompt_signature(self) -> PromptSignature:
         """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
@@ -88,7 +87,7 @@ class PredictiveTask(Task):
         prompt_template = self._engine.convert_prompt_template(self.prompt_template)
 
         # 2. Compile expected prompt signatures.
-        signature = self._create_prompt_signature()
+        signature: PromptSignature = self._create_prompt_signature()
 
         # 3. Build executable.
         executable = self._engine.build_executable(prompt_template, signature)
@@ -120,7 +119,7 @@ class PredictiveTask(Task):
         """
 
 
-class PostTask(Task):
+class PostTask(Generic[TaskOutput], Task):
     @abc.abstractmethod
     def __call__(self, docs: Iterable[Doc]) -> TaskOutput:
         """Execute the task on a set of documents.

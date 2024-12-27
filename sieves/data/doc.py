@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Optional
+from typing import Any, Optional
 
 
 @dataclasses.dataclass
@@ -8,8 +8,8 @@ class Doc:
 
     content: str
     chunks: Optional[list[str]]
-    meta: dict[str, any]
+    meta: dict[str, Any]
     id: Optional[str] = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.content

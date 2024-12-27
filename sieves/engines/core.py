@@ -3,7 +3,7 @@ from typing import Any, Generic, Iterable, Protocol, TypeVar
 
 PromptTemplate = TypeVar("PromptTemplate")
 PromptSignature = TypeVar("PromptSignature")
-ExecutableResult = TypeVar("ExecutableResult")
+ExecutableResult = TypeVar("ExecutableResult", covariant=True)
 
 
 class IExecutable(Protocol[ExecutableResult]):
@@ -15,7 +15,7 @@ class IExecutable(Protocol[ExecutableResult]):
         """
 
 
-Executable = TypeVar("Executable", bound=IExecutable)
+Executable = TypeVar("Executable", bound=IExecutable[Any])
 
 
 class Engine(Generic[PromptTemplate, PromptSignature, Executable]):
@@ -29,9 +29,11 @@ class Engine(Generic[PromptTemplate, PromptSignature, Executable]):
 
     @classmethod
     @abc.abstractmethod
-    def convert_prompt_template(cls, prompt_template: str) -> PromptTemplate:
+    def convert_prompt_template(cls, prompt_template: str, variable_names: tuple[str] = ()) -> PromptTemplate:  # type: ignore[assignment]
         """Returns string prompt template in engine-native format.
         :param prompt_template: Template to convert.
+        :param variable_names: Names of variables that will be injected into string. Note: not used for all engines -
+        e.g. DSPy - but by others, e.g. outlines.
         :returns: Converted prompt template.
         """
 

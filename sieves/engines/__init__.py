@@ -1,7 +1,5 @@
 import enum
 
-import outlines_engine
-
 from .core import Engine, Executable, ExecutableResult, PromptSignature, PromptTemplate
 
 

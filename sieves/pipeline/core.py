@@ -1,17 +1,22 @@
 import copy
 from typing import Iterable, Literal
 
-from interface import CoreTask
 from loguru import logger
 
-from sieves.data import Doc
-from sieves.interface import Chunker, Engine, PostTask, PreTask, Task
+from sieves.data import Chunker, Doc
+from sieves.engines import Engine, Executable, PromptSignature, PromptTemplate
+from sieves.tasks import PostTask, PredictiveTask, PreTask, Task
 
 
 class Pipeline:
     """Executes a sequence of tasks on documents using a specific engine."""
 
-    def __init__(self, engine: Engine, chunker: Chunker, tasks: Iterable[Task] = tuple()):
+    def __init__(
+        self,
+        engine: Engine[PromptTemplate, PromptSignature, Executable],
+        chunker: Chunker,
+        tasks: Iterable[Task] = tuple(),
+    ):
         """Initialize the pipeline.
 
         :param engine: The structured generation engine to use.
@@ -23,7 +28,10 @@ class Pipeline:
         self._tasks = list(tasks)
         self._validate_tasks()
 
-    def add_tasks(self, tasks: Iterable[Task]):
+    def add_tasks(self, tasks: Iterable[Task]) -> None:
+        """Adds tasks to pipeline. Revalidates pipeline.
+        :param tasks: Tasks to be added.
+        """
         self._tasks.extend(tasks)
         self._validate_tasks()
 
@@ -36,7 +44,7 @@ class Pipeline:
         task_ids: set[str] = set()
 
         for i, task in enumerate(self._tasks):
-            if isinstance(task, CoreTask):
+            if isinstance(task, PredictiveTask):
                 stage = "main"
             elif isinstance(task, PreTask):
                 if stage != "pre":
@@ -70,6 +78,7 @@ class Pipeline:
         processed_docs = docs if in_place else [copy.deepcopy(doc) for doc in docs]
 
         for i, task in enumerate(self._tasks):
+            assert isinstance(task, PreTask) or isinstance(task, PredictiveTask) or isinstance(task, PostTask)
             logger.info(f"Running task {task.id} ({i}/{len(self._tasks)} tasks).")
             processed_docs = task(processed_docs)
 

@@ -71,3 +71,29 @@ max-complexity = 10
 
 [tool.ruff.isort]
 known-first-party = ["sieves"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+allow_untyped_globals = false
+allow_redefinition = false
+implicit_reexport = false
+strict_equality = true
+ignore_missing_imports = true
+
+# Per-module ignores for third-party libraries
+[[tool.mypy.overrides]]
+module = ["outlines.*", "docling.*", "chonkie.*", "tqdm.*", "dspy.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

@@ -1,3 +1,3 @@
-from .core import Task
+from .core import PostTask, PredictiveTask, PreTask, Task
 
-__all__ = ["Task"]
+__all__ = ["Task", "PostTask", "PreTask", "PredictiveTask"]
