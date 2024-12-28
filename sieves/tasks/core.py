@@ -1,11 +1,11 @@
 import abc
-from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
+from typing import Any, Generic, Iterable, Optional, TypeVar
 
 from sieves.data import Doc
 from sieves.engines import (
     Engine,
     EngineType,
-    InferenceGenerator,
+    InferenceMode,
     Model,
     PromptSignature,
     Result,
@@ -13,6 +13,9 @@ from sieves.engines import (
 
 TaskInput = TypeVar("TaskInput")
 TaskOutput = TypeVar("TaskOutput")
+TaskPromptSignature = TypeVar("TaskPromptSignature")
+TaskInferenceMode = TypeVar("TaskInferenceMode")
+TaskResult = TypeVar("TaskResult")
 
 
 class Task(Generic[TaskInput, TaskOutput], abc.ABC):
@@ -45,11 +48,11 @@ class Task(Generic[TaskInput, TaskOutput], abc.ABC):
 
 
 class PredictiveTask(
-    Generic[PromptSignature, Result, Model, InferenceGenerator], Task[Iterable[Doc], Iterable[Doc]], abc.ABC
+    Generic[TaskPromptSignature, TaskResult, Model, TaskInferenceMode], Task[Iterable[Doc], Iterable[Doc]], abc.ABC
 ):
     def __init__(
         self,
-        engine: Engine[PromptSignature, Result, Model, InferenceGenerator],
+        engine: Engine[PromptSignature, Result, Model, InferenceMode],
         task_id: Optional[str],
         show_progress: bool,
         include_meta: bool,
@@ -82,21 +85,28 @@ class PredictiveTask(
         """
 
     @abc.abstractmethod
-    def _create_prompt_signature(self) -> PromptSignature:
+    def _create_prompt_signature(self) -> TaskPromptSignature:
         """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
         jsonformers). This is engine-specific.
         :returns: Output signature object.
         """
 
-    @abc.abstractmethod
     @property
-    def _inference_generator_factory(self) -> Callable[..., InferenceGenerator]:
-        """Returns inference generator factory.
-        :returns: Inference generator factory.
+    @abc.abstractmethod
+    def _inference_mode(self) -> TaskInferenceMode:
+        """Returns inference mode.
+        :returns: Inference mode.
         """
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Execute the task on a set of documents.
+
+        Note: the mypy ignore directives are because in practice, TaskX can be a superset of the X types of multiple
+        engines, but there is no way in Python's current typing system to model that. E.g.: TaskInferenceMode could be
+        Outlines.InferenceMode | DSPy.InferenceMode, depending on the class of the dynamically provided engine instance.
+        TypeVars don't support unions however, neither do generics on a higher level of abstraction. We hence ignore
+        these mypy errors, as the involved types should nonetheless be consistent.
+
         :param docs: The documents to process.
         :returns: The processed document
         """
@@ -104,7 +114,7 @@ class PredictiveTask(
         signature = self._create_prompt_signature()
 
         # 2. Build executable.
-        executable = self._engine.build_executable(self._inference_generator_factory, self.prompt_template, signature)
+        executable = self._engine.build_executable(self._inference_mode, self.prompt_template, signature)  # type: ignore[arg-type]
 
         # 3. Extract values we want to inject into prompt templates to render full prompts.
         docs_values = self._extract_from_docs(docs)
@@ -113,7 +123,7 @@ class PredictiveTask(
         results = executable(docs_values)
 
         # 5. Integrate results into docs.
-        docs = self._integrate_into_docs(results, docs)
+        docs = self._integrate_into_docs(results, docs)  # type: ignore[arg-type]
 
         return docs
 
@@ -125,7 +135,7 @@ class PredictiveTask(
         """
 
     @abc.abstractmethod
-    def _integrate_into_docs(self, results: Iterable[Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def _integrate_into_docs(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         """Integrate results into Doc instances.
         :param results: Results from prompt executable.
         :param docs: Doc instances to update.

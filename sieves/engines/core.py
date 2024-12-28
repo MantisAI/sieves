@@ -1,13 +1,14 @@
 import abc
-from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
+import enum
+from typing import Any, Callable, Generic, Iterable, Optional, Type, TypeVar
 
 PromptSignature = TypeVar("PromptSignature")
 Model = TypeVar("Model")
 Result = TypeVar("Result", covariant=True)
-InferenceGenerator = TypeVar("InferenceGenerator")
+InferenceMode = TypeVar("InferenceMode", bound=enum.Enum)
 
 
-class Engine(Generic[PromptSignature, Result, Model, InferenceGenerator]):
+class Engine(Generic[PromptSignature, Result, Model, InferenceMode]):
     def __init__(self, model: Model):
         """
         :param model: Instantiated model instance.
@@ -21,17 +22,22 @@ class Engine(Generic[PromptSignature, Result, Model, InferenceGenerator]):
         """
         return self._model
 
+    @property
+    @abc.abstractmethod
+    def inference_modes(self) -> Type[InferenceMode]:
+        """Supported inference modes."""
+
     @abc.abstractmethod
     def build_executable(
         self,
-        inference_generatory_factory: Callable[..., InferenceGenerator],
+        inference_mode: InferenceMode,
         prompt_template: str,
         prompt_signature: Optional[PromptSignature] = None,
     ) -> Callable[[Iterable[dict[str, Any]]], Iterable[Result]]:
         """
         Returns prompt executable, i.e. a function that wraps an engine-native prediction generators. Such engine-native
         generators are e.g. Predict in DSPy, generator in outlines, Jsonformer in jsonformers).
-        :param inference_generatory_factory: Callable returning engine-native inference generator to use.
+        :param inference_mode: Inference mode to use (e.g. classification, JSON, ... - this is engine-specific).
         :param prompt_template: Prompt template.
         :param prompt_signature: Expected prompt signature.
         :return: Prompt executable.

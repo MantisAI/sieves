@@ -1,14 +1,16 @@
 import chonkie
+import outlines
 import tokenizers
 
-from sieves import Pipeline, tasks
-from sieves.data import Doc
+from sieves import Doc, Pipeline, engines, tasks
 
 
 def test_pipeline() -> None:
+    engine = engines.outlines_engine.Outlines(outlines.models.transformers("gpt2"))
     all_tasks = [
         tasks.parsers.Docling(),
         tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))),
+        tasks.predictive.Classification(labels=["scientific paper", "newspaper article"], engine=engine),
     ]
 
     resources = [Doc(uri="https://arxiv.org/pdf/2408.09869")]

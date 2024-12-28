@@ -1,7 +1,7 @@
 import enum
 
 from . import outlines_engine
-from .core import Engine, InferenceGenerator, Model, PromptSignature, Result
+from .core import Engine, InferenceMode, Model, PromptSignature, Result
 
 
 class EngineType(enum.Enum):
@@ -16,6 +16,6 @@ __all__ = [
     "Result",
     "Model",
     "outlines_engine",
-    "InferenceGenerator",
+    "InferenceMode",
     "PromptSignature",
 ]
