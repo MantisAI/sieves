@@ -1,46 +1,37 @@
 import abc
-from typing import Any, Generic, Iterable, Protocol, TypeVar
+from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
 
-PromptTemplate = TypeVar("PromptTemplate")
 PromptSignature = TypeVar("PromptSignature")
-ExecutableResult = TypeVar("ExecutableResult", covariant=True)
+Model = TypeVar("Model")
+Result = TypeVar("Result", covariant=True)
+InferenceGenerator = TypeVar("InferenceGenerator")
 
 
-class IExecutable(Protocol[ExecutableResult]):
-    def __call__(self, values: Iterable[dict[str, Any]]) -> Iterable[ExecutableResult]:
+class Engine(Generic[PromptSignature, Result, Model, InferenceGenerator]):
+    def __init__(self, model: Model):
         """
-        Execute prompts.
-        :param values: Sets of values to inject into prompt_template (one for each prompt execution).
-        :return: Task results.
+        :param model: Instantiated model instance.
         """
+        self._model = model
 
-
-Executable = TypeVar("Executable", bound=IExecutable[Any])
-
-
-class Engine(Generic[PromptTemplate, PromptSignature, Executable]):
-    def __init__(self, model_id: str, model_kwargs: dict[str, Any]):
+    @property
+    def model(self) -> Model:
+        """Return model instance.
+        :returns: Model instance.
         """
-        :param model_id: ID of model to use.
-        :param model_kwargs: Model init arguments.
-        """
-        self._model_id = model_id
-        self._model_kwargs = model_kwargs
-
-    @classmethod
-    @abc.abstractmethod
-    def convert_prompt_template(cls, prompt_template: str, variable_names: tuple[str] = ()) -> PromptTemplate:  # type: ignore[assignment]
-        """Returns string prompt template in engine-native format.
-        :param prompt_template: Template to convert.
-        :param variable_names: Names of variables that will be injected into string. Note: not used for all engines -
-        e.g. DSPy - but by others, e.g. outlines.
-        :returns: Converted prompt template.
-        """
+        return self._model
 
     @abc.abstractmethod
-    def build_executable(self, prompt_template: PromptTemplate, prompt_signature: PromptSignature) -> Executable:
+    def build_executable(
+        self,
+        inference_generatory_factory: Callable[..., InferenceGenerator],
+        prompt_template: str,
+        prompt_signature: Optional[PromptSignature] = None,
+    ) -> Callable[[Iterable[dict[str, Any]]], Iterable[Result]]:
         """
-        Returns prompt executor, i.e. Predict in DSPy, Function in outlines, Jsonformer in jsonformers).
+        Returns prompt executable, i.e. a function that wraps an engine-native prediction generators. Such engine-native
+        generators are e.g. Predict in DSPy, generator in outlines, Jsonformer in jsonformers).
+        :param inference_generatory_factory: Callable returning engine-native inference generator to use.
         :param prompt_template: Prompt template.
         :param prompt_signature: Expected prompt signature.
         :return: Prompt executable.

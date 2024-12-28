@@ -27,7 +27,7 @@ test = [
 
 [tool.black]
 line-length = 120
-target-version = ['py38']
+target-version = ['py310']
 include = '\.pyi?$'
 
 [tool.ruff]

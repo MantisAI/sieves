@@ -1,6 +1,7 @@
 import enum
 
-from .core import Engine, Executable, ExecutableResult, PromptSignature, PromptTemplate
+from . import outlines_engine
+from .core import Engine, InferenceGenerator, Model, PromptSignature, Result
 
 
 class EngineType(enum.Enum):
@@ -12,9 +13,9 @@ class EngineType(enum.Enum):
 __all__ = [
     "Engine",
     "EngineType",
-    "Executable",
-    "ExecutableResult",
+    "Result",
+    "Model",
     "outlines_engine",
+    "InferenceGenerator",
     "PromptSignature",
-    "PromptTemplate",
 ]

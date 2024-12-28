@@ -7,5 +7,7 @@ __all__ = ["Doc", "tasks", "Pipeline"]
 
 # todo
 #  - Add predictive task
-#  - Add few-shot example support for outlines
 #  - Add DSPy engine
+#  - Add GliX engine
+#  - Add few-shot example support
+#  - Allow for customization of prompt templates

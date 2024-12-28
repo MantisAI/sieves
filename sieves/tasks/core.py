@@ -1,8 +1,15 @@
 import abc
-from typing import Any, Generic, Iterable, Optional, TypeVar
+from typing import Any, Callable, Generic, Iterable, Optional, TypeVar
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, Executable, ExecutableResult, PromptSignature, PromptTemplate
+from sieves.engines import (
+    Engine,
+    EngineType,
+    InferenceGenerator,
+    Model,
+    PromptSignature,
+    Result,
+)
 
 TaskInput = TypeVar("TaskInput")
 TaskOutput = TypeVar("TaskOutput")
@@ -37,10 +44,12 @@ class Task(Generic[TaskInput, TaskOutput], abc.ABC):
         """
 
 
-class PredictiveTask(Generic[PromptTemplate, PromptSignature, Executable], Task[Iterable[Doc], Iterable[Doc]], abc.ABC):
+class PredictiveTask(
+    Generic[PromptSignature, Result, Model, InferenceGenerator], Task[Iterable[Doc], Iterable[Doc]], abc.ABC
+):
     def __init__(
         self,
-        engine: Engine[PromptTemplate, PromptSignature, Executable],
+        engine: Engine[PromptSignature, Result, Model, InferenceGenerator],
         task_id: Optional[str],
         show_progress: bool,
         include_meta: bool,
@@ -79,27 +88,31 @@ class PredictiveTask(Generic[PromptTemplate, PromptSignature, Executable], Task[
         :returns: Output signature object.
         """
 
+    @abc.abstractmethod
+    @property
+    def _inference_generator_factory(self) -> Callable[..., InferenceGenerator]:
+        """Returns inference generator factory.
+        :returns: Inference generator factory.
+        """
+
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Execute the task on a set of documents.
         :param docs: The documents to process.
         :returns: The processed document
         """
-        # 1. Convert prompt template to its engine-specific representation.
-        prompt_template = self._engine.convert_prompt_template(self.prompt_template)
-
-        # 2. Compile expected prompt signatures.
+        # 1. Compile expected prompt signatures.
         signature = self._create_prompt_signature()
 
-        # 3. Build executable.
-        executable = self._engine.build_executable(prompt_template, signature)
+        # 2. Build executable.
+        executable = self._engine.build_executable(self._inference_generator_factory, self.prompt_template, signature)
 
-        # 4. Extract values we want to inject into prompt templates to render full prompts.
+        # 3. Extract values we want to inject into prompt templates to render full prompts.
         docs_values = self._extract_from_docs(docs)
 
-        # 5. Execute prompts.
+        # 4. Execute prompts.
         results = executable(docs_values)
 
-        # 6. Integrate results into docs.
+        # 5. Integrate results into docs.
         docs = self._integrate_into_docs(results, docs)
 
         return docs
@@ -112,7 +125,7 @@ class PredictiveTask(Generic[PromptTemplate, PromptSignature, Executable], Task[
         """
 
     @abc.abstractmethod
-    def _integrate_into_docs(self, results: Iterable[ExecutableResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def _integrate_into_docs(self, results: Iterable[Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         """Integrate results into Doc instances.
         :param results: Results from prompt executable.
         :param docs: Doc instances to update.
