@@ -7,9 +7,9 @@ from typing import Any, Optional
 class Doc:
     """A document holding data to be processed."""
 
-    uri: Path | str
     meta: dict[str, Any] = dataclasses.field(default_factory=dict)
     results: dict[str, Any] = dataclasses.field(default_factory=dict)
+    uri: Optional[Path | str] = None
     text: Optional[str] = None
     chunks: Optional[list[str]] = None
     id: Optional[str] = None

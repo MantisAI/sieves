@@ -2,7 +2,6 @@ name: Tests
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -31,8 +30,10 @@ jobs:
       run: |
         uv venv
         uv pip install -e ".[test]"
-    
+
     - name: Run tests
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       run: |
         source .venv/bin/activate
         python -m pytest sieves/tests/ -v
