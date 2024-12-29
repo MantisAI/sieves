@@ -3,15 +3,15 @@ from typing import Any, Iterable, Literal, Optional, TypeAlias
 import dspy
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_engine, outlines_engine
+from sieves.engines import Engine, EngineType, dspy_, outlines_
 from sieves.engines.core import InferenceMode, Model, PromptSignature, Result
-from sieves.engines.dspy_engine import DSPy
-from sieves.engines.outlines_engine import Outlines
+from sieves.engines.dspy_ import DSPy
+from sieves.engines.outlines_ import Outlines
 from sieves.tasks.core import PredictiveTask
 
-TaskPromptSignature: TypeAlias = list[str] | dspy_engine.PromptSignature
-TaskInferenceMode: TypeAlias = outlines_engine.InferenceMode | dspy_engine.InferenceMode
-TaskResult: TypeAlias = outlines_engine.Result | dspy_engine.Result
+TaskPromptSignature: TypeAlias = list[str] | dspy_.PromptSignature
+TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode
+TaskResult: TypeAlias = outlines_.Result | dspy_.Result
 
 
 class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]):
@@ -43,9 +43,9 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
     def _inference_mode(self) -> TaskInferenceMode:
         match self._engine:
             case Outlines():
-                return outlines_engine.InferenceMode.choice
+                return outlines_.InferenceMode.choice
             case DSPy():
-                return dspy_engine.InferenceMode.predict
+                return dspy_.InferenceMode.predict
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 

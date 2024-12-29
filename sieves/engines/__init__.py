@@ -1,22 +1,22 @@
 import enum
 
-from . import dspy_engine, outlines_engine
+from . import dspy_, outlines_
 from .core import Engine, InferenceMode, Model, PromptSignature, Result
 
 
 class EngineType(enum.Enum):
-    outlines = outlines_engine.Outlines
-    dspy = dspy_engine.DSPy
+    outlines = outlines_.Outlines
+    dspy = dspy_.DSPy
     # jsonformer = 2
 
 
 __all__ = [
-    "dspy_engine",
+    "dspy_.py",
     "Engine",
     "EngineType",
     "Result",
     "Model",
-    "outlines_engine",
+    "outlines_.py",
     "InferenceMode",
     "PromptSignature",
 ]

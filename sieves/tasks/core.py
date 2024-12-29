@@ -103,9 +103,9 @@ class PredictiveTask(
 
         Note: the mypy ignore directives are because in practice, TaskX can be a superset of the X types of multiple
         engines, but there is no way in Python's current typing system to model that. E.g.: TaskInferenceMode could be
-        Outlines.InferenceMode | DSPy.InferenceMode, depending on the class of the dynamically provided engine instance.
-        TypeVars don't support unions however, neither do generics on a higher level of abstraction. We hence ignore
-        these mypy errors, as the involved types should nonetheless be consistent.
+        outlines_.InferenceMode | dspy_.InferenceMode, depending on the class of the dynamically provided engine
+        instance. TypeVars don't support unions however, neither do generics on a higher level of abstraction.
+        We hence ignore these mypy errors, as the involved types should nonetheless be consistent.
 
         :param docs: The documents to process.
         :returns: The processed document
