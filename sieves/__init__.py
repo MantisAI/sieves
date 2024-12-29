@@ -6,7 +6,8 @@ from .pipeline import Pipeline
 __all__ = ["Doc", "tasks", "Pipeline"]
 
 # todo
-#  - Add more engines (DSPy, GliX (not generative!), JsonFormer)
+#  - Add progress bar support in PredictiveTask (should work with Iterable returned by engines)
+#  - Add more engines (GliX (not generative!), JsonFormer)
 #  - Add few-shot example support
 #    - https://dspy.ai/deep-dive/data-handling/examples/
 #  - Chunking support (on task-level)
