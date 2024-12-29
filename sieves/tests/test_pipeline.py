@@ -33,6 +33,8 @@ def test_pipeline() -> None:
     assert len(docs) == 1
     assert docs[0].text
     assert docs[0].chunks
+    assert "classifier_outlines" in docs[0].results
+    assert "classifier_dspy" in docs[0].results
 
 
 if __name__ == "__main__":
