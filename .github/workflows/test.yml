@@ -32,6 +32,11 @@ jobs:
         uv venv
         uv pip install -e ".[test]"
     
+    - name: Set Anthropic API Key
+      env:
+        ANTHROPI_API_KEY: ${{ secrets.ANTHROPI_API_KEY }}
+      run: echo "ANTHROPI_API_KEY=$ANTHROPI_API_KEY" >> $GITHUB_ENV
+
     - name: Run tests
       run: |
         source .venv/bin/activate
