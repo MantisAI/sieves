@@ -1,15 +1,17 @@
-from typing import Any, Iterable, Optional, TypeAlias
+from typing import Any, Iterable, Literal, Optional, TypeAlias
+
+import dspy
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, outlines_engine
+from sieves.engines import Engine, EngineType, dspy_engine, outlines_engine
 from sieves.engines.core import InferenceMode, Model, PromptSignature, Result
+from sieves.engines.dspy_engine import DSPy
 from sieves.engines.outlines_engine import Outlines
 from sieves.tasks.core import PredictiveTask
 
-# To be amended once more engines are supported.
-TaskPromptSignature: TypeAlias = list[str]
-TaskInferenceMode: TypeAlias = outlines_engine.InferenceMode
-TaskResult: TypeAlias = outlines_engine.Result
+TaskPromptSignature: TypeAlias = list[str] | dspy_engine.PromptSignature
+TaskInferenceMode: TypeAlias = outlines_engine.InferenceMode | dspy_engine.InferenceMode
+TaskResult: TypeAlias = outlines_engine.Result | dspy_engine.Result
 
 
 class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]):
@@ -35,13 +37,15 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
 
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.outlines}
+        return {EngineType.outlines, EngineType.dspy}
 
     @property
     def _inference_mode(self) -> TaskInferenceMode:
         match self._engine:
             case Outlines():
                 return outlines_engine.InferenceMode.choice
+            case DSPy():
+                return dspy_engine.InferenceMode.predict
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
@@ -50,10 +54,13 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
         match self._engine:
             case Outlines():
                 return f"""
-                Classify the text after ======== as one of the following options: {",".join(self._labels)}.
+                Classify the text after ======== as one or more of the following options: {",".join(self._labels)}. 
+                Separate your choices with a comma.
                 ========
                 {{{{ text }}}}
                 """
+            case DSPy():
+                return ""
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
@@ -61,18 +68,39 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
         match self._engine:
             case Outlines():
                 return self._labels
+            case DSPy():
+                labels = self._labels
+                # Dynamically create Literal as output type.
+                LabelType = Literal[*labels]  # type: ignore[valid-type]
+
+                class TextClassification(dspy.Signature):  # type: ignore[misc]
+                    text: str = dspy.InputField()
+                    labels: LabelType = dspy.OutputField()
+
+                return TextClassification
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
     def _extract_from_docs(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         # todo Remove slicing once we have chunking support.
-        return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+        match self._engine:
+            case Outlines():
+                return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+            case DSPy():
+                return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+            case _:
+                raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
     def _integrate_into_docs(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         match self._engine:
+            # mypy ignore[union-attr] directives are due to mypy not understanding properties of Union types (such as
+            # TaskResult) properly.
             case Outlines():
                 for doc, result in zip(docs, results):
-                    doc.results[self.id] = result
+                    doc.results[self.id] = result.split(",")  # type: ignore[union-attr]
+            case DSPy():
+                for doc, result in zip(docs, results):
+                    doc.results[self.id] = result.completions.labels  # type: ignore[union-attr]
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 

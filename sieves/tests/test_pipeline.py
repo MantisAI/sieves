@@ -1,16 +1,30 @@
+import os
+
 import chonkie
+import dspy
 import outlines
-import tokenizers
+from tokenizers import tokenizers
 
 from sieves import Doc, Pipeline, engines, tasks
 
 
 def test_pipeline() -> None:
-    engine = engines.outlines_engine.Outlines(outlines.models.transformers("gpt2"))
+    engine_outlines = engines.outlines_engine.Outlines(
+        model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+    )
+    engine_dspy = engines.dspy_engine.DSPy(
+        model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
+    )
+
     all_tasks = [
         tasks.parsers.Docling(),
         tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))),
-        tasks.predictive.Classification(labels=["scientific paper", "newspaper article"], engine=engine),
+        tasks.predictive.Classification(
+            task_id="classifier_outlines", labels=["scientific paper", "newspaper article"], engine=engine_outlines
+        ),
+        tasks.predictive.Classification(
+            task_id="classifier_dspy", labels=["scientific paper", "newspaper article"], engine=engine_dspy
+        ),
     ]
 
     resources = [Doc(uri="https://arxiv.org/pdf/2408.09869")]

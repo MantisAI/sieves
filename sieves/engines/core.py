@@ -1,11 +1,16 @@
 import abc
 import enum
-from typing import Any, Callable, Generic, Iterable, Optional, Type, TypeVar
+from typing import Any, Callable, Generic, Iterable, Optional, Protocol, Type, TypeVar
 
 PromptSignature = TypeVar("PromptSignature")
 Model = TypeVar("Model")
 Result = TypeVar("Result", covariant=True)
 InferenceMode = TypeVar("InferenceMode", bound=enum.Enum)
+
+
+class Executable(Protocol[Result]):
+    def __call__(self, values: Iterable[dict[str, Any]]) -> Iterable[Result]:
+        ...
 
 
 class Engine(Generic[PromptSignature, Result, Model, InferenceMode]):
@@ -31,8 +36,8 @@ class Engine(Generic[PromptSignature, Result, Model, InferenceMode]):
     def build_executable(
         self,
         inference_mode: InferenceMode,
-        prompt_template: str,
-        prompt_signature: Optional[PromptSignature] = None,
+        prompt_template: Optional[str],
+        prompt_signature: PromptSignature,
     ) -> Callable[[Iterable[dict[str, Any]]], Iterable[Result]]:
         """
         Returns prompt executable, i.e. a function that wraps an engine-native prediction generators. Such engine-native

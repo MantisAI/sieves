@@ -5,19 +5,22 @@ import outlines
 import pydantic
 from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformers, TransformersVision
 
-from sieves.engines.core import Engine
+from sieves.engines.core import Engine, Executable
 
 PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
 Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
 Result: TypeAlias = pydantic.BaseModel | str
-Executable: TypeAlias = Callable[[Iterable[dict[str, Any]]], Iterable[Result]]
 
 
 class InferenceMode(enum.Enum):
-    text = 0
-    choice = 1
-    regex = 2
-    json = 3
+    # For normal text output, i.e. no structured generation.
+    text = (outlines.generate.text,)
+    # For limited set of choices, e.g. classification.
+    choice = (outlines.generate.choice,)
+    # Regex-conforming output.
+    regex = (outlines.generate.regex,)
+    # Output conforming to Pydantic models.
+    json = (outlines.generate.json,)
 
 
 class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
@@ -28,30 +31,33 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
     def build_executable(
         self,
         inference_mode: InferenceMode,
-        prompt_template: str,
-        prompt_signature: Optional[PromptSignature] = None,
-    ) -> Executable:
+        prompt_template: Optional[str],
+        prompt_signature: PromptSignature,
+    ) -> Executable[Result]:
+        assert prompt_template, ValueError("prompt_template has to be provided to Outlines engine by task.")
+
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
+            generator_factory: Callable[..., Any] = inference_mode.value[0]
+
             match inference_mode:
                 case InferenceMode.text:
-                    # PromptSignature is ignored in text mode.
-                    generator = outlines.generate.text(self._model)
+                    generator = generator_factory(self._model)
                 case InferenceMode.regex:
                     # PromptSignature is used as regex.
-                    if not isinstance(prompt_signature, str):
-                        raise ValueError("PromptSignature has to be supplied as string in outlines regex mode.")
-                    generator = outlines.generate.regex(self._model, regex_str=prompt_signature)
+                    assert isinstance(prompt_signature, str), ValueError(
+                        "PromptSignature has to be supplied as string in outlines regex mode."
+                    )
+                    generator = generator_factory(self._model, regex_str=prompt_signature)
                 case InferenceMode.choice:
-                    if not isinstance(prompt_signature, list):
-                        raise ValueError(
-                            "PromptSignature has to be supplied as list of strings or enum values in "
-                            "outlines choice mode."
-                        )
-                    generator = outlines.generate.choice(self._model, choices=prompt_signature)
+                    assert isinstance(prompt_signature, list), ValueError(
+                        "PromptSignature has to be supplied as list of strings or enum values in outlines choice mode."
+                    )
+                    generator = generator_factory(self._model, choices=prompt_signature)
                 case InferenceMode.json:
-                    if not isinstance(prompt_signature, pydantic.BaseModel):
-                        raise ValueError("PromptSignature has to be supplied as Pydantic model in outlines json mode.")
-                    generator = outlines.generate.json(self._model, schema_object=prompt_signature)
+                    assert isinstance(prompt_signature, pydantic.BaseModel), ValueError(
+                        "PromptSignature has to be supplied as Pydantic model in outlines json mode."
+                    )
+                    generator = generator_factory(self._model, schema_object=prompt_signature)
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by outlines engine.")
 
