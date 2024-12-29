@@ -9,16 +9,15 @@ from sieves import Doc, Pipeline, engines, tasks
 
 
 def test_pipeline() -> None:
-    engine_outlines = engines.outlines_engine.Outlines(
-        model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
-    )
+    outlines_model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+    engine_outlines = engines.outlines_engine.Outlines(model=outlines.models.transformers(outlines_model_name))
     engine_dspy = engines.dspy_engine.DSPy(
         model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
     )
 
     all_tasks = [
         tasks.parsers.Docling(),
-        tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))),
+        tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(outlines_model_name))),
         tasks.predictive.Classification(
             task_id="classifier_outlines", labels=["scientific paper", "newspaper article"], engine=engine_outlines
         ),
