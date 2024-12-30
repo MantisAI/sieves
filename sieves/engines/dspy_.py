@@ -1,18 +1,21 @@
 import enum
-from typing import Any, Iterable, Optional, Type, TypeAlias
+from collections.abc import Iterable
+from typing import Any, Optional, TypeAlias
 
 import dsp
 import dspy
 
 from sieves.engines.core import Engine, Executable
 
-PromptSignature: TypeAlias = Type[dspy.Signature] | Type[dspy.Module]
+PromptSignature: TypeAlias = type[dspy.Signature] | type[dspy.Module]
 Model: TypeAlias = dsp.LM | dspy.BaseLM
 Result: TypeAlias = dspy.Prediction
 
 
 class InferenceMode(enum.Enum):
-    """See https://dspy.ai/#__tabbed_2_6 for more information and examples."""
+    """Available inference modes.
+    See https://dspy.ai/#__tabbed_2_6 for more information and examples.
+    """
 
     # Default inference mode.
     predict = dspy.Predict
@@ -41,13 +44,13 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         dspy.configure(lm=model)
 
     @property
-    def inference_modes(self) -> Type[InferenceMode]:
+    def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
     def build_executable(
         self,
         inference_mode: InferenceMode,
-        prompt_template: Optional[str],
+        prompt_template: Optional[str],  # noqa: UP007
         prompt_signature: PromptSignature,
     ) -> Executable[Result]:
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:

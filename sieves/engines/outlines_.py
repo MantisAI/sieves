@@ -1,5 +1,6 @@
 import enum
-from typing import Any, Callable, Iterable, Optional, Type, TypeAlias
+from collections.abc import Callable, Iterable
+from typing import Any, Optional, TypeAlias
 
 import outlines
 import pydantic
@@ -13,6 +14,11 @@ Result: TypeAlias = pydantic.BaseModel | str
 
 
 class InferenceMode(enum.Enum):
+    """Available inference modes.
+    Note: generator functions are wrapped in tuples, as otherwise the Enum instance seems to be replaced by the function
+    itself - not sure why that happens. Should take another look at this.
+    """
+
     # For normal text output, i.e. no structured generation.
     text = (outlines.generate.text,)
     # For limited set of choices, e.g. classification.
@@ -25,13 +31,13 @@ class InferenceMode(enum.Enum):
 
 class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
     @property
-    def inference_modes(self) -> Type[InferenceMode]:
+    def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
     def build_executable(
         self,
         inference_mode: InferenceMode,
-        prompt_template: Optional[str],
+        prompt_template: Optional[str],  # noqa: UP007
         prompt_signature: PromptSignature,
     ) -> Executable[Result]:
         assert prompt_template, ValueError("prompt_template has to be provided to Outlines engine by task.")
