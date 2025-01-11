@@ -1,6 +1,7 @@
 """File parsers for converting raw files into documents."""
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any
 
 import docling.datamodel.document
 import docling.document_converter
@@ -16,8 +17,8 @@ class Docling(Task[Iterable[Doc], Iterable[Doc]]):
 
     def __init__(
         self,
-        doc_converter: Optional[docling.document_converter.DocumentConverter] = None,
-        task_id: Optional[str] = None,
+        doc_converter: docling.document_converter.DocumentConverter | None = None,
+        task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = False,
     ):

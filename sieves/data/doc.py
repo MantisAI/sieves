@@ -1,6 +1,6 @@
 import dataclasses
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclasses.dataclass
@@ -9,10 +9,10 @@ class Doc:
 
     meta: dict[str, Any] = dataclasses.field(default_factory=dict)
     results: dict[str, Any] = dataclasses.field(default_factory=dict)
-    uri: Optional[Path | str] = None
-    text: Optional[str] = None
-    chunks: Optional[list[str]] = None
-    id: Optional[str] = None
+    uri: Path | str | None = None
+    text: str | None = None
+    chunks: list[str] | None = None
+    id: str | None = None
 
     def __str__(self) -> str:
         """String representation of document.

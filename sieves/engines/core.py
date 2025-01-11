@@ -1,6 +1,7 @@
 import abc
 import enum
-from typing import Any, Callable, Generic, Iterable, Optional, Protocol, Type, TypeVar
+from collections.abc import Callable, Iterable
+from typing import Any, Generic, Protocol, TypeVar
 
 PromptSignature = TypeVar("PromptSignature")
 Model = TypeVar("Model")
@@ -29,14 +30,23 @@ class Engine(Generic[PromptSignature, Result, Model, InferenceMode]):
 
     @property
     @abc.abstractmethod
-    def inference_modes(self) -> Type[InferenceMode]:
-        """Supported inference modes."""
+    def supports_few_shotting(self) -> bool:
+        """Whether engine supports few-shotting. If not, only zero-shotting is supported.
+        :returns: Whether engine supports few-shotting.
+        """
+
+    @property
+    @abc.abstractmethod
+    def inference_modes(self) -> type[InferenceMode]:
+        """Which inference modes are supported.
+        :returns: Supported inference modes.
+        """
 
     @abc.abstractmethod
     def build_executable(
         self,
         inference_mode: InferenceMode,
-        prompt_template: Optional[str],
+        prompt_template: str | None,
         prompt_signature: PromptSignature,
     ) -> Callable[[Iterable[dict[str, Any]]], Iterable[Result]]:
         """

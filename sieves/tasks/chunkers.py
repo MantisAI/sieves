@@ -1,5 +1,5 @@
 """File parsers for converting raw files into documents."""
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 import chonkie
 from tqdm import tqdm
@@ -14,7 +14,7 @@ class Chonkie(Task[Iterable[Doc], Iterable[Doc]]):
     def __init__(
         self,
         chunker: chonkie.BaseChunker,
-        task_id: Optional[str] = None,
+        task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = False,
     ):
@@ -33,7 +33,7 @@ class Chonkie(Task[Iterable[Doc], Iterable[Doc]]):
         """
         docs = list(docs)
 
-        pbar: Optional[tqdm] = tqdm(total=len(docs)) if self._show_progress else None
+        pbar: tqdm | None = tqdm(total=len(docs)) if self._show_progress else None
         try:
             chunks = self._chunker.chunk_batch([doc.text for doc in docs])
             assert len(chunks) == len(docs)
