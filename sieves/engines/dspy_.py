@@ -1,4 +1,5 @@
 import enum
+import warnings
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
@@ -57,6 +58,10 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: PromptSignature,
     ) -> Executable[Result]:
+        cls_name = self.__class__.__name__
+        if prompt_template:
+            warnings.warn(f"prompt_template is ignored by {cls_name} engine.")
+
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             # Handled differently than the other supported modules: dspy.Module serves as both the signature as well as
             # the inference generator.

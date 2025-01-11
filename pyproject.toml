@@ -14,7 +14,8 @@ dependencies = [
     "transformers>=4,<5",
     "loguru>=0.7.3",
     "docling>=2",
-    "sentencepiece<1"
+    "sentencepiece<1",
+    "gliner"
 ]
 
 [project.optional-dependencies]

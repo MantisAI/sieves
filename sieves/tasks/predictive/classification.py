@@ -4,16 +4,15 @@ from typing import Any, Literal, TypeAlias
 import dspy
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, huggingface_, outlines_
+from sieves.engines import DSPy, Engine, EngineType, GliX, HuggingFace, Outlines, dspy_, glix_, huggingface_, outlines_
 from sieves.engines.core import InferenceMode, Model, PromptSignature, Result
-from sieves.engines.dspy_ import DSPy
-from sieves.engines.huggingface_ import HuggingFace
-from sieves.engines.outlines_ import Outlines
 from sieves.tasks.core import PredictiveTask
 
 TaskPromptSignature: TypeAlias = list[str] | dspy_.PromptSignature
-TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode
-TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result
+TaskInferenceMode: TypeAlias = (
+    outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
+)
+TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result | glix_.Result
 
 
 class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]):
@@ -50,11 +49,13 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
                 return dspy_.InferenceMode.predict
             case HuggingFace():
                 return huggingface_.InferenceMode.default
+            case GliX():
+                return glix_.InferenceMode.gliclass
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
     @property
-    def prompt_template(self) -> str:
+    def prompt_template(self) -> str | None:
         match self._engine:
             case Outlines():
                 return f"""
@@ -64,9 +65,11 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
                 {{{{ text }}}}
                 """
             case DSPy():
-                return ""
+                return None
             case HuggingFace():
                 return "This text is about {}"
+            case GliX():
+                return None
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
@@ -86,6 +89,8 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
                 return TextClassification
             case HuggingFace():
                 return self._labels
+            case GliX():
+                return self._labels
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
@@ -97,6 +102,8 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
             case DSPy():
                 return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
             case HuggingFace():
+                return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+            case GliX():
                 return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
@@ -113,7 +120,12 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
                     doc.results[self.id] = result.completions.labels  # type: ignore[union-attr]
             case HuggingFace():
                 for doc, result in zip(docs, results):
-                    doc.results[self.id] = list(zip(result["labels"], result["scores"]))  # type: ignore[index]
+                    doc.results[self.id] = [(label, score) for label, score in zip(result["labels"], result["scores"])]  # type: ignore[index,arg-type]
+            case GliX():
+                for doc, result in zip(docs, results):
+                    doc.results[self.id] = [
+                        (res["label"], res["score"]) for res in sorted(result, key=lambda x: x["score"], reverse=True)
+                    ]
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
