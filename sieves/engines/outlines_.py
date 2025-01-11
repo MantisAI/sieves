@@ -54,26 +54,26 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
 
             match inference_mode:
                 case InferenceMode.text:
-                    generator = generator_factory(self._model)
+                    generator = generator_factory(self._model, **self._init_kwargs)
                 case InferenceMode.regex:
                     assert isinstance(prompt_signature, str), ValueError(
                         "PromptSignature has to be supplied as string in outlines regex mode."
                     )
-                    generator = generator_factory(self._model, regex_str=prompt_signature)
+                    generator = generator_factory(self._model, regex_str=prompt_signature, **self._init_kwargs)
                 case InferenceMode.choice:
                     assert isinstance(prompt_signature, list), ValueError(
                         f"PromptSignature has to be supplied as list of strings or enum values in {cls_name} choice "
                         f"mode."
                     )
-                    generator = generator_factory(self._model, choices=prompt_signature)
+                    generator = generator_factory(self._model, choices=prompt_signature, **self._init_kwargs)
                 case InferenceMode.json:
                     assert isinstance(prompt_signature, pydantic.BaseModel), ValueError(
                         f"PromptSignature has to be supplied as Pydantic model in {cls_name} json mode."
                     )
-                    generator = generator_factory(self._model, schema_object=prompt_signature)
+                    generator = generator_factory(self._model, schema_object=prompt_signature, **self._init_kwargs)
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            return (generator(template.render(**doc_values)) for doc_values in values)
+            return (generator(template.render(**doc_values), **self._inference_kwargs) for doc_values in values)
 
         return execute

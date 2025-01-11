@@ -32,7 +32,9 @@ class InferenceMode(enum.Enum):
 class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for DSPy."""
 
-    def __init__(self, model: Model):
+    def __init__(
+        self, model: Model, init_kwargs: dict[str, Any] | None = None, inference_kwargs: dict[str, Any] | None = None
+    ):
         """
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
             onwards, serve it with OLlama - see here: # https://dspy.ai/learn/programming/language_models/?h=models#__tabbed_1_5.
@@ -40,8 +42,10 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
             > curl -fsSL https://ollama.ai/install.sh | sh
             > ollama run MODEL_ID
             > `model = dspy.LM(MODEL_ID, api_base='http://localhost:11434', api_key='')`
+        :param init_kwargs: Optional kwargs to supply to engine executable at init time.
+        :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
         """
-        super().__init__(model)
+        super().__init__(model, init_kwargs, inference_kwargs)
         dspy.configure(lm=model)
 
     @property
@@ -69,13 +73,13 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                 assert isinstance(prompt_signature, dspy.Module), ValueError(
                     "In inference mode 'module' the provided prompt signature has to be of type dspy.Module."
                 )
-                generator = inference_mode.value()
+                generator = inference_mode.value(**self._init_kwargs)
             else:
                 assert issubclass(prompt_signature, dspy.Signature)
-                generator = inference_mode.value(signature=prompt_signature)
+                generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
             # Note: prompt template isn't used here explicitly, as DSPy expects the complete prompt of the signature's
             # fields.
-            return (generator(**doc_values) for doc_values in values)
+            return (generator(**doc_values, **self._inference_kwargs) for doc_values in values)
 
         return execute
