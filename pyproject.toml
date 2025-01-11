@@ -15,7 +15,8 @@ dependencies = [
     "loguru>=0.7.3",
     "docling>=2",
     "sentencepiece<1",
-    "gliner"
+    "gliner<1",
+    "gliclass<1"
 ]
 
 [project.optional-dependencies]
