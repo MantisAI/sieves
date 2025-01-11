@@ -77,13 +77,13 @@ class PredictiveTask(
 
     @property
     @abc.abstractmethod
-    def prompt_template(self) -> str:
+    def prompt_template(self) -> str | None:
         """Returns task's prompt template.
         Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
         Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
         a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
         expectations when creating a prompt template.
-        :returns: Prompt template as string.
+        :returns: Prompt template as string. None if none is required by engine.
         """
 
     @abc.abstractmethod

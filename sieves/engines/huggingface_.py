@@ -15,19 +15,10 @@ Result: TypeAlias = dict[str, Any]
 class InferenceMode(enum.Enum):
     """Available inference modes."""
 
-    # Default pipeline output.
     default = 0
 
 
 class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
-    def __init__(self, model: Model):
-        """
-        The HuggingFace engine currently supports few-shot classification only, as of the time of writing there is no
-        other natively supported task to few-shot on.
-        :param model: Model to run.
-        """
-        super().__init__(model)
-
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
