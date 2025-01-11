@@ -1,5 +1,6 @@
 import abc
-from typing import Any, Generic, Iterable, Optional, TypeVar
+from collections.abc import Iterable
+from typing import Any, Generic, TypeVar
 
 from sieves.data import Doc
 from sieves.engines import (
@@ -21,7 +22,7 @@ TaskResult = TypeVar("TaskResult")
 class Task(Generic[TaskInput, TaskOutput], abc.ABC):
     """Abstract base class for tasks that can be executed on documents."""
 
-    def __init__(self, task_id: Optional[str], show_progress: bool, include_meta: bool):
+    def __init__(self, task_id: str | None, show_progress: bool, include_meta: bool):
         """
         Initiates new Task.
         :param task_id: Task ID.
@@ -53,7 +54,7 @@ class PredictiveTask(
     def __init__(
         self,
         engine: Engine[PromptSignature, Result, Model, InferenceMode],
-        task_id: Optional[str],
+        task_id: str | None,
         show_progress: bool,
         include_meta: bool,
     ):
@@ -80,7 +81,8 @@ class PredictiveTask(
         """Returns task's prompt template.
         Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
         Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
-        a different value in the workflow and hence expects the prompt not to include these things.
+        a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
+        expectations when creating a prompt template.
         :returns: Prompt template as string.
         """
 

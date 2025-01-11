@@ -1,13 +1,15 @@
 # mypy: ignore-errors
 
-import outlines
+import transformers
 
 from sieves import Pipeline, engines, tasks
 
 
 def test_simple_run(dummy_docs) -> None:
-    model_name = "gpt2"
-    engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
+    model = transformers.pipeline(
+        "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
+    )
+    engine = engines.huggingface_.HuggingFace(model=model)
     pipe = Pipeline(
         [
             tasks.predictive.Classification(

@@ -1,6 +1,6 @@
 import enum
 from collections.abc import Iterable
-from typing import Any, Optional, TypeAlias
+from typing import Any, TypeAlias
 
 import dsp
 import dspy
@@ -47,10 +47,14 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    @property
+    def supports_few_shotting(self) -> bool:
+        return True
+
     def build_executable(
         self,
         inference_mode: InferenceMode,
-        prompt_template: Optional[str],  # noqa: UP007
+        prompt_template: str | None,  # noqa: UP007
         prompt_signature: PromptSignature,
     ) -> Executable[Result]:
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:

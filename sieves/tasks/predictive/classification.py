@@ -1,17 +1,19 @@
-from typing import Any, Iterable, Literal, Optional, TypeAlias
+from collections.abc import Iterable
+from typing import Any, Literal, TypeAlias
 
 import dspy
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, huggingface_, outlines_
 from sieves.engines.core import InferenceMode, Model, PromptSignature, Result
 from sieves.engines.dspy_ import DSPy
+from sieves.engines.huggingface_ import HuggingFace
 from sieves.engines.outlines_ import Outlines
 from sieves.tasks.core import PredictiveTask
 
 TaskPromptSignature: TypeAlias = list[str] | dspy_.PromptSignature
-TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode
-TaskResult: TypeAlias = outlines_.Result | dspy_.Result
+TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode
+TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result
 
 
 class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]):
@@ -19,7 +21,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
         self,
         labels: list[str],
         engine: Engine[PromptSignature, Result, Model, InferenceMode],
-        task_id: Optional[str] = None,
+        task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
     ) -> None:
@@ -37,7 +39,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
 
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.outlines, EngineType.dspy}
+        return {EngineType.outlines, EngineType.dspy, EngineType.huggingface}
 
     @property
     def _inference_mode(self) -> TaskInferenceMode:
@@ -46,6 +48,8 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
                 return outlines_.InferenceMode.choice
             case DSPy():
                 return dspy_.InferenceMode.predict
+            case HuggingFace():
+                return huggingface_.InferenceMode.default
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
@@ -61,6 +65,8 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
                 """
             case DSPy():
                 return ""
+            case HuggingFace():
+                return "This text is about {}"
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
@@ -78,6 +84,8 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
                     labels: LabelType = dspy.OutputField()
 
                 return TextClassification
+            case HuggingFace():
+                return self._labels
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 
@@ -87,6 +95,8 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
             case Outlines():
                 return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
             case DSPy():
+                return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+            case HuggingFace():
                 return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
@@ -101,6 +111,9 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
             case DSPy():
                 for doc, result in zip(docs, results):
                     doc.results[self.id] = result.completions.labels  # type: ignore[union-attr]
+            case HuggingFace():
+                for doc, result in zip(docs, results):
+                    doc.results[self.id] = list(zip(result["labels"], result["scores"]))  # type: ignore[index]
             case _:
                 raise ValueError(f"Unsupported engine type: {type(self._engine)}")
 

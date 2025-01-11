@@ -7,11 +7,11 @@ from sieves import Pipeline, engines, tasks
 
 
 def test_simple_run(dummy_docs) -> None:
-    engine_dspy = engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
+    engine = engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     pipe = Pipeline(
         [
             tasks.predictive.Classification(
-                task_id="classifier", labels=["scientific paper", "newspaper article"], engine=engine_dspy
+                task_id="classifier", labels=["scientific paper", "newspaper article"], engine=engine
             ),
         ]
     )
