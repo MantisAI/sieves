@@ -13,7 +13,8 @@ dependencies = [
     "chonkie>=0.3",
     "transformers>=4,<5",
     "loguru>=0.7.3",
-    "docling>=2"
+    "docling>=2",
+    "sentencepiece<1"
 ]
 
 [project.optional-dependencies]
