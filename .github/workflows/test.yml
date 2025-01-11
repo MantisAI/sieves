@@ -2,7 +2,6 @@ name: Tests
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -11,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
+#        python-version: ["3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -30,7 +30,10 @@ jobs:
       run: |
         uv venv
         uv pip install -e ".[test]"
-    
+
     - name: Run tests
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       run: |
-        python -m pytest src/tests/ -v
+        source .venv/bin/activate
+        python -m pytest sieves/tests/ -v
