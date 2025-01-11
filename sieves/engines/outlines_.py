@@ -2,6 +2,7 @@ import enum
 from collections.abc import Callable, Iterable
 from typing import Any, TypeAlias
 
+import jinja2
 import outlines
 import pydantic
 from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformers, TransformersVision
@@ -49,12 +50,12 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             generator_factory: Callable[..., Any] = inference_mode.value[0]
+            template = jinja2.Template(prompt_template)
 
             match inference_mode:
                 case InferenceMode.text:
                     generator = generator_factory(self._model)
                 case InferenceMode.regex:
-                    # PromptSignature is used as regex.
                     assert isinstance(prompt_signature, str), ValueError(
                         "PromptSignature has to be supplied as string in outlines regex mode."
                     )
@@ -73,6 +74,6 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            return (generator(outlines.prompts.render(prompt_template, **doc_values)) for doc_values in values)
+            return (generator(template.render(**doc_values)) for doc_values in values)
 
         return execute
