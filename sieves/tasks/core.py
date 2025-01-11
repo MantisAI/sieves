@@ -1,6 +1,6 @@
 import abc
 from collections.abc import Iterable
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from sieves.data import Doc
 from sieves.engines import (
@@ -14,9 +14,9 @@ from sieves.engines import (
 
 TaskInput = TypeVar("TaskInput")
 TaskOutput = TypeVar("TaskOutput")
-TaskPromptSignature = TypeVar("TaskPromptSignature")
-TaskInferenceMode = TypeVar("TaskInferenceMode")
-TaskResult = TypeVar("TaskResult")
+TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
+TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
+TaskResult = TypeVar("TaskResult", contravariant=True)
 
 
 class Task(Generic[TaskInput, TaskOutput], abc.ABC):
@@ -48,6 +48,46 @@ class Task(Generic[TaskInput, TaskOutput], abc.ABC):
         """
 
 
+@runtime_checkable
+class EnginePredictiveTask(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
+    """Implements coupling between one Engine and one PredictiveTask."""
+
+    @property
+    def prompt_template(self) -> str | None:
+        """Returns task's prompt template.
+        Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
+        Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
+        a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
+        expectations when creating a prompt template.
+        :returns: Prompt template as string. None if none is required by engine.
+        """
+
+    def create_prompt_signature(self) -> TaskPromptSignature:
+        """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
+        jsonformers). This is engine-specific.
+        :returns: Output signature object.
+        """
+
+    @property
+    def inference_mode(self) -> TaskInferenceMode:
+        """Returns inference mode.
+        :returns: Inference mode.
+        """
+
+    def extract_from_docs(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
+        """Extract all values from doc instances that are to be injected into the prompts.
+        :param docs: Docs to extract values from.
+        :returns: All values from doc instances that are to be injected into the prompts
+        """
+
+    def integrate_into_docs(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+        """Integrate results into Doc instances.
+        :param results: Results from prompt executable.
+        :param docs: Doc instances to update.
+        :returns: Updated doc instances.
+        """
+
+
 class PredictiveTask(
     Generic[TaskPromptSignature, TaskResult, Model, TaskInferenceMode], Task[Iterable[Doc], Iterable[Doc]], abc.ABC
 ):
@@ -66,38 +106,21 @@ class PredictiveTask(
         """
         super().__init__(task_id=task_id, show_progress=show_progress, include_meta=include_meta)
         self._engine = engine
-        self._prompt_signature = self._create_prompt_signature()
+        self._engine_task = self._init_engine_task(EngineType.get_engine_type(self._engine))
+
+    @abc.abstractmethod
+    def _init_engine_task(
+        self, engine_type: EngineType
+    ) -> EnginePredictiveTask[TaskPromptSignature, TaskInferenceMode, TaskResult]:
+        """Initialize engine task.
+        :returns: Engine task.
+        """
 
     @property
     @abc.abstractmethod
     def supports(self) -> set[EngineType]:
-        """Returns set of engines available for this task.
-        :returns: Set of engines available for this task.
-        """
-
-    @property
-    @abc.abstractmethod
-    def prompt_template(self) -> str | None:
-        """Returns task's prompt template.
-        Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
-        Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
-        a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
-        expectations when creating a prompt template.
-        :returns: Prompt template as string. None if none is required by engine.
-        """
-
-    @abc.abstractmethod
-    def _create_prompt_signature(self) -> TaskPromptSignature:
-        """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
-        jsonformers). This is engine-specific.
-        :returns: Output signature object.
-        """
-
-    @property
-    @abc.abstractmethod
-    def _inference_mode(self) -> TaskInferenceMode:
-        """Returns inference mode.
-        :returns: Inference mode.
+        """Returns supported engine types.
+        :returns: Supported engine types.
         """
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -113,33 +136,22 @@ class PredictiveTask(
         :returns: The processed document
         """
         # 1. Compile expected prompt signatures.
-        signature = self._create_prompt_signature()
+        signature = self._engine_task.create_prompt_signature()
 
         # 2. Build executable.
-        executable = self._engine.build_executable(self._inference_mode, self.prompt_template, signature)  # type: ignore[arg-type]
+        executable = self._engine.build_executable(
+            self._engine_task.inference_mode,  # type: ignore[arg-type]
+            self._engine_task.prompt_template,
+            signature,  # type: ignore[arg-type]
+        )
 
         # 3. Extract values we want to inject into prompt templates to render full prompts.
-        docs_values = self._extract_from_docs(docs)
+        docs_values = self._engine_task.extract_from_docs(docs)
 
         # 4. Execute prompts.
         results = executable(docs_values)
 
         # 5. Integrate results into docs.
-        docs = self._integrate_into_docs(results, docs)  # type: ignore[arg-type]
+        docs = self._engine_task.integrate_into_docs(results, docs)  # type: ignore[arg-type]
 
         return docs
-
-    @abc.abstractmethod
-    def _extract_from_docs(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        """Extract all values from doc instances that are to be injected into the prompts.
-        :param docs: Docs to extract values from.
-        :returns: All values from doc instances that are to be injected into the prompts
-        """
-
-    @abc.abstractmethod
-    def _integrate_into_docs(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
-        """Integrate results into Doc instances.
-        :param results: Results from prompt executable.
-        :param docs: Doc instances to update.
-        :returns: Updated doc instances.
-        """
