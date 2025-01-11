@@ -21,14 +21,6 @@ class InferenceMode(enum.Enum):
 
 
 class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
-    def __init__(self, model: Model, threshold: float = 0.5):
-        """
-        :param model: Model to run. Should be gliclass.ZeroShotClassificationPipeline or gliner.GLiNER.
-        :param threshold: Threshold to use for scores.
-        """
-        super().__init__(model)
-        self._threshold = threshold
-
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
@@ -49,11 +41,12 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             texts = [dv["text"] for dv in values]
+
             match inference_mode:
                 case InferenceMode.gliclass:
-                    result = self._model(texts, prompt_signature, threshold=self._threshold)
+                    result = self._model(texts, prompt_signature, **self._inference_kwargs)
                 case InferenceMode.gliner:
-                    result = self._model.batch_predict_entities(texts, prompt_signature, threshold=self._threshold)
+                    result = self._model.batch_predict_entities(texts, prompt_signature, **self._inference_kwargs)
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 

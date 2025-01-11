@@ -15,11 +15,17 @@ class Executable(Protocol[Result]):
 
 
 class Engine(Generic[PromptSignature, Result, Model, InferenceMode]):
-    def __init__(self, model: Model):
+    def __init__(
+        self, model: Model, init_kwargs: dict[str, Any] | None = None, inference_kwargs: dict[str, Any] | None = None
+    ):
         """
         :param model: Instantiated model instance.
+        :param init_kwargs: Optional kwargs to supply to engine executable at init time.
+        :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
         """
         self._model = model
+        self._inference_kwargs = inference_kwargs or {}
+        self._init_kwargs = init_kwargs or {}
 
     @property
     def model(self) -> Model:

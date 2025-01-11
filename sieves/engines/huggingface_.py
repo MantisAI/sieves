@@ -48,6 +48,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
                             prompt_signature,
                             # Render hypothesis template with everything but text.
                             hypothesis_template=template.render(**dv),
+                            **self._inference_kwargs,
                         )
                         assert isinstance(result, dict)
                         return result
