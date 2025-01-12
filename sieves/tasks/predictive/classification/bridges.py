@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import Any, Generic, Literal, TypeVar
 
 import dspy
+import jinja2
 
 from sieves.data import Doc
 from sieves.engines import dspy_, glix_, huggingface_, outlines_
@@ -64,7 +65,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
             labels: LabelType = dspy.OutputField()
             confidence: float = dspy.OutputField()
 
-        TextClassification.__doc__ = self.prompt_template
+        TextClassification.__doc__ = jinja2.Template(self.prompt_template).render()
 
         return TextClassification
 
