@@ -1,4 +1,3 @@
-from .bridges import TaskInferenceMode, TaskPromptSignature, TaskResult
-from .core import Classification
+from .core import Classification, TaskInferenceMode, TaskPromptSignature, TaskResult
 
 __all__ = ["Classification", "TaskInferenceMode", "TaskResult", "TaskPromptSignature"]

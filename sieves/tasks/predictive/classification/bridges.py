@@ -1,18 +1,12 @@
 import abc
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, Generic, Literal, TypeAlias, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 import dspy
 
 from sieves.data import Doc
 from sieves.engines import dspy_, glix_, huggingface_, outlines_
-
-TaskPromptSignature: TypeAlias = list[str] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
-TaskInferenceMode: TypeAlias = (
-    outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
-)
-TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result | glix_.Result
 
 BridgePromptSignature = TypeVar("BridgePromptSignature", covariant=True)
 BridgeInferenceMode = TypeVar("BridgeInferenceMode", covariant=True)

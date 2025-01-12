@@ -1,17 +1,22 @@
+from typing import TypeAlias
+
 from tasks.predictive.classification.bridges import (
     ClassificationBridge,
     DSPyClassification,
     GliXClassification,
     HuggingFaceClassification,
     OutlinesClassification,
-    TaskInferenceMode,
-    TaskPromptSignature,
-    TaskResult,
 )
 
-from sieves.engines import Engine, EngineType
+from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
 from sieves.engines.core import InferenceMode, Model, PromptSignature, Result
 from sieves.tasks.core import Bridge, PredictiveTask
+
+TaskPromptSignature: TypeAlias = list[str] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
+TaskInferenceMode: TypeAlias = (
+    outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
+)
+TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result | glix_.Result
 
 
 class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]):
