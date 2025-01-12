@@ -16,7 +16,7 @@ TaskInput = TypeVar("TaskInput")
 TaskOutput = TypeVar("TaskOutput")
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
 TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
-TaskResult = TypeVar("TaskResult", contravariant=True)
+TaskResult = TypeVar("TaskResult")
 
 
 class Task(Generic[TaskInput, TaskOutput], abc.ABC):
@@ -88,6 +88,14 @@ class Bridge(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
         :returns: Updated doc instances.
         """
 
+    def consolidate(self, results: Iterable[TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[TaskResult]:
+        """Consolidates results for document chunks into document results.
+        :param results: Results per document chunk.
+        :param docs_offsets: Chunk offsets per document. Chunks per document can be obtained with
+            results[docs_chunk_offsets[i][0]:docs_chunk_offsets[i][1]].
+        :returns: Results per document.
+        """
+
 
 class PredictiveTask(
     Generic[TaskPromptSignature, TaskResult, Model, TaskInferenceMode], Task[Iterable[Doc], Iterable[Doc]], abc.ABC
@@ -134,6 +142,8 @@ class PredictiveTask(
         :param docs: The documents to process.
         :returns: The processed document
         """
+        docs = list(docs)
+
         # 1. Compile expected prompt signatures.
         signature = self._bridge.prompt_signature
 
@@ -144,13 +154,35 @@ class PredictiveTask(
             signature,  # type: ignore[arg-type]
         )
 
+        # todo introduce chunking
+        #   - should extract run once per doc or per chunk? assuming doc for now, as additional info is probably meta
+        #     on a per doc-level
+        #   x after extraction: expand docs_values into chunk_values by using doc.chunks for text. let other info
+        #     untouched
+        #   - run executable with chunk_values
+        #   - add new merging/consolidate step/function before integration: fuse results for chunks together into one
+        #     doc.
         # 3. Extract values we want to inject into prompt templates to render full prompts.
         docs_values = self._bridge.extract(docs)
 
-        # 4. Execute prompts.
-        results = executable(docs_values)
+        # 4. Map extracted docs values onto chunks.
+        docs_chunks_offsets: list[tuple[int, int]] = []
+        docs_chunks_values: list[dict[str, Any]] = []
+        for doc, doc_values in zip(docs, docs_values):
+            assert doc.text
+            doc_chunks_values = [doc_values | {"text": chunk} for chunk in (doc.chunks or [doc.text])]
+            docs_chunks_offsets.append((len(docs_chunks_values), len(docs_chunks_values) + len(doc_chunks_values)))
+            docs_chunks_values.extend(doc_chunks_values)
 
-        # 5. Integrate results into docs.
+        # 4. Execute prompts per chunk.
+        results = list(executable(docs_chunks_values))
+        assert len(results) == len(docs_chunks_values)
+
+        # 5. Consolidate chunk results.
+        results = list(self._bridge.consolidate(results, docs_chunks_offsets))  # type: ignore[arg-type]
+        assert len(results) == len(docs)
+
+        # 6. Integrate results into docs.
         docs = self._bridge.integrate(results, docs)  # type: ignore[arg-type]
 
         return docs

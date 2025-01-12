@@ -80,6 +80,13 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
 
             # Note: prompt template isn't used here explicitly, as DSPy expects the complete prompt of the signature's
             # fields.
-            return (generator(**doc_values, **self._inference_kwargs) for doc_values in values)
+            for doc_values in values:
+                try:
+                    yield generator(**doc_values, **self._inference_kwargs)
+                except ValueError as ex:
+                    raise ValueError(
+                        "Encountered problem when executing DSPy prompt. Ensure your document chunks contain sensible "
+                        "information."
+                    ) from ex
 
         return execute
