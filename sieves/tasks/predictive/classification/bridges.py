@@ -79,7 +79,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
         return dspy_.InferenceMode.predict
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+        return ({"text": doc.text if doc.text else None} for doc in docs)
 
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
@@ -130,7 +130,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Inf
         return huggingface_.InferenceMode.default
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+        return ({"text": doc.text if doc.text else None} for doc in docs)
 
     def integrate(self, results: Iterable[huggingface_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
@@ -184,7 +184,7 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, Gl
         return glix_.InferenceMode.gliclass
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+        return ({"text": doc.text if doc.text else None} for doc in docs)
 
     def integrate(self, results: Iterable[GliXResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
@@ -237,7 +237,7 @@ class OutlinesClassification(ClassificationBridge[list[str], outlines_.Inference
         return outlines_.InferenceMode.choice
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text[:256] if doc.text else None} for doc in docs)
+        return ({"text": doc.text if doc.text else None} for doc in docs)
 
     def integrate(self, results: Iterable[str], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
