@@ -5,7 +5,7 @@ import outlines
 from sieves import Pipeline, engines, tasks
 
 
-def test_simple_run(dummy_docs) -> None:
+def test_run(dummy_docs) -> None:
     model_name = "gpt2"
     engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
     pipe = Pipeline(

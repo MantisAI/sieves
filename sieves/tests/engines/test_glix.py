@@ -5,7 +5,7 @@ import transformers
 from sieves import Pipeline, engines, tasks
 
 
-def test_simple_run(dummy_docs) -> None:
+def test_run(dummy_docs) -> None:
     pipeline = gliclass.ZeroShotClassificationPipeline(
         gliclass.GLiClassModel.from_pretrained("knowledgator/gliclass-small-v1.0"),
         transformers.AutoTokenizer.from_pretrained("knowledgator/gliclass-small-v1.0"),

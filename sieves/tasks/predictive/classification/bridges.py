@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import Any, Generic, Literal, TypeVar
 
 import dspy
+import jinja2
 
 from sieves.data import Doc
 from sieves.engines import dspy_, glix_, huggingface_, outlines_
@@ -51,7 +52,7 @@ class ClassificationBridge(abc.ABC, Generic[BridgePromptSignature, BridgeInferen
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
     @property
     def prompt_template(self) -> str | None:
-        return None
+        return "Classify text as one of a set of labels. Include confidence of classification."
 
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:  # type: ignore[valid-type]
@@ -60,11 +61,11 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
         LabelType = Literal[*labels]  # type: ignore[valid-type]
 
         class TextClassification(dspy.Signature):  # type: ignore[misc]
-            """Classify text as one of a set of labels. Include confidence of classification."""
-
             text: str = dspy.InputField()
             labels: LabelType = dspy.OutputField()
             confidence: float = dspy.OutputField()
+
+        TextClassification.__doc__ = jinja2.Template(self.prompt_template).render()
 
         return TextClassification
 
@@ -167,7 +168,7 @@ GliXResult = list[dict[str, str | float]]
 class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, GliXResult]):
     @property
     def prompt_template(self) -> str | None:
-        return "This text is about {}"
+        return None
 
     @property
     def prompt_signature(self) -> list[str]:

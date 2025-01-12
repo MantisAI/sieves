@@ -6,7 +6,7 @@ import dspy
 from sieves import Pipeline, engines, tasks
 
 
-def test_simple_run(dummy_docs) -> None:
+def test_run(dummy_docs) -> None:
     engine = engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     pipe = Pipeline(
         [
