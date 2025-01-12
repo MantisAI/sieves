@@ -154,14 +154,6 @@ class PredictiveTask(
             signature,  # type: ignore[arg-type]
         )
 
-        # todo introduce chunking
-        #   - should extract run once per doc or per chunk? assuming doc for now, as additional info is probably meta
-        #     on a per doc-level
-        #   x after extraction: expand docs_values into chunk_values by using doc.chunks for text. let other info
-        #     untouched
-        #   - run executable with chunk_values
-        #   - add new merging/consolidate step/function before integration: fuse results for chunks together into one
-        #     doc.
         # 3. Extract values we want to inject into prompt templates to render full prompts.
         docs_values = self._bridge.extract(docs)
 

@@ -17,6 +17,8 @@ def test_simple_run(dummy_docs) -> None:
     )
     docs = list(pipe(dummy_docs))
 
-    assert len(docs) == 1
-    assert docs[0].text
-    assert "classifier" in docs[0].results
+    assert len(docs) == 2
+    for doc in docs:
+        assert doc.text
+        assert doc.results["classifier"]
+        assert "classifier" in doc.results
