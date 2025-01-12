@@ -9,7 +9,7 @@ from sieves.engines.core import Engine, Executable
 
 PromptSignature: TypeAlias = list[str]
 Model: TypeAlias = transformers.Pipeline
-Result: TypeAlias = dict[str, Any]
+Result: TypeAlias = dict[str, list[str] | list[float]]
 
 
 class InferenceMode(enum.Enum):

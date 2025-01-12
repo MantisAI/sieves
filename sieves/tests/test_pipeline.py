@@ -20,7 +20,10 @@ def test_double_task(dummy_docs) -> None:
     )
     docs = list(pipe(dummy_docs))
 
-    assert len(docs) == 1
-    assert docs[0].text
-    assert "classifier_1" in docs[0].results
-    assert "classifier_2" in docs[0].results
+    assert len(docs) == 2
+    for doc in docs:
+        assert doc.text
+        assert doc.results["classifier_1"]
+        assert doc.results["classifier_2"]
+        assert "classifier_1" in doc.results
+        assert "classifier_2" in doc.results

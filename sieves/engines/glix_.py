@@ -10,7 +10,7 @@ from sieves.engines.core import Engine, Executable
 
 PromptSignature: TypeAlias = list[str]
 Model: TypeAlias = gliner.GLiNER | gliclass.ZeroShotClassificationPipeline
-Result: TypeAlias = dict[str, str | float]
+Result: TypeAlias = list[dict[str, str | float]]
 
 
 class InferenceMode(enum.Enum):

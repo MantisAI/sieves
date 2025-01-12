@@ -1,6 +1,7 @@
 from typing import TypeAlias
 
-from tasks.predictive.classification.engine_tasks import (
+from tasks.predictive.classification.bridges import (
+    ClassificationBridge,
     DSPyClassification,
     GliXClassification,
     HuggingFaceClassification,
@@ -9,9 +10,9 @@ from tasks.predictive.classification.engine_tasks import (
 
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
 from sieves.engines.core import InferenceMode, Model, PromptSignature, Result
-from sieves.tasks.core import EnginePredictiveTask, PredictiveTask
+from sieves.tasks.core import Bridge, PredictiveTask
 
-TaskPromptSignature: TypeAlias = list[str] | dspy_.PromptSignature
+TaskPromptSignature: TypeAlias = list[str] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
 TaskInferenceMode: TypeAlias = (
     outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
 )
@@ -37,28 +38,26 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
         self._labels = labels
         super().__init__(engine=engine, task_id=task_id, show_progress=show_progress, include_meta=include_meta)
 
-    def _init_engine_task(
-        self, engine_type: EngineType
-    ) -> EnginePredictiveTask[TaskPromptSignature, TaskInferenceMode, TaskResult]:
+    def _init_bridge(self, engine_type: EngineType) -> ClassificationBridge:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
         """
         match engine_type:
             case EngineType.dspy:
-                engine_task = DSPyClassification(self._task_id, self._labels)
+                bridge = DSPyClassification(self._task_id, self._labels)
             case EngineType.glix:
-                engine_task = GliXClassification(self._task_id, self._labels)
+                bridge = GliXClassification(self._task_id, self._labels)
             case EngineType.huggingface:
-                engine_task = HuggingFaceClassification(self._task_id, self._labels)
+                bridge = HuggingFaceClassification(self._task_id, self._labels)
             case EngineType.outlines:
-                engine_task = OutlinesClassification(self._task_id, self._labels)
+                bridge = OutlinesClassification(self._task_id, self._labels)
             case _:
                 raise ValueError(f"Unsupported engine type: {engine_type}")
 
-        assert isinstance(engine_task, EnginePredictiveTask)
-        return engine_task
+        assert isinstance(bridge, Bridge)
+        return bridge
 
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.outlines, EngineType.dspy, EngineType.huggingface}
+        return {EngineType.outlines, EngineType.dspy, EngineType.huggingface, EngineType.glix}

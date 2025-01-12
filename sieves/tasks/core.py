@@ -16,7 +16,7 @@ TaskInput = TypeVar("TaskInput")
 TaskOutput = TypeVar("TaskOutput")
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
 TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
-TaskResult = TypeVar("TaskResult", contravariant=True)
+TaskResult = TypeVar("TaskResult")
 
 
 class Task(Generic[TaskInput, TaskOutput], abc.ABC):
@@ -49,7 +49,7 @@ class Task(Generic[TaskInput, TaskOutput], abc.ABC):
 
 
 @runtime_checkable
-class EnginePredictiveTask(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
+class Bridge(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
     """Implements coupling between one Engine and one PredictiveTask."""
 
     @property
@@ -62,7 +62,8 @@ class EnginePredictiveTask(Protocol[TaskPromptSignature, TaskInferenceMode, Task
         :returns: Prompt template as string. None if none is required by engine.
         """
 
-    def create_prompt_signature(self) -> TaskPromptSignature:
+    @property
+    def prompt_signature(self) -> TaskPromptSignature:
         """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
         jsonformers). This is engine-specific.
         :returns: Output signature object.
@@ -74,17 +75,25 @@ class EnginePredictiveTask(Protocol[TaskPromptSignature, TaskInferenceMode, Task
         :returns: Inference mode.
         """
 
-    def extract_from_docs(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
+    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         """Extract all values from doc instances that are to be injected into the prompts.
         :param docs: Docs to extract values from.
         :returns: All values from doc instances that are to be injected into the prompts
         """
 
-    def integrate_into_docs(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         """Integrate results into Doc instances.
         :param results: Results from prompt executable.
         :param docs: Doc instances to update.
         :returns: Updated doc instances.
+        """
+
+    def consolidate(self, results: Iterable[TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[TaskResult]:
+        """Consolidates results for document chunks into document results.
+        :param results: Results per document chunk.
+        :param docs_offsets: Chunk offsets per document. Chunks per document can be obtained with
+            results[docs_chunk_offsets[i][0]:docs_chunk_offsets[i][1]].
+        :returns: Results per document.
         """
 
 
@@ -106,12 +115,10 @@ class PredictiveTask(
         """
         super().__init__(task_id=task_id, show_progress=show_progress, include_meta=include_meta)
         self._engine = engine
-        self._engine_task = self._init_engine_task(EngineType.get_engine_type(self._engine))
+        self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
 
     @abc.abstractmethod
-    def _init_engine_task(
-        self, engine_type: EngineType
-    ) -> EnginePredictiveTask[TaskPromptSignature, TaskInferenceMode, TaskResult]:
+    def _init_bridge(self, engine_type: EngineType) -> Bridge[TaskPromptSignature, TaskInferenceMode, TaskResult]:
         """Initialize engine task.
         :returns: Engine task.
         """
@@ -135,23 +142,39 @@ class PredictiveTask(
         :param docs: The documents to process.
         :returns: The processed document
         """
+        docs = list(docs)
+
         # 1. Compile expected prompt signatures.
-        signature = self._engine_task.create_prompt_signature()
+        signature = self._bridge.prompt_signature
 
         # 2. Build executable.
         executable = self._engine.build_executable(
-            self._engine_task.inference_mode,  # type: ignore[arg-type]
-            self._engine_task.prompt_template,
+            self._bridge.inference_mode,  # type: ignore[arg-type]
+            self._bridge.prompt_template,
             signature,  # type: ignore[arg-type]
         )
 
         # 3. Extract values we want to inject into prompt templates to render full prompts.
-        docs_values = self._engine_task.extract_from_docs(docs)
+        docs_values = self._bridge.extract(docs)
 
-        # 4. Execute prompts.
-        results = executable(docs_values)
+        # 4. Map extracted docs values onto chunks.
+        docs_chunks_offsets: list[tuple[int, int]] = []
+        docs_chunks_values: list[dict[str, Any]] = []
+        for doc, doc_values in zip(docs, docs_values):
+            assert doc.text
+            doc_chunks_values = [doc_values | {"text": chunk} for chunk in (doc.chunks or [doc.text])]
+            docs_chunks_offsets.append((len(docs_chunks_values), len(docs_chunks_values) + len(doc_chunks_values)))
+            docs_chunks_values.extend(doc_chunks_values)
 
-        # 5. Integrate results into docs.
-        docs = self._engine_task.integrate_into_docs(results, docs)  # type: ignore[arg-type]
+        # 4. Execute prompts per chunk.
+        results = list(executable(docs_chunks_values))
+        assert len(results) == len(docs_chunks_values)
+
+        # 5. Consolidate chunk results.
+        results = list(self._bridge.consolidate(results, docs_chunks_offsets))  # type: ignore[arg-type]
+        assert len(results) == len(docs)
+
+        # 6. Integrate results into docs.
+        docs = self._bridge.integrate(results, docs)  # type: ignore[arg-type]
 
         return docs
