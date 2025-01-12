@@ -5,7 +5,7 @@ import transformers
 from sieves import Pipeline, engines, tasks
 
 
-def test_simple_run(dummy_docs) -> None:
+def test_run(dummy_docs) -> None:
     model = transformers.pipeline(
         "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
     )
