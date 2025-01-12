@@ -38,7 +38,6 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
         self._labels = labels
         super().__init__(engine=engine, task_id=task_id, show_progress=show_progress, include_meta=include_meta)
 
-    # Bridge[TaskPromptSignature, TaskInferenceMode, TaskResult]:
     def _init_bridge(self, engine_type: EngineType) -> ClassificationBridge:
         """Initialize engine task.
         :returns: Engine task.
