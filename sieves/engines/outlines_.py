@@ -44,6 +44,7 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: PromptSignature,
+        fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result]:
         cls_name = self.__class__.__name__
         assert prompt_template, ValueError(f"prompt_template has to be provided to {cls_name} engine by task.")

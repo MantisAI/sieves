@@ -5,6 +5,7 @@ from typing import Any, TypeAlias
 
 import gliclass
 import gliner
+import pydantic
 
 from sieves.engines.core import Engine, Executable
 
@@ -34,10 +35,14 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,
         prompt_signature: PromptSignature,
+        fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result]:
         cls_name = self.__class__.__name__
+        fewshot_examples = list(fewshot_examples)
         if prompt_template:
             warnings.warn(f"prompt_template is ignored by {cls_name} engine.")
+        if len(fewshot_examples):
+            warnings.warn(f"Few-shot examples are not supported by {cls_name} engine.")
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             texts = [dv["text"] for dv in values]

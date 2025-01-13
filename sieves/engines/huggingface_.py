@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from typing import Any, TypeAlias
 
 import jinja2
+import pydantic
 import transformers
 
 from sieves.engines.core import Engine, Executable
@@ -25,13 +26,14 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
 
     @property
     def supports_few_shotting(self) -> bool:
-        return False
+        return True
 
     def build_executable(
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,
         prompt_signature: PromptSignature,
+        fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result]:
         cls_name = self.__class__.__name__
         assert prompt_template, ValueError(f"prompt_template has to be provided to {cls_name} engine by task.")

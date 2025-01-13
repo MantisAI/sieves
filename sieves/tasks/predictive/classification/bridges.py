@@ -56,7 +56,13 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
     def prompt_template(self) -> str | None:
         return (
             self._custom_prompt_template
-            or "Classify text as one of a set of labels. Include confidence of classification."
+            or """
+            Perform multi-label classification of the provided text given the provided labels.
+            For each label, provide the conficence with which you believe that the provided text should be assigned 
+            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
+            opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
+            add up to 1.
+            """
         )
 
     @cached_property
@@ -67,8 +73,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
 
         class TextClassification(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField()
-            labels: LabelType = dspy.OutputField()
-            confidence: float = dspy.OutputField()
+            confidence_per_label: dict[LabelType, float] = dspy.OutputField()
 
         TextClassification.__doc__ = jinja2.Template(self.prompt_template).render()
 
@@ -83,7 +88,13 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
 
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
-            doc.results[self._task_id] = result.completions.labels
+            assert len(result.completions.confidence_per_label) == 1
+            sorted_preds = sorted(
+                [(label, score) for label, score in result.completions.confidence_per_label[0].items()],
+                key=lambda x: x[1],
+                reverse=True,
+            )
+            doc.results[self._task_id] = sorted_preds
         return docs
 
     def consolidate(
@@ -95,7 +106,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
             for res in results[doc_offset[0] : doc_offset[1]]:
-                for label, score in zip(res.completions.labels, res.completions.confidence):
+                assert len(res.completions.confidence_per_label) == 1
+                for label, score in res.completions.confidence_per_label[0].items():
                     label_scores[label] += score
 
             sorted_label_scores: list[dict[str, str | float]] = sorted(
@@ -108,10 +120,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
             )
 
             yield dspy.Prediction.from_completions(
-                {
-                    "labels": [sls["label"] for sls in sorted_label_scores],
-                    "confidence": [sls["score"] for sls in sorted_label_scores],
-                },
+                {"confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}]},
                 signature=self.prompt_signature,
             )
 
