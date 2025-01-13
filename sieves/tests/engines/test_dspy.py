@@ -1,18 +1,18 @@
 # mypy: ignore-errors
-import os
-
-import dspy
+import pytest
 
 from sieves import Pipeline, engines, tasks
 
 
-def test_run(dummy_docs) -> None:
-    engine = engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
+@pytest.mark.parametrize(
+    "engine",
+    [engines.EngineType.dspy],
+    indirect=True,
+)
+def test_run(dummy_docs, engine) -> None:
     pipe = Pipeline(
         [
-            tasks.predictive.Classification(
-                task_id="classifier", labels=["scientific paper", "newspaper article"], engine=engine
-            ),
+            tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
         ]
     )
     docs = list(pipe(dummy_docs))

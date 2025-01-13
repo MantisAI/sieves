@@ -4,6 +4,7 @@ from typing import Any, TypeAlias
 
 import dsp
 import dspy
+import pydantic
 
 from sieves.engines.core import Engine, Executable
 
@@ -45,7 +46,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
         """
         super().__init__(model, init_kwargs, inference_kwargs)
-        dspy.configure(lm=model)
+        dspy.configure(lm=model, max_tokens=100000)
 
     @property
     def inference_modes(self) -> type[InferenceMode]:
@@ -60,6 +61,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: PromptSignature,
+        fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result]:
         # Note: prompt_template is ignored here, as it's expected to have been injected into prompt_signature already.
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
@@ -74,15 +76,17 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                 assert issubclass(prompt_signature, dspy.Signature)
                 generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
-            # Note: prompt template isn't used here explicitly, as DSPy expects the complete prompt of the signature's
-            # fields.
+            # Compile predictor with few-shot examples.
+            examples = [dspy.Example(**fs_example.model_dump()) for fs_example in fewshot_examples]
+            generator = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
+
             for doc_values in values:
                 try:
                     yield generator(**doc_values, **self._inference_kwargs)
                 except ValueError as ex:
                     raise ValueError(
-                        "Encountered problem when executing DSPy prompt. Ensure your document chunks contain sensible "
-                        "information."
+                        "Encountered problem when executing DSPy prompt. Ensure your few-shot examples and document "
+                        "chunks contain sensible information."
                     ) from ex
 
         return execute

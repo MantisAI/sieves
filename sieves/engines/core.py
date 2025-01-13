@@ -3,18 +3,20 @@ import enum
 from collections.abc import Callable, Iterable
 from typing import Any, Generic, Protocol, TypeVar
 
-PromptSignature = TypeVar("PromptSignature")
+import pydantic
+
+EnginePromptSignature = TypeVar("EnginePromptSignature")
 Model = TypeVar("Model")
-Result = TypeVar("Result", covariant=True)
-InferenceMode = TypeVar("InferenceMode", bound=enum.Enum)
+EngineResult = TypeVar("EngineResult", covariant=True)
+EngineInferenceMode = TypeVar("EngineInferenceMode", bound=enum.Enum)
 
 
-class Executable(Protocol[Result]):
-    def __call__(self, values: Iterable[dict[str, Any]]) -> Iterable[Result]:
+class Executable(Protocol[EngineResult]):
+    def __call__(self, values: Iterable[dict[str, Any]]) -> Iterable[EngineResult]:
         ...
 
 
-class Engine(Generic[PromptSignature, Result, Model, InferenceMode]):
+class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInferenceMode]):
     def __init__(
         self, model: Model, init_kwargs: dict[str, Any] | None = None, inference_kwargs: dict[str, Any] | None = None
     ):
@@ -43,7 +45,7 @@ class Engine(Generic[PromptSignature, Result, Model, InferenceMode]):
 
     @property
     @abc.abstractmethod
-    def inference_modes(self) -> type[InferenceMode]:
+    def inference_modes(self) -> type[EngineInferenceMode]:
         """Which inference modes are supported.
         :returns: Supported inference modes.
         """
@@ -51,15 +53,17 @@ class Engine(Generic[PromptSignature, Result, Model, InferenceMode]):
     @abc.abstractmethod
     def build_executable(
         self,
-        inference_mode: InferenceMode,
+        inference_mode: EngineInferenceMode,
         prompt_template: str | None,
-        prompt_signature: PromptSignature,
-    ) -> Callable[[Iterable[dict[str, Any]]], Iterable[Result]]:
+        prompt_signature: EnginePromptSignature,
+        fewshot_examples: Iterable[pydantic.BaseModel] = (),
+    ) -> Callable[[Iterable[dict[str, Any]]], Iterable[EngineResult]]:
         """
         Returns prompt executable, i.e. a function that wraps an engine-native prediction generators. Such engine-native
         generators are e.g. Predict in DSPy, generator in outlines, Jsonformer in jsonformers).
         :param inference_mode: Inference mode to use (e.g. classification, JSON, ... - this is engine-specific).
         :param prompt_template: Prompt template.
         :param prompt_signature: Expected prompt signature.
+        :param fewshot_examples: Few-shot examples.
         :return: Prompt executable.
         """

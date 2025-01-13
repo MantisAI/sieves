@@ -11,7 +11,7 @@ def test_custom_prompt_template():
     engine = engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     task = tasks.predictive.Classification(
         task_id="classifier",
-        labels=["scientific paper", "newspaper article"],
+        labels=["science", "politics"],
         engine=engine,
         prompt_template=prompt_template,
     )

@@ -1,20 +1,18 @@
 # mypy: ignore-errors
-
-import transformers
+import pytest
 
 from sieves import Pipeline, engines, tasks
 
 
-def test_run(dummy_docs) -> None:
-    model = transformers.pipeline(
-        "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
-    )
-    engine = engines.huggingface_.HuggingFace(model=model)
+@pytest.mark.parametrize(
+    "engine",
+    [engines.EngineType.huggingface],
+    indirect=True,
+)
+def test_run(dummy_docs, engine) -> None:
     pipe = Pipeline(
         [
-            tasks.predictive.Classification(
-                task_id="classifier", labels=["scientific paper", "newspaper article"], engine=engine
-            ),
+            tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
         ]
     )
     docs = list(pipe(dummy_docs))
