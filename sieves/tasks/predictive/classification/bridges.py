@@ -1,4 +1,5 @@
 import abc
+import warnings
 from collections.abc import Iterable
 from functools import cached_property
 from typing import Any, Generic, Literal, TypeVar
@@ -15,9 +16,10 @@ BridgeResult = TypeVar("BridgeResult")
 
 
 class ClassificationBridge(abc.ABC, Generic[BridgePromptSignature, BridgeInferenceMode, BridgeResult]):
-    def __init__(self, task_id: str, labels: list[str]):
+    def __init__(self, task_id: str, labels: list[str], custom_prompt_template: str | None):
         self._task_id = task_id
         self._labels = labels
+        self._custom_prompt_template = custom_prompt_template
 
     @property
     @abc.abstractmethod
@@ -52,7 +54,10 @@ class ClassificationBridge(abc.ABC, Generic[BridgePromptSignature, BridgeInferen
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
     @property
     def prompt_template(self) -> str | None:
-        return "Classify text as one of a set of labels. Include confidence of classification."
+        return (
+            self._custom_prompt_template
+            or "Classify text as one of a set of labels. Include confidence of classification."
+        )
 
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:  # type: ignore[valid-type]
@@ -114,7 +119,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
 class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.InferenceMode, huggingface_.Result]):
     @property
     def prompt_template(self) -> str | None:
-        return "This text is about {}"
+        return self._custom_prompt_template or "This text is about {}"
 
     @property
     def prompt_signature(self) -> list[str]:
@@ -166,6 +171,11 @@ GliXResult = list[dict[str, str | float]]
 
 
 class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, GliXResult]):
+    def __init__(self, task_id: str, labels: list[str], custom_prompt_template: str | None):
+        super().__init__(task_id=task_id, labels=labels, custom_prompt_template=custom_prompt_template)
+        if self._custom_prompt_template:
+            warnings.warn("Custom prompt template is ignored by GliX engine.")
+
     @property
     def prompt_template(self) -> str | None:
         return None
@@ -216,12 +226,15 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, Gl
 class OutlinesClassification(ClassificationBridge[list[str], outlines_.InferenceMode, str]):
     @property
     def prompt_template(self) -> str | None:
-        return f"""
+        return (
+            self._custom_prompt_template
+            or f"""
         Classify the text after ======== as one or more of the following options: {",".join(self._labels)}. 
         Separate your choices with a comma.
         ========
         {{{{ text }}}}
         """
+        )
 
     @property
     def prompt_signature(self) -> list[str]:
