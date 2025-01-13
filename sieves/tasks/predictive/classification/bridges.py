@@ -263,12 +263,7 @@ class OutlinesClassification(
             Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
             For each label, provide the conficence with which you believe that the provided text should be assigned
             this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
-<<<<<<< HEAD
             opposite. Confidence per label should ALWAYS be between 0 and 1.
-=======
-            opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to
-            add up to 1.
->>>>>>> 76aaf55c81d0051434ad0cf1feaecb7f6d8e10ed
             
             The output for two labels LABEL_1 and LABEL_2 should look like this:
             Output: {{
