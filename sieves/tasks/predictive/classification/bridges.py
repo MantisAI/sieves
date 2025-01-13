@@ -109,7 +109,10 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
             for res in results[doc_offset[0] : doc_offset[1]]:
                 assert len(res.completions.confidence_per_label) == 1
                 for label, score in res.completions.confidence_per_label[0].items():
-                    label_scores[label] += score
+                    # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
+                    # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
+                    # useful?).
+                    label_scores[label] += max(0, min(score, 1))
 
             sorted_label_scores: list[dict[str, str | float]] = sorted(
                 [
@@ -260,8 +263,7 @@ class OutlinesClassification(
             Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
             For each label, provide the conficence with which you believe that the provided text should be assigned
             this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
-            opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to
-            add up to 1.
+            opposite. Confidence per label should ALWAYS be between 0 and 1.
             
             The output for two labels LABEL_1 and LABEL_2 should look like this:
             Output: {{
@@ -292,7 +294,7 @@ class OutlinesClassification(
         prompt_sig = pydantic.create_model(  # type: ignore[call-overload]
             "MultilabelPrediction",
             __base__=pydantic.BaseModel,
-            **{label: (pydantic.confloat(ge=0, le=1), ...) for label in self._labels},
+            **{label: (float, ...) for label in self._labels},
         )
 
         assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
@@ -322,7 +324,10 @@ class OutlinesClassification(
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
             for rec in results[doc_offset[0] : doc_offset[1]]:
                 for label in self._labels:
-                    label_scores[label] += getattr(rec, label)
+                    # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
+                    # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
+                    # useful?).
+                    label_scores[label] += max(0, min(getattr(rec, label), 1))
 
             yield self.prompt_signature(
                 **{label: score / (doc_offset[1] - doc_offset[0]) for label, score in label_scores.items()}

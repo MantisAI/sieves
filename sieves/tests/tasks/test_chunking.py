@@ -27,9 +27,7 @@ def test_task_chunking(dummy_docs) -> None:
     pipe = Pipeline(
         [
             tasks.chunkers.NaiveChunker(interval=chunk_interval),
-            tasks.predictive.Classification(
-                task_id="classifier", labels=["scientific paper", "newspaper article"], engine=engine
-            ),
+            tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
         ]
     )
     docs = list(pipe(dummy_docs))
