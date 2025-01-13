@@ -1,13 +1,15 @@
 # mypy: ignore-errors
-
-import outlines
+import pytest
 
 from sieves import Pipeline, engines, tasks
 
 
-def test_run(dummy_docs) -> None:
-    model_name = "gpt2"
-    engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
+@pytest.mark.parametrize(
+    "engine",
+    [engines.EngineType.outlines],
+    indirect=True,
+)
+def test_run(dummy_docs, engine) -> None:
     pipe = Pipeline(
         [
             tasks.predictive.Classification(

@@ -1,21 +1,28 @@
 # mypy: ignore-errors
-import outlines
+from collections.abc import Iterable
 
-from sieves import Pipeline, engines, tasks
+import pytest
+
+from sieves import Doc, Pipeline, engines, tasks
 
 
-def test_double_task(dummy_docs) -> None:
-    outlines_model_name = "gpt2"
-    engine_outlines = engines.outlines_.Outlines(model=outlines.models.transformers(outlines_model_name))
+@pytest.mark.parametrize(
+    "engine",
+    [engines.EngineType.outlines],
+    indirect=True,
+)
+def test_double_task(dummy_docs, engine) -> None:
+    class DummyTask(tasks.Task[Iterable[Doc], Iterable[Doc]]):
+        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+            _docs = list(_docs)
+            for _doc in _docs:
+                _doc.results[self._task_id] = "dummy"
+            return _docs
 
     pipe = Pipeline(
         [
-            tasks.predictive.Classification(
-                task_id="classifier_1", labels=["scientific paper", "newspaper article"], engine=engine_outlines
-            ),
-            tasks.predictive.Classification(
-                task_id="classifier_2", labels=["scientific paper", "newspaper article"], engine=engine_outlines
-            ),
+            DummyTask(task_id="task_1", show_progress=False, include_meta=False),
+            DummyTask(task_id="task_2", show_progress=False, include_meta=False),
         ]
     )
     docs = list(pipe(dummy_docs))
@@ -23,7 +30,7 @@ def test_double_task(dummy_docs) -> None:
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
-        assert doc.results["classifier_1"]
-        assert doc.results["classifier_2"]
-        assert "classifier_1" in doc.results
-        assert "classifier_2" in doc.results
+        assert doc.results["task_1"]
+        assert doc.results["task_2"]
+        assert "task_1" in doc.results
+        assert "task_2" in doc.results

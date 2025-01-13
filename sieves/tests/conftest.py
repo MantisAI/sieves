@@ -31,7 +31,7 @@ def engine(request) -> engines.Engine:
             )
             return engines.huggingface_.HuggingFace(model=model)
         case engines.EngineType.outlines:
-            model_name = "gpt2"
+            model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
             return engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
         case _:
             raise ValueError(f"Unsupported engine type {request.param}.")
@@ -39,4 +39,4 @@ def engine(request) -> engines.Engine:
 
 @pytest.fixture(scope="session")
 def dummy_docs() -> list[Doc]:
-    return [Doc(text="This is about newspaper stuff. " * 10), Doc(text="This is about science stuff. " * 10)]
+    return [Doc(text="This is about politics stuff. " * 10), Doc(text="This is about science stuff. " * 10)]

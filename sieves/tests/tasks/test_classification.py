@@ -8,17 +8,17 @@ from sieves.tasks.predictive import classification
 
 @pytest.mark.parametrize(
     "engine",
-    [EngineType.glix],  # EngineType.dspy, EngineType.glix, EngineType.huggingface, EngineType.outlines],
+    [EngineType.dspy, EngineType.glix, EngineType.huggingface, EngineType.outlines],
     indirect=True,
 )
 def test_fewshot_examples(dummy_docs, engine):
     fewshot_examples = [
         classification.TaskFewshotExample(
-            text="On the properties of hydrogen atoms and red dwarfs" * 10,
+            text="On the properties of hydrogen atoms and red dwarfs.",
             confidence_per_label={"science": 1.0, "politics": 0.0},
         ),
         classification.TaskFewshotExample(
-            text="A parliament is elected by casting votes." * 10, confidence_per_label={"science": 0, "politics": 1.0}
+            text="A parliament is elected by casting votes.", confidence_per_label={"science": 0, "politics": 1.0}
         ),
     ]
     pipe = Pipeline(
