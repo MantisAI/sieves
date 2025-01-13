@@ -31,7 +31,7 @@ def engine(request) -> engines.Engine:
             )
             return engines.huggingface_.HuggingFace(model=model)
         case engines.EngineType.outlines:
-            model_name = "gpt2"
+            model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
             return engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
         case _:
             raise ValueError(f"Unsupported engine type {request.param}.")

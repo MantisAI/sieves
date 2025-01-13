@@ -16,7 +16,7 @@ from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outli
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
 from sieves.tasks.core import Bridge, PredictiveTask
 
-TaskPromptSignature: TypeAlias = list[str] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
+TaskPromptSignature: TypeAlias = list[str] | type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
 TaskInferenceMode: TypeAlias = (
     outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
 )

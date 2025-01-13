@@ -9,7 +9,7 @@ from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformer
 
 from sieves.engines.core import Engine, Executable
 
-PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
+PromptSignature: TypeAlias = type[pydantic.BaseModel] | list[str] | str
 Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
 Result: TypeAlias = pydantic.BaseModel | str
 
@@ -68,13 +68,22 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
                     )
                     generator = generator_factory(self._model, choices=prompt_signature, **self._init_kwargs)
                 case InferenceMode.json:
-                    assert isinstance(prompt_signature, pydantic.BaseModel), ValueError(
-                        f"PromptSignature has to be supplied as Pydantic model in {cls_name} json mode."
-                    )
+                    assert isinstance(prompt_signature, type) and issubclass(prompt_signature, pydantic.BaseModel)
                     generator = generator_factory(self._model, schema_object=prompt_signature, **self._init_kwargs)
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            return (generator(template.render(**doc_values), **self._inference_kwargs) for doc_values in values)
+            # Convert few-shot examples.
+            fs_examples: list[dict[str, Any]] = []
+            for fs_example in fewshot_examples:
+                fs_examples.append(fs_example.model_dump())
+
+            return (
+                generator(
+                    template.render(**doc_values, **({"examples": fs_examples} if len(fs_examples) else {})),
+                    **self._inference_kwargs,
+                )
+                for doc_values in values
+            )
 
         return execute

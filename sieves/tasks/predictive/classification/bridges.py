@@ -6,6 +6,7 @@ from typing import Any, Generic, Literal, TypeVar
 
 import dspy
 import jinja2
+import pydantic
 
 from sieves.data import Doc
 from sieves.engines import dspy_, glix_, huggingface_, outlines_
@@ -232,50 +233,84 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, Gl
             yield sorted_label_scores
 
 
-class OutlinesClassification(ClassificationBridge[list[str], outlines_.InferenceMode, str]):
+class OutlinesClassification(
+    ClassificationBridge[type[pydantic.BaseModel], outlines_.InferenceMode, pydantic.BaseModel]
+):
     @property
     def prompt_template(self) -> str | None:
         return (
             self._custom_prompt_template
             or f"""
-        Classify the text after ======== as one or more of the following options: {",".join(self._labels)}. 
-        Separate your choices with a comma.
-        ========
-        {{{{ text }}}}
-        """
+            Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
+            For each label, provide the conficence with which you believe that the provided text should be assigned
+            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
+            opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to
+            add up to 1.
+            
+            The output for two labels LABEL_1 and LABEL_2 should look like this:
+            Output: {{
+                LABEL_1: CONFIDENCE_SCORE_1,
+                LABEL_2: CONFIDENCE_SCORE_2,
+            }}
+            
+            {{% if examples|length > 0 -%}}
+                Examples:
+                ----------
+                {{%- for example in examples %}}
+                    Text: "{{{{ example.text }}}}":
+                    Output: 
+                    {{% for l, s in example.confidence_per_label.items() %}}    {{{{ l }}}}: {{{{ s }}}},
+                    {{% endfor -%}}
+                {{% endfor %}}
+                ----------
+            {{% endif -%}}
+            
+            ========
+            Text: {{{{ text }}}}
+            Output: 
+            """
         )
 
-    @property
-    def prompt_signature(self) -> list[str]:
-        return self._labels
+    @cached_property
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        prompt_sig = pydantic.create_model(  # type: ignore[call-overload]
+            "MultilabelPrediction",
+            __base__=pydantic.BaseModel,
+            **{label: (pydantic.confloat(ge=0, le=1), ...) for label in self._labels},
+        )
+
+        assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
+        return prompt_sig
 
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.choice
+        return outlines_.InferenceMode.json
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None} for doc in docs)
 
-    def integrate(self, results: Iterable[str], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
-            doc.results[self._task_id] = result.split(",")
+            doc.results[self._task_id] = sorted(
+                [(label, score) for label, score in result.model_dump().items()], key=lambda x: x[1], reverse=True
+            )
         return docs
 
-    def consolidate(self, results: Iterable[str], docs_offsets: list[tuple[int, int]]) -> Iterable[str]:
+    def consolidate(
+        self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[pydantic.BaseModel]:
         results = list(results)
+
+        # todo
+        #  - yield pydantic result object (use .prompt_signature to obtain class )
 
         # Determine label scores for chunks per document.
         for doc_offset in docs_offsets:
-            label_counts: dict[str, int] = {label: 0 for label in self._labels}
+            label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
             for rec in results[doc_offset[0] : doc_offset[1]]:
-                label_counts[rec] += 1
+                for label in self._labels:
+                    label_scores[label] += getattr(rec, label)
 
-            # Average score, sort by it in descending order.
-            sorted_label_scores: list[dict[str, str | float]] = sorted(
-                [{"label": label, "score": count} for label, count in label_counts.items()],
-                key=lambda x: x["score"],
-                reverse=True,
+            yield self.prompt_signature(
+                **{label: score / (doc_offset[1] - doc_offset[0]) for label, score in label_scores.items()}
             )
-
-            assert isinstance(sorted_label_scores[0]["label"], str)
-            yield sorted_label_scores[0]["label"]
