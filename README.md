@@ -1,17 +1,13 @@
-<table>
-<tr>
-<td><img src="docs/assets/sieve.png" width="120" /></td>
-<td>Text on the right of the image</td>
-</tr>
-</table>
+<h1 style="display: inline-flex; align-items: center;">
+  <img 
+    src="docs/assets/sieve.png" 
+    alt="sieves" 
+    width="200"
+    style="margin-right: 20px;"
+  />
+  sieves
+</h1>
 
-[//]: # (<div style="display: flex; align: left">)
-
-[//]: # (    <img width="200" src="docs/assets/sieve.png">)
-
-[//]: # (    <h1 style="margin-top: 50px;margin-left:20px">sieves</h1>)
-
-[//]: # (</div>)
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/mantisai/sieves)
