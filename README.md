@@ -3,6 +3,7 @@
     src="docs/assets/sieve.png" 
     alt="sieves" 
     width="200"
+    height="200"
     style="margin-right: 20px;"
   />
   sieves
