@@ -153,6 +153,12 @@ An `Engine` wraps an existing library designed for structured generation with ze
 setting up executing prompts and fetching output from the model and passes it back to be converted into a unified data 
 format.
 
+> [!IMPORTANT]  
+> Engines might fail in producing structured output. Validation ensures you won't end up with improperly structured 
+> results, but you might end up with a pipeline failure. The risk for this correlates positively with the complexity of 
+> the expected response type and negatively with the capability of the used model.  
+
+
 #### Task
 A `Task` implements a given NLP task (such as classification, NER, information extraction, ...) for at least one engine.
 In itself a `Task` implementation is usually very concise, as most of the logic will be implemented in `Bridge` classes,
@@ -196,6 +202,7 @@ This is not either-or - `sieves` includes `outlines` (among others), plus:
     - Tools for file parsing, chunking, exporting data for fine-tuning
 
 </details>
+
 
 > Source for `sieves` icon:
 > <a href="https://www.flaticon.com/free-icons/sieve" title="sieve icons">Sieve icons created by Freepik - Flaticon</a>.
