@@ -217,6 +217,7 @@ This is not either-or - `sieves` includes `outlines` (among others), plus:
 
 </details>
 
+---
 
 > Source for `sieves` icon:
 > <a href="https://www.flaticon.com/free-icons/sieve" title="sieve icons">Sieve icons created by Freepik - Flaticon</a>.
