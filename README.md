@@ -2,7 +2,9 @@
 
 <h1 align="center">
 <span style="font: bold 38pt'Courier New';">sieves</span>
-<br>Zero-shot NLP made easy
+<br>
+<span style="font: 28pt;">Zero-shot NLP made easy</span>
+
 <br>
 <br>
 <br>
