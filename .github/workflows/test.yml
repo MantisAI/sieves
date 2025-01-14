@@ -11,7 +11,6 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11"]
-#        python-version: ["3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -39,9 +38,9 @@ jobs:
         coverage run -m pytest sieves/tests/ -v
         coverage xml
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: coverage.xml
-        token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: true
+#    - name: Upload coverage to Codecov
+#      uses: codecov/codecov-action@v3
+#      with:
+#        files: coverage.xml
+#        token: ${{ secrets.CODECOV_TOKEN }}
+#        fail_ci_if_error: true
