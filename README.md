@@ -4,7 +4,6 @@
 <span style="font: bold 38pt'Courier New';">sieves</span>
 <br>
 <span style="font: 28pt;">Zero-shot NLP made easy</span>
-
 <br>
 <br>
 <br>
