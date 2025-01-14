@@ -1,6 +1,6 @@
-<div style="display: flex; align-items: center;">
+<div style="display: flex; align-items: center; gap: 20px;">
     <img width="200" src="docs/assets/sieve.png">
-    <h1 style="margin-left: 10px;margin-bottom: 65px;padding-left:30px;">sieves</h1>
+    <h1 style="margin: 0;">sieves</h1>
 </div>
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
