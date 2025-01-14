@@ -1,4 +1,4 @@
-<img src="docs/assets/sieve.png" width="200" height="200" align="left" style="margin-right:30px" />
+<img src="docs/assets/sieve.png" width="200" height="200" align="left" style="margin-right:0px" />
 
 <h1 align="center">
 <span style="font: bold 38pt'Courier New';">sieves</span>
