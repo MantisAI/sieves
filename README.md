@@ -1,13 +1,10 @@
-<h1 style="display: inline-flex; align-items: center;">
-  <img 
-    src="docs/assets/sieve.png" 
-    alt="sieves" 
-    width="200"
-    height="200"
-    style="margin-right: 20px;"
-  />
-  sieves
-</h1>
+<table border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td valign="middle"><img src="docs/assets/sieve.png" alt="My Image" width="200"></td>
+<td valign="middle"><h1>Your Heading Text</h1></td>
+</tr>
+</table>
+
 
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
