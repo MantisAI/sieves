@@ -153,11 +153,10 @@ An `Engine` wraps an existing library designed for structured generation with ze
 setting up executing prompts and fetching output from the model and passes it back to be converted into a unified data 
 format.
 
-> [!IMPORTANT]  
+> [!WARNING]  
 > Engines might fail in producing structured output. Validation ensures you won't end up with improperly structured 
 > results, but you might end up with a pipeline failure. The risk for this correlates positively with the complexity of 
-> the expected response type and negatively with the capability of the used model.  
-
+> the expected response type and negatively with the capability of the used model.
 
 #### Task
 A `Task` implements a given NLP task (such as classification, NER, information extraction, ...) for at least one engine.
