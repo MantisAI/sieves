@@ -1,9 +1,10 @@
-<table border="0" cellpadding="0" cellspacing="0">
-<tr>
-<td valign="middle"><img src="docs/assets/sieve.png" alt="My Image" width="200"></td>
-<td valign="middle"><h1>Your Heading Text</h1></td>
-</tr>
-</table>
+<img src="docs/assets/sieve.png" width="200" height="200" align="left" style="margin-right:30px" />
+
+<h1 align="center">
+<span style="font: bold 38pt'Courier New';">sieves</span>
+<br>Zero-shot NLP made easy
+</h1>
+<br><br>
 
 
 
