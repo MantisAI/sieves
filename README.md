@@ -199,14 +199,14 @@ given `Task`.
 Originally, `sieves` was intended for information extraction. The name comes from [gold panning](https://en.wikipedia.org/wiki/Gold_panning): 
 run your raw data through a sieve to obtain structured, refined “gold.”
 
-### Why do I need this if I can just prompt my LLM to do whatever I want?
+### Why not just prompt an LLM directly?
 
 You can - but `sieves` offers:
     - Structured data output. Zero-/few-shot LLMs can be finicky without guardrails or parsing.
     - A step-by-step pipeline, making it easier to debug and track each stage.
  
 
-### Why should I use `sieves` and not e.g. `outlines`?
+### Why use `sieves` and not a structured generation library like `outlines`?
 
 This is not either-or - `sieves` includes `outlines` (among others), plus:
     - A uniform input/output format
