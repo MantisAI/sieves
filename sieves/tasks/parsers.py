@@ -1,4 +1,5 @@
 """File parsers for converting raw files into documents."""
+import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,15 @@ class Docling(Task[Iterable[Doc], Iterable[Doc]]):
         :returns: Parsed documents
         """
         docs = list(docs)
+
+        # Validate docs.
+        have_text = False
+        for doc in docs:
+            assert doc.uri, ValueError("Documents have to have a value for .uri.")
+            if doc.text:
+                have_text = True
+        if have_text:
+            warnings.warn(f"Task {self._task_id} is about to overwrite existing .text values.")
 
         # Wrap conversion in TQDM if progress should be shown.
         convert = self._doc_converter.convert_all

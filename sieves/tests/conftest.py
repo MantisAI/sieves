@@ -23,7 +23,6 @@ def engine(request) -> engines.Engine:
                 classification_type="multi-label",
                 device="cpu",
             )
-
             return engines.glix_.GliX(model=pipeline)
         case engines.EngineType.huggingface:
             model = transformers.pipeline(
