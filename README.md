@@ -164,6 +164,10 @@ In itself a `Task` implementation is usually very concise, as most of the logic 
 which implement task logic with respect to a certain engine. I.e.: one `Task` provides one or more `Bridge` classes,
 which implement a task for one `Engine`.
 
+> [!TIP]
+> Some tasks might work better with one engine than the other. When implementing your own tasks, make sure to experiment
+> to figure out which engine delivers the best performance.
+
 #### Bridge
 A `Bridge` class connects one `Task` with one `Engine`. E.g.: a classification task will require a different 
 implementation when run against `outlines` then when run against `dspy` or `ollama`. This is the responsibility of a 
