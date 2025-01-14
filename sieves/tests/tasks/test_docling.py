@@ -9,7 +9,9 @@ def test_pdf_parsing() -> None:
     pipe = Pipeline(
         tasks=[
             tasks.parsers.Docling(),
-            tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))),
+            tasks.chunkers.Chonkie(
+                chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("HuggingFaceTB/SmolLM-135M-Instruct"))
+            ),
         ]
     )
     docs = list(pipe(resources))

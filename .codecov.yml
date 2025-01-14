@@ -1,0 +1,33 @@
+# codecov.yaml
+
+coverage:
+  # How coverage metrics are presented
+  precision: 2
+  round: down
+  range: "70...100"
+
+  # Define coverage thresholds
+  status:
+    project:
+      default:
+        # Fails CI if coverage < 80%
+        target: 1
+
+  # Optionally ignore specific files/dirs
+  ignore:
+    - "tests/fixtures/*"
+    - "docs/*"
+
+comment:
+  # Controls the GitHub PR comment format
+  layout: "reach, diff, flags, files"
+  behavior: default
+
+parsers:
+  # Example parser config
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
