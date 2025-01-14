@@ -1,4 +1,7 @@
-# sieves
+<div style="display: flex; align-items: center;">
+    <img width="200" src="docs/assets/sieve.png">
+    <h1 style="margin-left: 10px;margin-bottom: 65px;padding-left:30px;">sieves</h1>
+</div>
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/mantisai/sieves)
@@ -193,3 +196,6 @@ This is not either-or - `sieves` includes `outlines` (among others), plus:
     - Tools for file parsing, chunking, exporting data for fine-tuning
 
 </details>
+
+> Source for `sieves` icon:
+> <a href="https://www.flaticon.com/free-icons/sieve" title="sieve icons">Sieve icons created by Freepik - Flaticon</a>.
