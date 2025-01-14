@@ -1,9 +1,8 @@
 <img src="docs/assets/sieve.png" width="200" height="200" align="left" style="margin-right:30px" />
 
 <h1 align="left">
-<span style="font: bold 38pt'Courier New';">sieves</span>
 <br>
-<span style="font: 28pt;">Zero-shot NLP made easy</span>
+<span style="font: bold 38pt'Courier New';">sieves</span>
 <br>
 <br>
 <br>
