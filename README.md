@@ -155,6 +155,10 @@ A `Doc` instance represents one document and contains information about its cont
 meta-information. The `sieves` workflow pipeline revolves around `Doc` instances - information is propagated throughout
 the pipeline via `Doc` instances being passed from task to task.
 
+> [!IMPORTANT]  
+> The length of your `Doc`s might exceed your models context length. Make sure you run a chunking task in your pipeline
+> to avoid running into problems with the context length.
+
 #### Engine
 An `Engine` wraps an existing library designed for structured generation with zero-/few-shot models. It coordinates 
 setting up executing prompts and fetching output from the model and passes it back to be converted into a unified data 
