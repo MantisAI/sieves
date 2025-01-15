@@ -45,7 +45,7 @@ def test_run_readme_example_short():
     print(docs[0].results["Classification"])
 
 
-@pytest.mark.key("slow")
+@pytest.mark.slow
 def test_run_readme_example_long():
     # Define documents by text or URI.
     docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
