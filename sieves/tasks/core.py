@@ -1,6 +1,6 @@
 import abc
 from collections.abc import Iterable
-from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
+from typing import Any, Generic, TypeVar
 
 import pydantic
 
@@ -51,11 +51,19 @@ class Task(Generic[TaskInput, TaskOutput], abc.ABC):
         """
 
 
-@runtime_checkable
-class Bridge(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
-    """Implements coupling between one Engine and one PredictiveTask."""
+# @runtime_checkable
+# class Bridge(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
+#     """Implements coupling between one Engine and one PredictiveTask."""
+
+
+class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.ABC):
+    def __init__(self, task_id: str, custom_prompt_template: str | None):
+        """Initializes new bridge."""
+        self._task_id = task_id
+        self._custom_prompt_template = custom_prompt_template
 
     @property
+    @abc.abstractmethod
     def prompt_template(self) -> str | None:
         """Returns task's prompt template.
         Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
@@ -66,6 +74,7 @@ class Bridge(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
         """
 
     @property
+    @abc.abstractmethod
     def prompt_signature(self) -> TaskPromptSignature:
         """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
         jsonformers). This is engine-specific.
@@ -73,17 +82,20 @@ class Bridge(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
         """
 
     @property
+    @abc.abstractmethod
     def inference_mode(self) -> TaskInferenceMode:
         """Returns inference mode.
         :returns: Inference mode.
         """
 
+    @abc.abstractmethod
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         """Extract all values from doc instances that are to be injected into the prompts.
         :param docs: Docs to extract values from.
         :returns: All values from doc instances that are to be injected into the prompts
         """
 
+    @abc.abstractmethod
     def integrate(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         """Integrate results into Doc instances.
         :param results: Results from prompt executable.
@@ -91,6 +103,7 @@ class Bridge(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
         :returns: Updated doc instances.
         """
 
+    @abc.abstractmethod
     def consolidate(self, results: Iterable[TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[TaskResult]:
         """Consolidates results for document chunks into document results.
         :param results: Results per document chunk.
