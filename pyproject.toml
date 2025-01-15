@@ -7,7 +7,9 @@ name = "sieves"
 readme = "README.md"
 dynamic = ["version", "authors", "description", "license"]
 requires-python = ">=3.8"
-dependencies = []
+dependencies = [
+    "loguru>=0.7.3"
+]
 
 [project.optional-dependencies]
 all = [
