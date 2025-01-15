@@ -7,8 +7,7 @@ from sieves.engines import EngineType
 
 @pytest.mark.parametrize(
     "engine",
-    [EngineType.glix],
-    # [EngineType.dspy, EngineType.glix, EngineType.huggingface, EngineType.ollama, EngineType.outlines],
+    [EngineType.dspy, EngineType.glix, EngineType.huggingface, EngineType.ollama, EngineType.outlines],
     indirect=True,
 )
 def test_run(dummy_docs, engine) -> None:

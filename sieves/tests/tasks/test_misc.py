@@ -3,11 +3,8 @@ import os
 
 import chonkie
 import dspy
-import gliclass
-import outlines
 import pytest
 import tokenizers
-import transformers
 
 from sieves import Doc, Pipeline, engines, tasks
 
@@ -25,13 +22,14 @@ def test_custom_prompt_template():
 
 
 @pytest.mark.slow
-def test_run_readme_example_short():
+@pytest.mark.parametrize(
+    "engine",
+    [engines.EngineType.outlines],
+    indirect=True,
+)
+def test_run_readme_example_short(engine):
     # Define documents by text or URI.
     docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
-
-    # Create engine responsible for generating structured output.
-    model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-    engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
 
     # Create pipeline with tasks.
     pipe = Pipeline(
@@ -46,19 +44,18 @@ def test_run_readme_example_short():
     print(docs[0].results["Classification"])
 
 
-def test_run_readme_example_long():
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    "engine",
+    [engines.EngineType.glix],
+    indirect=True,
+)
+def test_run_readme_example_long(engine):
     # Define documents by text or URI.
     docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
     # Create engine responsible for generating structured output.
     model_name = "knowledgator/gliclass-small-v1.0"
-    pipeline = gliclass.ZeroShotClassificationPipeline(
-        gliclass.GLiClassModel.from_pretrained(model_name),
-        transformers.AutoTokenizer.from_pretrained(model_name),
-        classification_type="multi-label",
-        device="cpu",
-    )
-    engine = engines.glix_.GliX(model=pipeline)
 
     # Create pipeline with tasks.
     pipe = Pipeline(
