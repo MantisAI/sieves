@@ -12,7 +12,7 @@ from sieves import Doc, Pipeline, engines, tasks
     indirect=True,
 )
 def test_double_task(dummy_docs, engine) -> None:
-    class DummyTask(tasks.Task[Iterable[Doc], Iterable[Doc]]):
+    class DummyTask(tasks.Task):
         def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)
             for _doc in _docs:
