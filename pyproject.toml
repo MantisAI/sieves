@@ -26,7 +26,8 @@ test = [
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.21.1",
     "mypy>=1",
-    "mypy-extensions>=1"
+    "mypy-extensions>=1",
+    "pytest-cov"
 ]
 
 [tool.black]
