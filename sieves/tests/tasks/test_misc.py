@@ -24,6 +24,7 @@ def test_custom_prompt_template():
     assert task.prompt_template == prompt_template
 
 
+@pytest.mark.slow
 def test_run_readme_example_short():
     # Define documents by text or URI.
     docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
@@ -45,7 +46,6 @@ def test_run_readme_example_short():
     print(docs[0].results["Classification"])
 
 
-@pytest.mark.slow
 def test_run_readme_example_long():
     # Define documents by text or URI.
     docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
