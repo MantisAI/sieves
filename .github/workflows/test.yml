@@ -33,8 +33,10 @@ jobs:
     - name: Set up ollama
       run: |
         curl -fsSL https://ollama.ai/install.sh | sh
+        echo "**** serving"
         # Run as daemon, ignore potential errors (port usage fails if Ollama has been launched on this machine before). 
         ollama serve > /dev/null 2>&1 &
+        echo "**** pulling"
         ollama pull smollm:135m 
 
     - name: Run tests
