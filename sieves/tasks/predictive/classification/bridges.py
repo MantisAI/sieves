@@ -10,46 +10,27 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import dspy_, glix_, huggingface_, ollama_, outlines_
+from sieves.tasks.core import Bridge
 
 BridgePromptSignature = TypeVar("BridgePromptSignature", covariant=True)
 BridgeInferenceMode = TypeVar("BridgeInferenceMode", covariant=True)
 BridgeResult = TypeVar("BridgeResult")
 
 
-class ClassificationBridge(abc.ABC, Generic[BridgePromptSignature, BridgeInferenceMode, BridgeResult]):
-    def __init__(self, task_id: str, labels: list[str], custom_prompt_template: str | None):
-        self._task_id = task_id
+class ClassificationBridge(
+    Bridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
+    Generic[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
+    abc.ABC,
+):
+    def __init__(self, task_id: str, custom_prompt_template: str | None, labels: list[str]):
+        """
+        Initializes InformationExtractionBridge.
+        :param task_id: Task ID.
+        :param custom_prompt_template: Custom prompt template.
+        :param labels: Labels to classify.
+        """
+        super().__init__(task_id, custom_prompt_template)
         self._labels = labels
-        self._custom_prompt_template = custom_prompt_template
-
-    @property
-    @abc.abstractmethod
-    def prompt_template(self) -> str | None:
-        ...
-
-    @property
-    @abc.abstractmethod
-    def prompt_signature(self) -> BridgePromptSignature:
-        ...
-
-    @property
-    @abc.abstractmethod
-    def inference_mode(self) -> BridgeInferenceMode:
-        ...
-
-    @abc.abstractmethod
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        ...
-
-    @abc.abstractmethod
-    def integrate(self, results: Iterable[BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
-        ...
-
-    @abc.abstractmethod
-    def consolidate(
-        self, results: Iterable[BridgeResult], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[BridgeResult]:
-        ...
 
 
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
@@ -200,7 +181,7 @@ GliXResult = list[dict[str, str | float]]
 
 
 class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, GliXResult]):
-    def __init__(self, task_id: str, labels: list[str], custom_prompt_template: str | None):
+    def __init__(self, task_id: str, custom_prompt_template: str | None, labels: list[str]):
         super().__init__(task_id=task_id, labels=labels, custom_prompt_template=custom_prompt_template)
         if self._custom_prompt_template:
             warnings.warn("Custom prompt template is ignored by GliX engine.")

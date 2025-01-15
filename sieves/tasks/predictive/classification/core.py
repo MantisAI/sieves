@@ -78,11 +78,9 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
         }
 
         try:
-            bridge = bridge_types[engine_type](
-                self._task_id, self._labels, custom_prompt_template=self._custom_prompt_template
-            )
+            bridge = bridge_types[engine_type](self._task_id, self._custom_prompt_template, labels=self._labels)
         except KeyError:
-            raise KeyError(f"Engine type {engine_type} is not supported by Classification task.")
+            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
 
         assert isinstance(bridge, Bridge)
         return bridge

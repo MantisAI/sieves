@@ -41,7 +41,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         # Convert few-shot examples.
         fs_examples: list[dict[str, Any]] = []
         for fs_example in fewshot_examples:
-            fs_examples.append(fs_example.model_dump())
+            fs_examples.append(fs_example.model_dump(serialize_as_any=True))
 
         # Render template with few-shot examples. Note that we don't use extracted document values here, as HF zero-shot
         # pipelines only support one hypothesis template per call - and we want to batch, so our hypothesis template

@@ -43,3 +43,11 @@ def engine(request) -> engines.Engine:
 @pytest.fixture(scope="session")
 def dummy_docs() -> list[Doc]:
     return [Doc(text="This is about politics stuff. " * 10), Doc(text="This is about science stuff. " * 10)]
+
+
+@pytest.fixture(scope="session")
+def information_extraction_docs() -> list[Doc]:
+    return [
+        Doc(text="Mahatma Ghandi lived to 79 years old. Bugs Bunny is at least 85 years old."),
+        Doc(text="Marie Curie passed away with 67 years. Marie Curie was 67 years old."),
+    ]

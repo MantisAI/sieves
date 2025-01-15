@@ -77,7 +77,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                 generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
             # Compile predictor with few-shot examples.
-            examples = [dspy.Example(**fs_example.model_dump()) for fs_example in fewshot_examples]
+            examples = [dspy.Example(**fs_example.model_dump(serialize_as_any=True)) for fs_example in fewshot_examples]
             generator = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
 
             for doc_values in values:

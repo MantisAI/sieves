@@ -76,7 +76,7 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
             # Convert few-shot examples.
             fs_examples: list[dict[str, Any]] = []
             for fs_example in fewshot_examples:
-                fs_examples.append(fs_example.model_dump())
+                fs_examples.append(fs_example.model_dump(serialize_as_any=True))
 
             return (
                 generator(
