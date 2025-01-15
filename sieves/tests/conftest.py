@@ -3,6 +3,7 @@ import os
 
 import dspy
 import gliclass
+import ollama
 import outlines
 import pytest
 import transformers
@@ -29,6 +30,9 @@ def engine(request) -> engines.Engine:
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
             )
             return engines.huggingface_.HuggingFace(model=model)
+        case engines.EngineType.ollama:
+            model = engines.ollama_.Model(client=ollama.Client(host="http://localhost:11434"), name="smollm:135m")
+            return engines.ollama_.Ollama(model=model)
         case engines.EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
             return engines.outlines_.Outlines(model=outlines.models.transformers(model_name))

@@ -16,7 +16,8 @@ dependencies = [
     "docling>=2",
     "sentencepiece<1",
     "gliner<1",
-    "gliclass<1"
+    "gliclass<1",
+    "ollama<1"
 ]
 
 [project.optional-dependencies]
