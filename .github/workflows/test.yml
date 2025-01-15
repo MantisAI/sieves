@@ -46,6 +46,7 @@ jobs:
       run: |
         source .venv/bin/activate
         pytest --cov-branch --cov-report=xml -m "not slow" sieves/tests/ -v
+        ls -lh 
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
