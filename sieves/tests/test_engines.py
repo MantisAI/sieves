@@ -1,17 +1,19 @@
 # mypy: ignore-errors
 import pytest
 
-from sieves import Pipeline, engines, tasks
+from sieves import Pipeline, tasks
+from sieves.engines import EngineType
 
 
 @pytest.mark.parametrize(
     "engine",
-    [engines.EngineType.huggingface],
+    [EngineType.dspy, EngineType.glix, EngineType.huggingface, EngineType.ollama, EngineType.outlines],
     indirect=True,
 )
 def test_run(dummy_docs, engine) -> None:
     pipe = Pipeline(
         [
+            # todo exchange with dummy task
             tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
         ]
     )
