@@ -21,6 +21,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+all = [
+    "outlines>=0.0.34",
+    "dspy-ai>=2,<3",
+    "chonkie>=0.3",
+    "transformers>=4,<5",
+    "docling>=2",
+    "sentencepiece<1",
+    "gliner<1",
+    "gliclass<1",
+    "ollama<1"
+]
 test = [
     "pytest>=7.4.3",
     "pytest-cov>=4.1.0",
