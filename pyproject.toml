@@ -16,7 +16,8 @@ dependencies = [
     "docling>=2",
     "sentencepiece<1",
     "gliner<1",
-    "gliclass<1"
+    "gliclass<1",
+    "ollama<1"
 ]
 
 [project.optional-dependencies]
@@ -102,3 +103,8 @@ ignore_missing_imports = true
 module = ["outlines.*", "docling.*", "chonkie.*", "tqdm.*", "dspy.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
+
+[tool.pytest.ini_options]
+markers = [
+  "slow: marks tests as slow (deselect with '-m not slow')"
+]

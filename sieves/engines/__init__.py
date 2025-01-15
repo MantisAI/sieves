@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import enum
 
-from . import dspy_, glix_, huggingface_, outlines_
+from . import dspy_, glix_, huggingface_, ollama_, outlines_
 from .core import Engine, EngineInferenceMode, EnginePromptSignature, EngineResult, Model
 from .dspy_ import DSPy
 from .glix_ import GliX
 from .huggingface_ import HuggingFace
+from .ollama_ import Ollama
 from .outlines_ import Outlines
 
 
@@ -15,6 +16,7 @@ class EngineType(enum.Enum):
     dspy = dspy_.DSPy
     huggingface = huggingface_.HuggingFace
     glix = glix_.GliX
+    ollama = ollama_.Ollama
 
     @classmethod
     def get_engine_type(
@@ -42,6 +44,8 @@ __all__ = [
     "HuggingFace",
     "EngineResult",
     "Model",
+    "ollama_",
+    "Ollama",
     "outlines_",
     "Outlines",
     "EngineInferenceMode",

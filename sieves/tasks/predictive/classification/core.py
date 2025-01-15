@@ -9,6 +9,7 @@ from tasks.predictive.classification.bridges import (
     DSPyClassification,
     GliXClassification,
     HuggingFaceClassification,
+    OllamaClassification,
     OutlinesClassification,
 )
 
@@ -73,6 +74,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
             EngineType.glix: GliXClassification,
             EngineType.huggingface: HuggingFaceClassification,
             EngineType.outlines: OutlinesClassification,
+            EngineType.ollama: OllamaClassification,
         }
 
         try:
@@ -87,7 +89,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
 
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.outlines, EngineType.dspy, EngineType.huggingface, EngineType.glix}
+        return {EngineType.outlines, EngineType.dspy, EngineType.huggingface, EngineType.glix, EngineType.ollama}
 
     def _validate_fewshot_examples(self) -> None:
         for fs_example in self._fewshot_examples or []:

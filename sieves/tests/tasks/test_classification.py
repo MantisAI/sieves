@@ -8,7 +8,7 @@ from sieves.tasks.predictive import classification
 
 @pytest.mark.parametrize(
     "engine",
-    [EngineType.dspy, EngineType.glix, EngineType.huggingface, EngineType.outlines],
+    [EngineType.dspy, EngineType.glix, EngineType.huggingface, EngineType.ollama, EngineType.outlines],
     indirect=True,
 )
 def test_fewshot_examples(dummy_docs, engine):

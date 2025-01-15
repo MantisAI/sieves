@@ -1,9 +1,7 @@
 name: Tests
 
 on:
-  push:
   pull_request:
-    branches: [ "main" ]
 
 jobs:
   test:
@@ -30,12 +28,20 @@ jobs:
         uv venv
         uv pip install -e ".[test]"
 
+    - name: Set up ollama
+      run: |
+        curl -fsSL https://ollama.ai/install.sh | sh
+        # Run as daemon if ollama default port is free (port usage fails if Ollama has been launched on this machine 
+        # before otherwise). 
+        ((! nc -z 127.0.0.1 11434) && (ollama serve &)) || true
+        ollama pull smollm:135m 
+
     - name: Run tests
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       run: |
         source .venv/bin/activate
-        coverage run -m pytest sieves/tests/ -v
+        coverage run -m pytest -m "not slow" sieves/tests/ -v
         coverage xml
 
 #    - name: Upload coverage to Codecov
