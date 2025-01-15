@@ -33,8 +33,8 @@ jobs:
     - name: Set up ollama
       run: |
         curl -fsSL https://ollama.ai/install.sh | sh
-        ollama pull smollm:135m 
         ollama serve &
+        ollama pull smollm:135m 
 
     - name: Run tests
       env:
