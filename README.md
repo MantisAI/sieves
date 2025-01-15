@@ -46,13 +46,13 @@ engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_nam
 pipe = Pipeline(
     [
         # 4. Run classification on provided document.
-        tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
+        tasks.predictive.Classification(labels=["science", "politics"], engine=engine),
     ]
 )
 
 # 5. Run pipe and output results.
 docs = list(pipe(docs))
-print(docs[0].results["classifier"])
+print(docs[0].results["Classification"])
 ```
 
 <details>

@@ -36,13 +36,13 @@ def test_run_readme_example_short():
     pipe = Pipeline(
         [
             # Run classification on provided document.
-            tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
+            tasks.predictive.Classification(labels=["science", "politics"], engine=engine),
         ]
     )
 
     # Run pipe and output results.
     docs = list(pipe(docs))
-    print(docs[0].results["classifier"])
+    print(docs[0].results["Classification"])
 
 
 @pytest.mark.key("slow")
@@ -68,10 +68,10 @@ def test_run_readme_example_long():
             # Add chunking task to ensure we don't exceed our model's context window.
             tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))),
             # Run classification on provided document.
-            tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
+            tasks.predictive.Classification(labels=["science", "politics"], engine=engine),
         ]
     )
 
     # Run pipe and output results.
     docs = list(pipe(docs))
-    print(docs[0].results["classifier"])
+    print(docs[0].results["Classification"])
