@@ -1,7 +1,7 @@
 import abc
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 import dspy
 import jinja2
@@ -18,7 +18,6 @@ BridgeResult = TypeVar("BridgeResult")
 
 class InformationExtractionBridge(
     Bridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
-    Generic[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
     abc.ABC,
 ):
     def __init__(

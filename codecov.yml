@@ -1,4 +1,5 @@
-# codecov.yaml
+codecov:
+  require_ci_to_pass: true
 
 coverage:
   # How coverage metrics are presented
@@ -10,7 +11,7 @@ coverage:
   status:
     project:
       default:
-        # Fails CI if coverage < 80%
+        # Fails CI if coverage < 1%
         target: 1
 
   # Optionally ignore specific files/dirs
@@ -19,7 +20,7 @@ coverage:
     - "docs/*"
 
 comment:
-  layout: " diff, flags, files"
+  layout: "diff, flags, files"
   behavior: default
   require_changes: false  # learn more in the Requiring Changes section below
   require_base: false        # [true :: must have a base report to post]

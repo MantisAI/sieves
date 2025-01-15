@@ -13,7 +13,7 @@ from sieves.data.doc import Doc
 from sieves.tasks.core import Task
 
 
-class Docling(Task[Iterable[Doc], Iterable[Doc]]):
+class Docling(Task):
     """Parser wrappign the docling library to convert files into documents."""
 
     def __init__(

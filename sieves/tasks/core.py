@@ -14,15 +14,13 @@ from sieves.engines import (
     Model,
 )
 
-TaskInput = TypeVar("TaskInput")
-TaskOutput = TypeVar("TaskOutput")
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
 TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
 TaskResult = TypeVar("TaskResult")
 TaskFewshotExample = TypeVar("TaskFewshotExample", bound=pydantic.BaseModel)
 
 
-class Task(Generic[TaskInput, TaskOutput], abc.ABC):
+class Task(abc.ABC):
     """Abstract base class for tasks that can be executed on documents."""
 
     def __init__(self, task_id: str | None, show_progress: bool, include_meta: bool):
@@ -44,16 +42,11 @@ class Task(Generic[TaskInput, TaskOutput], abc.ABC):
         return self._task_id
 
     @abc.abstractmethod
-    def __call__(self, task_input: TaskInput) -> TaskOutput:
+    def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Execute task.
-        :param task_input: Input to process.
-        :returns: Task output.
+        :param docs: Docs to process.
+        :returns: Processed docs.
         """
-
-
-# @runtime_checkable
-# class Bridge(Protocol[TaskPromptSignature, TaskInferenceMode, TaskResult]):
-#     """Implements coupling between one Engine and one PredictiveTask."""
 
 
 class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.ABC):
@@ -115,7 +108,7 @@ class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.AB
 
 class PredictiveTask(
     Generic[TaskPromptSignature, TaskResult, Model, TaskInferenceMode, TaskFewshotExample],
-    Task[Iterable[Doc], Iterable[Doc]],
+    Task,
     abc.ABC,
 ):
     def __init__(

@@ -9,7 +9,7 @@ from sieves.data.doc import Doc
 from sieves.tasks.core import Task
 
 
-class Chonkie(Task[Iterable[Doc], Iterable[Doc]]):
+class Chonkie(Task):
     """Chunker wrapping the chonkie library."""
 
     def __init__(
@@ -52,7 +52,7 @@ class Chonkie(Task[Iterable[Doc], Iterable[Doc]]):
                 pbar.close()
 
 
-class NaiveChunker(Task[Iterable[Doc], Iterable[Doc]]):
+class NaiveChunker(Task):
     """Chunks by sentence counts. Only for test purposes."""
 
     def __init__(

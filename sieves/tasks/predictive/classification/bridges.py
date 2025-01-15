@@ -2,7 +2,7 @@ import abc
 import warnings
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
 import dspy
 import jinja2
@@ -19,7 +19,6 @@ BridgeResult = TypeVar("BridgeResult")
 
 class ClassificationBridge(
     Bridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
-    Generic[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
     abc.ABC,
 ):
     def __init__(self, task_id: str, custom_prompt_template: str | None, labels: list[str]):

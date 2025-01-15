@@ -1,24 +1,26 @@
 from __future__ import annotations
 
+import inspect
 import warnings
 from collections.abc import Iterable
 from typing import TypeAlias
 
 import pydantic
-from tasks.predictive.information_extraction.bridges import (
+
+from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
+from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
+from sieves.tasks.core import PredictiveTask
+from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
     InformationExtractionBridge,
     OllamaInformationExtraction,
     OutlinesInformationExtraction,
 )
 
-from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
-from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
-from sieves.tasks.core import Bridge, PredictiveTask
-
 TaskPromptSignature: TypeAlias = type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
 TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
 TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
+TaskBridge: TypeAlias = DSPyInformationExtraction | OutlinesInformationExtraction | OllamaInformationExtraction
 
 
 class TaskFewshotExample(pydantic.BaseModel):
@@ -63,19 +65,23 @@ class InformationExtraction(
             fewshot_examples=fewshot_examples,
         )
 
-    def _init_bridge(self, engine_type: EngineType) -> InformationExtractionBridge:
+    def _init_bridge(
+        self, engine_type: EngineType
+    ) -> InformationExtractionBridge[TaskPromptSignature, TaskInferenceMode, TaskResult]:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
         """
-        bridge_types = {
+        bridge_types: dict[EngineType, type[TaskBridge]] = {
             EngineType.dspy: DSPyInformationExtraction,
             EngineType.outlines: OutlinesInformationExtraction,
             EngineType.ollama: OllamaInformationExtraction,
         }
 
         try:
-            bridge = bridge_types[engine_type](
+            bridge_factory = bridge_types[engine_type]
+            assert not inspect.isabstract(bridge_factory)
+            bridge = bridge_factory(
                 self._task_id,
                 self._custom_prompt_template,
                 entity_type=self._entity_type,
@@ -83,8 +89,7 @@ class InformationExtraction(
         except KeyError:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
 
-        assert isinstance(bridge, Bridge)
-        return bridge
+        return bridge  # type: ignore[return-value]
 
     @property
     def supports(self) -> set[EngineType]:

@@ -4,7 +4,14 @@ from collections.abc import Iterable
 from typing import TypeAlias
 
 import pydantic
-from tasks.predictive.classification.bridges import (
+
+from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
+from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
+from sieves.tasks.core import PredictiveTask
+from sieves.tasks.predictive.classification.bridges import (
+    BridgeInferenceMode,
+    BridgePromptSignature,
+    BridgeResult,
     ClassificationBridge,
     DSPyClassification,
     GliXClassification,
@@ -13,15 +20,14 @@ from tasks.predictive.classification.bridges import (
     OutlinesClassification,
 )
 
-from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
-from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
-from sieves.tasks.core import Bridge, PredictiveTask
-
 TaskPromptSignature: TypeAlias = list[str] | type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
 TaskInferenceMode: TypeAlias = (
     outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
 )
 TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result | glix_.Result
+TaskBridge: TypeAlias = (
+    DSPyClassification | GliXClassification | HuggingFaceClassification | OllamaClassification | OutlinesClassification
+)
 
 
 class TaskFewshotExample(pydantic.BaseModel):
@@ -64,12 +70,14 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
             fewshot_examples=fewshot_examples,
         )
 
-    def _init_bridge(self, engine_type: EngineType) -> ClassificationBridge:
+    def _init_bridge(
+        self, engine_type: EngineType
+    ) -> ClassificationBridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult]:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
         """
-        bridge_types = {
+        bridge_types: dict[EngineType, type[TaskBridge]] = {
             EngineType.dspy: DSPyClassification,
             EngineType.glix: GliXClassification,
             EngineType.huggingface: HuggingFaceClassification,
@@ -82,8 +90,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
         except KeyError:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
 
-        assert isinstance(bridge, Bridge)
-        return bridge
+        return bridge  # type: ignore[return-value]
 
     @property
     def supports(self) -> set[EngineType]:
