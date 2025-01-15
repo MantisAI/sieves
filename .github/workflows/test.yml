@@ -31,11 +31,9 @@ jobs:
     - name: Set up ollama
       run: |
         curl -fsSL https://ollama.ai/install.sh | sh
-        echo "**** serving"
         # Run as daemon if ollama default port is free (port usage fails if Ollama has been launched on this machine 
         # before otherwise). 
-        nc -z 127.0.0.1 11434 && ollama serve &
-        echo "**** pulling"
+        ((! nc -z 127.0.0.1 11434) && (ollama serve &)) || true
         ollama pull smollm:135m 
 
     - name: Run tests
