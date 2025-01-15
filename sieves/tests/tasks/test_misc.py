@@ -5,6 +5,7 @@ import chonkie
 import dspy
 import gliclass
 import outlines
+import pytest
 import tokenizers
 import transformers
 
@@ -44,6 +45,7 @@ def test_run_readme_example_short():
     print(docs[0].results["classifier"])
 
 
+@pytest.mark.key("slow")
 def test_run_readme_example_long():
     # Define documents by text or URI.
     docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
