@@ -181,7 +181,7 @@ GliXResult = list[dict[str, str | float]]
 
 
 class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, GliXResult]):
-    def __init__(self, task_id: str, labels: list[str], custom_prompt_template: str | None):
+    def __init__(self, task_id: str, custom_prompt_template: str | None, labels: list[str]):
         super().__init__(task_id=task_id, labels=labels, custom_prompt_template=custom_prompt_template)
         if self._custom_prompt_template:
             warnings.warn("Custom prompt template is ignored by GliX engine.")
