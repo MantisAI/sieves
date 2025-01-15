@@ -34,6 +34,7 @@ jobs:
       run: |
         curl -fsSL https://ollama.ai/install.sh | sh
         ollama pull smollm:135m 
+        ollama serve &
 
     - name: Run tests
       env:
