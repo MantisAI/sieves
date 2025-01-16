@@ -8,9 +8,7 @@
 <br>
 </h1>
 
-
-
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test.yml)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/mantisai/sieves)
 [![PyPI - Version](https://img.shields.io/pypi/v/sieves)]((https://pypi.org/project/sieves/))
 ![PyPI - Status](https://img.shields.io/pypi/status/sieves)
