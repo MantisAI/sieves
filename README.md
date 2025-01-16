@@ -1,4 +1,4 @@
-<img src="docs/assets/sieve.png" width="200" height="200" align="left" style="margin-right:60px" />
+<img src="https://github.com/MantisAI/sieves/blob/main/docs/assets/sieve.png" width="200" height="200" align="left" style="margin-right:60px" />
 
 <h1 align="left">
 <br>
@@ -8,13 +8,10 @@
 <br>
 </h1>
 
-
-
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test.yml)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/mantisai/sieves)
-[![pypi Version](https://img.shields.io/pypi/v/sieves.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/sieves/)
+[![PyPI - Version](https://img.shields.io/pypi/v/sieves)]((https://pypi.org/project/sieves/))
 ![PyPI - Status](https://img.shields.io/pypi/status/sieves)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sieves)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
 
@@ -113,7 +110,8 @@ print(docs[0].results["classifier"])
   - TBD: export to [`datasets`]() dataset for easy fine-tuning 
 - :label: Prebuilt tasks ready to use out-of-the-box
   - Classification
-  - TBD: NER, entity linking, information extraction, summarization, translation, ...
+  - Information extraction
+  - TBD: NER, entity linking, summarization, translation, ...
 - :floppy_disk: Serializability (TBD)
 
 
