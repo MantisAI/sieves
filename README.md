@@ -110,7 +110,8 @@ print(docs[0].results["classifier"])
   - TBD: export to [`datasets`]() dataset for easy fine-tuning 
 - :label: Prebuilt tasks ready to use out-of-the-box
   - Classification
-  - TBD: NER, entity linking, information extraction, summarization, translation, ...
+  - Information extraction
+  - TBD: NER, entity linking, summarization, translation, ...
 - :floppy_disk: Serializability (TBD)
 
 
