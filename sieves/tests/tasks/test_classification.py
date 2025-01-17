@@ -7,11 +7,20 @@ from sieves.tasks.predictive import classification
 
 
 @pytest.mark.parametrize(
-    "engine",
-    [EngineType.dspy, EngineType.glix, EngineType.huggingface, EngineType.ollama, EngineType.outlines],
-    indirect=True,
+    "engine,fewshot",
+    [
+        (EngineType.dspy, False),
+        (EngineType.dspy, True),
+        (EngineType.langchain, False),
+        (EngineType.langchain, True),
+        (EngineType.ollama, False),
+        (EngineType.ollama, True),
+        (EngineType.outlines, False),
+        (EngineType.outlines, True),
+    ],
+    indirect=["engine"],
 )
-def test_fewshot_examples(dummy_docs, engine):
+def test_fewshot_examples(dummy_docs, engine, fewshot):
     fewshot_examples = [
         classification.TaskFewshotExample(
             text="On the properties of hydrogen atoms and red dwarfs.",
@@ -21,10 +30,12 @@ def test_fewshot_examples(dummy_docs, engine):
             text="A parliament is elected by casting votes.", confidence_per_label={"science": 0, "politics": 1.0}
         ),
     ]
+
+    fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline(
         [
             classification.Classification(
-                task_id="classifier", labels=["science", "politics"], engine=engine, fewshot_examples=fewshot_examples
+                task_id="classifier", labels=["science", "politics"], engine=engine, **fewshot_args
             ),
         ]
     )

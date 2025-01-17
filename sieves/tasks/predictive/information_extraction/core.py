@@ -13,6 +13,7 @@ from sieves.tasks.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
     InformationExtractionBridge,
+    LangChainInformationExtraction,
     OllamaInformationExtraction,
     OutlinesInformationExtraction,
 )
@@ -20,7 +21,12 @@ from sieves.tasks.predictive.information_extraction.bridges import (
 TaskPromptSignature: TypeAlias = type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
 TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
 TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
-TaskBridge: TypeAlias = DSPyInformationExtraction | OutlinesInformationExtraction | OllamaInformationExtraction
+TaskBridge: TypeAlias = (
+    DSPyInformationExtraction
+    | LangChainInformationExtraction
+    | OutlinesInformationExtraction
+    | OllamaInformationExtraction
+)
 
 
 class TaskFewshotExample(pydantic.BaseModel):
@@ -74,6 +80,7 @@ class InformationExtraction(
         """
         bridge_types: dict[EngineType, type[TaskBridge]] = {
             EngineType.dspy: DSPyInformationExtraction,
+            EngineType.langchain: LangChainInformationExtraction,
             EngineType.outlines: OutlinesInformationExtraction,
             EngineType.ollama: OllamaInformationExtraction,
         }

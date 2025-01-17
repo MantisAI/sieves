@@ -63,7 +63,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         prompt_signature: PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result]:
-        # Note: prompt_template is ignored here, as it's expected to have been injected into prompt_signature already.
+        # Note: prompt_template is ignored here, as DSPy doesn't use it directly (only prompt_signature_description).
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             # Handled differently than the other supported modules: dspy.Module serves as both the signature as well as
             # the inference generator.
@@ -77,7 +77,8 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                 generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
             # Compile predictor with few-shot examples.
-            examples = [dspy.Example(**fs_example.model_dump(serialize_as_any=True)) for fs_example in fewshot_examples]
+            fewshot_examples_dict = DSPy._convert_fewshot_examples(fewshot_examples)
+            examples = [dspy.Example(**fs_example) for fs_example in fewshot_examples_dict]
             generator = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
 
             for doc_values in values:

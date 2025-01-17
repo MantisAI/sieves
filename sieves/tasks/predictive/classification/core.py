@@ -9,15 +9,16 @@ from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outli
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
 from sieves.tasks.core import PredictiveTask
 from sieves.tasks.predictive.classification.bridges import (
-    BridgeInferenceMode,
-    BridgePromptSignature,
-    BridgeResult,
     ClassificationBridge,
     DSPyClassification,
     GliXClassification,
     HuggingFaceClassification,
+    LangChainClassification,
     OllamaClassification,
     OutlinesClassification,
+    _BridgeInferenceMode,
+    _BridgePromptSignature,
+    _BridgeResult,
 )
 
 TaskPromptSignature: TypeAlias = list[str] | type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
@@ -26,7 +27,12 @@ TaskInferenceMode: TypeAlias = (
 )
 TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result | glix_.Result
 TaskBridge: TypeAlias = (
-    DSPyClassification | GliXClassification | HuggingFaceClassification | OllamaClassification | OutlinesClassification
+    DSPyClassification
+    | GliXClassification
+    | LangChainClassification
+    | HuggingFaceClassification
+    | OllamaClassification
+    | OutlinesClassification
 )
 
 
@@ -72,7 +78,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
 
     def _init_bridge(
         self, engine_type: EngineType
-    ) -> ClassificationBridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult]:
+    ) -> ClassificationBridge[_BridgePromptSignature, _BridgeInferenceMode, _BridgeResult]:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
@@ -83,6 +89,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
             EngineType.huggingface: HuggingFaceClassification,
             EngineType.outlines: OutlinesClassification,
             EngineType.ollama: OllamaClassification,
+            EngineType.langchain: LangChainClassification,
         }
 
         try:

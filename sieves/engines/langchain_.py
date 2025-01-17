@@ -3,33 +3,22 @@ from collections.abc import Iterable
 from typing import Any, TypeAlias
 
 import jinja2
-import ollama
+import langchain_core.language_models
 import pydantic
 
 from sieves.engines.core import Engine, Executable
 
-
-class Model(pydantic.BaseModel):
-    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
-    name: str
-    client: ollama.Client
-
-
+Model: TypeAlias = langchain_core.language_models.BaseChatModel
 PromptSignature: TypeAlias = type[pydantic.BaseModel]
 Result: TypeAlias = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):
-    chat = "chat"
+    structured_output = "structured_output"
 
 
-class Ollama(Engine[PromptSignature, Result, Model, InferenceMode]):
-    """Engine for Ollama.
-    Make sure a Ollama server is running.
-            In a nutshell:
-            > curl -fsSL https://ollama.ai/install.sh | sh
-            > ollama serve (or ollama run MODEL_ID)
-    """
+class LangChain(Engine[PromptSignature, Result, Model, InferenceMode]):
+    """Engine for LangChain."""
 
     @property
     def inference_modes(self) -> type[InferenceMode]:
@@ -53,17 +42,14 @@ class Ollama(Engine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             match inference_mode:
-                case InferenceMode.chat:
+                case InferenceMode.structured_output:
+                    model = self._model.with_structured_output(prompt_signature)
 
                     def generate(prompt: str, **inference_kwargs: dict[str, Any]) -> Result:
-                        result = self._model.client.chat(
-                            messages=[{"role": "user", "content": prompt}],
-                            model=self._model.name,
-                            format=prompt_signature.model_json_schema(),
-                            **inference_kwargs,
-                        )
                         try:
-                            return prompt_signature.model_validate_json(result.message.content)
+                            result = model.invoke(prompt, **inference_kwargs)
+                            assert isinstance(result, Result)
+                            return result
                         except pydantic.ValidationError as ex:
                             raise pydantic.ValidationError(
                                 "Encountered problem in parsing Ollama output. Double-check your prompts and examples."
@@ -73,7 +59,7 @@ class Ollama(Engine[PromptSignature, Result, Model, InferenceMode]):
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            fewshot_examples_dict = Ollama._convert_fewshot_examples(fewshot_examples)
+            fewshot_examples_dict = LangChain._convert_fewshot_examples(fewshot_examples)
             return (
                 generator(
                     template.render(**doc_values, **({"examples": fewshot_examples_dict})),

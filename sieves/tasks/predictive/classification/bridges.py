@@ -1,24 +1,26 @@
 import abc
+import enum
 import warnings
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 import dspy
 import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import dspy_, glix_, huggingface_, ollama_, outlines_
+from sieves.engines import dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
 from sieves.tasks.core import Bridge
 
-BridgePromptSignature = TypeVar("BridgePromptSignature", covariant=True)
-BridgeInferenceMode = TypeVar("BridgeInferenceMode", covariant=True)
-BridgeResult = TypeVar("BridgeResult")
+_BridgePromptSignature = TypeVar("_BridgePromptSignature", covariant=True)
+_BridgeInferenceMode = TypeVar("_BridgeInferenceMode", bound=enum.Enum, covariant=True)
+_PydanticBridgeInferenceMode = TypeVar("_PydanticBridgeInferenceMode", bound=enum.Enum, covariant=True)
+_BridgeResult = TypeVar("_BridgeResult")
 
 
 class ClassificationBridge(
-    Bridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
+    Bridge[_BridgePromptSignature, _BridgeInferenceMode, _BridgeResult],
     abc.ABC,
 ):
     def __init__(self, task_id: str, custom_prompt_template: str | None, labels: list[str]):
@@ -232,89 +234,11 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, Gl
             yield sorted_label_scores
 
 
-class OutlinesClassification(
-    ClassificationBridge[type[pydantic.BaseModel], outlines_.InferenceMode, pydantic.BaseModel]
+class PydanticBasedClassification(
+    ClassificationBridge[type[pydantic.BaseModel], _PydanticBridgeInferenceMode, pydantic.BaseModel],
+    Generic[_PydanticBridgeInferenceMode],
+    abc.ABC,
 ):
-    @property
-    def prompt_template(self) -> str | None:
-        return (
-            self._custom_prompt_template
-            or f"""
-            Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
-            For each label, provide the conficence with which you believe that the provided text should be assigned
-            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
-            opposite. Confidence per label should ALWAYS be between 0 and 1.
-
-            The output for two labels LABEL_1 and LABEL_2 should look like this:
-            Output: {{
-                LABEL_1: CONFIDENCE_SCORE_1,
-                LABEL_2: CONFIDENCE_SCORE_2,
-            }}
-
-            {{% if examples|length > 0 -%}}
-                Examples:
-                ----------
-                {{%- for example in examples %}}
-                    Text: "{{{{ example.text }}}}":
-                    Output: 
-                    {{% for l, s in example.confidence_per_label.items() %}}    {{{{ l }}}}: {{{{ s }}}},
-                    {{% endfor -%}}
-                {{% endfor %}}
-                ----------
-            {{% endif -%}}
-
-            ========
-            Text: {{{{ text }}}}
-            Output: 
-            """
-        )
-
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        prompt_sig = pydantic.create_model(  # type: ignore[call-overload]
-            "MultilabelPrediction",
-            __base__=pydantic.BaseModel,
-            **{label: (float, ...) for label in self._labels},
-        )
-
-        assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
-        return prompt_sig
-
-    @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
-
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None} for doc in docs)
-
-    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
-        for doc, result in zip(docs, results):
-            doc.results[self._task_id] = sorted(
-                [(label, score) for label, score in result.model_dump().items()], key=lambda x: x[1], reverse=True
-            )
-        return docs
-
-    def consolidate(
-        self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel]:
-        results = list(results)
-
-        # Determine label scores for chunks per document.
-        for doc_offset in docs_offsets:
-            label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
-            for rec in results[doc_offset[0] : doc_offset[1]]:
-                for label in self._labels:
-                    # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
-                    # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
-                    # useful?).
-                    label_scores[label] += max(0, min(getattr(rec, label), 1))
-
-            yield self.prompt_signature(
-                **{label: score / (doc_offset[1] - doc_offset[0]) for label, score in label_scores.items()}
-            )
-
-
-class OllamaClassification(ClassificationBridge[type[pydantic.BaseModel], ollama_.InferenceMode, pydantic.BaseModel]):
     @property
     def prompt_template(self) -> str | None:
         return (
@@ -359,10 +283,6 @@ class OllamaClassification(ClassificationBridge[type[pydantic.BaseModel], ollama
         assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
         return prompt_sig
 
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
-
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None} for doc in docs)
 
@@ -391,3 +311,21 @@ class OllamaClassification(ClassificationBridge[type[pydantic.BaseModel], ollama
             yield self.prompt_signature(
                 **{label: score / (doc_offset[1] - doc_offset[0]) for label, score in label_scores.items()}
             )
+
+
+class OutlinesClassification(PydanticBasedClassification[outlines_.InferenceMode]):
+    @property
+    def inference_mode(self) -> outlines_.InferenceMode:
+        return outlines_.InferenceMode.json
+
+
+class OllamaClassification(PydanticBasedClassification[ollama_.InferenceMode]):
+    @property
+    def inference_mode(self) -> ollama_.InferenceMode:
+        return ollama_.InferenceMode.chat
+
+
+class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
+    @property
+    def inference_mode(self) -> langchain_.InferenceMode:
+        return langchain_.InferenceMode.structured_output

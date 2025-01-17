@@ -8,26 +8,46 @@ readme = "README.md"
 dynamic = ["version", "authors", "description", "license"]
 requires-python = ">=3.8"
 dependencies = [
+    "loguru>=0.7.3"
+]
+
+[project.optional-dependencies]
+all = [
+    "chonkie>=0.3",
+    "docling>=2",
     "outlines>=0.0.34",
     "dspy-ai>=2,<3",
     "chonkie>=0.3",
     "transformers>=4,<5",
     "loguru>=0.7.3",
-    "docling>=2",
     "sentencepiece<1",
     "gliner<1",
     "gliclass<1",
-    "ollama<1"
+    "ollama<1",
+    "langchain>=0.3,<0.4"
 ]
-
-[project.optional-dependencies]
+utils = [
+    "chonkie>=0.3",
+    "docling>=2",
+]
+engines = [
+    "outlines>=0.0.34",
+    "dspy-ai>=2,<3",
+    "transformers>=4,<5",
+    "sentencepiece<1",
+    "gliner<1",
+    "gliclass<1",
+    "ollama<1",
+    "langchain>=0.3,<0.4"
+]
 test = [
     "pytest>=7.4.3",
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.21.1",
     "mypy>=1",
     "mypy-extensions>=1",
-    "pytest-cov"
+    "pytest-cov>=6",
+    "langchain-anthropic>0.3,<0.4"
 ]
 
 [tool.black]
