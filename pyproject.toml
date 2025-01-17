@@ -5,7 +5,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sieves"
 readme = "README.md"
-readme-content-type = "text/markdown"
 description = "Rapid prototyping and robust baselines for information extraction with zero- and few-shot models."
 license = { text = "MIT" }
 dynamic = ["version", "authors"]
