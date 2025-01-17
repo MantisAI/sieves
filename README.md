@@ -1,6 +1,8 @@
-<img src="https://github.com/MantisAI/sieves/blob/main/docs/assets/sieve.png" width="195" align="left" style="margin-right:60px" />
+<img src="https://github.com/MantisAI/sieves/blob/main/docs/assets/sieve.png" width="230" align="left" style="margin-right:60px" />
 <img src="https://github.com/MantisAI/sieves/blob/main/docs/assets/sieves_sieve_style.png" width="350" align="left" style="margin-right:60px" />
 
+<br>
+<br>
 <br>
 <br>
 <br>
