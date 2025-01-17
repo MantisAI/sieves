@@ -1,12 +1,13 @@
 <img src="https://github.com/MantisAI/sieves/blob/main/docs/assets/sieve.png" width="200" height="200" align="left" style="margin-right:60px" />
+<img src="https://github.com/MantisAI/sieves/blob/main/docs/assets/sieves_sieve_style.png" width="350" align="left" style="margin-right:60px" />
 
-<h1 align="left">
-<br>
-<span style="font: bold 38pt'Courier New';">sieves</span>
 <br>
 <br>
 <br>
-</h1>
+<br>
+<br>
+<br>
+<br>
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test.yml)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/mantisai/sieves)
