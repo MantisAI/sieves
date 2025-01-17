@@ -1,6 +1,5 @@
 import abc
 import enum
-import warnings
 from collections.abc import Iterable
 from functools import cached_property
 from typing import Any, Generic, Literal, TypeVar
@@ -17,35 +16,41 @@ _BridgePromptSignature = TypeVar("_BridgePromptSignature", covariant=True)
 _BridgeInferenceMode = TypeVar("_BridgeInferenceMode", bound=enum.Enum, covariant=True)
 _PydanticBridgeInferenceMode = TypeVar("_PydanticBridgeInferenceMode", bound=enum.Enum, covariant=True)
 _BridgeResult = TypeVar("_BridgeResult")
+_GliXResult = list[dict[str, str | float]]
 
 
 class ClassificationBridge(
     Bridge[_BridgePromptSignature, _BridgeInferenceMode, _BridgeResult],
     abc.ABC,
 ):
-    def __init__(self, task_id: str, custom_prompt_template: str | None, labels: list[str]):
+    def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, labels: list[str]):
         """
         Initializes InformationExtractionBridge.
         :param task_id: Task ID.
-        :param custom_prompt_template: Custom prompt template.
+        :param prompt_template: Custom prompt template.
+        :param prompt_signature_desc: Custom prompt signature description.
         :param labels: Labels to classify.
         """
-        super().__init__(task_id, custom_prompt_template)
+        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
         self._labels = labels
 
 
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
     @property
     def prompt_template(self) -> str | None:
+        return self._custom_prompt_template
+
+    @property
+    def prompt_signature_description(self) -> str | None:
         return (
-            self._custom_prompt_template
+            self._custom_prompt_signature_desc
             or """
-            Perform multi-label classification of the provided text given the provided labels.
+            Multi-label classification of the provided text given the provided labels.
             For each label, provide the conficence with which you believe that the provided text should be assigned 
             this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
             opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
             add up to 1.
-            """
+        """
         )
 
     @cached_property
@@ -58,7 +63,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
             text: str = dspy.InputField()
             confidence_per_label: dict[LabelType, float] = dspy.OutputField()
 
-        TextClassification.__doc__ = jinja2.Template(self.prompt_template).render()
+        TextClassification.__doc__ = jinja2.Template(self.prompt_signature_description).render()
 
         return TextClassification
 
@@ -117,20 +122,24 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Inf
         return (
             self._custom_prompt_template
             or """
-        This text is about {}.
-        {% if examples|length > 0 -%}
-            Examples:
-        ----------
-        {%- for example in examples %}
-        Text: "{{ example.text }}":
-        Output: 
-        {% for l, s in example.confidence_per_label.items() %}    {{ l }}: {{ s }},
-        {% endfor -%}
-        {% endfor -%}
-        ----------
-        {% endif -%}
-        """
+            This text is about {}.
+            {% if examples|length > 0 -%}
+                Examples:
+            ----------
+            {%- for example in examples %}
+            Text: "{{ example.text }}":
+            Output: 
+            {% for l, s in example.confidence_per_label.items() %}    {{ l }}: {{ s }},
+            {% endfor -%}
+            {% endfor -%}
+            ----------
+            {% endif -%}
+            """
         )
+
+    @property
+    def prompt_signature_description(self) -> str | None:
+        return None
 
     @property
     def prompt_signature(self) -> list[str]:
@@ -178,17 +187,13 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Inf
             }
 
 
-GliXResult = list[dict[str, str | float]]
-
-
-class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, GliXResult]):
-    def __init__(self, task_id: str, custom_prompt_template: str | None, labels: list[str]):
-        super().__init__(task_id=task_id, labels=labels, custom_prompt_template=custom_prompt_template)
-        if self._custom_prompt_template:
-            warnings.warn("Custom prompt template is ignored by GliX engine.")
-
+class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _GliXResult]):
     @property
     def prompt_template(self) -> str | None:
+        return None
+
+    @property
+    def prompt_signature_description(self) -> str | None:
         return None
 
     @property
@@ -202,14 +207,14 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, Gl
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None} for doc in docs)
 
-    def integrate(self, results: Iterable[GliXResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[_GliXResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [
                 (res["label"], res["score"]) for res in sorted(result, key=lambda x: x["score"], reverse=True)
             ]
         return docs
 
-    def consolidate(self, results: Iterable[GliXResult], docs_offsets: list[tuple[int, int]]) -> Iterable[GliXResult]:
+    def consolidate(self, results: Iterable[_GliXResult], docs_offsets: list[tuple[int, int]]) -> Iterable[_GliXResult]:
         results = list(results)
 
         # Determine label scores for chunks per document.
@@ -272,6 +277,10 @@ class PydanticBasedClassification(
             """
         )
 
+    @property
+    def prompt_signature_description(self) -> str | None:
+        return self._custom_prompt_signature_desc or None
+
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         prompt_sig = pydantic.create_model(  # type: ignore[call-overload]
@@ -279,6 +288,9 @@ class PydanticBasedClassification(
             __base__=pydantic.BaseModel,
             **{label: (float, ...) for label in self._labels},
         )
+
+        if self.prompt_signature_description:
+            prompt_sig.__doc__ = jinja2.Template(self.prompt_signature_description).render()
 
         assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
         return prompt_sig

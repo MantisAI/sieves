@@ -21,6 +21,18 @@ def test_custom_prompt_template():
     assert task.prompt_template == prompt_template
 
 
+def test_custom_prompt_signature_desc():
+    prompt_sig_desc = "This is a different prompt signature description."
+    engine = engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
+    task = tasks.predictive.Classification(
+        task_id="classifier",
+        labels=["science", "politics"],
+        engine=engine,
+        prompt_signature_desc=prompt_sig_desc,
+    )
+    assert task.prompt_signature_description == prompt_sig_desc
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "engine",

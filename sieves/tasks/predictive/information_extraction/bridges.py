@@ -25,27 +25,33 @@ class InformationExtractionBridge(
     def __init__(
         self,
         task_id: str,
-        custom_prompt_template: str | None,
+        prompt_template: str | None,
+        prompt_signature_desc: str | None,
         entity_type: type[pydantic.BaseModel],
     ):
         """
         Initializes InformationExtractionBridge.
         :param task_id: Task ID.
-        :param custom_prompt_template: Custom prompt template.
+        :param prompt_template: Custom prompt template.
+        :param prompt_signature_desc: Custom prompt signature description.
         :param entity_type: Type to extract.
         """
-        super().__init__(task_id, custom_prompt_template)
+        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
         self._entity_type = entity_type
 
 
 class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
     @property
     def prompt_template(self) -> str | None:
+        return self._custom_prompt_template
+
+    @property
+    def prompt_signature_description(self) -> str | None:
         return (
-            self._custom_prompt_template
+            self._custom_prompt_signature_desc
             or """
             Find all occurences of this kind of entitity within the text.
-            """
+        """
         )
 
     @cached_property
@@ -56,7 +62,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
             text: str = dspy.InputField()
             entities: list[extraction_type] = dspy.OutputField()  # type: ignore[valid-type]
 
-        Entities.__doc__ = jinja2.Template(self.prompt_template).render()
+        Entities.__doc__ = jinja2.Template(self.prompt_signature_description).render()
 
         return Entities
 
@@ -131,12 +137,19 @@ class PydanticBasedInformationExtraction(
             """
         )
 
+    @property
+    def prompt_signature_description(self) -> str | None:
+        return self._custom_prompt_signature_desc
+
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         entity_type = self._entity_type
 
         class Entity(pydantic.BaseModel, frozen=True):
             entities: list[entity_type]  # type: ignore[valid-type]
+
+        if self.prompt_signature_description:
+            Entity.__doc__ = jinja2.Template(self.prompt_signature_description).render()
 
         return Entity
 
