@@ -67,3 +67,12 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
         :param fewshot_examples: Few-shot examples.
         :return: Prompt executable.
         """
+
+    @staticmethod
+    def _convert_fewshot_examples(fewshot_examples: Iterable[pydantic.BaseModel]) -> list[dict[str, Any]]:
+        """
+        Convert fewshot examples from pydantic.BaseModel instance to dicts.
+        :param fewshot_examples: Fewshot examples to convert.
+        :return: Fewshot examples as dicts.
+        """
+        return [fs_example.model_dump(serialize_as_any=True) for fs_example in fewshot_examples]

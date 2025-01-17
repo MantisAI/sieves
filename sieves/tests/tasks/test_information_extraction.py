@@ -12,6 +12,8 @@ from sieves.tasks.predictive import information_extraction
     [
         (EngineType.dspy, False),
         (EngineType.dspy, True),
+        (EngineType.langchain, False),
+        (EngineType.langchain, True),
         (EngineType.ollama, False),
         (EngineType.ollama, True),
         (EngineType.outlines, False),

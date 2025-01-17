@@ -38,15 +38,11 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         cls_name = self.__class__.__name__
         assert prompt_template, ValueError(f"prompt_template has to be provided to {cls_name} engine by task.")
 
-        # Convert few-shot examples.
-        fs_examples: list[dict[str, Any]] = []
-        for fs_example in fewshot_examples:
-            fs_examples.append(fs_example.model_dump(serialize_as_any=True))
-
         # Render template with few-shot examples. Note that we don't use extracted document values here, as HF zero-shot
         # pipelines only support one hypothesis template per call - and we want to batch, so our hypothesis template
         # will be document-invariant.
-        template = jinja2.Template(prompt_template).render(**({"examples": fs_examples} if len(fs_examples) else {}))
+        fewshot_examples_dict = HuggingFace._convert_fewshot_examples(fewshot_examples)
+        template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             generator: Callable[[Iterable[str]], Iterable[Result]]

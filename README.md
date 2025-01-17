@@ -100,10 +100,12 @@ print(docs[0].results["classifier"])
 - :robot: **Integration and unified usage of multiple structured generation libraries**:
   - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`dspy`](https://github.com/stanfordnlp/dspy)
+  - [`langchain`](https://github.com/langchain-ai/langchain)
   - [`gliner`](https://github.com/Knowledgator/GLiClass) and [`gliclass`](https://github.com/Knowledgator/GLiClass)
   - [`transformer`] zero-shot pipelines
-  - TBD: [`ollama`](https://github.com/ollama/ollama)
+  - [`ollama`](https://github.com/ollama/ollama)
 - :arrow_forward: **Pipeline-based system** for easy observability and debugging
+- 
 - :hammer_and_wrench: **Integrated utilities** convenient in an NLP pipeline
   - File parsing: [`docling`]()
   - Chunking: [`chonkie`]()

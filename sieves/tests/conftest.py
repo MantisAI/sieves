@@ -3,6 +3,7 @@ import os
 
 import dspy
 import gliclass
+import langchain_anthropic
 import ollama
 import outlines
 import pytest
@@ -25,6 +26,11 @@ def engine(request) -> engines.Engine:
                 device="cpu",
             )
             return engines.glix_.GliX(model=pipeline)
+        case engines.EngineType.langchain:
+            model = langchain_anthropic.ChatAnthropic(
+                model="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]
+            )
+            return engines.langchain_.LangChain(model=model)
         case engines.EngineType.huggingface:
             model = transformers.pipeline(
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"

@@ -47,7 +47,8 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result]:
         cls_name = self.__class__.__name__
-        assert prompt_template, ValueError(f"prompt_template has to be provided to {cls_name} engine by task.")
+        assert prompt_signature, f"prompt_signature has to be provided to {cls_name}."
+        assert prompt_template, f"prompt_template has to be provided to {cls_name}."
         template = jinja2.Template(prompt_template)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
@@ -73,14 +74,10 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            # Convert few-shot examples.
-            fs_examples: list[dict[str, Any]] = []
-            for fs_example in fewshot_examples:
-                fs_examples.append(fs_example.model_dump(serialize_as_any=True))
-
+            fewshot_examples_dict = Outlines._convert_fewshot_examples(fewshot_examples)
             return (
                 generator(
-                    template.render(**doc_values, **({"examples": fs_examples} if len(fs_examples) else {})),
+                    template.render(**doc_values, **({"examples": fewshot_examples_dict})),
                     **self._inference_kwargs,
                 )
                 for doc_values in values
