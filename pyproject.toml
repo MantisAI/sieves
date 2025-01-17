@@ -5,10 +5,22 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sieves"
 readme = "README.md"
-dynamic = ["version", "authors", "description", "license"]
-requires-python = ">=3.8"
+readme-content-type = "text/markdown"
+description = Rapid prototyping and robust baselines for information extraction with zero- and few-shot models.
+license = { text = "MIT" }
+dynamic = ["version", "authors"]
+requires-python = ">=3.10"
 dependencies = [
     "loguru>=0.7.3"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
 ]
 
 [project.optional-dependencies]

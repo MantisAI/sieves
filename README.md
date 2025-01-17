@@ -1,5 +1,5 @@
-<img src="https://github.com/MantisAI/sieves/blob/main/docs/assets/sieve.png" width="230" align="left" style="margin-right:60px" />
-<img src="https://github.com/MantisAI/sieves/blob/main/docs/assets/sieves_sieve_style.png" width="350" align="left" style="margin-right:60px" />
+<img src="https://raw.githubusercontent.com/mantisai/sieves/main/docs/assets/sieve.png" width="230" align="left" style="margin-right:60px" />
+<img src="https://raw.githubusercontent.com/mantisai/sieves/main/docs/assets/sieves_sieve_style.png" width="350" align="left" style="margin-right:60px" />
 
 <br>
 <br>
