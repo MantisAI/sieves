@@ -1,9 +1,10 @@
 # mypy: ignore-errors
 import chonkie
+import pytest
 import tokenizers
-import transformers
 
-from sieves import Doc, Pipeline, engines, tasks
+from sieves import Doc, Pipeline, tasks
+from sieves.engines import EngineType
 
 
 def test_chonkie() -> None:
@@ -16,13 +17,13 @@ def test_chonkie() -> None:
     assert docs[0].chunks
 
 
-def test_task_chunking(dummy_docs) -> None:
+@pytest.mark.parametrize(
+    "engine",
+    [EngineType.huggingface],
+    indirect=["engine"],
+)
+def test_task_chunking(dummy_docs, engine) -> None:
     """Tests whether chunking mechanism in PredictiveTask works as expected."""
-    model = transformers.pipeline(
-        "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
-    )
-    engine = engines.huggingface_.HuggingFace(model=model)
-
     chunk_interval = 5
     pipe = Pipeline(
         [

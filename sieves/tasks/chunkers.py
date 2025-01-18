@@ -6,6 +6,7 @@ import chonkie
 from tqdm import tqdm
 
 from sieves.data.doc import Doc
+from sieves.serialization import Attribute
 from sieves.tasks.core import Task
 
 
@@ -51,6 +52,13 @@ class Chonkie(Task):
             if pbar:
                 pbar.close()
 
+    @property
+    def _attributes(self) -> dict[str, Attribute]:
+        return {
+            **super()._attributes,
+            "chunker": Attribute(value=self._chunker, is_placeholder=True),
+        }
+
 
 class NaiveChunker(Task):
     """Chunks by sentence counts. Only for test purposes."""
@@ -89,3 +97,10 @@ class NaiveChunker(Task):
             pbar.close()
 
         return docs
+
+    @property
+    def _attributes(self) -> dict[str, Attribute]:
+        return {
+            **super()._attributes,
+            "interval": Attribute(value=self._interval, is_placeholder=False),
+        }

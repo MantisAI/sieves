@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 from collections.abc import Iterable
 from typing import Any, Generic, TypeVar
@@ -13,6 +15,7 @@ from sieves.engines import (
     EngineType,
     Model,
 )
+from sieves.serialization import Attribute, Config, Serializable
 
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
 TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
@@ -47,6 +50,33 @@ class Task(abc.ABC):
         :param docs: Docs to process.
         :returns: Processed docs.
         """
+
+    @property
+    def _attributes(self) -> dict[str, Attribute]:
+        """Returns attributes to serialize.
+        :returns: Dict of attributes to serialize.
+        """
+        return {
+            "task_id": Attribute(value=self._task_id, is_placeholder=False),
+            "show_progress": Attribute(value=self._show_progress, is_placeholder=False),
+            "include_meta": Attribute(value=self._include_meta, is_placeholder=False),
+        }
+
+    def serialize(self) -> Config:
+        """Serializes task.
+        :returns: Config instance.
+        """
+        return Config.create(self.__class__, self._attributes)
+
+    @classmethod
+    def deserialize(cls, config: Config, **kwargs: dict[str, Any]) -> Task:
+        """Generate Task instance from config.
+        :param config: Config to generate instance from.
+        :param kwargs: Values to inject into loaded config.
+        :returns: Deserialized Task instance.
+        """
+        # Deserialize and inject engine.
+        return cls(**config.to_init_dict(cls, **kwargs))
 
 
 class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.ABC):
@@ -235,3 +265,34 @@ class PredictiveTask(
         docs = self._bridge.integrate(results, docs)  # type: ignore[arg-type]
 
         return docs
+
+    @property
+    def _attributes(self) -> dict[str, Attribute]:
+        return {
+            **super()._attributes,
+            "engine": Attribute(value=self._engine.serialize(), is_placeholder=False),
+            "prompt_template": Attribute(value=self._custom_prompt_template, is_placeholder=False),
+            "prompt_signature_desc": Attribute(value=self._custom_prompt_signature_desc, is_placeholder=False),
+            "fewshot_examples": Attribute(value=self._fewshot_examples, is_placeholder=False),
+        }
+
+    @classmethod
+    def deserialize(
+        cls, config: Config, **kwargs: dict[str, Any]
+    ) -> PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode, TaskFewshotExample]:
+        """Generate PredictiveTask instance from config.
+        :param config: Config to generate instance from.
+        :param kwargs: Values to inject into loaded config.
+        :returns: Deserialized PredictiveTask instance.
+        """
+        # Validate engine config.
+        assert hasattr(config, "engine")
+        assert isinstance(config.engine.value, Config)
+        engine_config = config.engine.value
+        engine_cls = engine_config.config_cls
+        assert issubclass(engine_cls, Serializable)
+        assert issubclass(engine_cls, Engine)
+
+        # Deserialize and inject engine.
+        engine_param: dict[str, Any] = {"engine": engine_cls.deserialize(engine_config, **kwargs["engine"])}
+        return cls(**config.to_init_dict(cls, **(kwargs | engine_param)))

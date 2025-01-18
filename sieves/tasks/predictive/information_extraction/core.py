@@ -3,12 +3,13 @@ from __future__ import annotations
 import inspect
 import warnings
 from collections.abc import Iterable
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import pydantic
 
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
+from sieves.serialization import Attribute, Config
 from sieves.tasks.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
@@ -110,3 +111,14 @@ class InformationExtraction(
     def _validate_fewshot_examples(self) -> None:
         # No fixed validation we can do here beyond what's already done by Pydantic.
         pass
+
+    @property
+    def _attributes(self) -> dict[str, Attribute]:
+        return {
+            **super()._attributes,
+            "entity_type": Attribute(value=self._entity_type, is_placeholder=False),
+        }
+
+    @classmethod
+    def deserialize(cls, config: Config, **kwargs: dict[str, Any]) -> InformationExtraction[Model]:
+        raise NotImplementedError
