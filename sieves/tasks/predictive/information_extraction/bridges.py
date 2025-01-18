@@ -115,7 +115,6 @@ class PydanticBasedInformationExtraction(
 ):
     @property
     def prompt_template(self) -> str | None:
-        # {% for key, value in entity.model_dump().items() %}{{ key }}: {{ value }}{% endfor %}
         return (
             self._custom_prompt_template
             or """
