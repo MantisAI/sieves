@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 from pathlib import Path
 from typing import Any
@@ -23,3 +25,14 @@ class Doc:
         :returns: Document text or empty string if no text.
         """
         return self.text if self.text else ""
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Doc):
+            raise NotImplementedError
+        return (
+            self.id == other.uri
+            and self.uri == other.uri
+            and self.text == other.text
+            and self.chunks == other.chunks
+            and self.results == other.results
+        )

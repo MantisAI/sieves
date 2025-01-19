@@ -124,7 +124,6 @@ class Pipeline:
             # Restore engine config for PredictiveTask config.
             if "engine" in task_attr:
                 task_attr["engine"]["value"], engine_cls = Config.from_dict(task_attr["engine"]["value"])
-
             # Restore task config.
             task_config, task_cls = Config.from_dict(task_attr)
 
