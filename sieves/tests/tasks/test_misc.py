@@ -1,6 +1,7 @@
 # mypy: ignore-errors
 import os
 import pickle
+import tempfile
 
 import chonkie
 import dspy
@@ -87,26 +88,28 @@ def test_run_readme_example_long(engine):
     print(docs[0].results["Classification"])
 
     # Serialize pipeline and docs.
-    pipe.dump("pipeline.yml")
-    with open("docs.pkl", "wb") as f:
-        pickle.dump(docs, f)
+    with tempfile.NamedTemporaryFile(suffix=".yml") as tmp_pipeline_file:
+        with tempfile.NamedTemporaryFile(suffix=".pkl") as tmp_docs_file:
+            pipe.dump(tmp_pipeline_file.name)
+            with open(tmp_docs_file.name, "wb") as f:
+                pickle.dump(docs, f)
 
-    # To load a pipeline and docs from disk:
-    loaded_pipe = Pipeline.load(
-        "pipeline.yml",
-        (
-            {"doc_converter": None},
-            {"chunker": chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))},
-            {"engine": {"model": engine.model}},
-        ),
-    )
+            # To load a pipeline and docs from disk:
+            loaded_pipe = Pipeline.load(
+                tmp_pipeline_file.name,
+                (
+                    {"doc_converter": None},
+                    {"chunker": chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))},
+                    {"engine": {"model": engine.model}},
+                ),
+            )
 
-    pipe_config = pipe.serialize().model_dump()
-    assert pipe_config["tasks"]["value"][2]["fewshot_examples"]["value"] == ()
-    pipe_config["tasks"]["value"][2]["fewshot_examples"] = []
-    assert loaded_pipe.serialize().model_dump() == pipe_config
+            pipe_config = pipe.serialize().model_dump()
+            assert pipe_config["tasks"]["value"][2]["fewshot_examples"]["value"] == ()
+            pipe_config["tasks"]["value"][2]["fewshot_examples"]["value"] = []
+            assert loaded_pipe.serialize().model_dump() == pipe_config
 
-    with open("docs.pkl", "rb") as f:
-        loaded_docs = pickle.load(f)
-    assert len(loaded_docs) == len(docs)
-    assert all([(ld == d for ld, d in zip(loaded_docs, docs))])
+            with open(tmp_docs_file.name, "rb") as f:
+                loaded_docs = pickle.load(f)
+            assert len(loaded_docs) == len(docs)
+            assert all([(ld == d for ld, d in zip(loaded_docs, docs))])
