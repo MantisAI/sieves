@@ -123,7 +123,7 @@ class Config(pydantic.BaseModel):
             if attr["is_placeholder"]:
                 assert attr_name in kwargs, f"Attribute {attr_name} has to be provided at load time."
 
-    def dump(self, path: Path) -> None:
+    def dump(self, path: Path | str) -> None:
         """Saves to disk as .yml file.
         :param path: Path to save at.
         """
@@ -131,7 +131,7 @@ class Config(pydantic.BaseModel):
             yaml.dump(self.model_dump(mode="json"), file)
 
     @classmethod
-    def load(cls, path: Path) -> Config:
+    def load(cls, path: Path | str) -> Config:
         """Loads from .yml file.
         :param path: Pat to load from.
         :return: Config as stored at specified path.

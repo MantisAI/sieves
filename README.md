@@ -61,10 +61,14 @@ print(docs[0].results["Classification"])
 
 Here we parse a PDF with `docling`, chunk it with `chonkie`, and classify it with `gliclass`:
 ```python
+import os
+import pickle
+
 import transformers
 import gliclass
 import chonkie
 import tokenizers
+import dspy
 
 from sieves import Pipeline, engines, tasks, Doc
 
@@ -95,6 +99,23 @@ pipe = Pipeline(
 # 7. Run pipe and output results.
 docs = list(pipe(docs))
 print(docs[0].results["classifier"])
+
+# 8. Serialize pipeline and docs.
+pipe.dump("pipeline.yml")
+with open("docs.pkl", "wb") as f:
+    pickle.dump(docs, f)
+
+# 9. To load a pipeline and docs from disk:
+loaded_pipe = Pipeline.load(
+    "pipeline.yml",
+    (
+        {},
+        {"chunker": chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))},
+        {"engine": {"model": dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])}},
+    ),
+)
+with open("docs.pkl", "rb") as f:
+    loaded_docs = pickle.load(f)
 ```
 </details>
 
