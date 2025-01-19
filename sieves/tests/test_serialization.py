@@ -120,3 +120,7 @@ def test_serialization_docs(dummy_docs):
         # Assert the loaded docs are identical to original
         assert len(loaded_docs) == len(dummy_docs)
         assert all([orig_doc == loaded_doc for orig_doc, loaded_doc in zip(dummy_docs, loaded_docs)])
+
+        # Test that comparing Doc with int raises NotImplementedError
+        with pytest.raises(NotImplementedError):
+            loaded_docs[0] == 42

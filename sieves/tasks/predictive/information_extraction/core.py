@@ -3,13 +3,13 @@ from __future__ import annotations
 import inspect
 import warnings
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import TypeAlias
 
 import pydantic
 
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
-from sieves.serialization import Attribute, Config
+from sieves.serialization import Attribute
 from sieves.tasks.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
@@ -118,7 +118,3 @@ class InformationExtraction(
             **super()._attributes,
             "entity_type": Attribute(value=self._entity_type, is_placeholder=False),
         }
-
-    @classmethod
-    def deserialize(cls, config: Config, **kwargs: dict[str, Any]) -> InformationExtraction[Model]:
-        raise NotImplementedError
