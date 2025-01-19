@@ -7,16 +7,16 @@ coverage:
   round: down
   range: "70...100"
 
-  # Define coverage thresholds
+  # Define coverage thresholds.
   status:
     project:
       default:
         # Fails CI if coverage < 1%
-        target: 0
+        target: 90
 
-  # Optionally ignore specific files/dirs
+  # Optionally ignore specific files/dirs.
   ignore:
-    - "tests/fixtures/*"
+    - "tests/*"
     - "docs/*"
 
 comment:
