@@ -80,14 +80,14 @@ class Pipeline:
 
         return processed_docs
 
-    def dump(self, path: Path) -> None:
+    def dump(self, path: Path | str) -> None:
         """Save pipeline config to disk.
         :param path: Target path.
         """
         self.serialize().dump(path)
 
     @classmethod
-    def load(cls, path: Path, task_kwargs: Iterable[dict[str, Any]]) -> Pipeline:
+    def load(cls, path: Path | str, task_kwargs: Iterable[dict[str, Any]]) -> Pipeline:
         """Generate pipeline from disk.
         :param path: Path to config file.
         :param task_kwargs: Values to inject into loaded config.
