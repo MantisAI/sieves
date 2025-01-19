@@ -127,7 +127,7 @@ with open("docs.pkl", "rb") as f:
   - [`dspy`](https://github.com/stanfordnlp/dspy)
   - [`langchain`](https://github.com/langchain-ai/langchain)
   - [`gliner`](https://github.com/Knowledgator/GLiClass) and [`gliclass`](https://github.com/Knowledgator/GLiClass)
-  - [`transformer`] zero-shot pipelines
+  - [`transformer`](https://github.com/huggingface/transformers) zero-shot pipelines
   - [`ollama`](https://github.com/ollama/ollama)
 - :arrow_forward: **Pipeline-based system** for easy observability and debugging
 - 
