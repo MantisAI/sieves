@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import copy
 import inspect
 from collections.abc import Callable, Iterable
+from pathlib import Path
 from typing import Any, get_args, get_origin
 
 from loguru import logger
 
 from sieves.data import Doc
+from sieves.serialization import Attribute, Config, Serializable
 from sieves.tasks import Task
 
 
@@ -33,12 +37,12 @@ class Pipeline:
         """Validate tasks.
         :raises: ValueError on pipeline component signature mismatch.
         """
-        task_ids: list[str] = []
+        task_ids: set[str] = set()
 
         for i, task in enumerate(self._tasks):
             if task.id in task_ids:
-                raise ValueError("Each task has to have an individual ID. Make sure that's the case.")
-            task_ids.append(task.id)
+                raise ValueError(f"Task with duplicate ID {task.id}. Ensure unique task IDs.")
+            task_ids.add(task.id)
 
     @staticmethod
     def _extract_signature_types(fn: Callable[..., Any]) -> tuple[list[type[Any]], list[type[Any]]]:
@@ -75,3 +79,58 @@ class Pipeline:
             processed_docs = task(processed_docs)
 
         return processed_docs
+
+    def dump(self, path: Path) -> None:
+        """Save pipeline config to disk.
+        :param path: Target path.
+        """
+        self.serialize().dump(path)
+
+    @classmethod
+    def load(cls, path: Path, task_kwargs: Iterable[dict[str, Any]]) -> Pipeline:
+        """Generate pipeline from disk.
+        :param path: Path to config file.
+        :param task_kwargs: Values to inject into loaded config.
+        :return: Pipeline instance.
+        """
+        return cls.deserialize(Config.load(path), task_kwargs)
+
+    def serialize(self) -> Config:
+        """Serializes pipeline object.
+        :returns: Serialized pipeline representation.
+        """
+        return Config.create(
+            self.__class__,
+            {"tasks": Attribute(value=[task.serialize() for task in self._tasks], is_placeholder=False)},
+        )
+
+    @classmethod
+    def deserialize(cls, config: Config, tasks_kwargs: Iterable[dict[str, Any]]) -> Pipeline:
+        """Generates pipeline from config.
+        :param config: Config to generate pipeline from.
+        :param tasks_kwargs: Values to inject into task configs. One dict per task (dict can be empty).
+        :returns: Deserialized pipeline instance.
+        """
+        config.validate_init_params(cls)
+        tasks_kwargs = tuple(tasks_kwargs)
+
+        assert hasattr(config, "tasks")
+        assert len(config.tasks.value) == len(tasks_kwargs)
+        assert config.tasks.is_placeholder is False
+
+        # Deserialize tasks.
+        tasks: list[Task] = []
+        for task_attr, task_kwargs in zip(config.tasks.value, tasks_kwargs):
+            # Restore engine config for PredictiveTask config.
+            if "engine" in task_attr:
+                task_attr["engine"]["value"], engine_cls = Config.from_dict(task_attr["engine"]["value"])
+            # Restore task config.
+            task_config, task_cls = Config.from_dict(task_attr)
+
+            # Deserialize task.
+            assert issubclass(task_cls, Serializable)
+            assert issubclass(task_cls, Task)
+            task = task_cls.deserialize(task_config, **task_kwargs)
+            tasks.append(task)
+
+        return cls(tasks=tasks)

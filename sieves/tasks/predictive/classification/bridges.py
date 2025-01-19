@@ -12,15 +12,15 @@ from sieves.data import Doc
 from sieves.engines import dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
 from sieves.tasks.core import Bridge
 
-_BridgePromptSignature = TypeVar("_BridgePromptSignature", covariant=True)
-_BridgeInferenceMode = TypeVar("_BridgeInferenceMode", bound=enum.Enum, covariant=True)
+BridgePromptSignature = TypeVar("BridgePromptSignature", covariant=True)
+BridgeInferenceMode = TypeVar("BridgeInferenceMode", bound=enum.Enum, covariant=True)
 _PydanticBridgeInferenceMode = TypeVar("_PydanticBridgeInferenceMode", bound=enum.Enum, covariant=True)
-_BridgeResult = TypeVar("_BridgeResult")
+BridgeResult = TypeVar("BridgeResult")
 _GliXResult = list[dict[str, str | float]]
 
 
 class ClassificationBridge(
-    Bridge[_BridgePromptSignature, _BridgeInferenceMode, _BridgeResult],
+    Bridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
     abc.ABC,
 ):
     def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, labels: list[str]):

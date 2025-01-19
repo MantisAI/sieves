@@ -7,8 +7,12 @@ import pydantic
 
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
+from sieves.serialization import Attribute
 from sieves.tasks.core import PredictiveTask
 from sieves.tasks.predictive.classification.bridges import (
+    BridgeInferenceMode,
+    BridgePromptSignature,
+    BridgeResult,
     ClassificationBridge,
     DSPyClassification,
     GliXClassification,
@@ -16,9 +20,6 @@ from sieves.tasks.predictive.classification.bridges import (
     LangChainClassification,
     OllamaClassification,
     OutlinesClassification,
-    _BridgeInferenceMode,
-    _BridgePromptSignature,
-    _BridgeResult,
 )
 
 TaskPromptSignature: TypeAlias = list[str] | type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
@@ -47,7 +48,9 @@ class TaskFewshotExample(pydantic.BaseModel):
         return self
 
 
-class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode, TaskFewshotExample]):
+class Classification(
+    PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode, TaskFewshotExample],
+):
     def __init__(
         self,
         labels: list[str],
@@ -82,7 +85,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
 
     def _init_bridge(
         self, engine_type: EngineType
-    ) -> ClassificationBridge[_BridgePromptSignature, _BridgeInferenceMode, _BridgeResult]:
+    ) -> ClassificationBridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult]:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
@@ -121,3 +124,10 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
                     f"Label mismatch: {self._task_id} has labels {self._labels}. Few-shot examples has "
                     f"labels {fs_example.confidence_per_label.keys()}."
                 )
+
+    @property
+    def _attributes(self) -> dict[str, Attribute]:
+        return {
+            **super()._attributes,
+            "labels": Attribute(value=self._labels, is_placeholder=False),
+        }
