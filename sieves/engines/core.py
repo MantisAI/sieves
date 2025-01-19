@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import abc
 import enum
 from collections.abc import Callable, Iterable
 from typing import Any, Generic, Protocol, TypeVar
 
 import pydantic
+
+from sieves.serialization import Attribute, Config
 
 EnginePromptSignature = TypeVar("EnginePromptSignature")
 Model = TypeVar("Model")
@@ -76,3 +80,33 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
         :return: Fewshot examples as dicts.
         """
         return [fs_example.model_dump(serialize_as_any=True) for fs_example in fewshot_examples]
+
+    @property
+    def _attributes(self) -> dict[str, Attribute]:
+        """Returns attributes to serialize.
+        :returns: Dict of attributes to serialize.
+        """
+        # Note: init_kwargs and inference_kwargs are potentially unfit for serialization as they contain arbitrary
+        # objects.
+        return {
+            "model": Attribute(value=self._model, is_placeholder=True),
+            "init_kwargs": Attribute(value=self._init_kwargs, is_placeholder=False),
+            "inference_kwargs": Attribute(value=self._inference_kwargs, is_placeholder=False),
+        }
+
+    def serialize(self) -> Config:
+        """Serializes engine.
+        :returns: Config instance.
+        """
+        return Config.create(self.__class__, self._attributes)
+
+    @classmethod
+    def deserialize(
+        cls, config: Config, **kwargs: dict[str, Any]
+    ) -> Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode]:
+        """Generate Engine instance from config.
+        :param config: Config to generate instance from.
+        :param kwargs: Values to inject into loaded config.
+        :returns: Deserialized Engine instance.
+        """
+        return cls(**config.to_init_dict(cls, **kwargs))
