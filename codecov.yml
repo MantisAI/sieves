@@ -16,7 +16,7 @@ coverage:
 
   # Optionally ignore specific files/dirs.
   ignore:
-    - "tests/*"
+    - "sieves/tests/*"
     - "docs/*"
 
 comment:
