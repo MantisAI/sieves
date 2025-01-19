@@ -58,7 +58,6 @@ test = [
     "mypy>=1",
     "mypy-extensions>=1",
     "pytest-cov>=6",
-    "pytest-PyYAML>=6,<=7",
     "langchain-anthropic>0.3,<0.4"
 ]
 
