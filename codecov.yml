@@ -16,8 +16,9 @@ coverage:
 
   # Optionally ignore specific files/dirs.
   ignore:
-    - "sieves/tests/*"
-    - "docs/*"
+    - "sieves/tests"
+    - "docs"
+    - "**/test_*.py"
 
 comment:
   layout: "diff, flags, files"
