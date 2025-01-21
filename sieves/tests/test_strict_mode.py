@@ -1,0 +1,47 @@
+# mypy: ignore-errors
+import pydantic
+import pytest
+
+from sieves import Doc, Pipeline
+from sieves.engines import EngineType
+from sieves.tasks.predictive import information_extraction
+
+
+@pytest.mark.parametrize(
+    "engine,strict_mode",
+    [
+        (EngineType.dspy, False),
+        (EngineType.dspy, True),
+        (EngineType.langchain, False),
+        (EngineType.langchain, True),
+        (EngineType.ollama, False),
+        (EngineType.ollama, True),
+    ],
+    indirect=["engine"],
+)
+def test_strict_mode(engine, strict_mode):
+    engine._strict_mode = strict_mode
+
+    class Person(pydantic.BaseModel, frozen=True):
+        name: str
+        age: pydantic.PositiveInt
+
+    pipe = Pipeline([information_extraction.InformationExtraction(entity_type=Person, engine=engine)])
+
+    docs: list[Doc] = []
+    hit_exception = False
+    if strict_mode:
+        try:
+            docs = list(pipe([Doc(text=".")]))
+        except Exception:
+            hit_exception = True
+    if strict_mode is False:
+        docs = list(pipe([Doc(text=".")]))
+
+    if strict_mode and hit_exception:
+        assert len(docs) == 0
+    else:
+        assert len(docs) == 1
+
+    for doc in docs:
+        assert "InformationExtraction" in doc.results
