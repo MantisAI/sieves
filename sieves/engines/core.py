@@ -154,7 +154,7 @@ class TemplateBasedEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, M
                     ),
                     **self._inference_kwargs,
                 )
-            except TypeError as err:
+            except (TypeError, pydantic.ValidationError) as err:
                 if self._strict_mode:
                     raise ValueError(
                         "Encountered problem when executing prompt. Ensure your few-shot examples and document "
