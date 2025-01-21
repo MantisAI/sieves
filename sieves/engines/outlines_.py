@@ -2,12 +2,11 @@ import enum
 from collections.abc import Callable, Iterable
 from typing import Any, TypeAlias
 
-import jinja2
 import outlines
 import pydantic
 from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformers, TransformersVision
 
-from sieves.engines.core import Engine, Executable
+from sieves.engines.core import Executable, TemplateBasedEngine
 
 PromptSignature: TypeAlias = type[pydantic.BaseModel] | list[str] | str
 Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
@@ -30,7 +29,7 @@ class InferenceMode(enum.Enum):
     json = (outlines.generate.json,)
 
 
-class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
+class Outlines(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode]):
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
@@ -47,9 +46,7 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
         cls_name = self.__class__.__name__
-        assert prompt_signature, f"prompt_signature has to be provided to {cls_name}."
-        assert prompt_template, f"prompt_template has to be provided to {cls_name}."
-        template = jinja2.Template(prompt_template)
+        template = self._create_template(prompt_template)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             generator_factory: Callable[..., Any] = inference_mode.value[0]
@@ -74,21 +71,11 @@ class Outlines(Engine[PromptSignature, Result, Model, InferenceMode]):
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            fewshot_examples_dict = Outlines._convert_fewshot_examples(fewshot_examples)
-
-            for doc_values in values:
-                try:
-                    yield generator(
-                        template.render(**doc_values, **({"examples": fewshot_examples_dict})),
-                        **self._inference_kwargs,
-                    )
-                except TypeError as err:
-                    if self._strict_mode:
-                        raise ValueError(
-                            "Encountered problem when executing prompt. Ensure your few-shot examples and document "
-                            "chunks contain sensible information."
-                        ) from err
-                    else:
-                        yield None
+            return self._infer(
+                generator,
+                template,
+                values,
+                fewshot_examples,
+            )
 
         return execute

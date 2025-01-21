@@ -2,11 +2,10 @@ import enum
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
-import jinja2
 import langchain_core.language_models
 import pydantic
 
-from sieves.engines.core import Engine, Executable
+from sieves.engines.core import Executable, TemplateBasedEngine
 
 Model: TypeAlias = langchain_core.language_models.BaseChatModel
 PromptSignature: TypeAlias = type[pydantic.BaseModel]
@@ -17,7 +16,7 @@ class InferenceMode(enum.Enum):
     structured_output = "structured_output"
 
 
-class LangChain(Engine[PromptSignature, Result, Model, InferenceMode]):
+class LangChain(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for LangChain."""
 
     @property
@@ -36,9 +35,7 @@ class LangChain(Engine[PromptSignature, Result, Model, InferenceMode]):
         fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result | None]:
         cls_name = self.__class__.__name__
-        assert prompt_signature, f"prompt_signature has to be provided to {cls_name}."
-        assert prompt_template, f"prompt_template has to be provided to {cls_name}."
-        template = jinja2.Template(prompt_template)
+        template = self._create_template(prompt_template)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             match inference_mode:
@@ -59,21 +56,11 @@ class LangChain(Engine[PromptSignature, Result, Model, InferenceMode]):
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            fewshot_examples_dict = LangChain._convert_fewshot_examples(fewshot_examples)
-
-            for doc_values in values:
-                try:
-                    yield generator(
-                        template.render(**doc_values, **({"examples": fewshot_examples_dict})),
-                        **self._inference_kwargs,
-                    )
-                except TypeError as err:
-                    if self._strict_mode:
-                        raise ValueError(
-                            "Encountered problem when executing prompt. Ensure your few-shot examples and document "
-                            "chunks contain sensible information."
-                        ) from err
-                    else:
-                        yield None
+            return self._infer(
+                generator,
+                template,
+                values,
+                fewshot_examples,
+            )
 
         return execute
