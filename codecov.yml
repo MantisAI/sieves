@@ -13,6 +13,9 @@ coverage:
       default:
         # Fails CI if coverage < 1%
         target: 90
+    patch:
+      default:
+        target: 60%
 
   # Optionally ignore specific files/dirs.
   ignore:
