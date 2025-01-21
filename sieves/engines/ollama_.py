@@ -45,13 +45,13 @@ class Ollama(Engine[PromptSignature, Result, Model, InferenceMode]):
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
-    ) -> Executable[Result]:
+    ) -> Executable[Result | None]:
         cls_name = self.__class__.__name__
         assert prompt_signature, f"prompt_signature has to be provided to {cls_name}."
         assert prompt_template, f"prompt_template has to be provided to {cls_name}."
         template = jinja2.Template(prompt_template)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
+        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             match inference_mode:
                 case InferenceMode.chat:
 
@@ -74,12 +74,20 @@ class Ollama(Engine[PromptSignature, Result, Model, InferenceMode]):
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
             fewshot_examples_dict = Ollama._convert_fewshot_examples(fewshot_examples)
-            return (
-                generator(
-                    template.render(**doc_values, **({"examples": fewshot_examples_dict})),
-                    **self._inference_kwargs,
-                )
-                for doc_values in values
-            )
+
+            for doc_values in values:
+                try:
+                    yield generator(
+                        template.render(**doc_values, **({"examples": fewshot_examples_dict})),
+                        **self._inference_kwargs,
+                    )
+                except TypeError as err:
+                    if self._strict_mode:
+                        raise ValueError(
+                            "Encountered problem when executing prompt. Ensure your few-shot examples and document "
+                            "chunks contain sensible information."
+                        ) from err
+                    else:
+                        yield None
 
         return execute

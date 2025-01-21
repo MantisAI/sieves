@@ -17,6 +17,10 @@ from sieves.tasks.predictive import classification
         (EngineType.ollama, True),
         (EngineType.outlines, False),
         (EngineType.outlines, True),
+        (EngineType.glix, False),
+        (EngineType.glix, True),
+        (EngineType.huggingface, False),
+        (EngineType.huggingface, True),
     ],
     indirect=["engine"],
 )

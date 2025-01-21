@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 import enum
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from typing import Any, Generic, Protocol, TypeVar
 
 import pydantic
@@ -22,16 +22,22 @@ class Executable(Protocol[EngineResult]):
 
 class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInferenceMode]):
     def __init__(
-        self, model: Model, init_kwargs: dict[str, Any] | None = None, inference_kwargs: dict[str, Any] | None = None
+        self,
+        model: Model,
+        init_kwargs: dict[str, Any] | None = None,
+        inference_kwargs: dict[str, Any] | None = None,
+        strict_mode: bool = False,
     ):
         """
         :param model: Instantiated model instance.
         :param init_kwargs: Optional kwargs to supply to engine executable at init time.
         :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
+        :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
         """
         self._model = model
         self._inference_kwargs = inference_kwargs or {}
         self._init_kwargs = init_kwargs or {}
+        self._strict_mode = strict_mode
 
     @property
     def model(self) -> Model:
@@ -61,7 +67,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
         prompt_template: str | None,
         prompt_signature: EnginePromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
-    ) -> Callable[[Iterable[dict[str, Any]]], Iterable[EngineResult]]:
+    ) -> Executable[EngineResult | None]:
         """
         Returns prompt executable, i.e. a function that wraps an engine-native prediction generators. Such engine-native
         generators are e.g. Predict in DSPy, generator in outlines, Jsonformer in jsonformers).
