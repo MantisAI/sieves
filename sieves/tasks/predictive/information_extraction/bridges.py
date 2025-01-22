@@ -2,7 +2,7 @@ import abc
 import enum
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 import dspy
 import jinja2
@@ -69,9 +69,6 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.predict
-
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None} for doc in docs)
 
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
@@ -185,9 +182,6 @@ class PydanticBasedInformationExtraction(
                         entities.extend(res.entities)
 
             yield self.prompt_signature(entities=entities)
-
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None} for doc in docs)
 
 
 class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_.InferenceMode]):

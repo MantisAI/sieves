@@ -125,12 +125,12 @@ class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.AB
         :returns: Inference mode.
         """
 
-    @abc.abstractmethod
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         """Extract all values from doc instances that are to be injected into the prompts.
         :param docs: Docs to extract values from.
         :returns: All values from doc instances that are to be injected into the prompts
         """
+        return ({"text": doc.text if doc.text else None} for doc in docs)
 
     @abc.abstractmethod
     def integrate(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
