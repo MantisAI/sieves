@@ -33,7 +33,6 @@ all = [
     "loguru>=0.7.3",
     "sentencepiece<1",
     "gliner<1",
-    "gliclass<1",
     "ollama<1",
     "langchain>=0.3,<0.4"
 ]
@@ -47,7 +46,6 @@ engines = [
     "transformers>=4,<5",
     "sentencepiece<1",
     "gliner<1",
-    "gliclass<1",
     "ollama<1",
     "langchain>=0.3,<0.4"
 ]

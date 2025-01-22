@@ -202,7 +202,7 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _G
 
     @property
     def inference_mode(self) -> glix_.InferenceMode:
-        return glix_.InferenceMode.gliclass
+        return glix_.InferenceMode.classification
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None} for doc in docs)

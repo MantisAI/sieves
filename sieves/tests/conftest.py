@@ -2,7 +2,7 @@
 import os
 
 import dspy
-import gliclass
+import gliner.multitask
 import langchain_anthropic
 import ollama
 import outlines
@@ -19,13 +19,10 @@ def engine(request) -> engines.Engine:
         case engines.EngineType.dspy:
             return engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
         case engines.EngineType.glix:
-            pipeline = gliclass.ZeroShotClassificationPipeline(
-                gliclass.GLiClassModel.from_pretrained("knowledgator/gliclass-small-v1.0"),
-                transformers.AutoTokenizer.from_pretrained("knowledgator/gliclass-small-v1.0"),
-                classification_type="multi-label",
-                device="cpu",
+            model_id = "knowledgator/gliner-multitask-v1.0"
+            return engines.glix_.GliX(
+                model=gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_id))
             )
-            return engines.glix_.GliX(model=pipeline)
         case engines.EngineType.langchain:
             model = langchain_anthropic.ChatAnthropic(
                 model="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]

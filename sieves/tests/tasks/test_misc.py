@@ -68,8 +68,7 @@ def test_run_readme_example_long(engine):
     # Define documents by text or URI.
     docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
-    # Create engine responsible for generating structured output.
-    model_name = "knowledgator/gliclass-small-v1.0"
+    model_name = "knowledgator/gliner-multitask-v1.0"
 
     # Create pipeline with tasks.
     pipe = Pipeline(
