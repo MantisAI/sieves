@@ -3,22 +3,24 @@ import warnings
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
-import gliclass
-import gliner
+import gliner.multitask.base
 import pydantic
 
 from sieves.engines.core import Engine, Executable
 
 PromptSignature: TypeAlias = list[str]
-Model: TypeAlias = gliner.GLiNER | gliclass.ZeroShotClassificationPipeline
+Model: TypeAlias = gliner.multitask.base.GLiNERBasePipeline
 Result: TypeAlias = list[dict[str, str | float]]
 
 
 class InferenceMode(enum.Enum):
     """Available inference modes."""
 
-    gliner = 0
-    gliclass = 1
+    ner = 0
+    classification = 1
+    question_answering = 2
+    information_extraction = 3
+    summarization = 4
 
 
 class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
@@ -40,18 +42,18 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
         cls_name = self.__class__.__name__
         fewshot_examples = list(fewshot_examples)
         if prompt_template:
-            warnings.warn(f"prompt_template is ignored by {cls_name} engine.")
+            warnings.warn(f"prompt_template is ignored by engine {cls_name}.")
         if len(fewshot_examples):
-            warnings.warn(f"Few-shot examples are not supported by {cls_name} engine.")
+            warnings.warn(f"Few-shot examples are not supported by engine {cls_name}.")
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             texts = [dv["text"] for dv in values]
 
             match inference_mode:
-                case InferenceMode.gliclass:
-                    result = self._model(texts, prompt_signature, **self._inference_kwargs)
-                case InferenceMode.gliner:
-                    result = self._model.batch_predict_entities(texts, prompt_signature, **self._inference_kwargs)
+                case InferenceMode.classification:
+                    result = self._model(
+                        texts, classes=prompt_signature, **({"multi_label": True} | self._inference_kwargs)
+                    )
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 

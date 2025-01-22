@@ -2,7 +2,7 @@ import abc
 import enum
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar
 
 import dspy
 import jinja2
@@ -70,9 +70,6 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.predict
-
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None} for doc in docs)
 
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
@@ -149,9 +146,6 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Inf
     def inference_mode(self) -> huggingface_.InferenceMode:
         return huggingface_.InferenceMode.zeroshot_cls
 
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None} for doc in docs)
-
     def integrate(self, results: Iterable[huggingface_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [(label, score) for label, score in zip(result["labels"], result["scores"])]
@@ -202,10 +196,7 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _G
 
     @property
     def inference_mode(self) -> glix_.InferenceMode:
-        return glix_.InferenceMode.gliclass
-
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None} for doc in docs)
+        return glix_.InferenceMode.classification
 
     def integrate(self, results: Iterable[_GliXResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
@@ -225,7 +216,9 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _G
                 for entry in rec:
                     assert isinstance(entry["label"], str)
                     assert isinstance(entry["score"], float)
-                    label_scores[entry["label"]] += entry["score"]
+                    # GliNER might return scores for undefined labels, which we silently ignore.
+                    if entry["label"] in label_scores:
+                        label_scores[entry["label"]] += entry["score"]
 
             # Average score, sort by it in descending order.
             sorted_label_scores: list[dict[str, str | float]] = sorted(
@@ -294,9 +287,6 @@ class PydanticBasedClassification(
 
         assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
         return prompt_sig
-
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None} for doc in docs)
 
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):

@@ -19,7 +19,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
 
-## Sieve your data: zero-shot NLP made easy.
+## Zero-shot NLP made easy.
 
 `sieves` enables zero- and few-shot NLP tasks with structured generation. With no training required, you can quickly 
 prototype NLP tasks while ensuring reliable, unified output formats.
@@ -59,13 +59,12 @@ print(docs[0].results["Classification"])
 <details>
   <summary><b>A more involved example</b></summary>
 
-Here we parse a PDF with `docling`, chunk it with `chonkie`, and classify it with `gliclass`:
+Here we parse a PDF with `docling`, chunk it with `chonkie`, and classify it with `gliner`:
 ```python
 import os
 import pickle
 
-import transformers
-import gliclass
+import gliner.multitask
 import chonkie
 import tokenizers
 import dspy
@@ -76,13 +75,10 @@ from sieves import Pipeline, engines, tasks, Doc
 docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
 # 2. Create engine responsible for generating structured output.
-model_name = "knowledgator/gliclass-small-v1.0"
-pipeline = gliclass.ZeroShotClassificationPipeline(
-    gliclass.GLiClassModel.from_pretrained(model_name),
-    transformers.AutoTokenizer.from_pretrained(model_name),
-    classification_type="multi-label",
+model_id = 'knowledgator/gliner-multitask-v1.0'
+engine = engines.glix_.GliX(
+    model=gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_id))
 )
-engine = engines.glix_.GliX(model=pipeline)
     
 # 3. Create pipeline with tasks.
 pipe = Pipeline(
@@ -126,7 +122,7 @@ with open("docs.pkl", "rb") as f:
   - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`dspy`](https://github.com/stanfordnlp/dspy)
   - [`langchain`](https://github.com/langchain-ai/langchain)
-  - [`gliner`](https://github.com/Knowledgator/GLiClass) and [`gliclass`](https://github.com/Knowledgator/GLiClass)
+  - [`gliner`](https://github.com/urchade/GLiNER)
   - [`transformer`](https://github.com/huggingface/transformers) zero-shot pipelines
   - [`ollama`](https://github.com/ollama/ollama)
 - :arrow_forward: **Pipeline-based system** for easy observability and debugging
