@@ -28,10 +28,15 @@ def test_fewshot_examples(dummy_docs, engine, fewshot):
     fewshot_examples = [
         classification.TaskFewshotExample(
             text="On the properties of hydrogen atoms and red dwarfs.",
+            reasoning="Atoms, hydrogen and red dwarfs are terms from physics. There is no mention of any "
+            "politics-related terms.",
             confidence_per_label={"science": 1.0, "politics": 0.0},
         ),
         classification.TaskFewshotExample(
-            text="A parliament is elected by casting votes.", confidence_per_label={"science": 0, "politics": 1.0}
+            text="A parliament is elected by casting votes.",
+            reasoning="The election of a parliament by the casting of votes is a component of a democratic political "
+            "system.",
+            confidence_per_label={"science": 0, "politics": 1.0},
         ),
     ]
 

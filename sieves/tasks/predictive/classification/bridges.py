@@ -50,7 +50,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
             this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
             opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
             add up to 1.
-        """
+            """
         )
 
     @cached_property
@@ -61,6 +61,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
 
         class TextClassification(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField()
+            reasoning: str = dspy.OutputField()
             confidence_per_label: dict[LabelType, float] = dspy.OutputField()
 
         TextClassification.__doc__ = jinja2.Template(self.prompt_signature_description).render()
@@ -90,7 +91,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
         # Determine label scores for chunks per document.
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
-            for res in results[doc_offset[0] : doc_offset[1]]:
+            doc_results = results[doc_offset[0] : doc_offset[1]]
+
+            for res in doc_results:
                 assert len(res.completions.confidence_per_label) == 1
                 for label, score in res.completions.confidence_per_label[0].items():
                     # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
@@ -108,7 +111,10 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
             )
 
             yield dspy.Prediction.from_completions(
-                {"confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}]},
+                {
+                    "confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
+                    "reasoning": [str([res.reasoning for res in doc_results])],
+                },
                 signature=self.prompt_signature,
             )
 
@@ -124,7 +130,8 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Inf
                 Examples:
             ----------
             {%- for example in examples %}
-            Text: "{{ example.text }}":
+            Text: "{{ example.text }}"
+            Reasoning: "{{ example.reasoning }}"
             Output: 
             {% for l, s in example.confidence_per_label.items() %}    {{ l }}: {{ s }},
             {% endfor -%}
@@ -245,19 +252,21 @@ class PydanticBasedClassification(
             Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
             For each label, provide the conficence with which you believe that the provided text should be assigned
             this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
-            opposite. Confidence per label should ALWAYS be between 0 and 1.
+            opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision. 
 
             The output for two labels LABEL_1 and LABEL_2 should look like this:
             Output:
-                LABEL_1: CONFIDENCE_SCORE_1,
-                LABEL_2: CONFIDENCE_SCORE_2,
+                Reasoning: REASONING
+                LABEL_1: CONFIDENCE_SCORE_1
+                LABEL_2: CONFIDENCE_SCORE_2
 
             {{% if examples|length > 0 -%}}
                 Examples:
                 ----------
                 {{%- for example in examples %}}
-                    Text: "{{{{ example.text }}}}":
-                    Output: 
+                    Text: "{{{{ example.text }}}}"
+                    Output:
+                        Reasoning: "{{{{ example.reasoning }}}}" 
                     {{% for l, s in example.confidence_per_label.items() %}}    {{{{ l }}}}: {{{{ s }}}},
                     {{% endfor -%}}
                 {{% endfor %}}
@@ -279,6 +288,7 @@ class PydanticBasedClassification(
         prompt_sig = pydantic.create_model(  # type: ignore[call-overload]
             "MultilabelPrediction",
             __base__=pydantic.BaseModel,
+            reasoning=(str, ...),
             **{label: (float, ...) for label in self._labels},
         )
 
@@ -290,8 +300,9 @@ class PydanticBasedClassification(
 
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
+            label_scores = {k: v for k, v in result.model_dump().items() if k != "reasoning"}
             doc.results[self._task_id] = sorted(
-                [(label, score) for label, score in result.model_dump().items()], key=lambda x: x[1], reverse=True
+                [(label, score) for label, score in label_scores.items()], key=lambda x: x[1], reverse=True
             )
         return docs
 
@@ -301,9 +312,14 @@ class PydanticBasedClassification(
         results = list(results)
 
         # Determine label scores for chunks per document.
+        reasonings: list[str] = []
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
-            for rec in results[doc_offset[0] : doc_offset[1]]:
+            doc_results = results[doc_offset[0] : doc_offset[1]]
+
+            for rec in doc_results:
+                assert hasattr(rec, "reasoning")
+                reasonings.append(rec.reasoning)
                 for label in self._labels:
                     # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
@@ -311,7 +327,8 @@ class PydanticBasedClassification(
                     label_scores[label] += max(0, min(getattr(rec, label), 1))
 
             yield self.prompt_signature(
-                **{label: score / (doc_offset[1] - doc_offset[0]) for label, score in label_scores.items()}
+                reasoning=str(reasonings),
+                **{label: score / (doc_offset[1] - doc_offset[0]) for label, score in label_scores.items()},
             )
 
 
