@@ -61,7 +61,6 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
 
         class TextClassification(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField()
-            reasoning: str = dspy.OutputField()
             confidence_per_label: dict[LabelType, float] = dspy.OutputField()
 
         TextClassification.__doc__ = jinja2.Template(self.prompt_signature_description).render()
@@ -70,7 +69,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
 
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.predict
+        return dspy_.InferenceMode.chain_of_thought
 
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):

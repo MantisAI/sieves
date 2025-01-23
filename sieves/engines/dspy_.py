@@ -21,7 +21,7 @@ class InferenceMode(enum.Enum):
     # Default inference mode.
     predict = dspy.Predict
     # CoT-style inference.
-    chain_of_thought = dspy.TypedChainOfThought
+    chain_of_thought = dspy.ChainOfThought
     # Agentic, i.e. with tool use.
     react = dspy.ReAct
     # For multi-stage pipelines within a task. This is handled differently than the other supported modules: dspy.Module

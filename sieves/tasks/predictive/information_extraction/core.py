@@ -32,6 +32,7 @@ TaskBridge: TypeAlias = (
 
 class TaskFewshotExample(pydantic.BaseModel):
     text: str
+    reasoning: str
     entities: list[pydantic.BaseModel]
 
 
