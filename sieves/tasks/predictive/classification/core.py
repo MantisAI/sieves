@@ -39,6 +39,7 @@ TaskBridge: TypeAlias = (
 
 class TaskFewshotExample(pydantic.BaseModel):
     text: str
+    reasoning: str
     confidence_per_label: dict[str, float]
 
     @pydantic.model_validator(mode="after")

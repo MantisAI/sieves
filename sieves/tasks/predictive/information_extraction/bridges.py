@@ -51,7 +51,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
             self._custom_prompt_signature_desc
             or """
             Find all occurences of this kind of entitity within the text.
-        """
+            """
         )
 
     @cached_property
@@ -68,7 +68,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.predict
+        return dspy_.InferenceMode.chain_of_thought
 
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
@@ -85,12 +85,14 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
         # Merge all found entities.
         for doc_offset in docs_offsets:
+            reasonings: list[str] = []
             entities: list[entity_type] = []  # type: ignore[valid-type]
             seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
                     continue
+                reasonings.append(res.reasoning)
                 assert len(res.completions.entities) == 1
                 if entity_type_is_frozen:
                     # Ensure not to add duplicate entities.
@@ -102,7 +104,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
                     entities.extend(res.completions.entities[0])
 
             yield dspy.Prediction.from_completions(
-                {"entities": [entities]},
+                {"entities": [entities], "reasoning": [str(reasonings)]},
                 signature=self.prompt_signature,
             )
 
@@ -117,13 +119,15 @@ class PydanticBasedInformationExtraction(
         return (
             self._custom_prompt_template
             or """
-            Find all occurences of this kind of entitity within the text.
+            Find all occurences of this kind of entitity within the text. Keep your reasoning concise - don't 
+            exhaustively list all identified entities in your reasoning.
 
             {% if examples|length > 0 -%}
                 Examples:
                 ----------
                 {%- for example in examples %}
                     Text: "{{ example.text }}":
+                    Reasoning: "{{ example.reasoning }}"
                     Output: {{ example.entities }}
                 {% endfor -%}
                 ----------
@@ -144,6 +148,7 @@ class PydanticBasedInformationExtraction(
         entity_type = self._entity_type
 
         class Entity(pydantic.BaseModel, frozen=True):
+            reasoning: str
             entities: list[entity_type]  # type: ignore[valid-type]
 
         if self.prompt_signature_description:
@@ -166,11 +171,15 @@ class PydanticBasedInformationExtraction(
 
         # Determine label scores for chunks per document.
         for doc_offset in docs_offsets:
+            reasonings: list[str] = []
             entities: list[entity_type] = []  # type: ignore[valid-type]
             seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res:
+                    assert hasattr(res, "reasoning")
+                    reasonings.append(res.reasoning)
+
                     assert hasattr(res, "entities")
                     if entity_type_is_frozen:
                         # Ensure not to add duplicate entities.
@@ -181,7 +190,7 @@ class PydanticBasedInformationExtraction(
                     else:
                         entities.extend(res.entities)
 
-            yield self.prompt_signature(entities=entities)
+            yield self.prompt_signature(entities=entities, reasoning=str(reasonings))
 
 
 class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_.InferenceMode]):
