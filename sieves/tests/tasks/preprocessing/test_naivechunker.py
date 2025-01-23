@@ -1,20 +1,8 @@
 # mypy: ignore-errors
-import chonkie
 import pytest
-import tokenizers
 
-from sieves import Doc, Pipeline, tasks
+from sieves import Pipeline, tasks
 from sieves.engines import EngineType
-
-
-def test_chonkie() -> None:
-    resources = [Doc(text="This is a text " * 100)]
-    pipe = Pipeline(tasks=[tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2")))])
-    docs = list(pipe(resources))
-
-    assert len(docs) == 1
-    assert docs[0].text
-    assert docs[0].chunks
 
 
 @pytest.mark.parametrize(
@@ -27,7 +15,7 @@ def test_task_chunking(dummy_docs, engine) -> None:
     chunk_interval = 5
     pipe = Pipeline(
         [
-            tasks.chunkers.NaiveChunker(interval=chunk_interval),
+            tasks.preprocessing.NaiveChunker(interval=chunk_interval),
             tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
         ]
     )

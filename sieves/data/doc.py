@@ -30,7 +30,7 @@ class Doc:
         if not isinstance(other, Doc):
             raise NotImplementedError
         return (
-            self.id == other.uri
+            self.id == other.id
             and self.uri == other.uri
             and self.text == other.text
             and self.chunks == other.chunks

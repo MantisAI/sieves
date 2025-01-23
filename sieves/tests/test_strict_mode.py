@@ -7,18 +7,8 @@ from sieves.engines import EngineType
 from sieves.tasks.predictive import information_extraction
 
 
-@pytest.mark.parametrize(
-    "engine,strict_mode",
-    [
-        (EngineType.dspy, False),
-        (EngineType.dspy, True),
-        (EngineType.langchain, False),
-        (EngineType.langchain, True),
-        (EngineType.ollama, False),
-        (EngineType.ollama, True),
-    ],
-    indirect=["engine"],
-)
+@pytest.mark.parametrize("engine", (EngineType.dspy, EngineType.langchain, EngineType.ollama), indirect=["engine"])
+@pytest.mark.parametrize("strict_mode", [True, False])
 def test_strict_mode(engine, strict_mode):
     engine._strict_mode = strict_mode
 

@@ -1,4 +1,4 @@
-"""File parsers for converting raw files into documents."""
+"""File preprocessing for converting raw files into documents."""
 import re
 from collections.abc import Iterable
 

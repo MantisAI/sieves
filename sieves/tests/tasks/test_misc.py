@@ -6,7 +6,6 @@ import tempfile
 import chonkie
 import dspy
 import pytest
-import tokenizers
 
 from sieves import Doc, Pipeline, engines, tasks
 
@@ -64,19 +63,17 @@ def test_run_readme_example_short(engine):
     [engines.EngineType.glix],
     indirect=True,
 )
-def test_run_readme_example_long(engine):
+def test_run_readme_example_long(engine, tokenizer):
     # Define documents by text or URI.
     docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
-
-    model_name = "knowledgator/gliner-multitask-v1.0"
 
     # Create pipeline with tasks.
     pipe = Pipeline(
         [
             # Add document parsing task.
-            tasks.parsers.Docling(),
+            tasks.preprocessing.Docling(),
             # Add chunking task to ensure we don't exceed our model's context window.
-            tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))),
+            tasks.preprocessing.Chonkie(chonkie.TokenChunker(tokenizer)),
             # Run classification on provided document.
             tasks.predictive.Classification(labels=["science", "politics"], engine=engine),
         ]
@@ -98,7 +95,7 @@ def test_run_readme_example_long(engine):
                 tmp_pipeline_file.name,
                 (
                     {"doc_converter": None},
-                    {"chunker": chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))},
+                    {"chunker": chonkie.TokenChunker(tokenizer)},
                     {"engine": {"model": engine.model}},
                 ),
             )

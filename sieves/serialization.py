@@ -24,8 +24,21 @@ class Attribute(pydantic.BaseModel):
         """
         # Adjust value to be class MODULE.NAME if is_placeholder.
         if self.is_placeholder and not isinstance(self.value, str):
-            self.value = f"{self.value.__class__.__module__}.{self.value.__class__.__name__}"
+            if hasattr(self.value, "__class__"):
+                self.value = f"{self.value.__class__.__module__}.{self.value.__class__.__name__}"
+            else:
+                self.value = getattr(self.value, "__name__", "Unknown")
+
         return self
+
+    # @pydantic.computed_field
+    # @property
+    # def is_placeholder(self) -> bool:
+    #     return any(
+    #         [
+    #             for t in (dict, list, tuple, set, int, float, str, pydantic.BaseModel)
+    #         ]
+    #     )
 
 
 class Config(pydantic.BaseModel):

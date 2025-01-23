@@ -1,4 +1,4 @@
-"""File parsers for converting raw files into documents."""
+"""File preprocessing for converting raw files into documents."""
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -15,7 +15,7 @@ from sieves.tasks.core import Task
 
 
 class Docling(Task):
-    """Parser wrappign the docling library to convert files into documents."""
+    """Parser wrapping the docling library to convert files into documents."""
 
     def __init__(
         self,

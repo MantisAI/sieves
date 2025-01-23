@@ -7,12 +7,11 @@ from pathlib import Path
 import chonkie
 import dspy
 import pytest
-import tokenizers
 
 from sieves import Pipeline
 from sieves.engines import EngineType
 from sieves.serialization import Config
-from sieves.tasks import chunkers
+from sieves.tasks import preprocessing
 from sieves.tasks.predictive import classification
 
 
@@ -21,11 +20,11 @@ from sieves.tasks.predictive import classification
     [EngineType.dspy],
     indirect=["engine"],
 )
-def test_serialization_pipeline(dummy_docs, engine):
+def test_serialization_pipeline(dummy_docs, engine, tokenizer):
     """Tests serialization and deserialization of pipeline to files and config objects."""
     pipe = Pipeline(
         [
-            chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))),
+            preprocessing.Chonkie(chonkie.TokenChunker(tokenizer)),
             classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
         ]
     )
@@ -41,7 +40,7 @@ def test_serialization_pipeline(dummy_docs, engine):
             "value": [
                 {
                     "chunker": {"is_placeholder": True, "value": "chonkie.chunker.token.TokenChunker"},
-                    "cls_name": "sieves.tasks.chunkers.Chonkie",
+                    "cls_name": "sieves.tasks.preprocessing.chunkers.Chonkie",
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Chonkie"},
@@ -89,7 +88,7 @@ def test_serialization_pipeline(dummy_docs, engine):
         loaded_pipe = Pipeline.load(
             tmp_path,
             (
-                {"chunker": chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))},
+                {"chunker": chonkie.TokenChunker(tokenizer)},
                 {"engine": {"model": dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])}},
             ),
         )

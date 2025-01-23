@@ -7,9 +7,15 @@ import langchain_anthropic
 import ollama
 import outlines
 import pytest
+import tokenizers
 import transformers
 
 from sieves import Doc, engines
+
+
+@pytest.fixture(scope="session")
+def tokenizer() -> tokenizers.Tokenizer:
+    return tokenizers.Tokenizer.from_pretrained("gpt2")
 
 
 @pytest.fixture(scope="session")

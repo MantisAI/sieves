@@ -124,8 +124,15 @@ class Pipeline:
             # Restore engine config for PredictiveTask config.
             if "engine" in task_attr:
                 task_attr["engine"]["value"], engine_cls = Config.from_dict(task_attr["engine"]["value"])
-            # Restore task config.
-            task_config, task_cls = Config.from_dict(task_attr)
+            # Restore task config, if provided as dict.
+            match task_attr:
+                case dict():
+                    task_config, task_cls = Config.from_dict(task_attr)
+                case Config():
+                    task_config = task_attr
+                    task_cls = task_attr.config_cls
+                case _:
+                    raise TypeError(f"Deserialization can't handle configs of type {type(task_attr)}.")
 
             # Deserialize task.
             assert issubclass(task_cls, Serializable)
