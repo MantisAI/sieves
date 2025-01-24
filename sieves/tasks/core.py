@@ -52,21 +52,21 @@ class Task(abc.ABC):
         """
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         """Returns attributes to serialize.
         :returns: Dict of attributes to serialize.
         """
         return {
-            "task_id": Attribute(value=self._task_id, is_placeholder=False),
-            "show_progress": Attribute(value=self._show_progress, is_placeholder=False),
-            "include_meta": Attribute(value=self._include_meta, is_placeholder=False),
+            "task_id": self._task_id,
+            "show_progress": self._show_progress,
+            "include_meta": self._include_meta,
         }
 
     def serialize(self) -> Config:
         """Serializes task.
         :returns: Config instance.
         """
-        return Config.create(self.__class__, self._attributes)
+        return Config.create(self.__class__, {k: Attribute(value=v) for k, v in self._state.items()})
 
     @classmethod
     def deserialize(cls, config: Config, **kwargs: dict[str, Any]) -> Task:
@@ -267,13 +267,13 @@ class PredictiveTask(
         return docs
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         return {
-            **super()._attributes,
-            "engine": Attribute(value=self._engine.serialize(), is_placeholder=False),
-            "prompt_template": Attribute(value=self._custom_prompt_template, is_placeholder=False),
-            "prompt_signature_desc": Attribute(value=self._custom_prompt_signature_desc, is_placeholder=False),
-            "fewshot_examples": Attribute(value=self._fewshot_examples, is_placeholder=False),
+            **super()._state,
+            "engine": self._engine.serialize(),
+            "prompt_template": self._custom_prompt_template,
+            "prompt_signature_desc": self._custom_prompt_signature_desc,
+            "fewshot_examples": self._fewshot_examples,
         }
 
     @classmethod

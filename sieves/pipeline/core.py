@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import copy
-import inspect
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, get_args, get_origin
+from typing import Any
 
 from loguru import logger
 
@@ -44,28 +43,6 @@ class Pipeline:
                 raise ValueError(f"Task with duplicate ID {task.id}. Ensure unique task IDs.")
             task_ids.add(task.id)
 
-    @staticmethod
-    def _extract_signature_types(fn: Callable[..., Any]) -> tuple[list[type[Any]], list[type[Any]]]:
-        """Extract type of first function argument and return annotation.
-        :param fn: Callable to inspect.
-        :returns: (1) Types of arguments, (2) types of return annotation (>= 1 if it's a tuple).
-        :raises: TypeError if function has more than one argument (this isn't permissible within the currently
-        supported architecture).
-        """
-        sig = inspect.signature(fn)
-
-        def _extract_types(annotation: type[Any]) -> list[type[Any]]:
-            # Check if it's a tuple type (either typing.Tuple or regular tuple)
-            origin = get_origin(annotation)
-            if origin is tuple or origin is tuple:
-                return list(get_args(annotation))
-            return [annotation]
-
-        return (
-            [param.annotation for param in list(sig.parameters.values()) if param.name != "self"],
-            _extract_types(sig.return_annotation),
-        )
-
     def __call__(self, docs: Iterable[Doc], in_place: bool = False) -> Iterable[Doc]:
         """Process a list of documents through all tasks.
         :param docs: Documents to process.
@@ -101,7 +78,7 @@ class Pipeline:
         """
         return Config.create(
             self.__class__,
-            {"tasks": Attribute(value=[task.serialize() for task in self._tasks], is_placeholder=False)},
+            {"tasks": Attribute(value=[task.serialize() for task in self._tasks])},
         )
 
     @classmethod

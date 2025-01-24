@@ -14,31 +14,56 @@ META_ATTRIBUTES = ("cls_name", "version")
 class Attribute(pydantic.BaseModel):
     """Single attribute."""
 
-    is_placeholder: bool
     value: Any
+    is_placeholder: bool | None = None
+
+    @staticmethod
+    def _is_primitive_type(value: Any) -> bool:
+        """Determines whether value is primitive type.
+        :param value: Value to inspect.
+        :returns: Whether value is primitive type.
+        """
+        return any([isinstance(value, t) for t in (set, int, float, str, Config)])
+
+    @classmethod
+    def _determine_is_placeholder(cls, value: Any) -> bool:
+        """Determines whether Attribute value is a non-supported complex type and hence a placeholder.
+        If value is a collection type, we inspect recursively. If all children elements are primitive types, values is
+        determined not be a placeholder.
+        :returns: Determined value for is_placeholder.
+        """
+
+        # If value is None or a primitive type or a Config object: not a placeholder.
+        if value is None or cls._is_primitive_type(value):
+            return False
+
+        # Investigate collection types.
+        if isinstance(value, dict):
+            return any(cls._determine_is_placeholder(child) for child in value.values())
+        elif any([isinstance(value, t) for t in (list, tuple, set)]):
+            return any(cls._determine_is_placeholder(child) for child in value)
+
+        # Unknown value type: assume placeholder status.
+        return True
 
     @pydantic.model_validator(mode="after")
     def check_value(self) -> Attribute:
         """Validates .value property.
         :returns: Validated object.
         """
+        # Set is_placeholder w.r.t. of value type.
+        if self.is_placeholder is None:
+            self.is_placeholder = Attribute._determine_is_placeholder(self.value)
+
         # Adjust value to be class MODULE.NAME if is_placeholder.
         if self.is_placeholder and not isinstance(self.value, str):
-            if hasattr(self.value, "__class__"):
-                self.value = f"{self.value.__class__.__module__}.{self.value.__class__.__name__}"
-            else:
-                self.value = getattr(self.value, "__name__", "Unknown")
+            if self.value is not None:
+                if hasattr(self.value, "__class__"):
+                    self.value = f"{self.value.__class__.__module__}.{self.value.__class__.__name__}"
+                else:
+                    self.value = getattr(self.value, "__name__", "Unknown")
 
         return self
-
-    # @pydantic.computed_field
-    # @property
-    # def is_placeholder(self) -> bool:
-    #     return any(
-    #         [
-    #             for t in (dict, list, tuple, set, int, float, str, pydantic.BaseModel)
-    #         ]
-    #     )
 
 
 class Config(pydantic.BaseModel):

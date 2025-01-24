@@ -10,7 +10,6 @@ import unstructured.partition.auto
 from tqdm import tqdm
 
 from sieves.data.doc import Doc
-from sieves.serialization import Attribute
 from sieves.tasks.core import Task
 
 PartitionType = Callable[..., list[unstructured.documents.elements.Text]]
@@ -108,10 +107,10 @@ class Unstructured(Task):
         return docs
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         return {
-            **super()._attributes,
-            "partition": Attribute(value=self._partition, is_placeholder=True),
-            "cleaners": Attribute(value=self._cleaners, is_placeholder=True),
-            **{k: Attribute(value=v, is_placeholder=False) for k, v in self._partition_args.items()},
+            **super()._state,
+            "partition": self._partition,
+            "cleaners": self._cleaners,
+            **self._partition_args,
         }

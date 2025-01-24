@@ -10,7 +10,6 @@ from loguru import logger
 from tqdm import tqdm
 
 from sieves.data.doc import Doc
-from sieves.serialization import Attribute
 from sieves.tasks.core import Task
 
 
@@ -76,8 +75,8 @@ class Docling(Task):
         return docs
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         return {
-            **super()._attributes,
-            "doc_converter": Attribute(value=self._doc_converter, is_placeholder=True),
+            **super()._state,
+            "doc_converter": self._doc_converter,
         }

@@ -3,13 +3,12 @@ from __future__ import annotations
 import inspect
 import warnings
 from collections.abc import Iterable
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import pydantic
 
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
-from sieves.serialization import Attribute
 from sieves.tasks.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
@@ -114,8 +113,8 @@ class InformationExtraction(
         pass
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         return {
-            **super()._attributes,
-            "entity_type": Attribute(value=self._entity_type, is_placeholder=False),
+            **super()._state,
+            "entity_type": self._entity_type,
         }

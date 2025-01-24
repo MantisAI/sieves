@@ -96,9 +96,9 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
         # Note: init_kwargs and inference_kwargs are potentially unfit for serialization as they contain arbitrary
         # objects.
         return {
-            "model": Attribute(value=self._model, is_placeholder=True),
-            "init_kwargs": Attribute(value=self._init_kwargs, is_placeholder=False),
-            "inference_kwargs": Attribute(value=self._inference_kwargs, is_placeholder=False),
+            "model": Attribute(value=self._model),
+            "init_kwargs": Attribute(value=self._init_kwargs),
+            "inference_kwargs": Attribute(value=self._inference_kwargs),
         }
 
     def serialize(self) -> Config:
