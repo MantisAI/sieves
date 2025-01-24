@@ -36,7 +36,7 @@ all = [
     "ollama<1",
     "langchain>=0.3,<0.4",
     "scikit-learn>=1,<2",
-    "unstructured>=0.16,<1",
+    "unstructured[all-docs]>=0.16,<1",
     "unstructured-inference>=0.8,<1",
 ]
 utils = [
