@@ -1,4 +1,4 @@
-"""File parsers for converting raw files into documents."""
+"""File preprocessing for converting raw files into documents."""
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -10,12 +10,11 @@ from loguru import logger
 from tqdm import tqdm
 
 from sieves.data.doc import Doc
-from sieves.serialization import Attribute
 from sieves.tasks.core import Task
 
 
 class Docling(Task):
-    """Parser wrappign the docling library to convert files into documents."""
+    """Parser wrapping the docling library to convert files into documents."""
 
     def __init__(
         self,
@@ -76,8 +75,8 @@ class Docling(Task):
         return docs
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         return {
-            **super()._attributes,
-            "doc_converter": Attribute(value=self._doc_converter, is_placeholder=True),
+            **super()._state,
+            "doc_converter": self._doc_converter,
         }

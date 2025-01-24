@@ -1,4 +1,4 @@
-from . import chunkers, parsers, predictive
+from . import predictive, preprocessing
 from .core import PredictiveTask, Task
 
-__all__ = ["chunkers", "Task", "parsers", "predictive", "PredictiveTask"]
+__all__ = ["Task", "predictive", "PredictiveTask", "preprocessing"]

@@ -29,6 +29,8 @@ jobs:
     
     - name: Install dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install tesseract-ocr
         uv venv
         uv pip install -e ".[all,test]"
 

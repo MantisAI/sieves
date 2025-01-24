@@ -8,19 +8,9 @@ from sieves.tasks.predictive import information_extraction
 
 
 @pytest.mark.parametrize(
-    "engine,fewshot",
-    [
-        (EngineType.dspy, False),
-        (EngineType.dspy, True),
-        (EngineType.langchain, False),
-        (EngineType.langchain, True),
-        (EngineType.ollama, False),
-        (EngineType.ollama, True),
-        (EngineType.outlines, False),
-        (EngineType.outlines, True),
-    ],
-    indirect=["engine"],
+    "engine", (EngineType.dspy, EngineType.langchain, EngineType.ollama, EngineType.outlines), indirect=["engine"]
 )
+@pytest.mark.parametrize("fewshot", [True, False])
 def test_run(information_extraction_docs, engine, fewshot) -> None:
     class Person(pydantic.BaseModel, frozen=True):
         name: str

@@ -1,12 +1,12 @@
-"""File parsers for converting raw files into documents."""
+"""File preprocessing for converting raw files into documents."""
 import re
 from collections.abc import Iterable
+from typing import Any
 
 import chonkie
 from tqdm import tqdm
 
 from sieves.data.doc import Doc
-from sieves.serialization import Attribute
 from sieves.tasks.core import Task
 
 
@@ -53,10 +53,10 @@ class Chonkie(Task):
                 pbar.close()
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         return {
-            **super()._attributes,
-            "chunker": Attribute(value=self._chunker, is_placeholder=True),
+            **super()._state,
+            "chunker": self._chunker,
         }
 
 
@@ -99,8 +99,8 @@ class NaiveChunker(Task):
         return docs
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         return {
-            **super()._attributes,
-            "interval": Attribute(value=self._interval, is_placeholder=False),
+            **super()._state,
+            "interval": self._interval,
         }

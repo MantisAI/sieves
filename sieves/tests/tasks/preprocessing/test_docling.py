@@ -4,12 +4,12 @@ import tokenizers
 from sieves import Doc, Pipeline, tasks
 
 
-def test_pdf_parsing() -> None:
+def test_docling() -> None:
     resources = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
     pipe = Pipeline(
         tasks=[
-            tasks.parsers.Docling(),
-            tasks.chunkers.Chonkie(
+            tasks.preprocessing.Docling(),
+            tasks.preprocessing.Chonkie(
                 chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("HuggingFaceTB/SmolLM-135M-Instruct"))
             ),
         ]

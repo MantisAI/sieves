@@ -21,6 +21,10 @@ class EngineType(enum.Enum):
     langchain = langchain_.LangChain
 
     @classmethod
+    def all(cls) -> tuple[EngineType, ...]:
+        return cls.outlines, cls.dspy, cls.huggingface, cls.glix, cls.ollama, cls.langchain
+
+    @classmethod
     def get_engine_type(
         cls, engine: Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode]
     ) -> EngineType:

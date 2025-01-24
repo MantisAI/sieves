@@ -84,9 +84,9 @@ engine = engines.glix_.GliX(
 pipe = Pipeline(
     [
         # 4. Add document parsing task.
-        tasks.parsers.Docling(),
+        tasks.preprocessing.Docling(),
         # 5. Add chunking task to ensure we don't exceed our model's context window.
-        tasks.chunkers.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))),
+        tasks.preprocessing.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))),
         # 6. Run classification on provided document.
         tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
     ]
@@ -128,9 +128,9 @@ with open("docs.pkl", "rb") as f:
 - :arrow_forward: **Pipeline-based system** for easy observability and debugging
 - 
 - :hammer_and_wrench: **Integrated utilities** convenient in an NLP pipeline
-  - File parsing: [`docling`]()
-  - Chunking: [`chonkie`]()
-  - TBD: export to [`datasets`]() dataset for easy fine-tuning 
+  - File parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
+  - Chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
+  - TBD: export to [`datasets`](https://github.com/huggingface/datasets) dataset for easy fine-tuning 
 - :label: Prebuilt tasks ready to use out-of-the-box
   - Classification
   - Information extraction

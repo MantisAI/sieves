@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import pydantic
 
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
-from sieves.serialization import Attribute
 from sieves.tasks.core import PredictiveTask
 from sieves.tasks.predictive.classification.bridges import (
     BridgeInferenceMode,
@@ -127,8 +126,8 @@ class Classification(
                 )
 
     @property
-    def _attributes(self) -> dict[str, Attribute]:
+    def _state(self) -> dict[str, Any]:
         return {
-            **super()._attributes,
-            "labels": Attribute(value=self._labels, is_placeholder=False),
+            **super()._state,
+            "labels": self._labels,
         }

@@ -6,24 +6,8 @@ from sieves.engines import EngineType
 from sieves.tasks.predictive import classification
 
 
-@pytest.mark.parametrize(
-    "engine,fewshot",
-    [
-        (EngineType.dspy, False),
-        # (EngineType.dspy, True),
-        # (EngineType.langchain, False),
-        # (EngineType.langchain, True),
-        # (EngineType.ollama, False),
-        # (EngineType.ollama, True),
-        # (EngineType.outlines, False),
-        # (EngineType.outlines, True),
-        # (EngineType.glix, False),
-        # (EngineType.glix, True),
-        # (EngineType.huggingface, False),
-        # (EngineType.huggingface, True),
-    ],
-    indirect=["engine"],
-)
+@pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
+@pytest.mark.parametrize("fewshot", [True, False])
 def test_fewshot_examples(dummy_docs, engine, fewshot):
     fewshot_examples = [
         classification.TaskFewshotExample(

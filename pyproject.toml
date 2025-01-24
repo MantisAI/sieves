@@ -35,11 +35,16 @@ all = [
     "gliner<1",
     "ollama<1",
     "langchain>=0.3,<0.4",
-    "scikit-learn>=1,<2"
+    "scikit-learn>=1,<2",
+    "unstructured[all-docs]>=0.16,<1",
+    "unstructured-inference>=0.8,<1",
 ]
 utils = [
     "chonkie>=0.3",
     "docling>=2",
+    "unstructured[all-docs]>=0.16,<1",
+    "unstructured-inference>=0.8,<1",
+    "tesseract>=0.1,<1"
 ]
 engines = [
     "outlines>=0.0.34",
@@ -58,7 +63,8 @@ test = [
     "mypy>=1",
     "mypy-extensions>=1",
     "pytest-cov>=6",
-    "langchain-anthropic>0.3,<0.4"
+    "langchain-anthropic>0.3,<0.4",
+    "tesseract>=0.1,<1"
 ]
 
 [tool.black]
