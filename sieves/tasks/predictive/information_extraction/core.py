@@ -5,11 +5,14 @@ import warnings
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
+import datasets
 import pydantic
 
+from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
-from sieves.tasks.core import PredictiveTask
+from sieves.serialization import Config
+from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
     InformationExtractionBridge,
@@ -17,6 +20,7 @@ from sieves.tasks.predictive.information_extraction.bridges import (
     OllamaInformationExtraction,
     OutlinesInformationExtraction,
 )
+from sieves.tasks.utils import PydanticToHFDatasets
 
 TaskPromptSignature: TypeAlias = type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
 TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
@@ -118,3 +122,36 @@ class InformationExtraction(
             **super()._state,
             "entity_type": self._entity_type,
         }
+
+    def docs_to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+        # Define metadata.
+        features = datasets.Features(
+            {
+                "text": datasets.Value("string"),
+                "entities": datasets.Sequence(PydanticToHFDatasets.model_cls_to_features(self._entity_type)),
+            }
+        )
+        info = datasets.DatasetInfo(
+            description=f"Information extraction dataset for entity type {self._entity_type.__class__.__name__}. "
+            f"Generated with sieves v{Config.get_version()}",
+            features=features,
+        )
+
+        # Fetch data used for generating dataset.
+        try:
+            data = [
+                (doc.text, [PydanticToHFDatasets.model_to_dict(res) for res in doc.results[self._task_id]])
+                for doc in docs
+            ]
+        except KeyError as err:
+            raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
+
+        def generate_data() -> Iterable[dict[str, Any]]:
+            """Yields results as dicts.
+            :return: Results as dicts.
+            """
+            for text, entities in data:
+                yield {"text": text, "entities": entities}
+
+        # Create dataset.
+        return datasets.Dataset.from_generator(generate_data, features=features, info=info)

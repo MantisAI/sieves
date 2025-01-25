@@ -27,6 +27,10 @@ def test_double_task(dummy_docs, engine) -> None:
     )
     docs = list(pipe(dummy_docs))
 
+    _ = pipe["task_1"]
+    with pytest.raises(KeyError):
+        _ = pipe["sdfkjs"]
+
     assert len(docs) == 2
     for doc in docs:
         assert doc.text

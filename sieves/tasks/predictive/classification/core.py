@@ -3,11 +3,13 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
+import datasets
 import pydantic
 
+from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
-from sieves.tasks.core import PredictiveTask
+from sieves.serialization import Config
 from sieves.tasks.predictive.classification.bridges import (
     BridgeInferenceMode,
     BridgePromptSignature,
@@ -20,6 +22,7 @@ from sieves.tasks.predictive.classification.bridges import (
     OllamaClassification,
     OutlinesClassification,
 )
+from sieves.tasks.predictive.core import PredictiveTask
 
 TaskPromptSignature: TypeAlias = list[str] | type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
 TaskInferenceMode: TypeAlias = (
@@ -131,3 +134,32 @@ class Classification(
             **super()._state,
             "labels": self._labels,
         }
+
+    def docs_to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+        # Define metadata.
+        features = datasets.Features(
+            {"text": datasets.Value("string"), "label": datasets.Sequence(datasets.Value("float32"))}
+        )
+        info = datasets.DatasetInfo(
+            description=f"Multi-label classification dataset with labels {self._labels}. Generated with sieves "
+            f"v{Config.get_version()}",
+            features=features,
+        )
+
+        # Fetch data used for generating dataset.
+        labels = self._labels
+        try:
+            data = [(doc.text, doc.results[self._task_id]) for doc in docs]
+        except KeyError as err:
+            raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
+
+        def generate_data() -> Iterable[dict[str, Any]]:
+            """Yields results as dicts.
+            :return: Results as dicts.
+            """
+            for text, result in data:
+                scores = {label_score[0]: label_score[1] for label_score in result}
+                yield {"text": text, "label": [scores[label] for label in labels]}
+
+        # Create dataset.
+        return datasets.Dataset.from_generator(generate_data, features=features, info=info)
