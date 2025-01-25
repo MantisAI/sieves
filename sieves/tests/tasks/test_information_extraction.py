@@ -51,3 +51,13 @@ def test_run(information_extraction_docs, engine, fewshot) -> None:
     dataset = task.docs_to_dataset(docs)
     assert all([key in dataset.features for key in ("text", "entities")])
     assert len(dataset) == 2
+    assert list(dataset) == [
+        {
+            "entities": {"age": [79, 85], "name": ["Mahatma Ghandi", "Bugs Bunny"]},
+            "text": "Mahatma Ghandi lived to 79 years old. Bugs Bunny is at least 85 years old.",
+        },
+        {
+            "entities": {"age": [67], "name": ["Marie Curie"]},
+            "text": "Marie Curie passed away with 67 years. Marie Curie was 67 years old.",
+        },
+    ]

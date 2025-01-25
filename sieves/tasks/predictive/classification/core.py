@@ -10,7 +10,6 @@ from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
 from sieves.serialization import Config
-from sieves.tasks.core import PredictiveTask
 from sieves.tasks.predictive.classification.bridges import (
     BridgeInferenceMode,
     BridgePromptSignature,
@@ -23,6 +22,7 @@ from sieves.tasks.predictive.classification.bridges import (
     OllamaClassification,
     OutlinesClassification,
 )
+from sieves.tasks.predictive.core import PredictiveTask
 
 TaskPromptSignature: TypeAlias = list[str] | type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
 TaskInferenceMode: TypeAlias = (
