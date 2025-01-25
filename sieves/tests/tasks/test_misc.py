@@ -117,19 +117,27 @@ def test_run_readme_example_long(engine, tokenizer):
 def test_pydantic_to_hf() -> None:
     """Test the conversion of various Pydantic objects to HF datasets.Features."""
 
-    # Simplest case - primitives only.
+    # Check non-nested properties.
 
     class Simple(pydantic.BaseModel):
         a: int
         b: str
+        c: str | float
+        d: tuple[int, float]
+        e: str | None
 
     features = PydanticToHFDatasets.model_cls_to_features(Simple)
     assert all([key in features for key in ("a", "b")])
     assert features["a"].dtype == "int32"
     assert features["b"].dtype == "string"
-    kwargs = {"a": 1, "b": "blub"}
-    dataset = datasets.Dataset.from_list([PydanticToHFDatasets.model_to_dict(Simple(**kwargs))], features=features)
-    assert list(dataset)[0] == kwargs
+    assert features["c"].dtype == "string"
+    assert isinstance(features["d"], datasets.Sequence)
+    assert features["d"].feature.dtype == "string"
+    assert features["e"].dtype == "string"
+    dataset = datasets.Dataset.from_list(
+        [PydanticToHFDatasets.model_to_dict(Simple(a=1, b="blub", c=0.3, d=(1, 0.4), e=None))], features=features
+    )
+    assert list(dataset)[0] == {"a": 1, "b": "blub", "c": "0.3", "d": ["1", "0.4"], "e": None}
 
     # With a list of primitives.
 

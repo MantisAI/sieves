@@ -1,14 +1,13 @@
 # mypy: ignore-errors
 import pytest
 
-from sieves import Pipeline
+from sieves import Doc, Pipeline
 from sieves.engines import EngineType
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
 
 
-# @pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
-@pytest.mark.parametrize("engine", [EngineType.langchain], indirect=["engine"])
+@pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(dummy_docs, engine, fewshot):
     fewshot_examples = [
@@ -54,3 +53,6 @@ def test_run(dummy_docs, engine, fewshot):
         for v in rec["label"]:
             assert isinstance(v, float)
         assert isinstance(rec["text"], str)
+
+    with pytest.raises(KeyError):
+        task.docs_to_dataset([Doc(text="This is a dummy text.")])

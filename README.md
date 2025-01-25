@@ -126,7 +126,6 @@ with open("docs.pkl", "rb") as f:
   - [`transformer`](https://github.com/huggingface/transformers) zero-shot pipelines
   - [`ollama`](https://github.com/ollama/ollama)
 - :arrow_forward: **Pipeline-based system** for easy observability and debugging
-- 
 - :hammer_and_wrench: **Integrated utilities** convenient in an NLP pipeline
   - File parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
   - Chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
@@ -135,7 +134,9 @@ with open("docs.pkl", "rb") as f:
   - Classification
   - Information extraction
   - TBD: NER, entity linking, summarization, translation, ...
-- :floppy_disk: Serializability (TBD)
+- :floppy_disk: Serialize your tasks and pipelines
+  - Save your pipeline config to disk and generate a pipeline from a saved config.
+- :teacher: Export your results as Hugging Face [`Dataset`](https://github.com/huggingface/datasets), then distill a smaller models on the results you got from a zero-shot model's outputs. 
 
 
 ### Why `sieves`?
