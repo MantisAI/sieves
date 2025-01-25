@@ -3,12 +3,13 @@ import pytest
 
 from sieves import Pipeline
 from sieves.engines import EngineType
+from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
 
 
 @pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_fewshot_examples(dummy_docs, engine, fewshot):
+def test_run(dummy_docs, engine, fewshot):
     fewshot_examples = [
         classification.TaskFewshotExample(
             text="On the properties of hydrogen atoms and red dwarfs.",
@@ -39,3 +40,10 @@ def test_fewshot_examples(dummy_docs, engine, fewshot):
         assert doc.text
         assert doc.results["classifier"]
         assert "classifier" in doc.results
+
+    # Test docs-to-dataset conversion.
+    task = pipe["classifier"]
+    assert isinstance(task, PredictiveTask)
+    dataset = task.docs_to_dataset(docs)
+    assert all([key in dataset.features for key in ("text", "label")])
+    assert len(dataset) == 2

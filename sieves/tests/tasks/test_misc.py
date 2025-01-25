@@ -109,3 +109,8 @@ def test_run_readme_example_long(engine, tokenizer):
                 loaded_docs = pickle.load(f)
             assert len(loaded_docs) == len(docs)
             assert all([(ld == d for ld, d in zip(loaded_docs, docs))])
+
+
+def test_pydantic_to_hf() -> None:
+    # todo add pydantic to HF tests
+    pass

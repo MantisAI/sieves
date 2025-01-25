@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import abc
+import typing
 from collections.abc import Iterable
 from typing import Any, Generic, TypeVar
 
+import datasets
 import pydantic
 
 from sieves.data import Doc
@@ -253,15 +255,15 @@ class PredictiveTask(
             docs_chunks_offsets.append((len(docs_chunks_values), len(docs_chunks_values) + len(doc_chunks_values)))
             docs_chunks_values.extend(doc_chunks_values)
 
-        # 4. Execute prompts per chunk.
+        # 5. Execute prompts per chunk.
         results = list(executable(docs_chunks_values))
         assert len(results) == len(docs_chunks_values)
 
-        # 5. Consolidate chunk results.
+        # 6. Consolidate chunk results.
         results = list(self._bridge.consolidate(results, docs_chunks_offsets))  # type: ignore[arg-type]
         assert len(results) == len(docs)
 
-        # 6. Integrate results into docs.
+        # 7. Integrate results into docs.
         docs = self._bridge.integrate(results, docs)  # type: ignore[arg-type]
 
         return docs
@@ -296,3 +298,97 @@ class PredictiveTask(
         # Deserialize and inject engine.
         engine_param: dict[str, Any] = {"engine": engine_cls.deserialize(engine_config, **kwargs["engine"])}
         return cls(**config.to_init_dict(cls, **(kwargs | engine_param)))
+
+    @abc.abstractmethod
+    def docs_to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+        """Creates Hugging Face datasets.Dataset from docs.
+        :param docs: Docs to convert.
+        :returns: Hugging Face dataset.
+        """
+
+    @classmethod
+    def _pydantic_model_to_hf_features(cls, entity_type: type[pydantic.BaseModel]) -> datasets.Sequence:
+        """
+        Given a Pydantic model, build a `datasets.Sequence` of features that match its fields.
+        :returns: Dataset sequence for use in HF `datasets.Dataset`.
+        """
+        field_features: dict[str, datasets.Value] = {}
+
+        for field_name, field in entity_type.model_fields.items():
+            field_features[field_name] = PredictiveTask._pydantic_field_to_hf_value(field)
+
+        return datasets.Features(field_features)
+
+    @classmethod
+    def _pydantic_field_to_hf_value(cls, field: pydantic.ModelField) -> datasets.Value | datasets.Sequence:  # type: ignore[valid-type]
+        """
+        Convert a single Pydantic field into a corresponding Hugging Face `datasets` feature.
+        Recursively handles:
+          - Primitive types (str, int, float, bool)
+          - Lists, tuples
+          - Nested `BaseModel` classes
+          - Dicts (by default stored as a string, or you can expand logic for fixed key sets)
+        :param field: Field to convert.
+        :returns: `datasets.Value` or `datasets.Sequence` instance generated from model field.
+        """
+        # The declared type annotation (e.g. str, list[str], MyModel, etc.)
+        py_type = field.annotation  # type: ignore[attr-defined]
+        # E.g. list, tuple, dict, Union, etc.
+        origin = typing.get_origin(py_type)
+        # Type arguments, e.g. (str,) for list[str].
+        args = typing.get_args(py_type)
+
+        # 1) If this is a (sub)class of pydantic.BaseModel -> recursively convert to nested Features.
+        if isinstance(py_type, type) and issubclass(py_type, pydantic.BaseModel):
+            return cls._pydantic_model_to_hf_features(py_type)
+
+        # 2) If it's a generic collection (list[...] or tuple[...]).
+        if origin in (list, tuple):
+            if len(args) == 1:
+                # E.g. list[str], tuple[int].
+                item_type = args[0]
+                # We'll create a dummy pydantic.BaseModel with annotation=item_type.
+                sub_field = pydantic.BaseModel(annotation=item_type)
+                return datasets.Sequence(cls._pydantic_field_to_hf_value(sub_field))
+            elif len(args) > 1 and origin == tuple:
+                # E.g. tuple[int, str].
+                # Hugging Face Datasets doesn't handle truly heterogeneous tuples natively.
+                # You could either store them as strings or attempt partial handling.
+                return datasets.Sequence(datasets.Value("string"))
+            else:
+                # fallback
+                return datasets.Sequence(datasets.Value("string"))
+
+        # 3) If it's a dict
+        if origin == dict:
+            if len(args) == 2:
+                key_type, value_type = args
+                # If the keys are strings, we can store them as {key: str, value: sub_feature} then recursively parse
+                # the value.
+                if key_type == str:
+                    sub_field = pydantic.FieldInfo(annotation=value_type)  # type: ignore[operator]
+                    return datasets.Sequence(
+                        feature=datasets.Features(
+                            {"key": datasets.Value("string"), "value": cls._pydantic_field_to_hf_value(sub_field)}
+                        )
+                    )
+
+        # 4) If it's a Union (e.g. Optional[str] == Union[str, None]).
+        if origin == typing.Union:
+            # Usually you might handle Optional types or multiple types.
+            # A common approach: fallback to "string" or a single numeric type if you expect it.
+            # A more advanced approach would check each part of the union.
+            return datasets.Value("string")
+
+        # 5) Handle basic primitives
+        if py_type == str:
+            return datasets.Value("string")
+        elif py_type == int:
+            return datasets.Value("int32")
+        elif py_type == float:
+            return datasets.Value("float32")
+        elif py_type == bool:
+            return datasets.Value("bool")
+
+        # 6) Fallback: store as string
+        return datasets.Value("string")

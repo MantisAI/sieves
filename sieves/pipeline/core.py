@@ -118,3 +118,15 @@ class Pipeline:
             tasks.append(task)
 
         return cls(tasks=tasks)
+
+    def __getitem__(self, task_id: str) -> Task:
+        """Gets task with this ID.
+        :param task_id: ID of task to fetch.
+        :returns: Task with specified ID.
+        :raises: KeyError if no task with such ID exists.
+        """
+        for task in self._tasks:
+            if task.id == task_id:
+                return task
+
+        raise KeyError(f"No task with ID {task_id} exists in this pipeline.")

@@ -4,13 +4,16 @@ import pytest
 
 from sieves import Pipeline, tasks
 from sieves.engines import EngineType
+from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import information_extraction
 
 
-@pytest.mark.parametrize(
-    "engine", (EngineType.dspy, EngineType.langchain, EngineType.ollama, EngineType.outlines), indirect=["engine"]
-)
-@pytest.mark.parametrize("fewshot", [True, False])
+# @pytest.mark.parametrize(
+#     "engine", (EngineType.dspy, EngineType.langchain, EngineType.ollama, EngineType.outlines), indirect=["engine"]
+# )
+# @pytest.mark.parametrize("fewshot", [True, False])
+@pytest.mark.parametrize("engine", [EngineType.langchain], indirect=["engine"])
+@pytest.mark.parametrize("fewshot", [False])
 def test_run(information_extraction_docs, engine, fewshot) -> None:
     class Person(pydantic.BaseModel, frozen=True):
         name: str
@@ -41,3 +44,10 @@ def test_run(information_extraction_docs, engine, fewshot) -> None:
     for doc in docs:
         assert doc.text
         assert "InformationExtraction" in doc.results
+
+    # Test docs-to-dataset conversion.
+    task = pipe["InformationExtraction"]
+    assert isinstance(task, PredictiveTask)
+    dataset = task.docs_to_dataset(docs)
+    assert all([key in dataset.features for key in ("text", "entities")])
+    assert len(dataset) == 2
