@@ -2,6 +2,7 @@
 import os
 import pickle
 import tempfile
+import typing
 
 import chonkie
 import datasets
@@ -125,6 +126,7 @@ def test_pydantic_to_hf() -> None:
         c: str | float
         d: tuple[int, float]
         e: str | None
+        f: typing.Optional[str]  # noqa: UP007
 
     features = PydanticToHFDatasets.model_cls_to_features(Simple)
     assert all([key in features for key in ("a", "b")])
@@ -134,10 +136,13 @@ def test_pydantic_to_hf() -> None:
     assert isinstance(features["d"], datasets.Sequence)
     assert features["d"].feature.dtype == "string"
     assert features["e"].dtype == "string"
+    assert features["f"].dtype == "string"
+    assert PydanticToHFDatasets.model_to_dict(None) is None
     dataset = datasets.Dataset.from_list(
-        [PydanticToHFDatasets.model_to_dict(Simple(a=1, b="blub", c=0.3, d=(1, 0.4), e=None))], features=features
+        [PydanticToHFDatasets.model_to_dict(Simple(a=1, b="blub", c=0.3, d=(1, 0.4), e=None, f=None))],
+        features=features,
     )
-    assert list(dataset)[0] == {"a": 1, "b": "blub", "c": "0.3", "d": ["1", "0.4"], "e": None}
+    assert list(dataset)[0] == {"a": 1, "b": "blub", "c": "0.3", "d": ["1", "0.4"], "e": None, "f": None}
 
     # With a list of primitives.
 
@@ -159,16 +164,19 @@ def test_pydantic_to_hf() -> None:
     class WithDict(pydantic.BaseModel):
         a: int
         b: dict[str, int]
+        c: dict
 
     features = PydanticToHFDatasets.model_cls_to_features(WithDict)
     assert all([key in features for key in ("a", "b")])
     assert isinstance(features["b"], datasets.Sequence)
     assert isinstance(features["b"].feature, datasets.Features)
+    assert isinstance(features["c"], datasets.Value)
+    assert features["c"].dtype == "string"
     assert all([name in features["b"].feature for name in ("key", "value")])
     dataset = datasets.Dataset.from_list(
-        [PydanticToHFDatasets.model_to_dict(WithDict(a=1, b={"blub": 2, "blab": 3}))], features=features
+        [PydanticToHFDatasets.model_to_dict(WithDict(a=1, b={"blub": 2, "blab": 3}, c={"blib": 4}))], features=features
     )
-    assert list(dataset)[0] == {"a": 1, "b": {"key": ["blub", "blab"], "value": [2, 3]}}
+    assert list(dataset)[0] == {"a": 1, "b": {"key": ["blub", "blab"], "value": [2, 3]}, "c": "{'blib': 4}"}
 
     # With nested Pydantic models.
 
