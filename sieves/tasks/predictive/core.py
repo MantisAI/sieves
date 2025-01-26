@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import enum
 from collections.abc import Iterable
 from typing import Any, Generic
 
@@ -60,7 +61,7 @@ class PredictiveTask(
         """
 
     @abc.abstractmethod
-    def _init_bridge(self, engine_type: EngineType) -> Bridge[TaskPromptSignature, TaskInferenceMode, TaskResult]:
+    def _init_bridge(self, engine_type: EngineType) -> Bridge[TaskPromptSignature, TaskResult]:
         """Initialize engine task.
         :returns: Engine task.
         """
@@ -175,7 +176,7 @@ class PredictiveTask(
         """
 
 
-class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.ABC):
+class Bridge(Generic[TaskPromptSignature, TaskResult], abc.ABC):
     def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None):
         """
         Initializes new bridge.
@@ -216,7 +217,7 @@ class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.AB
 
     @property
     @abc.abstractmethod
-    def inference_mode(self) -> TaskInferenceMode:
+    def inference_mode(self) -> enum.Enum:
         """Returns inference mode.
         :returns: Inference mode.
         """

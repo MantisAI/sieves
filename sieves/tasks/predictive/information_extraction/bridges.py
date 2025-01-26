@@ -1,8 +1,7 @@
 import abc
-import enum
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 import dspy
 import jinja2
@@ -13,13 +12,11 @@ from sieves.engines import dspy_, langchain_, ollama_, outlines_
 from sieves.tasks.predictive.core import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature", covariant=True)
-_BridgeInferenceMode = TypeVar("_BridgeInferenceMode", bound=enum.Enum, covariant=True)
-_PydanticBridgeInferenceMode = TypeVar("_PydanticBridgeInferenceMode", bound=enum.Enum, covariant=True)
 _BridgeResult = TypeVar("_BridgeResult")
 
 
 class InformationExtractionBridge(
-    Bridge[_BridgePromptSignature, _BridgeInferenceMode, _BridgeResult],
+    Bridge[_BridgePromptSignature, _BridgeResult],
     abc.ABC,
 ):
     def __init__(
@@ -40,7 +37,7 @@ class InformationExtractionBridge(
         self._entity_type = entity_type
 
 
-class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
+class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result]):
     @property
     def prompt_template(self) -> str | None:
         return self._custom_prompt_template
@@ -110,8 +107,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
 
 class PydanticBasedInformationExtraction(
-    InformationExtractionBridge[type[pydantic.BaseModel], _PydanticBridgeInferenceMode, pydantic.BaseModel],
-    Generic[_PydanticBridgeInferenceMode],
+    InformationExtractionBridge[type[pydantic.BaseModel], pydantic.BaseModel],
     abc.ABC,
 ):
     @property
@@ -193,19 +189,19 @@ class PydanticBasedInformationExtraction(
             yield self.prompt_signature(entities=entities, reasoning=str(reasonings))
 
 
-class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_.InferenceMode]):
+class OutlinesInformationExtraction(PydanticBasedInformationExtraction):
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
 
 
-class OllamaInformationExtraction(PydanticBasedInformationExtraction[ollama_.InferenceMode]):
+class OllamaInformationExtraction(PydanticBasedInformationExtraction):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
         return ollama_.InferenceMode.chat
 
 
-class LangChainInformationExtraction(PydanticBasedInformationExtraction[langchain_.InferenceMode]):
+class LangChainInformationExtraction(PydanticBasedInformationExtraction):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured_output

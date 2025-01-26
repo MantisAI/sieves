@@ -78,9 +78,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, Mode
             fewshot_examples=fewshot_examples,
         )
 
-    def _init_bridge(
-        self, engine_type: EngineType
-    ) -> InformationExtractionBridge[TaskPromptSignature, TaskInferenceMode, TaskResult]:
+    def _init_bridge(self, engine_type: EngineType) -> InformationExtractionBridge[TaskPromptSignature, TaskResult]:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.

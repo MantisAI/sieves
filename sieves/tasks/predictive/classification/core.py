@@ -11,7 +11,6 @@ from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outli
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
 from sieves.serialization import Config
 from sieves.tasks.predictive.classification.bridges import (
-    BridgeInferenceMode,
     BridgePromptSignature,
     BridgeResult,
     ClassificationBridge,
@@ -85,9 +84,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, Task
         )
         self._fewshot_examples: Iterable[TaskFewshotExample]
 
-    def _init_bridge(
-        self, engine_type: EngineType
-    ) -> ClassificationBridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult]:
+    def _init_bridge(self, engine_type: EngineType) -> ClassificationBridge[BridgePromptSignature, BridgeResult]:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.

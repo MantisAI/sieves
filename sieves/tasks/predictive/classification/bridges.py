@@ -1,8 +1,7 @@
 import abc
-import enum
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Generic, Literal, TypeVar
+from typing import Literal, TypeVar
 
 import dspy
 import jinja2
@@ -13,16 +12,11 @@ from sieves.engines import dspy_, glix_, huggingface_, langchain_, ollama_, outl
 from sieves.tasks.predictive.core import Bridge
 
 BridgePromptSignature = TypeVar("BridgePromptSignature", covariant=True)
-BridgeInferenceMode = TypeVar("BridgeInferenceMode", bound=enum.Enum, covariant=True)
-_PydanticBridgeInferenceMode = TypeVar("_PydanticBridgeInferenceMode", bound=enum.Enum, covariant=True)
 BridgeResult = TypeVar("BridgeResult")
 _GliXResult = list[dict[str, str | float]]
 
 
-class ClassificationBridge(
-    Bridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
-    abc.ABC,
-):
+class ClassificationBridge(Bridge[BridgePromptSignature, BridgeResult], abc.ABC):
     def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, labels: list[str]):
         """
         Initializes InformationExtractionBridge.
@@ -35,7 +29,7 @@ class ClassificationBridge(
         self._labels = labels
 
 
-class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
+class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result]):
     @property
     def prompt_template(self) -> str | None:
         return self._custom_prompt_template
@@ -118,7 +112,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
             )
 
 
-class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.InferenceMode, huggingface_.Result]):
+class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Result]):
     @property
     def prompt_template(self) -> str | None:
         return (
@@ -187,7 +181,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Inf
             }
 
 
-class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _GliXResult]):
+class GliXClassification(ClassificationBridge[list[str], _GliXResult]):
     @property
     def prompt_template(self) -> str | None:
         return None
@@ -238,11 +232,7 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _G
             yield sorted_label_scores
 
 
-class PydanticBasedClassification(
-    ClassificationBridge[type[pydantic.BaseModel], _PydanticBridgeInferenceMode, pydantic.BaseModel],
-    Generic[_PydanticBridgeInferenceMode],
-    abc.ABC,
-):
+class PydanticBasedClassification(ClassificationBridge[type[pydantic.BaseModel], pydantic.BaseModel], abc.ABC):
     @property
     def prompt_template(self) -> str | None:
         return (
@@ -331,19 +321,19 @@ class PydanticBasedClassification(
             )
 
 
-class OutlinesClassification(PydanticBasedClassification[outlines_.InferenceMode]):
+class OutlinesClassification(PydanticBasedClassification):
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
 
 
-class OllamaClassification(PydanticBasedClassification[ollama_.InferenceMode]):
+class OllamaClassification(PydanticBasedClassification):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
         return ollama_.InferenceMode.chat
 
 
-class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
+class LangChainClassification(PydanticBasedClassification):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured_output
