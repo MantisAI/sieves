@@ -2,14 +2,10 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Iterable
-from typing import Any, TypeVar
+from typing import Any
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config
-
-TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
-TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
-TaskResult = TypeVar("TaskResult")
 
 
 class Task(abc.ABC):

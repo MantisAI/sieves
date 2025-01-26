@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import enum
 from collections.abc import Iterable
-from typing import Any, Generic
+from typing import Any, Generic, TypeVar
 
 import datasets
 import pydantic
@@ -18,11 +18,16 @@ from sieves.engines import (
     Model,
 )
 from sieves.serialization import Config, Serializable
-from sieves.tasks.core import Task, TaskInferenceMode, TaskPromptSignature, TaskResult
+from sieves.tasks.core import Task
+
+TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
+TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
+TaskResult = TypeVar("TaskResult")
+TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult]")  # type: ignore[valid-type]
 
 
 class PredictiveTask(
-    Generic[TaskPromptSignature, TaskResult, TaskInferenceMode],
+    Generic[TaskPromptSignature, TaskResult, TaskInferenceMode, TaskBridge],
     Task,
     abc.ABC,
 ):
@@ -54,14 +59,14 @@ class PredictiveTask(
 
         self._validate_fewshot_examples()
 
-    @abc.abstractmethod
     def _validate_fewshot_examples(self) -> None:
         """Validates fewshot examples.
         :raises: ValueError if fewshot examples don't pass validation.
         """
+        pass
 
     @abc.abstractmethod
-    def _init_bridge(self, engine_type: EngineType) -> Bridge[TaskPromptSignature, TaskResult]:
+    def _init_bridge(self, engine_type: EngineType) -> TaskBridge:
         """Initialize engine task.
         :returns: Engine task.
         """
@@ -78,14 +83,18 @@ class PredictiveTask(
         """Returns prompt template.
         :returns: Prompt template.
         """
-        return self._bridge.prompt_template
+        prompt_template = self._bridge.prompt_template
+        assert prompt_template is None or isinstance(prompt_template, str)
+        return prompt_template
 
     @property
     def prompt_signature_description(self) -> str | None:
         """Returns prompt signature description.
         :returns: Prompt signature description.
         """
-        return self._bridge.prompt_signature_description
+        sig_desc = self._bridge.prompt_signature_description
+        assert sig_desc is None or isinstance(sig_desc, str)
+        return sig_desc
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Execute the task on a set of documents.
@@ -107,8 +116,8 @@ class PredictiveTask(
         # 2. Build executable.
         executable = self._engine.build_executable(
             inference_mode=self._bridge.inference_mode,  # type: ignore[arg-type]
-            prompt_template=self._bridge.prompt_template,
-            prompt_signature=signature,  # type: ignore[arg-type]
+            prompt_template=self.prompt_template,
+            prompt_signature=signature,
             fewshot_examples=self._fewshot_examples,
         )
 
@@ -129,11 +138,11 @@ class PredictiveTask(
         assert len(results) == len(docs_chunks_values)
 
         # 6. Consolidate chunk results.
-        results = list(self._bridge.consolidate(results, docs_chunks_offsets))  # type: ignore[arg-type]
+        results = list(self._bridge.consolidate(results, docs_chunks_offsets))
         assert len(results) == len(docs)
 
         # 7. Integrate results into docs.
-        docs = self._bridge.integrate(results, docs)  # type: ignore[arg-type]
+        docs = self._bridge.integrate(results, docs)
 
         return docs
 
@@ -150,7 +159,7 @@ class PredictiveTask(
     @classmethod
     def deserialize(
         cls, config: Config, **kwargs: dict[str, Any]
-    ) -> PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode]:
+    ) -> PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode, TaskBridge]:
         """Generate PredictiveTask instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.

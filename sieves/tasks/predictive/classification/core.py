@@ -11,15 +11,12 @@ from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outli
 from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
 from sieves.serialization import Config
 from sieves.tasks.predictive.classification.bridges import (
-    ClassificationBridge,
     DSPyClassification,
     GliXClassification,
     HuggingFaceClassification,
     LangChainClassification,
     OllamaClassification,
     OutlinesClassification,
-    _BridgePromptSignature,
-    _BridgeResult,
 )
 from sieves.tasks.predictive.core import PredictiveTask
 
@@ -50,7 +47,7 @@ class TaskFewshotExample(pydantic.BaseModel):
         return self
 
 
-class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode]):
+class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode, TaskBridge]):
     def __init__(
         self,
         labels: list[str],
@@ -84,7 +81,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskInferen
         )
         self._fewshot_examples: Iterable[TaskFewshotExample]
 
-    def _init_bridge(self, engine_type: EngineType) -> ClassificationBridge[_BridgePromptSignature, _BridgeResult]:
+    def _init_bridge(self, engine_type: EngineType) -> TaskBridge:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
@@ -108,7 +105,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskInferen
         except KeyError:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
 
-        return bridge  # type: ignore[return-value]
+        return bridge
 
     @property
     def supports(self) -> set[EngineType]:

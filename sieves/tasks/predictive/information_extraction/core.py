@@ -15,7 +15,6 @@ from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
-    InformationExtractionBridge,
     LangChainInformationExtraction,
     OllamaInformationExtraction,
     OutlinesInformationExtraction,
@@ -39,7 +38,7 @@ class TaskFewshotExample(pydantic.BaseModel):
     entities: list[pydantic.BaseModel]
 
 
-class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode]):
+class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode, TaskBridge]):
     def __init__(
         self,
         entity_type: type[pydantic.BaseModel],
@@ -78,7 +77,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, Task
             fewshot_examples=fewshot_examples,
         )
 
-    def _init_bridge(self, engine_type: EngineType) -> InformationExtractionBridge[TaskPromptSignature, TaskResult]:
+    def _init_bridge(self, engine_type: EngineType) -> TaskBridge:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
@@ -102,15 +101,11 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, Task
         except KeyError:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
 
-        return bridge  # type: ignore[return-value]
+        return bridge
 
     @property
     def supports(self) -> set[EngineType]:
         return {EngineType.outlines, EngineType.dspy, EngineType.ollama}
-
-    def _validate_fewshot_examples(self) -> None:
-        # No fixed validation we can do here beyond what's already done by Pydantic.
-        pass
 
     @property
     def _state(self) -> dict[str, Any]:
