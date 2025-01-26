@@ -22,7 +22,7 @@ from sieves.tasks.core import Task, TaskInferenceMode, TaskPromptSignature, Task
 
 
 class PredictiveTask(
-    Generic[TaskPromptSignature, TaskResult, Model, TaskInferenceMode],
+    Generic[TaskPromptSignature, TaskResult, TaskInferenceMode],
     Task,
     abc.ABC,
 ):
@@ -150,7 +150,7 @@ class PredictiveTask(
     @classmethod
     def deserialize(
         cls, config: Config, **kwargs: dict[str, Any]
-    ) -> PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]:
+    ) -> PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode]:
         """Generate PredictiveTask instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
