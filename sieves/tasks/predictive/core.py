@@ -209,10 +209,11 @@ class Bridge(Generic[TaskPromptSignature, TaskResult], abc.ABC):
 
     @property
     @abc.abstractmethod
-    def prompt_signature(self) -> TaskPromptSignature:
+    def prompt_signature(self) -> type[TaskPromptSignature] | TaskPromptSignature:
         """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
         jsonformers). This is engine-specific.
-        :returns: Output signature object.
+        :returns: Output signature object. This can be an instance (e.g. a regex string) or a class (e.g. a Pydantic
+            class).
         """
 
     @property

@@ -1,7 +1,7 @@
 import abc
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Literal, TypeVar
+from typing import Generic, Literal, TypeVar
 
 import dspy
 import jinja2
@@ -11,12 +11,14 @@ from sieves.data import Doc
 from sieves.engines import dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
 from sieves.tasks.predictive.core import Bridge
 
-BridgePromptSignature = TypeVar("BridgePromptSignature", covariant=True)
-BridgeResult = TypeVar("BridgeResult")
+_BridgePromptSignature = TypeVar("_BridgePromptSignature", covariant=True)
+_BridgeResult = TypeVar("_BridgeResult")
 _GliXResult = list[dict[str, str | float]]
 
 
-class ClassificationBridge(Bridge[BridgePromptSignature, BridgeResult], abc.ABC):
+class ClassificationBridge(
+    Bridge[_BridgePromptSignature, _BridgeResult], Generic[_BridgePromptSignature, _BridgeResult], abc.ABC
+):
     def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, labels: list[str]):
         """
         Initializes InformationExtractionBridge.
@@ -48,7 +50,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         )
 
     @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:  # type: ignore[valid-type]
+    def prompt_signature(self) -> type[dspy_.PromptSignature]:
         labels = self._labels
         # Dynamically create Literal as output type.
         LabelType = Literal[*labels]  # type: ignore[valid-type]
@@ -232,7 +234,7 @@ class GliXClassification(ClassificationBridge[list[str], _GliXResult]):
             yield sorted_label_scores
 
 
-class PydanticBasedClassification(ClassificationBridge[type[pydantic.BaseModel], pydantic.BaseModel], abc.ABC):
+class PydanticBasedClassification(ClassificationBridge[pydantic.BaseModel, pydantic.BaseModel], abc.ABC):
     @property
     def prompt_template(self) -> str | None:
         return (

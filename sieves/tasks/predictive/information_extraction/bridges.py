@@ -52,7 +52,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         )
 
     @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:  # type: ignore[valid-type]
+    def prompt_signature(self) -> type[dspy_.PromptSignature]:
         extraction_type = self._entity_type
 
         class Entities(dspy.Signature):  # type: ignore[misc]
@@ -107,7 +107,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
 
 class PydanticBasedInformationExtraction(
-    InformationExtractionBridge[type[pydantic.BaseModel], pydantic.BaseModel],
+    InformationExtractionBridge[pydantic.BaseModel, pydantic.BaseModel],
     abc.ABC,
 ):
     @property

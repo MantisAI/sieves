@@ -32,7 +32,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,
-        prompt_signature: PromptSignature,
+        prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
         cls_name = self.__class__.__name__

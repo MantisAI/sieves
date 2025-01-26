@@ -22,7 +22,7 @@ from sieves.tasks.predictive.information_extraction.bridges import (
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-TaskPromptSignature: TypeAlias = type[pydantic.BaseModel] | type[dspy_.PromptSignature]  # type: ignore[valid-type]
+TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
 TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
 TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
 TaskBridge: TypeAlias = (

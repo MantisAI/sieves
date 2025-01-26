@@ -66,7 +66,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
         self,
         inference_mode: EngineInferenceMode,
         prompt_template: str | None,
-        prompt_signature: EnginePromptSignature,
+        prompt_signature: type[EnginePromptSignature] | EnginePromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[EngineResult | None]:
         """
@@ -74,7 +74,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
         generators are e.g. Predict in DSPy, generator in outlines, Jsonformer in jsonformers).
         :param inference_mode: Inference mode to use (e.g. classification, JSON, ... - this is engine-specific).
         :param prompt_template: Prompt template.
-        :param prompt_signature: Expected prompt signature.
+        :param prompt_signature: Expected prompt signature type.
         :param fewshot_examples: Few-shot examples.
         :return: Prompt executable.
         """
