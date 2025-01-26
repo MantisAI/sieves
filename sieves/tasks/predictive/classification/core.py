@@ -51,9 +51,7 @@ class TaskFewshotExample(pydantic.BaseModel):
         return self
 
 
-class Classification(
-    PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode, TaskFewshotExample],
-):
+class Classification(PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]):
     def __init__(
         self,
         labels: list[str],
@@ -85,6 +83,7 @@ class Classification(
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,
         )
+        self._fewshot_examples: Iterable[TaskFewshotExample]
 
     def _init_bridge(
         self, engine_type: EngineType

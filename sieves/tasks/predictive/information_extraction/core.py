@@ -39,9 +39,7 @@ class TaskFewshotExample(pydantic.BaseModel):
     entities: list[pydantic.BaseModel]
 
 
-class InformationExtraction(
-    PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode, TaskFewshotExample]
-):
+class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]):
     def __init__(
         self,
         entity_type: type[pydantic.BaseModel],

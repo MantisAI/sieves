@@ -10,7 +10,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
-from sieves.tasks.core import Bridge
+from sieves.tasks.predictive.core import Bridge
 
 BridgePromptSignature = TypeVar("BridgePromptSignature", covariant=True)
 BridgeInferenceMode = TypeVar("BridgeInferenceMode", bound=enum.Enum, covariant=True)

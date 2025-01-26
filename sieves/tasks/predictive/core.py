@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from typing import Any, Generic
 
 import datasets
+import pydantic
 
 from sieves.data import Doc
 from sieves.engines import (
@@ -16,11 +17,11 @@ from sieves.engines import (
     Model,
 )
 from sieves.serialization import Config, Serializable
-from sieves.tasks.core import Bridge, Task, TaskFewshotExample, TaskInferenceMode, TaskPromptSignature, TaskResult
+from sieves.tasks.core import Task, TaskInferenceMode, TaskPromptSignature, TaskResult
 
 
 class PredictiveTask(
-    Generic[TaskPromptSignature, TaskResult, Model, TaskInferenceMode, TaskFewshotExample],
+    Generic[TaskPromptSignature, TaskResult, Model, TaskInferenceMode],
     Task,
     abc.ABC,
 ):
@@ -32,7 +33,7 @@ class PredictiveTask(
         include_meta: bool,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ):
         """
         Initializes new PredictiveTask.
@@ -148,7 +149,7 @@ class PredictiveTask(
     @classmethod
     def deserialize(
         cls, config: Config, **kwargs: dict[str, Any]
-    ) -> PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode, TaskFewshotExample]:
+    ) -> PredictiveTask[TaskPromptSignature, TaskResult, Model, TaskInferenceMode]:
         """Generate PredictiveTask instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
@@ -171,4 +172,75 @@ class PredictiveTask(
         """Creates Hugging Face datasets.Dataset from docs.
         :param docs: Docs to convert.
         :returns: Hugging Face dataset.
+        """
+
+
+class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.ABC):
+    def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None):
+        """
+        Initializes new bridge.
+        :param task_id: Task ID.
+        :param prompt_template: Custom prompt template. If None, default will be used.
+        :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
+        """
+        self._task_id = task_id
+        self._custom_prompt_template = prompt_template
+        self._custom_prompt_signature_desc = prompt_signature_desc
+
+    @property
+    @abc.abstractmethod
+    def prompt_template(self) -> str | None:
+        """Returns prompt template.
+        Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
+        Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
+        a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
+        expectations when creating a prompt template.
+        :returns: Prompt template as string. None if not used by engine.
+        """
+
+    @property
+    @abc.abstractmethod
+    def prompt_signature_description(self) -> str | None:
+        """Returns prompt signature description. This is used by some engines to aid the language model in generating
+        structured output.
+        :returns: Prompt signature description. None if not used by engine.
+        """
+
+    @property
+    @abc.abstractmethod
+    def prompt_signature(self) -> TaskPromptSignature:
+        """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
+        jsonformers). This is engine-specific.
+        :returns: Output signature object.
+        """
+
+    @property
+    @abc.abstractmethod
+    def inference_mode(self) -> TaskInferenceMode:
+        """Returns inference mode.
+        :returns: Inference mode.
+        """
+
+    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
+        """Extract all values from doc instances that are to be injected into the prompts.
+        :param docs: Docs to extract values from.
+        :returns: All values from doc instances that are to be injected into the prompts
+        """
+        return ({"text": doc.text if doc.text else None} for doc in docs)
+
+    @abc.abstractmethod
+    def integrate(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+        """Integrate results into Doc instances.
+        :param results: Results from prompt executable.
+        :param docs: Doc instances to update.
+        :returns: Updated doc instances.
+        """
+
+    @abc.abstractmethod
+    def consolidate(self, results: Iterable[TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[TaskResult]:
+        """Consolidates results for document chunks into document results.
+        :param results: Results per document chunk.
+        :param docs_offsets: Chunk offsets per document. Chunks per document can be obtained with
+            results[docs_chunk_offsets[i][0]:docs_chunk_offsets[i][1]].
+        :returns: Results per document.
         """

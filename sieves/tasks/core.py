@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Iterable
-from typing import Any, Generic, TypeVar
-
-import pydantic
+from typing import Any, TypeVar
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config
@@ -12,7 +10,6 @@ from sieves.serialization import Attribute, Config
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
 TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
 TaskResult = TypeVar("TaskResult")
-TaskFewshotExample = TypeVar("TaskFewshotExample", bound=pydantic.BaseModel)
 
 
 class Task(abc.ABC):
@@ -69,74 +66,3 @@ class Task(abc.ABC):
         """
         # Deserialize and inject engine.
         return cls(**config.to_init_dict(cls, **kwargs))
-
-
-class Bridge(Generic[TaskPromptSignature, TaskInferenceMode, TaskResult], abc.ABC):
-    def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None):
-        """
-        Initializes new bridge.
-        :param task_id: Task ID.
-        :param prompt_template: Custom prompt template. If None, default will be used.
-        :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
-        """
-        self._task_id = task_id
-        self._custom_prompt_template = prompt_template
-        self._custom_prompt_signature_desc = prompt_signature_desc
-
-    @property
-    @abc.abstractmethod
-    def prompt_template(self) -> str | None:
-        """Returns prompt template.
-        Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
-        Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
-        a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
-        expectations when creating a prompt template.
-        :returns: Prompt template as string. None if not used by engine.
-        """
-
-    @property
-    @abc.abstractmethod
-    def prompt_signature_description(self) -> str | None:
-        """Returns prompt signature description. This is used by some engines to aid the language model in generating
-        structured output.
-        :returns: Prompt signature description. None if not used by engine.
-        """
-
-    @property
-    @abc.abstractmethod
-    def prompt_signature(self) -> TaskPromptSignature:
-        """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
-        jsonformers). This is engine-specific.
-        :returns: Output signature object.
-        """
-
-    @property
-    @abc.abstractmethod
-    def inference_mode(self) -> TaskInferenceMode:
-        """Returns inference mode.
-        :returns: Inference mode.
-        """
-
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        """Extract all values from doc instances that are to be injected into the prompts.
-        :param docs: Docs to extract values from.
-        :returns: All values from doc instances that are to be injected into the prompts
-        """
-        return ({"text": doc.text if doc.text else None} for doc in docs)
-
-    @abc.abstractmethod
-    def integrate(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
-        """Integrate results into Doc instances.
-        :param results: Results from prompt executable.
-        :param docs: Doc instances to update.
-        :returns: Updated doc instances.
-        """
-
-    @abc.abstractmethod
-    def consolidate(self, results: Iterable[TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[TaskResult]:
-        """Consolidates results for document chunks into document results.
-        :param results: Results per document chunk.
-        :param docs_offsets: Chunk offsets per document. Chunks per document can be obtained with
-            results[docs_chunk_offsets[i][0]:docs_chunk_offsets[i][1]].
-        :returns: Results per document.
-        """
