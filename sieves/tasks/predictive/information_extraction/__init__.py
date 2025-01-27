@@ -1,3 +1,3 @@
-from .core import InformationExtraction, TaskFewshotExample, TaskInferenceMode, TaskPromptSignature, TaskResult
+from .core import InformationExtraction, TaskFewshotExample, _TaskInferenceMode, _TaskPromptSignature, _TaskResult
 
-__all__ = ["InformationExtraction", "TaskFewshotExample", "TaskInferenceMode", "TaskResult", "TaskPromptSignature"]
+__all__ = ["InformationExtraction", "TaskFewshotExample", "_TaskInferenceMode", "_TaskResult", "_TaskPromptSignature"]

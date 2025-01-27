@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 
 from . import dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
-from .core import Engine, EngineInferenceMode, EnginePromptSignature, EngineResult, Model
+from .core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from .dspy_ import DSPy
 from .glix_ import GliX
 from .huggingface_ import HuggingFace
@@ -26,7 +26,7 @@ class EngineType(enum.Enum):
 
     @classmethod
     def get_engine_type(
-        cls, engine: Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode]
+        cls, engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]
     ) -> EngineType:
         """Get engine type for self._engine.
         :param engine: Engine to check.
@@ -51,7 +51,7 @@ __all__ = [
     "huggingface_",
     "HuggingFace",
     "EngineResult",
-    "Model",
+    "EngineModel",
     "ollama_",
     "Ollama",
     "outlines_",

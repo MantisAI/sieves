@@ -8,7 +8,7 @@ from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformer
 
 from sieves.engines.core import Executable, TemplateBasedEngine
 
-PromptSignature: TypeAlias = type[pydantic.BaseModel] | list[str] | str
+PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
 Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
 Result: TypeAlias = pydantic.BaseModel | str
 
@@ -42,7 +42,7 @@ class Outlines(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
-        prompt_signature: PromptSignature,
+        prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
         cls_name = self.__class__.__name__

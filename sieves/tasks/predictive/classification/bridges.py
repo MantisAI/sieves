@@ -1,28 +1,21 @@
 import abc
-import enum
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Generic, Literal, TypeVar
+from typing import Literal, TypeVar
 
 import dspy
 import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
-from sieves.tasks.core import Bridge
+from sieves.engines import EngineInferenceMode, dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
+from sieves.tasks.predictive.core import Bridge
 
-BridgePromptSignature = TypeVar("BridgePromptSignature", covariant=True)
-BridgeInferenceMode = TypeVar("BridgeInferenceMode", bound=enum.Enum, covariant=True)
-_PydanticBridgeInferenceMode = TypeVar("_PydanticBridgeInferenceMode", bound=enum.Enum, covariant=True)
-BridgeResult = TypeVar("BridgeResult")
-_GliXResult = list[dict[str, str | float]]
+_BridgePromptSignature = TypeVar("_BridgePromptSignature")
+_BridgeResult = TypeVar("_BridgeResult")
 
 
-class ClassificationBridge(
-    Bridge[BridgePromptSignature, BridgeInferenceMode, BridgeResult],
-    abc.ABC,
-):
+class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
     def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, labels: list[str]):
         """
         Initializes InformationExtractionBridge.
@@ -35,7 +28,7 @@ class ClassificationBridge(
         self._labels = labels
 
 
-class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
+class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     @property
     def prompt_template(self) -> str | None:
         return self._custom_prompt_template
@@ -54,7 +47,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
         )
 
     @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:  # type: ignore[valid-type]
+    def prompt_signature(self) -> type[dspy_.PromptSignature]:
         labels = self._labels
         # Dynamically create Literal as output type.
         LabelType = Literal[*labels]  # type: ignore[valid-type]
@@ -118,7 +111,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Infer
             )
 
 
-class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.InferenceMode, huggingface_.Result]):
+class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Result, huggingface_.InferenceMode]):
     @property
     def prompt_template(self) -> str | None:
         return (
@@ -187,7 +180,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Inf
             }
 
 
-class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _GliXResult]):
+class GliXClassification(ClassificationBridge[list[str], glix_.Result, glix_.InferenceMode]):
     @property
     def prompt_template(self) -> str | None:
         return None
@@ -204,14 +197,16 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _G
     def inference_mode(self) -> glix_.InferenceMode:
         return glix_.InferenceMode.classification
 
-    def integrate(self, results: Iterable[_GliXResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [
                 (res["label"], res["score"]) for res in sorted(result, key=lambda x: x["score"], reverse=True)
             ]
         return docs
 
-    def consolidate(self, results: Iterable[_GliXResult], docs_offsets: list[tuple[int, int]]) -> Iterable[_GliXResult]:
+    def consolidate(
+        self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[glix_.Result]:
         results = list(results)
 
         # Determine label scores for chunks per document.
@@ -239,9 +234,7 @@ class GliXClassification(ClassificationBridge[list[str], glix_.InferenceMode, _G
 
 
 class PydanticBasedClassification(
-    ClassificationBridge[type[pydantic.BaseModel], _PydanticBridgeInferenceMode, pydantic.BaseModel],
-    Generic[_PydanticBridgeInferenceMode],
-    abc.ABC,
+    ClassificationBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode], abc.ABC
 ):
     @property
     def prompt_template(self) -> str | None:

@@ -1,3 +1,3 @@
-from .core import Classification, TaskFewshotExample, TaskInferenceMode, TaskPromptSignature, TaskResult
+from .core import Classification, TaskFewshotExample, _TaskInferenceMode, _TaskPromptSignature, _TaskResult
 
-__all__ = ["Classification", "TaskFewshotExample", "TaskInferenceMode", "TaskResult", "TaskPromptSignature"]
+__all__ = ["Classification", "TaskFewshotExample", "_TaskInferenceMode", "_TaskResult", "_TaskPromptSignature"]
