@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import dspy_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, ollama_, outlines_
 from sieves.tasks.predictive.core import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature", covariant=True)
@@ -16,7 +16,7 @@ _BridgeResult = TypeVar("_BridgeResult")
 
 
 class InformationExtractionBridge(
-    Bridge[_BridgePromptSignature, _BridgeResult],
+    Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode],
     abc.ABC,
 ):
     def __init__(
@@ -37,7 +37,7 @@ class InformationExtractionBridge(
         self._entity_type = entity_type
 
 
-class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result]):
+class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     @property
     def prompt_template(self) -> str | None:
         return self._custom_prompt_template
@@ -107,7 +107,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
 
 class PydanticBasedInformationExtraction(
-    InformationExtractionBridge[pydantic.BaseModel, pydantic.BaseModel],
+    InformationExtractionBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode],
     abc.ABC,
 ):
     @property
@@ -189,19 +189,19 @@ class PydanticBasedInformationExtraction(
             yield self.prompt_signature(entities=entities, reasoning=str(reasonings))
 
 
-class OutlinesInformationExtraction(PydanticBasedInformationExtraction):
+class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_.InferenceMode]):
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
 
 
-class OllamaInformationExtraction(PydanticBasedInformationExtraction):
+class OllamaInformationExtraction(PydanticBasedInformationExtraction[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
         return ollama_.InferenceMode.chat
 
 
-class LangChainInformationExtraction(PydanticBasedInformationExtraction):
+class LangChainInformationExtraction(PydanticBasedInformationExtraction[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured_output

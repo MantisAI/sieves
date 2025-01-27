@@ -47,7 +47,7 @@ class TaskFewshotExample(pydantic.BaseModel):
         return self
 
 
-class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode, TaskBridge]):
+class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge]):
     def __init__(
         self,
         labels: list[str],

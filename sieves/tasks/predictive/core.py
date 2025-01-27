@@ -21,13 +21,12 @@ from sieves.serialization import Config, Serializable
 from sieves.tasks.core import Task
 
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
-TaskInferenceMode = TypeVar("TaskInferenceMode", covariant=True)
 TaskResult = TypeVar("TaskResult")
-TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult]")  # type: ignore[valid-type]
+TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult, EngineInferenceMode]")  # type: ignore[valid-type]
 
 
 class PredictiveTask(
-    Generic[TaskPromptSignature, TaskResult, TaskInferenceMode, TaskBridge],
+    Generic[TaskPromptSignature, TaskResult, TaskBridge],
     Task,
     abc.ABC,
 ):
@@ -114,8 +113,9 @@ class PredictiveTask(
         signature = self._bridge.prompt_signature
 
         # 2. Build executable.
+        assert isinstance(self._bridge.inference_mode, enum.Enum)
         executable = self._engine.build_executable(
-            inference_mode=self._bridge.inference_mode,  # type: ignore[arg-type]
+            inference_mode=self._bridge.inference_mode,
             prompt_template=self.prompt_template,
             prompt_signature=signature,
             fewshot_examples=self._fewshot_examples,
@@ -159,7 +159,7 @@ class PredictiveTask(
     @classmethod
     def deserialize(
         cls, config: Config, **kwargs: dict[str, Any]
-    ) -> PredictiveTask[TaskPromptSignature, TaskResult, TaskInferenceMode, TaskBridge]:
+    ) -> PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge]:
         """Generate PredictiveTask instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
@@ -185,7 +185,7 @@ class PredictiveTask(
         """
 
 
-class Bridge(Generic[TaskPromptSignature, TaskResult], abc.ABC):
+class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.ABC):
     def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None):
         """
         Initializes new bridge.
@@ -227,7 +227,7 @@ class Bridge(Generic[TaskPromptSignature, TaskResult], abc.ABC):
 
     @property
     @abc.abstractmethod
-    def inference_mode(self) -> enum.Enum:
+    def inference_mode(self) -> EngineInferenceMode:
         """Returns inference mode.
         :returns: Inference mode.
         """
