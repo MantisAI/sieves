@@ -40,7 +40,7 @@ def engine(request) -> engines.Engine:
             )
             return engines.huggingface_.HuggingFace(model=model)
         case engines.EngineType.ollama:
-            model = engines.ollama_.Model(client=ollama.Client(host="http://localhost:11434"), name="smollm:135m")
+            model = engines.ollama_._Model(client=ollama.Client(host="http://localhost:11434"), name="smollm:135m")
             return engines.ollama_.Ollama(model=model)
         case engines.EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"

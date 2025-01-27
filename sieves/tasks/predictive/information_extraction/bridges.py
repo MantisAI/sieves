@@ -37,7 +37,9 @@ class InformationExtractionBridge(
         self._entity_type = entity_type
 
 
-class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
+class DSPyInformationExtraction(
+    InformationExtractionBridge[dspy_._PromptSignature, dspy_._Result, dspy_.InferenceMode]
+):
     @property
     def prompt_template(self) -> str | None:
         return self._custom_prompt_template
@@ -52,7 +54,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         )
 
     @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
+    def prompt_signature(self) -> type[dspy_._PromptSignature]:
         extraction_type = self._entity_type
 
         class Entities(dspy.Signature):  # type: ignore[misc]
@@ -67,15 +69,15 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.chain_of_thought
 
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[dspy_._Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.entities) == 1
             doc.results[self._task_id] = result.completions.entities[0]
         return docs
 
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
+        self, results: Iterable[dspy_._Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[dspy_._Result]:
         results = list(results)
         entity_type = self._entity_type
         entity_type_is_frozen = entity_type.model_config.get("frozen", False)

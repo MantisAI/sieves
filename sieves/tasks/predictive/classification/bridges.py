@@ -28,7 +28,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         self._labels = labels
 
 
-class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
+class DSPyClassification(ClassificationBridge[dspy_._PromptSignature, dspy_._Result, dspy_.InferenceMode]):
     @property
     def prompt_template(self) -> str | None:
         return self._custom_prompt_template
@@ -47,7 +47,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         )
 
     @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
+    def prompt_signature(self) -> type[dspy_._PromptSignature]:
         labels = self._labels
         # Dynamically create Literal as output type.
         LabelType = Literal[*labels]  # type: ignore[valid-type]
@@ -64,7 +64,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.chain_of_thought
 
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[dspy_._Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.confidence_per_label) == 1
             sorted_preds = sorted(
@@ -76,8 +76,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         return docs
 
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
+        self, results: Iterable[dspy_._Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[dspy_._Result]:
         results = list(results)
 
         # Determine label scores for chunks per document.
@@ -111,7 +111,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             )
 
 
-class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Result, huggingface_.InferenceMode]):
+class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_._Result, huggingface_.InferenceMode]):
     @property
     def prompt_template(self) -> str | None:
         return (
@@ -145,14 +145,14 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     def inference_mode(self) -> huggingface_.InferenceMode:
         return huggingface_.InferenceMode.zeroshot_cls
 
-    def integrate(self, results: Iterable[huggingface_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[huggingface_._Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [(label, score) for label, score in zip(result["labels"], result["scores"])]
         return docs
 
     def consolidate(
-        self, results: Iterable[huggingface_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[huggingface_.Result]:
+        self, results: Iterable[huggingface_._Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[huggingface_._Result]:
         results = list(results)
 
         # Determine label scores for chunks per document.
@@ -180,7 +180,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
             }
 
 
-class GliXClassification(ClassificationBridge[list[str], glix_.Result, glix_.InferenceMode]):
+class GliXClassification(ClassificationBridge[list[str], glix_._Result, glix_.InferenceMode]):
     @property
     def prompt_template(self) -> str | None:
         return None
@@ -197,7 +197,7 @@ class GliXClassification(ClassificationBridge[list[str], glix_.Result, glix_.Inf
     def inference_mode(self) -> glix_.InferenceMode:
         return glix_.InferenceMode.classification
 
-    def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[glix_._Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [
                 (res["label"], res["score"]) for res in sorted(result, key=lambda x: x["score"], reverse=True)
@@ -205,8 +205,8 @@ class GliXClassification(ClassificationBridge[list[str], glix_.Result, glix_.Inf
         return docs
 
     def consolidate(
-        self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[glix_.Result]:
+        self, results: Iterable[glix_._Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[glix_._Result]:
         results = list(results)
 
         # Determine label scores for chunks per document.

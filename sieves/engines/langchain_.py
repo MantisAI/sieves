@@ -34,6 +34,7 @@ class LangChain(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMod
         prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result | None]:
+        assert isinstance(prompt_signature, type)
         cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
 

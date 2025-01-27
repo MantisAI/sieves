@@ -8,9 +8,9 @@ import pydantic
 
 from sieves.engines.core import Engine, Executable
 
-PromptSignature: TypeAlias = dspy.Signature | dspy.Module
-Model: TypeAlias = dsp.LM | dspy.BaseLM
-Result: TypeAlias = dspy.Prediction
+_PromptSignature: TypeAlias = dspy.Signature | dspy.Module
+_Model: TypeAlias = dsp.LM | dspy.BaseLM
+_Result: TypeAlias = dspy.Prediction
 
 
 class InferenceMode(enum.Enum):
@@ -29,12 +29,12 @@ class InferenceMode(enum.Enum):
     module = dspy.Module
 
 
-class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
+class DSPy(Engine[_PromptSignature, _Result, _Model, InferenceMode]):
     """Engine for DSPy."""
 
     def __init__(
         self,
-        model: Model,
+        model: _Model,
         config_kwargs: dict[str, Any] | None = None,
         init_kwargs: dict[str, Any] | None = None,
         inference_kwargs: dict[str, Any] | None = None,
@@ -66,11 +66,13 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
-        prompt_signature: type[PromptSignature] | PromptSignature,
+        prompt_signature: type[_PromptSignature] | _PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
-    ) -> Executable[Result | None]:
+    ) -> Executable[_Result | None]:
+        assert isinstance(prompt_signature, type)
+
         # Note: prompt_template is ignored here, as DSPy doesn't use it directly (only prompt_signature_description).
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Iterable[dict[str, Any]]) -> Iterable[_Result | None]:
             # Handled differently than the other supported modules: dspy.Module serves as both the signature as well as
             # the inference generator.
             if inference_mode == InferenceMode.module:

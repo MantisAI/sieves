@@ -20,11 +20,11 @@ from sieves.tasks.predictive.classification.bridges import (
 )
 from sieves.tasks.predictive.core import PredictiveTask
 
-_TaskPromptSignature: TypeAlias = list[str] | pydantic.BaseModel | dspy_.PromptSignature
+_TaskPromptSignature: TypeAlias = list[str] | pydantic.BaseModel | dspy_._PromptSignature
 _TaskInferenceMode: TypeAlias = (
     outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
 )
-_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result | glix_.Result
+_TaskResult: TypeAlias = outlines_._Result | dspy_._Result | huggingface_._Result | glix_._Result
 _TaskBridge: TypeAlias = (
     DSPyClassification
     | GliXClassification

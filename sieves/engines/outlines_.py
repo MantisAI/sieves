@@ -8,9 +8,9 @@ from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformer
 
 from sieves.engines.core import Executable, TemplateBasedEngine
 
-PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
-Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
-Result: TypeAlias = pydantic.BaseModel | str
+_PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
+_Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
+_Result: TypeAlias = pydantic.BaseModel | str
 
 
 class InferenceMode(enum.Enum):
@@ -29,7 +29,7 @@ class InferenceMode(enum.Enum):
     json = (outlines.generate.json,)
 
 
-class Outlines(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode]):
+class Outlines(TemplateBasedEngine[_PromptSignature, _Result, _Model, InferenceMode]):
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
@@ -42,13 +42,13 @@ class Outlines(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
-        prompt_signature: type[PromptSignature] | PromptSignature,
+        prompt_signature: type[_PromptSignature] | _PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
-    ) -> Executable[Result | None]:
+    ) -> Executable[_Result | None]:
         cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Iterable[dict[str, Any]]) -> Iterable[_Result | None]:
             generator_factory: Callable[..., Any] = inference_mode.value[0]
 
             match inference_mode:

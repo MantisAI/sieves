@@ -8,9 +8,9 @@ import pydantic
 
 from sieves.engines.core import Engine, Executable
 
-PromptSignature: TypeAlias = list[str]
-Model: TypeAlias = gliner.multitask.base.GLiNERBasePipeline
-Result: TypeAlias = list[dict[str, str | float]]
+_PromptSignature: TypeAlias = list[str]
+_Model: TypeAlias = gliner.multitask.base.GLiNERBasePipeline
+_Result: TypeAlias = list[dict[str, str | float]]
 
 
 class InferenceMode(enum.Enum):
@@ -23,7 +23,7 @@ class InferenceMode(enum.Enum):
     summarization = 4
 
 
-class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
+class GliX(Engine[_PromptSignature, _Result, _Model, InferenceMode]):
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
@@ -36,17 +36,17 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,
-        prompt_signature: type[PromptSignature] | PromptSignature,
+        prompt_signature: type[_PromptSignature] | _PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
-    ) -> Executable[Result]:
+    ) -> Executable[_Result]:
+        assert isinstance(prompt_signature, list)
         cls_name = self.__class__.__name__
-        fewshot_examples = list(fewshot_examples)
         if prompt_template:
             warnings.warn(f"prompt_template is ignored by engine {cls_name}.")
-        if len(fewshot_examples):
+        if len(list(fewshot_examples)):
             warnings.warn(f"Few-shot examples are not supported by engine {cls_name}.")
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
+        def execute(values: Iterable[dict[str, Any]]) -> Iterable[_Result]:
             texts = [dv["text"] for dv in values]
 
             match inference_mode:
