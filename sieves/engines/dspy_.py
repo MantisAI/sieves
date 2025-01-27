@@ -8,7 +8,7 @@ import pydantic
 
 from sieves.engines.core import Engine, Executable
 
-PromptSignature: TypeAlias = type[dspy.Signature] | type[dspy.Module]
+PromptSignature: TypeAlias = dspy.Signature | dspy.Module
 Model: TypeAlias = dsp.LM | dspy.BaseLM
 Result: TypeAlias = dspy.Prediction
 
@@ -66,7 +66,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
-        prompt_signature: PromptSignature,
+        prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result | None]:
         # Note: prompt_template is ignored here, as DSPy doesn't use it directly (only prompt_signature_description).

@@ -1,25 +1,22 @@
 import abc
-import enum
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 import dspy
 import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import dspy_, langchain_, ollama_, outlines_
-from sieves.tasks.core import Bridge
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, ollama_, outlines_
+from sieves.tasks.predictive.core import Bridge
 
-_BridgePromptSignature = TypeVar("_BridgePromptSignature", covariant=True)
-_BridgeInferenceMode = TypeVar("_BridgeInferenceMode", bound=enum.Enum, covariant=True)
-_PydanticBridgeInferenceMode = TypeVar("_PydanticBridgeInferenceMode", bound=enum.Enum, covariant=True)
+_BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
 class InformationExtractionBridge(
-    Bridge[_BridgePromptSignature, _BridgeInferenceMode, _BridgeResult],
+    Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode],
     abc.ABC,
 ):
     def __init__(
@@ -40,7 +37,7 @@ class InformationExtractionBridge(
         self._entity_type = entity_type
 
 
-class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.InferenceMode, dspy_.Result]):
+class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     @property
     def prompt_template(self) -> str | None:
         return self._custom_prompt_template
@@ -55,7 +52,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         )
 
     @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:  # type: ignore[valid-type]
+    def prompt_signature(self) -> type[dspy_.PromptSignature]:
         extraction_type = self._entity_type
 
         class Entities(dspy.Signature):  # type: ignore[misc]
@@ -110,8 +107,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
 
 class PydanticBasedInformationExtraction(
-    InformationExtractionBridge[type[pydantic.BaseModel], _PydanticBridgeInferenceMode, pydantic.BaseModel],
-    Generic[_PydanticBridgeInferenceMode],
+    InformationExtractionBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode],
     abc.ABC,
 ):
     @property
