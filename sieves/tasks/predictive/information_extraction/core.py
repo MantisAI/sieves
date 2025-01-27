@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 import warnings
 from collections.abc import Iterable
 from typing import Any, TypeAlias
@@ -10,7 +9,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
-from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
+from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
@@ -21,10 +20,10 @@ from sieves.tasks.predictive.information_extraction.bridges import (
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
-TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
-TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
-TaskBridge: TypeAlias = (
+_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
+_TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
+_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
+_TaskBridge: TypeAlias = (
     DSPyInformationExtraction
     | LangChainInformationExtraction
     | OutlinesInformationExtraction
@@ -38,11 +37,11 @@ class TaskFewshotExample(pydantic.BaseModel):
     entities: list[pydantic.BaseModel]
 
 
-class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge]):
+class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     def __init__(
         self,
         entity_type: type[pydantic.BaseModel],
-        engine: Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode],
+        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
@@ -77,12 +76,12 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, Task
             fewshot_examples=fewshot_examples,
         )
 
-    def _init_bridge(self, engine_type: EngineType) -> TaskBridge:
+    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
         """
-        bridge_types: dict[EngineType, type[TaskBridge]] = {
+        bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyInformationExtraction,
             EngineType.langchain: LangChainInformationExtraction,
             EngineType.outlines: OutlinesInformationExtraction,
@@ -90,16 +89,14 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, Task
         }
 
         try:
-            bridge_factory = bridge_types[engine_type]
-            assert not inspect.isabstract(bridge_factory)
-            bridge = bridge_factory(
+            bridge = bridge_types[engine_type](
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
                 entity_type=self._entity_type,
             )
-        except KeyError:
-            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
+        except KeyError as err:
+            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
 
         return bridge
 

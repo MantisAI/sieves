@@ -12,27 +12,27 @@ from sieves.data import Doc
 from sieves.engines import (
     Engine,
     EngineInferenceMode,
+    EngineModel,
     EnginePromptSignature,
     EngineResult,
     EngineType,
-    Model,
 )
 from sieves.serialization import Config, Serializable
 from sieves.tasks.core import Task
 
-TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
-TaskResult = TypeVar("TaskResult")
-TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult, EngineInferenceMode]")  # type: ignore[valid-type]
+_TaskPromptSignature = TypeVar("_TaskPromptSignature", covariant=True)
+_TaskResult = TypeVar("_TaskResult")
+_TaskBridge = TypeVar("_TaskBridge", bound="Bridge[_TaskPromptSignature, _TaskResult, EngineInferenceMode]")  # type: ignore[valid-type]
 
 
 class PredictiveTask(
-    Generic[TaskPromptSignature, TaskResult, TaskBridge],
+    Generic[_TaskPromptSignature, _TaskResult, _TaskBridge],
     Task,
     abc.ABC,
 ):
     def __init__(
         self,
-        engine: Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode],
+        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
         task_id: str | None,
         show_progress: bool,
         include_meta: bool,
@@ -65,7 +65,7 @@ class PredictiveTask(
         pass
 
     @abc.abstractmethod
-    def _init_bridge(self, engine_type: EngineType) -> TaskBridge:
+    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize engine task.
         :returns: Engine task.
         """
@@ -159,7 +159,7 @@ class PredictiveTask(
     @classmethod
     def deserialize(
         cls, config: Config, **kwargs: dict[str, Any]
-    ) -> PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge]:
+    ) -> PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]:
         """Generate PredictiveTask instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
@@ -185,7 +185,7 @@ class PredictiveTask(
         """
 
 
-class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.ABC):
+class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], abc.ABC):
     def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None):
         """
         Initializes new bridge.
@@ -218,7 +218,7 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
 
     @property
     @abc.abstractmethod
-    def prompt_signature(self) -> type[TaskPromptSignature] | TaskPromptSignature:
+    def prompt_signature(self) -> type[_TaskPromptSignature] | _TaskPromptSignature:
         """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
         jsonformers). This is engine-specific.
         :returns: Output signature object. This can be an instance (e.g. a regex string) or a class (e.g. a Pydantic
@@ -240,7 +240,7 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
         return ({"text": doc.text if doc.text else None} for doc in docs)
 
     @abc.abstractmethod
-    def integrate(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[_TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         """Integrate results into Doc instances.
         :param results: Results from prompt executable.
         :param docs: Doc instances to update.
@@ -248,7 +248,7 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
         """
 
     @abc.abstractmethod
-    def consolidate(self, results: Iterable[TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[TaskResult]:
+    def consolidate(self, results: Iterable[_TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[_TaskResult]:
         """Consolidates results for document chunks into document results.
         :param results: Results per document chunk.
         :param docs_offsets: Chunk offsets per document. Chunks per document can be obtained with

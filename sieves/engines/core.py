@@ -11,7 +11,7 @@ import pydantic
 from sieves.serialization import Attribute, Config
 
 EnginePromptSignature = TypeVar("EnginePromptSignature")
-Model = TypeVar("Model")
+EngineModel = TypeVar("EngineModel")
 EngineResult = TypeVar("EngineResult", covariant=True)
 EngineInferenceMode = TypeVar("EngineInferenceMode", bound=enum.Enum)
 
@@ -21,10 +21,10 @@ class Executable(Protocol[EngineResult]):
         ...
 
 
-class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInferenceMode]):
+class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
     def __init__(
         self,
-        model: Model,
+        model: EngineModel,
         init_kwargs: dict[str, Any] | None = None,
         inference_kwargs: dict[str, Any] | None = None,
         strict_mode: bool = False,
@@ -41,7 +41,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
         self._strict_mode = strict_mode
 
     @property
-    def model(self) -> Model:
+    def model(self) -> EngineModel:
         """Return model instance.
         :returns: Model instance.
         """
@@ -110,7 +110,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
     @classmethod
     def deserialize(
         cls, config: Config, **kwargs: dict[str, Any]
-    ) -> Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode]:
+    ) -> Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:
         """Generate Engine instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
@@ -119,7 +119,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, Model, EngineInference
         return cls(**config.to_init_dict(cls, **kwargs))
 
 
-class TemplateBasedEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode]):
+class TemplateBasedEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
     @classmethod
     def _create_template(cls, template: str | None) -> jinja2.Template:
         """Creates Jinja2 template from template string.

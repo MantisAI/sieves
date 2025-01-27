@@ -11,7 +11,7 @@ from sieves.data import Doc
 from sieves.engines import EngineInferenceMode, dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
 from sieves.tasks.predictive.core import Bridge
 
-_BridgePromptSignature = TypeVar("_BridgePromptSignature", covariant=True)
+_BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 

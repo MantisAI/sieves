@@ -8,7 +8,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
-from sieves.engines.core import EngineInferenceMode, EnginePromptSignature, EngineResult, Model
+from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.classification.bridges import (
     DSPyClassification,
@@ -20,12 +20,12 @@ from sieves.tasks.predictive.classification.bridges import (
 )
 from sieves.tasks.predictive.core import PredictiveTask
 
-TaskPromptSignature: TypeAlias = list[str] | pydantic.BaseModel | dspy_.PromptSignature
-TaskInferenceMode: TypeAlias = (
+_TaskPromptSignature: TypeAlias = list[str] | pydantic.BaseModel | dspy_.PromptSignature
+_TaskInferenceMode: TypeAlias = (
     outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
 )
-TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result | glix_.Result
-TaskBridge: TypeAlias = (
+_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | huggingface_.Result | glix_.Result
+_TaskBridge: TypeAlias = (
     DSPyClassification
     | GliXClassification
     | LangChainClassification
@@ -47,11 +47,11 @@ class TaskFewshotExample(pydantic.BaseModel):
         return self
 
 
-class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge]):
+class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     def __init__(
         self,
         labels: list[str],
-        engine: Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode],
+        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
@@ -81,12 +81,12 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge]
         )
         self._fewshot_examples: Iterable[TaskFewshotExample]
 
-    def _init_bridge(self, engine_type: EngineType) -> TaskBridge:
+    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize engine task.
         :returns: Engine task.
         :raises ValueError: If engine type is not supported.
         """
-        bridge_types: dict[EngineType, type[TaskBridge]] = {
+        bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyClassification,
             EngineType.glix: GliXClassification,
             EngineType.huggingface: HuggingFaceClassification,
@@ -102,8 +102,8 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge]
                 prompt_signature_desc=self._custom_prompt_signature_desc,
                 labels=self._labels,
             )
-        except KeyError:
-            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
+        except KeyError as err:
+            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
 
         return bridge
 
