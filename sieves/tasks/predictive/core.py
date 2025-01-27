@@ -12,10 +12,10 @@ from sieves.data import Doc
 from sieves.engines import (
     Engine,
     EngineInferenceMode,
+    EngineModel,
     EnginePromptSignature,
     EngineResult,
     EngineType,
-    Model,
 )
 from sieves.serialization import Config, Serializable
 from sieves.tasks.core import Task
@@ -32,7 +32,7 @@ class PredictiveTask(
 ):
     def __init__(
         self,
-        engine: Engine[EnginePromptSignature, EngineResult, Model, EngineInferenceMode],
+        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
         task_id: str | None,
         show_progress: bool,
         include_meta: bool,
