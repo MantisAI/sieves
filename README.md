@@ -24,11 +24,15 @@
 `sieves` enables zero- and few-shot NLP tasks with structured generation. With no training required, you can quickly 
 prototype NLP tasks while ensuring reliable, unified output formats.
 
-`sieves` allows running NLP tasks off the bat with zero- and few-shot models, leveraging structured generation methods. 
-- No training needed
-- Consistent structured output
-- Immediate productivity using built-in tasks
-- Flexible customization for your own tasks
+In developing NLP applications, we encountered this situation many times:
+- We want a quick prototype with a fast turnaround time.
+- The use-case we're trying to solve is complex enough to benefit from being split into several tasks (for better
+  observability, easier debugging etc.).
+- These tasks have to have a well-defined output, not just natural language text.
+
+`sieves` addresses such situations. It allows running NLP tasks off the bat with zero- and few-shot models, leveraging structured generation 
+methods. No training needed, consistent structured output, with immediate productivity using built-in tasks, and flexible customization 
+if the prebuilt tasks don't cut it for you.
 
 A simple example, using `outlines` for classification:
 ```python
