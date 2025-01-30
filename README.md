@@ -24,17 +24,43 @@
 `sieves` enables zero- and few-shot NLP tasks with structured generation. With no training required, you can quickly 
 prototype NLP tasks while ensuring reliable, unified output formats.
 
-In developing NLP applications, we encountered this situation many times:
-- We want a quick prototype with a fast turnaround time.
-- The use-case we're trying to solve is complex enough to benefit from being split into several tasks (for better
-  observability, easier debugging etc.).
-- These tasks have to have a well-defined output, not just natural language text.
+During the development of NLP applications, we're frequently facing this set of requirements:
+- Rapid Prototyping Needs: A requirement for quick prototypes with fast turnaround times.
+- Complex Use-Cases: Use cases being sufficiently complex to benefit from being divided into multiple tasks - to enhance observability and simplify debugging.
+- Recurring Tasks: Many projects involve similar tasks, including classification, Named Entity Recognition (NER), information extraction, and PII removal.
+- Structured Outputs: Necessity for tasks to produce well-defined outputs rather than just natural language text.
 
-`sieves` addresses such situations. It allows running NLP tasks off the bat with zero- and few-shot models, leveraging structured generation 
-methods. No training needed, consistent structured output, with immediate productivity using built-in tasks, and flexible customization 
+`sieves` addresses this. It allows running NLP tasks off the bat with zero- and few-shot models, leveraging structured generation 
+methods. No training needed, consistent structured output, immediate productivity using built-in tasks, and flexible customization 
 if the prebuilt tasks don't cut it for you.
 
-A simple example, using `outlines` for classification:
+--- 
+
+### Features
+
+- :dart: **No training:** All tasks run with structured zero-/few-shot models 
+- :robot: **Unified usage of multiple structured generation libraries**:
+  - [`outlines`](https://github.com/dottxt-ai/outlines)
+  - [`dspy`](https://github.com/stanfordnlp/dspy)
+  - [`langchain`](https://github.com/langchain-ai/langchain)
+  - [`gliner`](https://github.com/urchade/GLiNER)
+  - [`transformer`](https://github.com/huggingface/transformers) zero-shot pipelines
+  - [`ollama`](https://github.com/ollama/ollama)
+- :arrow_forward: **Pipeline-based system** for easy observability and debugging
+- :hammer_and_wrench: **Integrated utilities** convenient in an NLP pipeline
+  - File parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
+  - Chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
+- :label: **Prebuilt tasks** ready to use out-of-the-box
+  - Classification
+  - Information extraction
+  - TBD: NER, entity linking, summarization, translation, ...
+- :floppy_disk: **Save and load** your tasks and pipelines
+  - Save your pipeline config to disk and generate a pipeline from a saved config.
+- :teacher: **Export** your results as Hugging Face [`Dataset`](https://github.com/huggingface/datasets) for easy distillation of a specialized model on the zero-shot model's outputs. 
+
+---
+
+A simple example, using [`outlines`](https://github.com/dottxt-ai/outlines) for classification:
 ```python
 import outlines
 
@@ -80,17 +106,20 @@ docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
 # 2. Create engine responsible for generating structured output.
 model_id = 'knowledgator/gliner-multitask-v1.0'
-engine = engines.glix_.GliX(
-    model=gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_id))
+engine = engines.glix_.GliX(model=
+    gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_id))
 )
-    
+
+# 3. Create chunker object.
+chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
+
 # 3. Create pipeline with tasks.
 pipe = Pipeline(
     [
         # 4. Add document parsing task.
         tasks.preprocessing.Docling(),
         # 5. Add chunking task to ensure we don't exceed our model's context window.
-        tasks.preprocessing.Chonkie(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))),
+        tasks.preprocessing.Chonkie(chunker),
         # 6. Run classification on provided document.
         tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
     ]
@@ -105,13 +134,14 @@ pipe.dump("pipeline.yml")
 with open("docs.pkl", "wb") as f:
     pickle.dump(docs, f)
 
-# 9. To load a pipeline and docs from disk:
+# 9. Load pipeline and docs from disk. Note: we don't serialize complex third-party objects, so you'll have 
+#    to pass those in at load time.
 loaded_pipe = Pipeline.load(
     "pipeline.yml",
     (
         {},
-        {"chunker": chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))},
-        {"engine": {"model": dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])}},
+        {"chunker": chunker},
+        {"engine": {"model": engine.model},
     ),
 )
 with open("docs.pkl", "rb") as f:
@@ -119,29 +149,7 @@ with open("docs.pkl", "rb") as f:
 ```
 </details>
 
-### Features
-
-- :dart: **No training:** All tasks run with structured zero-/few-shot models 
-- :robot: **Integration and unified usage of multiple structured generation libraries**:
-  - [`outlines`](https://github.com/dottxt-ai/outlines)
-  - [`dspy`](https://github.com/stanfordnlp/dspy)
-  - [`langchain`](https://github.com/langchain-ai/langchain)
-  - [`gliner`](https://github.com/urchade/GLiNER)
-  - [`transformer`](https://github.com/huggingface/transformers) zero-shot pipelines
-  - [`ollama`](https://github.com/ollama/ollama)
-- :arrow_forward: **Pipeline-based system** for easy observability and debugging
-- :hammer_and_wrench: **Integrated utilities** convenient in an NLP pipeline
-  - File parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
-  - Chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
-  - TBD: export to [`datasets`](https://github.com/huggingface/datasets) dataset for easy fine-tuning 
-- :label: Prebuilt tasks ready to use out-of-the-box
-  - Classification
-  - Information extraction
-  - TBD: NER, entity linking, summarization, translation, ...
-- :floppy_disk: Serialize your tasks and pipelines
-  - Save your pipeline config to disk and generate a pipeline from a saved config.
-- :teacher: Export your results as Hugging Face [`Dataset`](https://github.com/huggingface/datasets), then distill a smaller models on the results you got from a zero-shot model's outputs. 
-
+---
 
 ### Why `sieves`?
 
@@ -158,11 +166,13 @@ prompting/encouraging the model to structure its output. All of these things are
 ecosystem (think [`docling`](https://github.com/DS4SD/docling) or Hugging Face's 
 [`datasets`](https://github.com/huggingface/datasets). 
 
-**What `sieves` aims to do** is to bundle all of this into one library that enables you to quickly and painlessly build 
+**What `sieves` does** is bundling all of this into one library, enabling you to quickly and painlessly build 
 prototypes of NLP-heavy applications. Built on zero- and few-shot models and a number of pre-implemented tasks you can 
 use right without having to build your own.  
 
 `sieves` has been partially inspired by [`spacy`](), especially [`spacy-llm`](https://github.com/explosion/spacy-llm). 
+
+---
 
 ### Core Abstractions
 
@@ -215,6 +225,8 @@ Note that the `Bridge` abstraction is not relevant if you're just using `sieves`
 composition. It is however relevant when implementing your own task, as you will need at least one `Bridge` for any 
 given `Task`. 
 
+--- 
+
 ## Frequently Asked Questions
 
 <details>
@@ -223,14 +235,14 @@ given `Task`.
 ### What's the meaning behind the name?
 
 Originally, `sieves` was intended for information extraction. The name comes from [gold panning](https://en.wikipedia.org/wiki/Gold_panning): 
-run your raw data through a sieve to obtain structured, refined “gold.”
+run your raw data through a sieve to obtain structured, refined “gold.” Also, `sieves` can be read as "Structured Information Extraction and
+VErification System" (but that's a mouthful).
 
 ### Why not just prompt an LLM directly?
 
 You can - but `sieves` offers:
-    - Structured data output. Zero-/few-shot LLMs can be finicky without guardrails or parsing.
-    - A step-by-step pipeline, making it easier to debug and track each stage.
- 
+- Structured data output. Zero-/few-shot LLMs can be finicky without guardrails or parsing.
+- A step-by-step pipeline, making it easier to debug and track each stage. 
 
 ### Why use `sieves` and not a structured generation library like `outlines`?
 
