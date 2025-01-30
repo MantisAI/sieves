@@ -2,14 +2,13 @@ import enum
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
-import dsp
 import dspy
 import pydantic
 
 from sieves.engines.core import Engine, Executable
 
 _PromptSignature: TypeAlias = dspy.Signature | dspy.Module
-_Model: TypeAlias = dsp.LM | dspy.BaseLM
+_Model: TypeAlias = dspy.LM | dspy.BaseLM
 _Result: TypeAlias = dspy.Prediction
 
 
