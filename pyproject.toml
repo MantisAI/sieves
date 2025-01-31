@@ -64,7 +64,10 @@ test = [
     "mypy-extensions>=1",
     "pytest-cov>=6",
     "langchain-anthropic>0.3,<0.4",
-    "tesseract>=0.1,<1"
+    "tesseract>=0.1,<1",
+    # For generating documentation.
+    "mkdocstrings[python]>=0.27,<1",
+    "mkdocs-material>=9.6,<10"
 ]
 
 [tool.black]

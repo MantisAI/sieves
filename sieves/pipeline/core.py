@@ -20,6 +20,7 @@ class Pipeline:
         tasks: Iterable[Task],
     ):
         """Initialize the pipeline.
+
         :param tasks: List of tasks to execute.
         """
         self._tasks = list(tasks)
@@ -45,9 +46,10 @@ class Pipeline:
 
     def __call__(self, docs: Iterable[Doc], in_place: bool = False) -> Iterable[Doc]:
         """Process a list of documents through all tasks.
+
         :param docs: Documents to process.
         :param in_place: Whether to modify documents in-place or create copies.
-        :returns: Processed documents.
+        :return Iterable[Doc]: Processed documents.
         """
         processed_docs = docs if in_place else [copy.deepcopy(doc) for doc in docs]
 
@@ -74,7 +76,7 @@ class Pipeline:
 
     def serialize(self) -> Config:
         """Serializes pipeline object.
-        :returns: Serialized pipeline representation.
+        :return: Serialized pipeline representation.
         """
         return Config.create(
             self.__class__,
@@ -86,7 +88,7 @@ class Pipeline:
         """Generates pipeline from config.
         :param config: Config to generate pipeline from.
         :param tasks_kwargs: Values to inject into task configs. One dict per task (dict can be empty).
-        :returns: Deserialized pipeline instance.
+        :return: Deserialized pipeline instance.
         """
         config.validate_init_params(cls)
         tasks_kwargs = tuple(tasks_kwargs)
@@ -122,7 +124,7 @@ class Pipeline:
     def __getitem__(self, task_id: str) -> Task:
         """Gets task with this ID.
         :param task_id: ID of task to fetch.
-        :returns: Task with specified ID.
+        :return: Task with specified ID.
         :raises: KeyError if no task with such ID exists.
         """
         for task in self._tasks:

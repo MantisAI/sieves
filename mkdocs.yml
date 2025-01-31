@@ -1,0 +1,72 @@
+site_name: sieves
+site_url: https://sieves.ai/docs
+docs_dir: docs
+repo_url: https://github.com/mantisai/sieves
+repo_name: "sieves on GitHub"
+
+theme:
+  name: material
+  features:
+    - navigation.top
+    - navigation.tabs
+    - navigation.footer
+    - header.autohide
+  palette:
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  logo: 'assets/sieve.png'
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          loading_strategy: import
+          options:
+            docstring_style: sphinx
+            show_source: true
+            signatures: true
+            inherited_members: true
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.superfences
+
+nav:
+  - Home:
+    - index.md
+    - about.md
+  - API Reference:
+    - pipeline.md
+    - doc.md
+    - bridge.md
+    - Tasks:
+      - tasks/task.md
+      - Preprocessing:
+        - tasks/preprocessing/chunkers.md
+        - tasks/preprocessing/docling.md
+        - tasks/preprocessing/unstructured.md
+      - Predictive:
+        - tasks/predictive/classification.md
+        - tasks/predictive/information_extraction.md
+    - Engines:
+        - engines/engine.md
+        - All Engines:
+            - engines/dspy.md
+            - engines/gliner.md
+            - engines/huggingface.md
+            - engines/langchain.md
+            - engines/ollama.md
+            - engines/outlines.md
+  - Guides:
+      - guides/getting_started.md
+      - guides/serialization.md
+      - guides/custom_tasks.md

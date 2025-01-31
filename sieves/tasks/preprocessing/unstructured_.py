@@ -57,7 +57,7 @@ class Unstructured(Task):
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Parse resources using docling.
         :param docs: Resources to process.
-        :returns: Parsed documents.
+        :return: Parsed documents.
         """
         docs = list(docs)
 

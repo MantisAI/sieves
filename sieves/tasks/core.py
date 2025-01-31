@@ -25,7 +25,7 @@ class Task(abc.ABC):
     @property
     def id(self) -> str:
         """Returns task ID. Used by pipeline for results and dependency management.
-        :returns: Task ID.
+        :return: Task ID.
         """
         return self._task_id
 
@@ -33,13 +33,13 @@ class Task(abc.ABC):
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Execute task.
         :param docs: Docs to process.
-        :returns: Processed docs.
+        :return: Processed docs.
         """
 
     @property
     def _state(self) -> dict[str, Any]:
         """Returns attributes to serialize.
-        :returns: Dict of attributes to serialize.
+        :return: Dict of attributes to serialize.
         """
         return {
             "task_id": self._task_id,
@@ -49,7 +49,7 @@ class Task(abc.ABC):
 
     def serialize(self) -> Config:
         """Serializes task.
-        :returns: Config instance.
+        :return: Config instance.
         """
         return Config.create(self.__class__, {k: Attribute(value=v) for k, v in self._state.items()})
 
@@ -58,7 +58,7 @@ class Task(abc.ABC):
         """Generate Task instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
-        :returns: Deserialized Task instance.
+        :return: Deserialized Task instance.
         """
         # Deserialize and inject engine.
         return cls(**config.to_init_dict(cls, **kwargs))

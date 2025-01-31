@@ -22,15 +22,18 @@ class EngineType(enum.Enum):
 
     @classmethod
     def all(cls) -> tuple[EngineType, ...]:
+        """Returns all available engine types.
+        :return tuple[EngineType, ...]: All available engine types.
+        """
         return cls.outlines, cls.dspy, cls.huggingface, cls.glix, cls.ollama, cls.langchain
 
     @classmethod
     def get_engine_type(
         cls, engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]
     ) -> EngineType:
-        """Get engine type for self._engine.
-        :param engine: Engine to check.
-        :returns: Engine type for self._engine.
+        """Returns engine type for specified engine.
+        :param engine: Engine to get type for.
+        :return EngineType: Engine type for self._engine.
         :raises: ValueError if engine class not found in EngineType.
         """
         for et in EngineType:

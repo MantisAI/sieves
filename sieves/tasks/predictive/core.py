@@ -67,20 +67,21 @@ class PredictiveTask(
     @abc.abstractmethod
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize engine task.
-        :returns: Engine task.
+        :param engine_type: Type of engine to initialize bridge for.
+        :return _TaskBridge: Engine task bridge.
         """
 
     @property
     @abc.abstractmethod
     def supports(self) -> set[EngineType]:
         """Returns supported engine types.
-        :returns: Supported engine types.
+        :return set[EngineType]: Supported engine types.
         """
 
     @property
     def prompt_template(self) -> str | None:
         """Returns prompt template.
-        :returns: Prompt template.
+        :return str | None: Prompt template.
         """
         prompt_template = self._bridge.prompt_template
         assert prompt_template is None or isinstance(prompt_template, str)
@@ -89,7 +90,7 @@ class PredictiveTask(
     @property
     def prompt_signature_description(self) -> str | None:
         """Returns prompt signature description.
-        :returns: Prompt signature description.
+        :return str | None: Prompt signature description.
         """
         sig_desc = self._bridge.prompt_signature_description
         assert sig_desc is None or isinstance(sig_desc, str)
@@ -104,8 +105,8 @@ class PredictiveTask(
         instance. TypeVars don't support unions however, neither do generics on a higher level of abstraction.
         We hence ignore these mypy errors, as the involved types should nonetheless be consistent.
 
-        :param docs: The documents to process.
-        :returns: The processed document
+        :param docs: Documents to process.
+        :return Iterable[Doc]: Processed documents.
         """
         docs = list(docs)
 
@@ -163,7 +164,7 @@ class PredictiveTask(
         """Generate PredictiveTask instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
-        :returns: Deserialized PredictiveTask instance.
+        :return PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]: Deserialized PredictiveTask instance.
         """
         # Validate engine config.
         assert hasattr(config, "engine")
@@ -181,7 +182,7 @@ class PredictiveTask(
     def docs_to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         """Creates Hugging Face datasets.Dataset from docs.
         :param docs: Docs to convert.
-        :returns: Hugging Face dataset.
+        :return datasets.Dataset: Hugging Face dataset.
         """
 
 
@@ -205,7 +206,7 @@ class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], ab
         Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
         a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
         expectations when creating a prompt template.
-        :returns: Prompt template as string. None if not used by engine.
+        :return str | None: Prompt template as string. None if not used by engine.
         """
 
     @property
@@ -213,7 +214,7 @@ class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], ab
     def prompt_signature_description(self) -> str | None:
         """Returns prompt signature description. This is used by some engines to aid the language model in generating
         structured output.
-        :returns: Prompt signature description. None if not used by engine.
+        :return str | None: Prompt signature description. None if not used by engine.
         """
 
     @property
@@ -221,21 +222,21 @@ class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], ab
     def prompt_signature(self) -> type[_TaskPromptSignature] | _TaskPromptSignature:
         """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
         jsonformers). This is engine-specific.
-        :returns: Output signature object. This can be an instance (e.g. a regex string) or a class (e.g. a Pydantic
-            class).
+        :return type[_TaskPromptSignature] | _TaskPromptSignature: Output signature object. This can be an instance
+            (e.g. a regex string) or a class (e.g. a Pydantic class).
         """
 
     @property
     @abc.abstractmethod
     def inference_mode(self) -> EngineInferenceMode:
         """Returns inference mode.
-        :returns: Inference mode.
+        :return EngineInferenceMode: Inference mode.
         """
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         """Extract all values from doc instances that are to be injected into the prompts.
         :param docs: Docs to extract values from.
-        :returns: All values from doc instances that are to be injected into the prompts
+        :return Iterable[dict[str, Any]]: All values from doc instances that are to be injected into the prompts
         """
         return ({"text": doc.text if doc.text else None} for doc in docs)
 
@@ -244,7 +245,7 @@ class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], ab
         """Integrate results into Doc instances.
         :param results: Results from prompt executable.
         :param docs: Doc instances to update.
-        :returns: Updated doc instances.
+        :return Iterable[Doc]: Updated doc instances.
         """
 
     @abc.abstractmethod
@@ -253,5 +254,5 @@ class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], ab
         :param results: Results per document chunk.
         :param docs_offsets: Chunk offsets per document. Chunks per document can be obtained with
             results[docs_chunk_offsets[i][0]:docs_chunk_offsets[i][1]].
-        :returns: Results per document.
+        :return Iterable[_TaskResult]: Results per document.
         """

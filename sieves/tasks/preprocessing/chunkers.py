@@ -1,4 +1,4 @@
-"""File preprocessing for converting raw files into documents."""
+"""Allows chunking of documents into segments."""
 import re
 from collections.abc import Iterable
 from typing import Any
@@ -31,7 +31,7 @@ class Chonkie(Task):
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Split documents into chunks.
         :param docs: Documents to split.
-        :returns: Split documents.
+        :return: Split documents.
         """
         docs = list(docs)
 
@@ -82,7 +82,7 @@ class NaiveChunker(Task):
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Split documents into chunks.
         :param docs: Documents to split.
-        :returns: Split documents.
+        :return: Split documents.
         """
         docs = list(docs)
 
