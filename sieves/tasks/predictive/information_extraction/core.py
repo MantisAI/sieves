@@ -78,7 +78,8 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize engine task.
-        :returns: Engine task.
+        :param engine_type: Type of engine to initialize bridge for.
+        :return _TaskBridge: Engine task bridge.
         :raises ValueError: If engine type is not supported.
         """
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
@@ -102,16 +103,26 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
     @property
     def supports(self) -> set[EngineType]:
+        """
+        :return set[EngineType]: Supported engine types.
+        """
         return {EngineType.outlines, EngineType.dspy, EngineType.ollama}
 
     @property
     def _state(self) -> dict[str, Any]:
+        """
+        :return dict[str, Any]: Task state.
+        """
         return {
             **super()._state,
             "entity_type": self._entity_type,
         }
 
     def docs_to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+        """
+        :param docs: Documents to convert.
+        :return datasets.Dataset: Converted dataset.
+        """
         # Define metadata.
         features = datasets.Features(
             {

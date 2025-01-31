@@ -60,6 +60,8 @@ if the prebuilt tasks don't cut it for you.
 
 ---
 
+### Getting Started
+
 A simple example, using [`outlines`](https://github.com/dottxt-ai/outlines) for classification:
 ```python
 import outlines

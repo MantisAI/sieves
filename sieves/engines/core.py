@@ -43,7 +43,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
     @property
     def model(self) -> EngineModel:
         """Return model instance.
-        :returns: Model instance.
+        :return: Model instance.
         """
         return self._model
 
@@ -51,14 +51,14 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
     @abc.abstractmethod
     def supports_few_shotting(self) -> bool:
         """Whether engine supports few-shotting. If not, only zero-shotting is supported.
-        :returns: Whether engine supports few-shotting.
+        :return: Whether engine supports few-shotting.
         """
 
     @property
     @abc.abstractmethod
     def inference_modes(self) -> type[EngineInferenceMode]:
         """Which inference modes are supported.
-        :returns: Supported inference modes.
+        :return: Supported inference modes.
         """
 
     @abc.abstractmethod
@@ -91,7 +91,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
     @property
     def _attributes(self) -> dict[str, Attribute]:
         """Returns attributes to serialize.
-        :returns: Dict of attributes to serialize.
+        :return: Dict of attributes to serialize.
         """
         # Note: init_kwargs and inference_kwargs are potentially unfit for serialization as they contain arbitrary
         # objects.
@@ -103,7 +103,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
 
     def serialize(self) -> Config:
         """Serializes engine.
-        :returns: Config instance.
+        :return: Config instance.
         """
         return Config.create(self.__class__, self._attributes)
 
@@ -114,7 +114,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         """Generate Engine instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
-        :returns: Deserialized Engine instance.
+        :return: Deserialized Engine instance.
         """
         return cls(**config.to_init_dict(cls, **kwargs))
 

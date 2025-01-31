@@ -83,7 +83,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize engine task.
-        :returns: Engine task.
+        :return: Engine task.
         :raises ValueError: If engine type is not supported.
         """
         bridge_types: dict[EngineType, type[_TaskBridge]] = {

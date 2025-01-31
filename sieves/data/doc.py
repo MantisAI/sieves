@@ -20,9 +20,10 @@ class Doc:
         if self.chunks is None and self.text is not None:
             self.chunks = [self.text]
 
-    def __str__(self) -> str:
-        """String representation of document.
-        :returns: Document text or empty string if no text.
+    @property
+    def __str__(self) -> str:  # type: ignore[override]
+        """Returns document text.
+        :return str: Document text or empty string if no text.
         """
         return self.text if self.text else ""
 

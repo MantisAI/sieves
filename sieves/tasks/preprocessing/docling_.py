@@ -1,4 +1,4 @@
-"""File preprocessing for converting raw files into documents."""
+"""Wrapper for `Docling` for the conversion of complex files into markdown."""
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -36,7 +36,7 @@ class Docling(Task):
         """Parse resources using docling.
 
         :param docs: Resources to process.
-        :returns: Parsed documents
+        :return: Parsed documents
         """
         docs = list(docs)
 
