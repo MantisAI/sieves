@@ -1,6 +1,7 @@
 # Saving and Loading
 
 `sieves` provides functionality to save your pipeline configurations to disk and load them later. This is useful for:
+
 - Sharing pipeline configurations with others
 - Versioning your pipelines
 - Deploying pipelines to production
@@ -25,7 +26,7 @@ pipeline = Pipeline([classifier])
 
 # Save the pipeline configuration
 config_path = Path("classification_pipeline.yml")
-pipeline.serialize().dump(config_path)
+pipeline.dump(config_path)
 
 # Load the pipeline configuration
 loaded_pipeline = Pipeline.load(
@@ -70,7 +71,7 @@ extractor = tasks.predictive.InformationExtraction(
 
 # Create and save the pipeline
 pipeline = Pipeline([chunker, extractor])
-pipeline.serialize().dump("extraction_pipeline.yml")
+pipeline.dump("extraction_pipeline.yml")
 
 # Load the pipeline with initialization parameters for each task
 loaded_pipeline = Pipeline.load(
@@ -118,24 +119,18 @@ tasks:
 ```
 
 The configuration file contains:
+
 - The full class path of the pipeline and its tasks
 - Version information
 - Task-specific parameters and their values
 - Placeholders for components that need to be provided during loading
 
-## Best Practices
+!!! info Parameter management
 
-1. **Version Control**: Keep your pipeline configuration files under version control along with your code.
+      When loading pipelines, provide all required initialization parameters and ensure you're loading a pipeline with a compatible `sieves` version.
 
-2. **Documentation**: Add comments in your configuration files to document any special requirements or dependencies.
+!!! warning Limitations
 
-3. **Parameter Management**: When loading pipelines:
-   - Provide all required initialization parameters
-   - Maintain consistent model versions
-   - Handle API keys and credentials securely
-
-## Limitations
-
-- Model weights are not saved in the configuration files
-- Complex third-party objects (everything beyond primitives or collections thereof) may not be serializable
-- API keys and credentials must be managed separately
+      - Model weights are not saved in the configuration files
+      - Complex third-party objects (everything beyond primitives or collections thereof) may not be serializable
+      - API keys and credentials must be managed separately

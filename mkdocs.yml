@@ -44,7 +44,7 @@ nav:
   - Home:
     - index.md
     - about.md
-  - API Reference:
+  - API:
     - pipeline.md
     - doc.md
     - bridge.md

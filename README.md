@@ -93,13 +93,11 @@ print(docs[0].results["Classification"])
 
 Here we parse a PDF with `docling`, chunk it with `chonkie`, and classify it with `gliner`:
 ```python
-import os
 import pickle
 
 import gliner.multitask
 import chonkie
 import tokenizers
-import dspy
 
 from sieves import Pipeline, engines, tasks, Doc
 
@@ -143,7 +141,7 @@ loaded_pipe = Pipeline.load(
     (
         {},
         {"chunker": chunker},
-        {"engine": {"model": engine.model},
+        {"engine": {"model": engine.model}},
     ),
 )
 with open("docs.pkl", "rb") as f:
