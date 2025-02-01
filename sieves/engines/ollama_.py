@@ -8,21 +8,21 @@ import pydantic
 from sieves.engines.core import Executable, TemplateBasedEngine
 
 
-class _Model(pydantic.BaseModel):
+class Model(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
     name: str
     client: ollama.Client
 
 
-_PromptSignature: TypeAlias = pydantic.BaseModel
-_Result: TypeAlias = pydantic.BaseModel
+PromptSignature: TypeAlias = pydantic.BaseModel
+Result: TypeAlias = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):
     chat = "chat"
 
 
-class Ollama(TemplateBasedEngine[_PromptSignature, _Result, _Model, InferenceMode]):
+class Ollama(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for Ollama.
     Make sure a Ollama server is running.
             In a nutshell:
@@ -42,18 +42,18 @@ class Ollama(TemplateBasedEngine[_PromptSignature, _Result, _Model, InferenceMod
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
-        prompt_signature: type[_PromptSignature] | _PromptSignature,
+        prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
-    ) -> Executable[_Result | None]:
+    ) -> Executable[Result | None]:
         assert isinstance(prompt_signature, type)
         cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[_Result | None]:
+        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             match inference_mode:
                 case InferenceMode.chat:
 
-                    def generate(prompt: str, **inference_kwargs: dict[str, Any]) -> _Result:
+                    def generate(prompt: str, **inference_kwargs: dict[str, Any]) -> Result:
                         result = self._model.client.chat(
                             messages=[{"role": "user", "content": prompt}],
                             model=self._model.name,

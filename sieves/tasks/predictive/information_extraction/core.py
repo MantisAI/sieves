@@ -20,9 +20,9 @@ from sieves.tasks.predictive.information_extraction.bridges import (
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_._PromptSignature
+_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
 _TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
-_TaskResult: TypeAlias = outlines_._Result | dspy_._Result | ollama_._Result
+_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
 _TaskBridge: TypeAlias = (
     DSPyInformationExtraction
     | LangChainInformationExtraction
@@ -77,7 +77,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         )
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
-        """Initialize engine task.
+        """Initialize bridge.
         :param engine_type: Type of engine to initialize bridge for.
         :return _TaskBridge: Engine task bridge.
         :raises ValueError: If engine type is not supported.
@@ -118,7 +118,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             "entity_type": self._entity_type,
         }
 
-    def docs_to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         """
         :param docs: Documents to convert.
         :return datasets.Dataset: Converted dataset.

@@ -66,7 +66,7 @@ class PredictiveTask(
 
     @abc.abstractmethod
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
-        """Initialize engine task.
+        """Initialize bridge.
         :param engine_type: Type of engine to initialize bridge for.
         :return _TaskBridge: Engine task bridge.
         """
@@ -179,7 +179,7 @@ class PredictiveTask(
         return cls(**config.to_init_dict(cls, **(kwargs | engine_param)))
 
     @abc.abstractmethod
-    def docs_to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         """Creates Hugging Face datasets.Dataset from docs.
         :param docs: Docs to convert.
         :return datasets.Dataset: Hugging Face dataset.
@@ -200,6 +200,12 @@ class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], ab
 
     @property
     @abc.abstractmethod
+    def _prompt_template(self) -> str | None:
+        """Returns default prompt template.
+        :return str | None: Default prompt template.
+        """
+
+    @property
     def prompt_template(self) -> str | None:
         """Returns prompt template.
         Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
@@ -208,14 +214,22 @@ class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], ab
         expectations when creating a prompt template.
         :return str | None: Prompt template as string. None if not used by engine.
         """
+        return self._custom_prompt_template or self._prompt_template
 
     @property
     @abc.abstractmethod
+    def _prompt_signature_description(self) -> str | None:
+        """Returns default prompt signature description.
+        :return str | None: Default prompt signature description.
+        """
+
+    @property
     def prompt_signature_description(self) -> str | None:
         """Returns prompt signature description. This is used by some engines to aid the language model in generating
         structured output.
         :return str | None: Prompt signature description. None if not used by engine.
         """
+        return self._custom_prompt_signature_desc or self._prompt_signature_description
 
     @property
     @abc.abstractmethod

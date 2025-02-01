@@ -7,7 +7,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.classification.bridges import (
@@ -20,11 +20,16 @@ from sieves.tasks.predictive.classification.bridges import (
 )
 from sieves.tasks.predictive.core import PredictiveTask
 
-_TaskPromptSignature: TypeAlias = list[str] | pydantic.BaseModel | dspy_._PromptSignature
+_TaskPromptSignature: TypeAlias = list[str] | pydantic.BaseModel | dspy_.PromptSignature
 _TaskInferenceMode: TypeAlias = (
-    outlines_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | glix_.InferenceMode
+    outlines_.InferenceMode
+    | dspy_.InferenceMode
+    | huggingface_.InferenceMode
+    | glix_.InferenceMode
+    | langchain_.InferenceMode
+    | ollama_.InferenceMode
 )
-_TaskResult: TypeAlias = outlines_._Result | dspy_._Result | huggingface_._Result | glix_._Result
+_TaskResult: TypeAlias = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | glix_.Result
 _TaskBridge: TypeAlias = (
     DSPyClassification
     | GliXClassification
@@ -82,7 +87,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         self._fewshot_examples: Iterable[TaskFewshotExample]
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
-        """Initialize engine task.
+        """Initialize bridge.
         :return: Engine task.
         :raises ValueError: If engine type is not supported.
         """
@@ -128,7 +133,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             "labels": self._labels,
         }
 
-    def docs_to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
             {"text": datasets.Value("string"), "label": datasets.Sequence(datasets.Value("float32"))}

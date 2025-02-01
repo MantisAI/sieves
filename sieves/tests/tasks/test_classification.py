@@ -44,7 +44,7 @@ def test_run(dummy_docs, engine, fewshot):
     # Test docs-to-dataset conversion.
     task = pipe["classifier"]
     assert isinstance(task, PredictiveTask)
-    dataset = task.docs_to_dataset(docs)
+    dataset = task.to_dataset(docs)
     assert all([key in dataset.features for key in ("text", "label")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -55,4 +55,4 @@ def test_run(dummy_docs, engine, fewshot):
         assert isinstance(rec["text"], str)
 
     with pytest.raises(KeyError):
-        task.docs_to_dataset([Doc(text="This is a dummy text.")])
+        task.to_dataset([Doc(text="This is a dummy text.")])

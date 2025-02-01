@@ -8,9 +8,9 @@ import transformers
 
 from sieves.engines.core import Engine, Executable
 
-_PromptSignature: TypeAlias = list[str]
-_Model: TypeAlias = transformers.Pipeline
-_Result: TypeAlias = dict[str, list[str] | list[float]]
+PromptSignature: TypeAlias = list[str]
+Model: TypeAlias = transformers.Pipeline
+Result: TypeAlias = dict[str, list[str] | list[float]]
 
 
 class InferenceMode(enum.Enum):
@@ -19,7 +19,7 @@ class InferenceMode(enum.Enum):
     zeroshot_cls = 0
 
 
-class HuggingFace(Engine[_PromptSignature, _Result, _Model, InferenceMode]):
+class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
@@ -32,9 +32,9 @@ class HuggingFace(Engine[_PromptSignature, _Result, _Model, InferenceMode]):
         self,
         inference_mode: InferenceMode,
         prompt_template: str | None,
-        prompt_signature: type[_PromptSignature] | _PromptSignature,
+        prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
-    ) -> Executable[_Result | None]:
+    ) -> Executable[Result | None]:
         cls_name = self.__class__.__name__
         assert prompt_template, ValueError(f"prompt_template has to be provided to {cls_name} engine by task.")
         assert isinstance(prompt_signature, list)
@@ -45,13 +45,13 @@ class HuggingFace(Engine[_PromptSignature, _Result, _Model, InferenceMode]):
         fewshot_examples_dict = HuggingFace._convert_fewshot_examples(fewshot_examples)
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[_Result]:
-            generator: Callable[[Iterable[str]], Iterable[_Result]]
+        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
+            generator: Callable[[Iterable[str]], Iterable[Result]]
 
             match inference_mode:
                 case InferenceMode.zeroshot_cls:
 
-                    def generate(texts: Iterable[str]) -> Iterable[_Result]:
+                    def generate(texts: Iterable[str]) -> Iterable[Result]:
                         result = self._model(
                             texts,
                             prompt_signature,
