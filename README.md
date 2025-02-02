@@ -54,7 +54,7 @@ build modern NLP applications. It provides:
 ### Features
 
 - :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models 
-- :robot **Unified Generation Interface:** Seamlessly use multiple libraries
+- :robot: **Unified Generation Interface:** Seamlessly use multiple libraries
   - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`dspy`](https://github.com/stanfordnlp/dspy)
   - [`langchain`](https://github.com/langchain-ai/langchain)
