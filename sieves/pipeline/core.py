@@ -94,7 +94,9 @@ class Pipeline:
         tasks_kwargs = tuple(tasks_kwargs)
 
         assert hasattr(config, "tasks")
-        assert len(config.tasks.value) == len(tasks_kwargs)
+        assert len(config.tasks.value) == len(tasks_kwargs), ValueError(
+            f"len(tasks_kwargs) has to match the number of tasks in this pipeline ({len(config.tasks.value)}."
+        )
         assert config.tasks.is_placeholder is False
 
         # Deserialize tasks.

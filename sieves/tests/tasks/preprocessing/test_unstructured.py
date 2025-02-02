@@ -7,9 +7,6 @@ import unstructured.partition.auto
 
 from sieves import Doc, Pipeline, tasks
 
-# todo
-#   - serialization: is_placeholder as derived field
-#   - serialization: generate Attributes in core task
 #   - serialization: don't require task kwargs if default values exist
 
 

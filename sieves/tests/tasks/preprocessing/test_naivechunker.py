@@ -10,20 +10,41 @@ from sieves.engines import EngineType
     [EngineType.huggingface],
     indirect=["engine"],
 )
-def test_task_chunking(dummy_docs, engine) -> None:
+def test_run(dummy_docs, engine) -> None:
     """Tests whether chunking mechanism in PredictiveTask works as expected."""
     chunk_interval = 5
-    pipe = Pipeline(
-        [
-            tasks.preprocessing.NaiveChunker(interval=chunk_interval),
-            tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
-        ]
-    )
+    pipe = Pipeline([tasks.preprocessing.NaiveChunker(interval=chunk_interval)])
     docs = list(pipe(dummy_docs))
 
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
-        assert doc.results["classifier"]
         assert len(doc.chunks) == 2
-        assert "classifier" in doc.results
+
+
+def test_serialization(dummy_docs) -> None:
+    chunk_interval = 5
+    pipe = Pipeline(tasks=[tasks.preprocessing.NaiveChunker(interval=chunk_interval)])
+    docs = list(pipe(dummy_docs))
+
+    config = pipe.serialize()
+    assert config.model_dump() == {
+        "cls_name": "sieves.pipeline.core.Pipeline",
+        "tasks": {
+            "is_placeholder": False,
+            "value": [
+                {
+                    "cls_name": "sieves.tasks.preprocessing.chunkers.NaiveChunker",
+                    "include_meta": {"is_placeholder": False, "value": False},
+                    "interval": {"is_placeholder": False, "value": 5},
+                    "show_progress": {"is_placeholder": False, "value": True},
+                    "task_id": {"is_placeholder": False, "value": "NaiveChunker"},
+                    "version": "0.4.0",
+                }
+            ],
+        },
+        "version": "0.4.0",
+    }
+
+    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{}])
+    assert docs[0] == list(deserialized_pipeline(dummy_docs))[0]

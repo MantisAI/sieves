@@ -8,15 +8,16 @@ from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import information_extraction
 
 
+class Person(pydantic.BaseModel, frozen=True):
+    name: str
+    age: pydantic.PositiveInt
+
+
 @pytest.mark.parametrize(
     "engine", (EngineType.dspy, EngineType.langchain, EngineType.ollama, EngineType.outlines), indirect=["engine"]
 )
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(information_extraction_docs, engine, fewshot) -> None:
-    class Person(pydantic.BaseModel, frozen=True):
-        name: str
-        age: pydantic.PositiveInt
-
     fewshot_examples = [
         information_extraction.TaskFewshotExample(
             text="Ada Lovelace lived to 47 years old. Zeno of Citium died with 72 years.",
@@ -59,3 +60,70 @@ def test_run(information_extraction_docs, engine, fewshot) -> None:
 
     with pytest.raises(KeyError):
         task.to_dataset([Doc(text="This is a dummy text.")])
+
+
+@pytest.mark.parametrize("engine", [EngineType.ollama], indirect=["engine"])
+def test_to_dataset(information_extraction_docs, engine) -> None:
+    task = tasks.predictive.InformationExtraction(entity_type=Person, engine=engine)
+    docs = task(information_extraction_docs)
+
+    assert isinstance(task, PredictiveTask)
+    dataset = task.to_dataset(docs)
+    assert all([key in dataset.features for key in ("text", "entities")])
+    assert len(dataset) == 2
+    records = list(dataset)
+    assert records[0]["text"] == "Mahatma Ghandi lived to 79 years old. Bugs Bunny is at least 85 years old."
+    assert records[1]["text"] == "Marie Curie passed away with 67 years. Marie Curie was 67 years old."
+    for record in records:
+        assert isinstance(record["entities"], dict)
+        assert isinstance(record["entities"]["age"], list)
+        assert isinstance(record["entities"]["name"], list)
+
+    with pytest.raises(KeyError):
+        task.to_dataset([Doc(text="This is a dummy text.")])
+
+    with pytest.raises(KeyError):
+        task.to_dataset([Doc(text="This is a dummy text.")])
+
+
+@pytest.mark.parametrize("engine", [EngineType.ollama], indirect=["engine"])
+def test_serialization(information_extraction_docs, engine) -> None:
+    pipe = Pipeline([tasks.predictive.InformationExtraction(entity_type=Person, engine=engine)])
+    list(pipe(information_extraction_docs))
+
+    config = pipe.serialize()
+    assert config.model_dump() == {
+        "cls_name": "sieves.pipeline.core.Pipeline",
+        "tasks": {
+            "is_placeholder": False,
+            "value": [
+                {
+                    "cls_name": "sieves.tasks.predictive.information_extraction.core.InformationExtraction",
+                    "engine": {
+                        "is_placeholder": False,
+                        "value": {
+                            "cls_name": "sieves.engines.ollama_.Ollama",
+                            "inference_kwargs": {"is_placeholder": False, "value": {}},
+                            "init_kwargs": {"is_placeholder": False, "value": {}},
+                            "model": {"is_placeholder": True, "value": "sieves.engines.ollama_.Model"},
+                            "version": "0.4.0",
+                        },
+                    },
+                    "entity_type": {
+                        "is_placeholder": True,
+                        "value": "pydantic._internal._model_construction.ModelMetaclass",
+                    },
+                    "fewshot_examples": {"is_placeholder": False, "value": ()},
+                    "include_meta": {"is_placeholder": False, "value": True},
+                    "prompt_signature_desc": {"is_placeholder": False, "value": None},
+                    "prompt_template": {"is_placeholder": False, "value": None},
+                    "show_progress": {"is_placeholder": False, "value": True},
+                    "task_id": {"is_placeholder": False, "value": "InformationExtraction"},
+                    "version": "0.4.0",
+                }
+            ],
+        },
+        "version": "0.4.0",
+    }
+
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": engine.model}, "entity_type": Person}])

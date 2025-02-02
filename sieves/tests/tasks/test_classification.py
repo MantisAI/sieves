@@ -41,10 +41,13 @@ def test_run(dummy_docs, engine, fewshot):
         assert doc.results["classifier"]
         assert "classifier" in doc.results
 
-    # Test docs-to-dataset conversion.
-    task = pipe["classifier"]
+
+@pytest.mark.parametrize("engine", [EngineType.huggingface], indirect=["engine"])
+def test_to_dataset(dummy_docs, engine) -> None:
+    task = classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)
+
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(docs)
+    dataset = task.to_dataset(task(dummy_docs))
     assert all([key in dataset.features for key in ("text", "label")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -56,3 +59,49 @@ def test_run(dummy_docs, engine, fewshot):
 
     with pytest.raises(KeyError):
         task.to_dataset([Doc(text="This is a dummy text.")])
+
+
+@pytest.mark.parametrize("engine", [EngineType.huggingface], indirect=["engine"])
+def test_serialization(dummy_docs, engine) -> None:
+    pipe = Pipeline(
+        [classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)]
+    )
+    list(pipe(dummy_docs))
+
+    config = pipe.serialize()
+    assert config.model_dump() == {
+        "cls_name": "sieves.pipeline.core.Pipeline",
+        "tasks": {
+            "is_placeholder": False,
+            "value": [
+                {
+                    "cls_name": "sieves.tasks.predictive.classification.core.Classification",
+                    "engine": {
+                        "is_placeholder": False,
+                        "value": {
+                            "cls_name": "sieves.engines.huggingface_.HuggingFace",
+                            "inference_kwargs": {"is_placeholder": False, "value": {}},
+                            "init_kwargs": {"is_placeholder": False, "value": {}},
+                            "model": {
+                                "is_placeholder": True,
+                                "value": "transformers.pipelines.zero_shot_classification."
+                                "ZeroShotClassificationPipeline",
+                            },
+                            "version": "0.4.0",
+                        },
+                    },
+                    "fewshot_examples": {"is_placeholder": False, "value": ()},
+                    "include_meta": {"is_placeholder": False, "value": True},
+                    "labels": {"is_placeholder": False, "value": ["science", "politics"]},
+                    "prompt_signature_desc": {"is_placeholder": False, "value": None},
+                    "prompt_template": {"is_placeholder": False, "value": None},
+                    "show_progress": {"is_placeholder": False, "value": True},
+                    "task_id": {"is_placeholder": False, "value": "classifier"},
+                    "version": "0.4.0",
+                }
+            ],
+        },
+        "version": "0.4.0",
+    }
+
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": engine.model}}])
