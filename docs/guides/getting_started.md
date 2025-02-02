@@ -23,21 +23,16 @@ from sieves import Pipeline, engines, tasks, Doc
 doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
 
 # Initialize the engine (using a small but capable model)
-model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
-
-# Create a classification task
-classifier = tasks.predictive.Classification(
-    labels=["science", "politics"], 
-    engine=engine
+engine = engines.outlines_.Outlines(
+    model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
 )
 
 # Create and run the pipeline
-pipeline = Pipeline([classifier])
-results = list(pipeline([doc]))
+pipeline = Pipeline([tasks.predictive.Classification(labels=["science", "politics"], engine=engine)])
 
 # Print the classification result
-print(results[0].results["Classification"])
+for doc in pipeline([doc]):
+    print(doc.results)
 ```
 
 ## Working with Documents
@@ -61,6 +56,7 @@ doc = Doc(
 ## Advanced Example: PDF Processing Pipeline
 
 Here's a more involved example that:
+
 1. Parses a PDF document
 2. Chunks it into smaller pieces
 3. Performs information extraction on each chunk
