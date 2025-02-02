@@ -42,6 +42,7 @@ class Attribute(pydantic.BaseModel):
             return any(cls._determine_is_placeholder(child) for child in value.values())
         elif any([isinstance(value, t) for t in (list, tuple, set)]):
             return any(cls._determine_is_placeholder(child) for child in value)
+        # todo Support serialization of Pydantic classes (convert to dict to determine placeholder status).
 
         # Unknown value type: assume placeholder status.
         return True
