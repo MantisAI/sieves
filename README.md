@@ -21,48 +21,62 @@
 
 ## Zero-shot NLP made easy.
 
-`sieves` enables zero- and few-shot NLP tasks with structured generation. With no training required, you can quickly 
-prototype NLP tasks while ensuring reliable, unified output formats.
+`sieves` is a library for zero- and few-shot NLP tasks with structured generation. Build production-ready NLP prototypes quickly, with guaranteed output formats and no training required.
 
-During the development of NLP applications, we're frequently facing this set of requirements:
-- Rapid Prototyping Needs: A requirement for quick prototypes with fast turnaround times.
-- Complex Use-Cases: Use cases being sufficiently complex to benefit from being divided into multiple tasks - to enhance observability and simplify debugging.
-- Recurring Tasks: Many projects involve similar tasks, including classification, Named Entity Recognition (NER), information extraction, and PII removal.
-- Structured Outputs: Necessity for tasks to produce well-defined outputs rather than just natural language text.
+### Why `sieves`?
 
-`sieves` addresses this. It allows running NLP tasks off the bat with zero- and few-shot models, leveraging structured generation 
-methods. No training needed, consistent structured output, immediate productivity using built-in tasks, and flexible customization 
-if the prebuilt tasks don't cut it for you.
+Even in the era of generative AI, structured outputs and observability remain crucial.
+
+Many real-world scenarios require rapid prototyping with minimal data. Generative language models excel here, but 
+producing clean, structured output can be challenging. Various tools address this need for structured/guided language 
+model output, including [`outlines`](https://github.com/dottxt-ai/outlines), [`dspy`](https://github.com/stanfordnlp/dspy), 
+[`ollama`](https://github.com/ollama/ollama), and others. Each has different design patterns, pros and cons. `sieves` wraps these tools and provides 
+a unified interface for input, processing, and output.
+
+Developing NLP prototypes often involves repetitive steps: parsing and chunking documents, exporting results for 
+model fine-tuning, and experimenting with different prompting techniques. All these needs are addressed by existing 
+libraries in the NLP ecosystem address (e.g. [`docling`](https://github.com/DS4SD/docling) for file parsing, or [`datasets`](https://github.com/huggingface/datasets) for transforming 
+data into a unified format for model training). 
+
+`sieves`  **simplifies NLP prototyping** by bundling these capabilities into a single library, allowing you to quickly 
+build modern NLP applications. It provides:
+- Zero- and few-shot model support for immediate inference
+- A bundle of utilities addressing common requirements in NLP applications
+- A unified interface for structured generation across multiple libraries
+- Built-in tasks for common NLP operations
+- Easy extendability
+- A document-based pipeline architecture for easy observability and debugging
+
+`sieves` draws a lot of inspiration from [`spaCy`](https://spacy.io/) and particularly [`spacy-llm`](https://github.com/explosion/spacy-llm).
 
 --- 
 
 ### Features
 
-- :dart: **No training:** All tasks run with structured zero-/few-shot models 
-- :robot: **Unified usage of multiple structured generation libraries**:
+- :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models 
+- :robot **Unified Generation Interface:** Seamlessly use multiple libraries
   - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`dspy`](https://github.com/stanfordnlp/dspy)
   - [`langchain`](https://github.com/langchain-ai/langchain)
   - [`gliner`](https://github.com/urchade/GLiNER)
-  - [`transformer`](https://github.com/huggingface/transformers) zero-shot pipelines
+  - [`transformer`](https://github.com/huggingface/transformers)
   - [`ollama`](https://github.com/ollama/ollama)
-- :arrow_forward: **Pipeline-based system** for easy observability and debugging
-- :hammer_and_wrench: **Integrated utilities** convenient in an NLP pipeline
-  - File parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
-  - Chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
-- :label: **Prebuilt tasks** ready to use out-of-the-box
-  - Classification
-  - Information extraction
-  - TBD: NER, entity linking, summarization, translation, ...
-- :floppy_disk: **Save and load** your tasks and pipelines
-  - Save your pipeline config to disk and generate a pipeline from a saved config.
-- :teacher: **Export** your results as Hugging Face [`Dataset`](https://github.com/huggingface/datasets) for easy distillation of a specialized model on the zero-shot model's outputs. 
+- :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
+- :hammer_and_wrench: **Integrated Tools:** 
+  - Document parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
+  - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
+- :label: **Ready-to-Use Tasks:**
+  - Text Classification
+  - Information Extraction
+  - Coming soon: NER, entity linking, summarization, translation, ...
+- :floppy_disk: **Persistence:** Save and load pipelines with configurations
+- :teacher: **Export:** Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for easy distillation
 
 ---
 
 ### Getting Started
 
-A simple example, using [`outlines`](https://github.com/dottxt-ai/outlines) for classification:
+Here's a simple classification example using [`outlines`](https://github.com/dottxt-ai/outlines):
 ```python
 import outlines
 
@@ -84,22 +98,20 @@ pipe = Pipeline(
 )
 
 # 5. Run pipe and output results.
-docs = list(pipe(docs))
-print(docs[0].results["Classification"])
+for doc in pipe(docs):
+  print(doc.results)
 ```
 
 <details>
-  <summary><b>A more involved example</b></summary>
+  <summary><b>Advanced Example</b></summary>
 
-Here we parse a PDF with `docling`, chunk it with `chonkie`, and classify it with `gliner`:
+This example demonstrates PDF parsing, text chunking, and classification:
 ```python
-import os
 import pickle
 
 import gliner.multitask
 import chonkie
 import tokenizers
-import dspy
 
 from sieves import Pipeline, engines, tasks, Doc
 
@@ -143,7 +155,7 @@ loaded_pipe = Pipeline.load(
     (
         {},
         {"chunker": chunker},
-        {"engine": {"model": engine.model},
+        {"engine": {"model": engine.model}},
     ),
 )
 with open("docs.pkl", "rb") as f:
@@ -153,79 +165,39 @@ with open("docs.pkl", "rb") as f:
 
 ---
 
-### Why `sieves`?
+### Core Concepts
 
-Even with generative AI, structured outputs and observability remain essential. 
+`sieves` is built on five key abstractions.
 
-In many real-life use-cases, there is a need for prototyping solutions that work with very little data. Generative 
-language models fill this gap nicely. Getting them to output clean, structured data can be tricky though. This is addressed by tooling for 
-structured/steered language model output: [`outlines`](https://github.com/dottxt-ai/outlines), [`dspy`](https://github.com/stanfordnlp/dspy), [`ollama`](https://github.com/ollama/ollama) and others.
-Each of these libraries has its own patterns, pros and cons. `sieves` offers a unified interface for usage, in- and output. 
+#### **`Pipeline`**
+Orchestrates task execution with features for.
+- Task configuration and sequencing
+- Pipeline execution
+- Configuration management and serialization
 
-Beyond that, we often encounter the same set of steps to get a prototype off the ground - such as parsing and chunking 
-documents, exporting results in a dataset format that can be used to fine-tune models, and experimenting with different ways of 
-prompting/encouraging the model to structure its output. All of these things are solved by existing libraries in the NLP
-ecosystem (think [`docling`](https://github.com/DS4SD/docling) or Hugging Face's 
-[`datasets`](https://github.com/huggingface/datasets). 
+#### **`Doc`**
+Represents a document in the pipeline.
+- Contains text content and metadata
+- Tracks document URI and processing results
+- Passes information between pipeline tasks
 
-**What `sieves` does** is bundling all of this into one library, enabling you to quickly and painlessly build 
-prototypes of NLP-heavy applications. Built on zero- and few-shot models and a number of pre-implemented tasks you can 
-use right without having to build your own.  
+#### **`Task`**
+Encapsulates a single processing step in a pipeline.
+- Defines input arguments
+- Wraps and initializes `Bridge` instances handling task-engine-specific logic
+- Implements task-specific dataset export
 
-`sieves` has been partially inspired by [`spacy`](), especially [`spacy-llm`](https://github.com/explosion/spacy-llm). 
+#### **`Engine`**
+Provides a unified interface to structured generation libraries.
+- Manages model interactions
+- Handles prompt execution
+- Standardizes output formats
 
----
-
-### Core Abstractions
-
-We intend to keep the API is minimalist and modular as possible. When using `sieves`, you'll need to know about the 
-following abstrations:
-
-#### Pipeline
-Responsible for coordinating the execution of tasks. Typical interactions with a `Pipeline` instance:
-- Instatiate pipeline
-- Add tasks to pipeline
-- Run pipeline
-- Serialize pipeline (config)
-
-#### Doc
-A `Doc` instance represents one document and contains information about its content, URI (if available) and potential 
-meta-information. The `sieves` workflow pipeline revolves around `Doc` instances - information is propagated throughout
-the pipeline via `Doc` instances being passed from task to task.
-
-> [!IMPORTANT]  
-> The length of your `Doc`s might exceed your models context length. Make sure you run a chunking task in your pipeline
-> to avoid running into problems with the context length.
-
-#### Engine
-An `Engine` wraps an existing library designed for structured generation with zero-/few-shot models. It coordinates 
-setting up executing prompts and fetching output from the model and passes it back to be converted into a unified data 
-format.
-
-> [!WARNING]  
-> Engines might fail in producing structured output. Validation ensures you won't end up with improperly structured 
-> results, but you might end up with a pipeline failure. The risk for this correlates positively with the complexity of 
-> the expected response type and negatively with the capability of the used model.
-
-#### Task
-A `Task` implements a given NLP task (such as classification, NER, information extraction, ...) for at least one engine.
-In itself a `Task` implementation is usually very concise, as most of the logic will be implemented in `Bridge` classes,
-which implement task logic with respect to a certain engine. I.e.: one `Task` provides one or more `Bridge` classes,
-which implement a task for one `Engine`.
-
-> [!TIP]
-> Some tasks might work better with one engine than the other. When implementing your own tasks, make sure to experiment
-> to figure out which engine delivers the best performance.
-
-#### Bridge
-A `Bridge` class connects one `Task` with one `Engine`. E.g.: a classification task will require a different 
-implementation when run against `outlines` then when run against `dspy` or `ollama`. This is the responsibility of a 
-`Bridge` implementation. `Bridge` implements functionality such as specifying a prompt template or the prompt's expected
-output type.
-
-Note that the `Bridge` abstraction is not relevant if you're just using `sieves`, as it's a part of a `Task`s 
-composition. It is however relevant when implementing your own task, as you will need at least one `Bridge` for any 
-given `Task`. 
+#### **`Bridge`**
+Connects `Task` with `Engine`.
+- Implements engine-specific prompt templates
+- Manages output type specifications
+- Ensures compatibility between tasks and engine
 
 --- 
 
@@ -234,26 +206,37 @@ given `Task`.
 <details>
   <summary><b>Show FAQs</b></summary>
 
-### What's the meaning behind the name?
+### Why "sieves"?
 
-Originally, `sieves` was intended for information extraction. The name comes from [gold panning](https://en.wikipedia.org/wiki/Gold_panning): 
-run your raw data through a sieve to obtain structured, refined “gold.” Also, `sieves` can be read as "Structured Information Extraction and
-VErification System" (but that's a mouthful).
+`sieves` was originally motivated by the want to use generative models for structured information extraction. Coming
+from this angle, there are two ways to explain why we settled on this name (pick the one you like better):
+- An analogy to [gold panning](https://en.wikipedia.org/wiki/Gold_panning): run your raw data through a sieve to obtain structured, refined "gold."
+- An acronym - "sieves" can be read as "Structured Information Extraction and VErification System" (but that's a mouthful).
 
 ### Why not just prompt an LLM directly?
 
-You can - but `sieves` offers:
+You can, of course - but `sieves` offers:
 - Structured data output. Zero-/few-shot LLMs can be finicky without guardrails or parsing.
 - A step-by-step pipeline, making it easier to debug and track each stage. 
+- The flexibility to switch between different models and ways to ensure structured and validated output.
+- A bunch of useful utilities for pre- and post-processing you might need.
+- An array of useful tasks you can right of the bat without having to roll your own.
 
-### Why use `sieves` and not a structured generation library like `outlines`?
+### Why use `sieves` and not a structured generation library, like `outlines`, directly?
 
-This is not either-or - `sieves` includes `outlines` (among others), plus:
-    - A uniform input/output format
-    - Prebuilt NLP tasks
-    - Pipeline logic with chunking and chunk consolidation
-    - Easy switching between structured generation engines
-    - Tools for file parsing, chunking, exporting data for fine-tuning
+Which library makes the most sense to you depends strongly on your use-case. `outlines` provides structured generation
+abilities, but not the pipeline system, utilities and pre-built tasks that `sieves` has to offer (and of course not the
+flexibility to switch between different structured generation libraries). Then again, maybe you don't need all that -
+in which case we recommend using `outlines` (or any other structured generation libray) directly.
+
+Similarly, maybe you already have an existing tech stack in your project that uses exclusively `ollama`, `langchain`, or
+`dspy`? All of these libraries (and more) are supported by `sieves` - but they are not _just_ structured generation 
+libraries, they come with a plethora of features that are out of scope for `sieves`. If your application deeply 
+integrates with a framework like LangChain or DSPy, it may be reasonable to stick to those libraries directly.
+
+As many things in engineering, this is a trade-off. The way we see it: the less tightly coupled your existing 
+application is with a particular language model framework, the more mileage you'll get out of `sieves`. This means that 
+it's ideal for prototyping (there's no reason you can't use it in production too, of course).
 
 </details>
 

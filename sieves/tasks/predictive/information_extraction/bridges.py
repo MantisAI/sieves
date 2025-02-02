@@ -37,24 +37,17 @@ class InformationExtractionBridge(
         self._entity_type = entity_type
 
 
-class DSPyInformationExtraction(
-    InformationExtractionBridge[dspy_._PromptSignature, dspy_._Result, dspy_.InferenceMode]
-):
+class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     @property
-    def prompt_template(self) -> str | None:
-        return self._custom_prompt_template
+    def _prompt_template(self) -> str | None:
+        return None
 
     @property
-    def prompt_signature_description(self) -> str | None:
-        return (
-            self._custom_prompt_signature_desc
-            or """
-            Find all occurences of this kind of entitity within the text.
-            """
-        )
+    def _prompt_signature_description(self) -> str | None:
+        return "Find all occurences of this kind of entitity within the text."
 
     @cached_property
-    def prompt_signature(self) -> type[dspy_._PromptSignature]:
+    def prompt_signature(self) -> type[dspy_.PromptSignature]:
         extraction_type = self._entity_type
 
         class Entities(dspy.Signature):  # type: ignore[misc]
@@ -69,15 +62,15 @@ class DSPyInformationExtraction(
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.chain_of_thought
 
-    def integrate(self, results: Iterable[dspy_._Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.entities) == 1
             doc.results[self._task_id] = result.completions.entities[0]
         return docs
 
     def consolidate(
-        self, results: Iterable[dspy_._Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_._Result]:
+        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[dspy_.Result]:
         results = list(results)
         entity_type = self._entity_type
         entity_type_is_frozen = entity_type.model_config.get("frozen", False)
@@ -113,33 +106,30 @@ class PydanticBasedInformationExtraction(
     abc.ABC,
 ):
     @property
-    def prompt_template(self) -> str | None:
-        return (
-            self._custom_prompt_template
-            or """
-            Find all occurences of this kind of entitity within the text. Keep your reasoning concise - don't 
-            exhaustively list all identified entities in your reasoning.
+    def _prompt_template(self) -> str | None:
+        return """
+        Find all occurences of this kind of entitity within the text. Keep your reasoning concise - don't 
+        exhaustively list all identified entities in your reasoning.
 
-            {% if examples|length > 0 -%}
-                Examples:
-                ----------
-                {%- for example in examples %}
-                    Text: "{{ example.text }}":
-                    Reasoning: "{{ example.reasoning }}"
-                    Output: {{ example.entities }}
-                {% endfor -%}
-                ----------
-            {% endif -%}
+        {% if examples|length > 0 -%}
+            Examples:
+            ----------
+            {%- for example in examples %}
+                Text: "{{ example.text }}":
+                Reasoning: "{{ example.reasoning }}"
+                Output: {{ example.entities }}
+            {% endfor -%}
+            ----------
+        {% endif -%}
 
-            ========
-            Text: {{ text }}
-            Output: 
-            """
-        )
+        ========
+        Text: {{ text }}
+        Output: 
+        """
 
     @property
-    def prompt_signature_description(self) -> str | None:
-        return self._custom_prompt_signature_desc
+    def _prompt_signature_description(self) -> str | None:
+        return None
 
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:

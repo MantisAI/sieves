@@ -28,26 +28,23 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         self._labels = labels
 
 
-class DSPyClassification(ClassificationBridge[dspy_._PromptSignature, dspy_._Result, dspy_.InferenceMode]):
+class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     @property
-    def prompt_template(self) -> str | None:
-        return self._custom_prompt_template
+    def _prompt_template(self) -> str | None:
+        return None
 
     @property
-    def prompt_signature_description(self) -> str | None:
-        return (
-            self._custom_prompt_signature_desc
-            or """
-            Multi-label classification of the provided text given the provided labels.
-            For each label, provide the conficence with which you believe that the provided text should be assigned 
-            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
-            opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
-            add up to 1.
-            """
-        )
+    def _prompt_signature_description(self) -> str | None:
+        return """
+        Multi-label classification of the provided text given the provided labels.
+        For each label, provide the conficence with which you believe that the provided text should be assigned 
+        this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
+        opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
+        add up to 1.
+        """
 
     @cached_property
-    def prompt_signature(self) -> type[dspy_._PromptSignature]:
+    def prompt_signature(self) -> type[dspy_.PromptSignature]:
         labels = self._labels
         # Dynamically create Literal as output type.
         LabelType = Literal[*labels]  # type: ignore[valid-type]
@@ -64,7 +61,7 @@ class DSPyClassification(ClassificationBridge[dspy_._PromptSignature, dspy_._Res
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.chain_of_thought
 
-    def integrate(self, results: Iterable[dspy_._Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.confidence_per_label) == 1
             sorted_preds = sorted(
@@ -76,8 +73,8 @@ class DSPyClassification(ClassificationBridge[dspy_._PromptSignature, dspy_._Res
         return docs
 
     def consolidate(
-        self, results: Iterable[dspy_._Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_._Result]:
+        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[dspy_.Result]:
         results = list(results)
 
         # Determine label scores for chunks per document.
@@ -111,30 +108,27 @@ class DSPyClassification(ClassificationBridge[dspy_._PromptSignature, dspy_._Res
             )
 
 
-class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_._Result, huggingface_.InferenceMode]):
+class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Result, huggingface_.InferenceMode]):
     @property
-    def prompt_template(self) -> str | None:
-        return (
-            self._custom_prompt_template
-            or """
-            This text is about {}.
-            {% if examples|length > 0 -%}
-                Examples:
-            ----------
-            {%- for example in examples %}
-            Text: "{{ example.text }}"
-            Reasoning: "{{ example.reasoning }}"
-            Output: 
-            {% for l, s in example.confidence_per_label.items() %}    {{ l }}: {{ s }},
-            {% endfor -%}
-            {% endfor -%}
-            ----------
-            {% endif -%}
-            """
-        )
+    def _prompt_template(self) -> str | None:
+        return """
+        This text is about {}.
+        {% if examples|length > 0 -%}
+            Examples:
+        ----------
+        {%- for example in examples %}
+        Text: "{{ example.text }}"
+        Reasoning: "{{ example.reasoning }}"
+        Output: 
+        {% for l, s in example.confidence_per_label.items() %}    {{ l }}: {{ s }},
+        {% endfor -%}
+        {% endfor -%}
+        ----------
+        {% endif -%}
+        """
 
     @property
-    def prompt_signature_description(self) -> str | None:
+    def _prompt_signature_description(self) -> str | None:
         return None
 
     @property
@@ -145,14 +139,14 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_._Re
     def inference_mode(self) -> huggingface_.InferenceMode:
         return huggingface_.InferenceMode.zeroshot_cls
 
-    def integrate(self, results: Iterable[huggingface_._Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[huggingface_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [(label, score) for label, score in zip(result["labels"], result["scores"])]
         return docs
 
     def consolidate(
-        self, results: Iterable[huggingface_._Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[huggingface_._Result]:
+        self, results: Iterable[huggingface_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[huggingface_.Result]:
         results = list(results)
 
         # Determine label scores for chunks per document.
@@ -180,13 +174,13 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_._Re
             }
 
 
-class GliXClassification(ClassificationBridge[list[str], glix_._Result, glix_.InferenceMode]):
+class GliXClassification(ClassificationBridge[list[str], glix_.Result, glix_.InferenceMode]):
     @property
-    def prompt_template(self) -> str | None:
+    def _prompt_template(self) -> str | None:
         return None
 
     @property
-    def prompt_signature_description(self) -> str | None:
+    def _prompt_signature_description(self) -> str | None:
         return None
 
     @property
@@ -197,7 +191,7 @@ class GliXClassification(ClassificationBridge[list[str], glix_._Result, glix_.In
     def inference_mode(self) -> glix_.InferenceMode:
         return glix_.InferenceMode.classification
 
-    def integrate(self, results: Iterable[glix_._Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [
                 (res["label"], res["score"]) for res in sorted(result, key=lambda x: x["score"], reverse=True)
@@ -205,8 +199,8 @@ class GliXClassification(ClassificationBridge[list[str], glix_._Result, glix_.In
         return docs
 
     def consolidate(
-        self, results: Iterable[glix_._Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[glix_._Result]:
+        self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[glix_.Result]:
         results = list(results)
 
         # Determine label scores for chunks per document.
@@ -237,43 +231,40 @@ class PydanticBasedClassification(
     ClassificationBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode], abc.ABC
 ):
     @property
-    def prompt_template(self) -> str | None:
-        return (
-            self._custom_prompt_template
-            or f"""
-            Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
-            For each label, provide the conficence with which you believe that the provided text should be assigned
-            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
-            opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision. 
+    def _prompt_template(self) -> str | None:
+        return f"""
+        Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
+        For each label, provide the conficence with which you believe that the provided text should be assigned
+        this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
+        opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision. 
 
-            The output for two labels LABEL_1 and LABEL_2 should look like this:
-            Output:
-                Reasoning: REASONING
-                LABEL_1: CONFIDENCE_SCORE_1
-                LABEL_2: CONFIDENCE_SCORE_2
+        The output for two labels LABEL_1 and LABEL_2 should look like this:
+        Output:
+            Reasoning: REASONING
+            LABEL_1: CONFIDENCE_SCORE_1
+            LABEL_2: CONFIDENCE_SCORE_2
 
-            {{% if examples|length > 0 -%}}
-                Examples:
-                ----------
-                {{%- for example in examples %}}
-                    Text: "{{{{ example.text }}}}"
-                    Output:
-                        Reasoning: "{{{{ example.reasoning }}}}" 
-                    {{% for l, s in example.confidence_per_label.items() %}}    {{{{ l }}}}: {{{{ s }}}},
-                    {{% endfor -%}}
-                {{% endfor %}}
-                ----------
-            {{% endif -%}}
+        {{% if examples|length > 0 -%}}
+            Examples:
+            ----------
+            {{%- for example in examples %}}
+                Text: "{{{{ example.text }}}}"
+                Output:
+                    Reasoning: "{{{{ example.reasoning }}}}" 
+                {{% for l, s in example.confidence_per_label.items() %}}    {{{{ l }}}}: {{{{ s }}}},
+                {{% endfor -%}}
+            {{% endfor %}}
+            ----------
+        {{% endif -%}}
 
-            ========
-            Text: {{{{ text }}}}
-            Output: 
-            """
-        )
+        ========
+        Text: {{{{ text }}}}
+        Output: 
+        """
 
     @property
-    def prompt_signature_description(self) -> str | None:
-        return self._custom_prompt_signature_desc or None
+    def _prompt_signature_description(self) -> str | None:
+        return None
 
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:

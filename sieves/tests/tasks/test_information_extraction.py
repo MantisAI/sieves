@@ -46,7 +46,7 @@ def test_run(information_extraction_docs, engine, fewshot) -> None:
     # Test docs-to-dataset conversion.
     task = pipe["InformationExtraction"]
     assert isinstance(task, PredictiveTask)
-    dataset = task.docs_to_dataset(docs)
+    dataset = task.to_dataset(docs)
     assert all([key in dataset.features for key in ("text", "entities")])
     assert len(dataset) == 2
     records = list(dataset)
@@ -58,4 +58,4 @@ def test_run(information_extraction_docs, engine, fewshot) -> None:
         assert isinstance(record["entities"]["name"], list)
 
     with pytest.raises(KeyError):
-        task.docs_to_dataset([Doc(text="This is a dummy text.")])
+        task.to_dataset([Doc(text="This is a dummy text.")])
