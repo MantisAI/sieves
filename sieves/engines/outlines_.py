@@ -6,7 +6,7 @@ import outlines
 import pydantic
 from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformers, TransformersVision
 
-from sieves.engines.core import Executable, TemplateBasedEngine
+from sieves.engines.core import Executable, PydanticEngine
 
 PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
 Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
@@ -29,14 +29,10 @@ class InferenceMode(enum.Enum):
     json = (outlines.generate.json,)
 
 
-class Outlines(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode]):
+class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
-
-    @property
-    def supports_few_shotting(self) -> bool:
-        return True
 
     def build_executable(
         self,
@@ -53,26 +49,30 @@ class Outlines(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode
 
             match inference_mode:
                 case InferenceMode.text:
-                    generator = generator_factory(self._model, **self._init_kwargs)
+                    seq_generator = generator_factory(self._model, **self._init_kwargs)
                 case InferenceMode.regex:
                     assert isinstance(prompt_signature, str), ValueError(
                         "PromptSignature has to be supplied as string in outlines regex mode."
                     )
-                    generator = generator_factory(self._model, regex_str=prompt_signature, **self._init_kwargs)
+                    seq_generator = generator_factory(self._model, regex_str=prompt_signature, **self._init_kwargs)
                 case InferenceMode.choice:
                     assert isinstance(prompt_signature, list), ValueError(
                         f"PromptSignature has to be supplied as list of strings or enum values in {cls_name} choice "
                         f"mode."
                     )
-                    generator = generator_factory(self._model, choices=prompt_signature, **self._init_kwargs)
+                    seq_generator = generator_factory(self._model, choices=prompt_signature, **self._init_kwargs)
+
                 case InferenceMode.json:
                     assert isinstance(prompt_signature, type) and issubclass(prompt_signature, pydantic.BaseModel)
-                    generator = generator_factory(self._model, schema_object=prompt_signature, **self._init_kwargs)
+                    seq_generator = generator_factory(self._model, schema_object=prompt_signature, **self._init_kwargs)
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
+            def generate(prompts: list[str]) -> Iterable[Result]:
+                yield from seq_generator(prompts, **self._inference_kwargs)
+
             return self._infer(
-                generator,
+                generate,
                 template,
                 values,
                 fewshot_examples,

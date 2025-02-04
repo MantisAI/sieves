@@ -1,17 +1,20 @@
+import asyncio
 import enum
+import warnings
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import Any, Literal, TypeAlias
 
 import ollama
 import pydantic
 
-from sieves.engines.core import Executable, TemplateBasedEngine
+from sieves.engines.core import Executable, PydanticEngine
 
 
 class Model(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
     name: str
-    client: ollama.Client
+    mode: Literal["sync", "async"]
+    host: str
 
 
 PromptSignature: TypeAlias = pydantic.BaseModel
@@ -22,7 +25,7 @@ class InferenceMode(enum.Enum):
     chat = "chat"
 
 
-class Ollama(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode]):
+class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for Ollama.
     Make sure a Ollama server is running.
             In a nutshell:
@@ -30,13 +33,19 @@ class Ollama(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode])
             > ollama serve (or ollama run MODEL_ID)
     """
 
+    def _validate_batch_size(self, batch_size: int) -> int:
+        if not self._model.mode == "sync" and batch_size != 1:
+            warnings.warn(
+                f"`batch_size` is forced to 1 when {self.__class__.__name__} engine is run with `Instructor`, as "
+                f"it runs a synchronous workflow."
+            )
+            batch_size = 1
+
+        return batch_size
+
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
-
-    @property
-    def supports_few_shotting(self) -> bool:
-        return True
 
     def build_executable(
         self,
@@ -53,26 +62,38 @@ class Ollama(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode])
             match inference_mode:
                 case InferenceMode.chat:
 
-                    def generate(prompt: str, **inference_kwargs: dict[str, Any]) -> Result:
-                        result = self._model.client.chat(
-                            messages=[{"role": "user", "content": prompt}],
-                            model=self._model.name,
-                            format=prompt_signature.model_json_schema(),
-                            **inference_kwargs,
-                        )
+                    def generate(prompts: list[str]) -> Iterable[Result]:
+                        client_cls = {"async": ollama.AsyncClient, "sync": ollama.Client}
+                        client = client_cls[self._model.mode](host=self._model.host)
+
+                        # chats: list[Coroutine | prompt_signature] = [
+                        responses = [
+                            client.chat(
+                                messages=[{"role": "user", "content": prompt}],
+                                model=self._model.name,
+                                format=prompt_signature.model_json_schema(),
+                                **self._inference_kwargs,
+                            )
+                            for prompt in prompts
+                        ]
+
+                        # For async client: responses are coroutines waiting to be executed.
+                        if self._model.mode == "async":
+                            responses = asyncio.run(self._execute_async_calls(responses))
+
                         try:
-                            return prompt_signature.model_validate_json(result.message.content)
+                            for res in responses:
+                                yield prompt_signature.model_validate_json(res.message.content)
                         except pydantic.ValidationError as ex:
                             raise pydantic.ValidationError(
                                 "Encountered problem in parsing Ollama output. Double-check your prompts and examples."
                             ) from ex
 
-                    generator = generate
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            return self._infer(
-                generator,
+            yield from self._infer(
+                generate,
                 template,
                 values,
                 fewshot_examples,

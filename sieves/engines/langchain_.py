@@ -1,3 +1,4 @@
+import asyncio
 import enum
 from collections.abc import Iterable
 from typing import Any, TypeAlias
@@ -5,7 +6,7 @@ from typing import Any, TypeAlias
 import langchain_core.language_models
 import pydantic
 
-from sieves.engines.core import Executable, TemplateBasedEngine
+from sieves.engines.core import Executable, PydanticEngine
 
 Model: TypeAlias = langchain_core.language_models.BaseChatModel
 PromptSignature: TypeAlias = pydantic.BaseModel
@@ -16,16 +17,12 @@ class InferenceMode(enum.Enum):
     structured_output = "structured_output"
 
 
-class LangChain(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMode]):
+class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for LangChain."""
 
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
-
-    @property
-    def supports_few_shotting(self) -> bool:
-        return True
 
     def build_executable(
         self,
@@ -43,11 +40,10 @@ class LangChain(TemplateBasedEngine[PromptSignature, Result, Model, InferenceMod
                 case InferenceMode.structured_output:
                     model = self._model.with_structured_output(prompt_signature)
 
-                    def generate(prompt: str, **inference_kwargs: dict[str, Any]) -> Result:
+                    def generate(prompts: list[str]) -> Iterable[Result]:
                         try:
-                            result = model.invoke(prompt, **inference_kwargs)
-                            assert isinstance(result, Result)
-                            return result
+                            yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
+
                         except pydantic.ValidationError as ex:
                             raise pydantic.ValidationError(
                                 "Encountered problem in parsing Ollama output. Double-check your prompts and examples."

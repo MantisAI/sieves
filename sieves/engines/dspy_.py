@@ -1,4 +1,5 @@
 import enum
+import warnings
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
@@ -52,6 +53,13 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         super().__init__(model, init_kwargs, inference_kwargs)
         config_kwargs = {"max_tokens": 100000} | (config_kwargs or {})
         dspy.configure(lm=model, **config_kwargs)
+
+    def _validate_batch_size(self, batch_size: int) -> int:
+        if batch_size != 1:
+            warnings.warn(f"`{self.__class__.__name__} doesn't support batch sizes > 1. Forcing batch size to be 1.")
+            batch_size = 1
+
+        return batch_size
 
     @property
     def inference_modes(self) -> type[InferenceMode]:

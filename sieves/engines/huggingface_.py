@@ -1,5 +1,7 @@
 import enum
-from collections.abc import Callable, Iterable
+import itertools
+import sys
+from collections.abc import Iterable
 from typing import Any, TypeAlias
 
 import jinja2
@@ -43,30 +45,31 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         # pipelines only support one hypothesis template per call - and we want to batch, so our hypothesis template
         # will be document-invariant.
         fewshot_examples_dict = HuggingFace._convert_fewshot_examples(fewshot_examples)
+        # Render hypothesis template with everything but text.
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
-            generator: Callable[[Iterable[str]], Iterable[Result]]
+            # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use different
+            # batch handling depending on whether lists/tuples or generators are used).
+            values = (v for v in values)
 
             match inference_mode:
                 case InferenceMode.zeroshot_cls:
+                    batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
 
-                    def generate(texts: Iterable[str]) -> Iterable[Result]:
-                        result = self._model(
-                            texts,
+                    while batch := [vals["text"] for vals in itertools.islice(values, batch_size)]:
+                        if len(batch) == 0:
+                            break
+
+                        yield from self._model(
+                            batch,
                             prompt_signature,
-                            # Render hypothesis template with everything but text.
                             hypothesis_template=template,
                             multi_label=True,
                             **self._inference_kwargs,
                         )
-                        assert isinstance(result, Iterable)
-                        return result
 
-                    generator = generate
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
-
-            return generator([doc_values["text"] for doc_values in values])
 
         return execute
