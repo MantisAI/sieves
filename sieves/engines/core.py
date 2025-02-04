@@ -157,7 +157,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         return True
 
     @staticmethod
-    async def _execute_async_calls(calls: list[Coroutine[Any, Any, Any]]) -> list[Any]:
+    async def _execute_async_calls(calls: list[Coroutine[Any, Any, Any]]) -> Any:
         """Executes batch of async functions.
         :param calls: Async calls to execute.
         :return: Parsed response objects.
