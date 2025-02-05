@@ -5,6 +5,7 @@ from typing import Any, TypeAlias
 
 import datasets
 import pydantic
+from tasks.predictive.classification.bridges import InstructorClassification
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
@@ -94,6 +95,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyClassification,
             EngineType.glix: GliXClassification,
+            EngineType.instructor: InstructorClassification,
             EngineType.huggingface: HuggingFaceClassification,
             EngineType.outlines: OutlinesClassification,
             EngineType.ollama: OllamaClassification,

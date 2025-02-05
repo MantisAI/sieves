@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
 from sieves.tasks.predictive.core import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -331,3 +331,9 @@ class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMo
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured_output
+
+
+class InstructorClassification(PydanticBasedClassification[instructor_.InferenceMode]):
+    @property
+    def inference_mode(self) -> instructor_.InferenceMode:
+        return instructor_.InferenceMode.chat

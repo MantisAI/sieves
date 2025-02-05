@@ -36,6 +36,10 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         template = self._create_template(prompt_template)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+            """Execute prompts with engine for given values.
+            :param values: Values to inject into prompts.
+            :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
+            """
             match inference_mode:
                 case InferenceMode.structured_output:
                     model = self._model.with_structured_output(prompt_signature)
@@ -43,7 +47,6 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                     def generate(prompts: list[str]) -> Iterable[Result]:
                         try:
                             yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
-
                         except pydantic.ValidationError as ex:
                             raise pydantic.ValidationError(
                                 "Encountered problem in parsing Ollama output. Double-check your prompts and examples."
@@ -53,11 +56,6 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            return self._infer(
-                generator,
-                template,
-                values,
-                fewshot_examples,
-            )
+            yield from self._infer(generator, template, values, fewshot_examples)
 
         return execute

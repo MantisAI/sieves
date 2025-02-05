@@ -49,13 +49,16 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
-            # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use different
-            # batch handling depending on whether lists/tuples or generators are used).
-            values = (v for v in values)
-
+            """Execute prompts with engine for given values.
+            :param values: Values to inject into prompts.
+            :return Iterable[Result]: Results for prompts.
+            """
             match inference_mode:
                 case InferenceMode.zeroshot_cls:
                     batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
+                    # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use
+                    # different batch handling depending on whether lists/tuples or generators are used).
+                    values = (v for v in values)
 
                     while batch := [vals["text"] for vals in itertools.islice(values, batch_size)]:
                         if len(batch) == 0:

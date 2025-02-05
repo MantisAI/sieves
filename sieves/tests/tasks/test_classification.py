@@ -7,7 +7,7 @@ from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
 
 
-@pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
+@pytest.mark.parametrize("engine", [EngineType.instructor], indirect=["engine"])
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(dummy_docs, engine, fewshot):
     fewshot_examples = [

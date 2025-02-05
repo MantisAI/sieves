@@ -14,6 +14,7 @@ from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
+    InstructorInformationExtraction,
     LangChainInformationExtraction,
     OllamaInformationExtraction,
     OutlinesInformationExtraction,
@@ -25,6 +26,7 @@ _TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | 
 _TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
 _TaskBridge: TypeAlias = (
     DSPyInformationExtraction
+    | InstructorInformationExtraction
     | LangChainInformationExtraction
     | OutlinesInformationExtraction
     | OllamaInformationExtraction
@@ -84,6 +86,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         """
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyInformationExtraction,
+            EngineType.instructor: InstructorInformationExtraction,
             EngineType.langchain: LangChainInformationExtraction,
             EngineType.outlines: OutlinesInformationExtraction,
             EngineType.ollama: OllamaInformationExtraction,

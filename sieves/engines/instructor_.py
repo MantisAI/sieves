@@ -1,3 +1,4 @@
+import asyncio
 import enum
 import warnings
 from collections.abc import Iterable
@@ -51,56 +52,33 @@ class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         template = self._create_template(prompt_template)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+            """Execute prompts with engine for given values.
+            :param values: Values to inject into prompts.
+            :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
+            """
             match inference_mode:
                 case InferenceMode.chat:
 
                     def generate(prompts: list[str]) -> Iterable[Result]:
-                        # todo generate is only for _one_ prompt. this doesn't a batched pattern -> probably best to:
-                        #   - extend PydanticEngine.infer() to support batch generators
-                        #   - specify so via a batch_size arg to infer() that defaults to 1
-                        #   - implement async calls for a list in here, but batching in infer()
-                        #       -> reasoning: batching is a general mechanism, but it's far from guaranteed that other
-                        #          engines will batch the same way (i.e. via async calls - could be via other
-                        #          inference server optimizations). if it becomes clear that this is the case, we can
-                        #          still lift the async call mechanism up into PydanticEngine.
-                        raise NotImplementedError
-                        # if isinstance(self._model, instructor.AsyncInstructor):
-                        #     calls: list[Coroutine] = [
-                        #         self._model.client.chat.completions.create(
-                        #             model=self._model.name,
-                        #             messages=[{"role": "user", "content": prompt}],
-                        #             response_model=prompt_signature,
-                        #             **inference_kwargs,
-                        #         )
-                        #     ]
-                        #
-                        #     for i in range(0, len(calls), batch_size):
-                        #         results_batch = [
-                        #             res for res in asyncio.run(_download(calls[i : i + batch_size])) if res
-                        #         ]
-                        #
-                        #     asyncio.run(calls)
-                        #     # todo implement async calling with batch size
-                        #     pass
-                        # else:
-                        #     result = self._model.client.chat.completions.create(
-                        #         model=self._model.name,
-                        #         messages=[{"role": "user", "content": prompt}],
-                        #         response_model=prompt_signature,
-                        #         **inference_kwargs,
-                        #     )
-                        #     assert isinstance(result, prompt_signature)
-                        #     return result
+                        responses = [
+                            self._model.client.chat.completions.create(
+                                messages=[{"role": "user", "content": prompt}],
+                                model=self._model.name,
+                                response_model=prompt_signature,
+                                **({"max_tokens": 1024} | self._inference_kwargs),
+                            )
+                            for prompt in prompts
+                        ]
 
-                    generator = generate
+                        # For async client: responses are coroutines waiting to be executed.
+                        if isinstance(self._model.client, instructor.AsyncInstructor):
+                            responses = asyncio.run(self._execute_async_calls(responses))
+
+                        yield from responses
+
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            return self._infer(
-                generator,
-                template,
-                values,
-                fewshot_examples,
-            )
+            yield from self._infer(generate, template, values, fewshot_examples)
 
         return execute

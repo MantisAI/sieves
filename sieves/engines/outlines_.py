@@ -45,6 +45,10 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         template = self._create_template(prompt_template)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+            """Execute prompts with engine for given values.
+            :param values: Values to inject into prompts.
+            :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
+            """
             generator_factory: Callable[..., Any] = inference_mode.value[0]
 
             match inference_mode:
@@ -71,7 +75,7 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             def generate(prompts: list[str]) -> Iterable[Result]:
                 yield from seq_generator(prompts, **self._inference_kwargs)
 
-            return self._infer(
+            yield from self._infer(
                 generate,
                 template,
                 values,
