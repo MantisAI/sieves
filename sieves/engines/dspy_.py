@@ -1,4 +1,7 @@
+import asyncio
 import enum
+import itertools
+import sys
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
@@ -37,6 +40,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         config_kwargs: dict[str, Any] | None = None,
         init_kwargs: dict[str, Any] | None = None,
         inference_kwargs: dict[str, Any] | None = None,
+        batch_size: int = -1,
     ):
         """
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
@@ -48,8 +52,10 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         :param config_kwargs: Optional kwargs supplied to dspy.configure().
         :param init_kwargs: Optional kwargs to supply to engine executable at init time.
         :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
+        :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
+            support batching.
         """
-        super().__init__(model, init_kwargs, inference_kwargs)
+        super().__init__(model, init_kwargs, inference_kwargs, batch_size=batch_size)
         config_kwargs = {"max_tokens": 100000} | (config_kwargs or {})
         dspy.configure(lm=model, **config_kwargs)
 
@@ -86,11 +92,21 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
             # Compile predictor with few-shot examples.
             fewshot_examples_dict = DSPy._convert_fewshot_examples(fewshot_examples)
             examples = [dspy.Example(**fs_example) for fs_example in fewshot_examples_dict]
-            generator = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
+            generator = dspy.asyncify(dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples))
 
-            for doc_values in values:
+            batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
+            # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use
+            # different batch handling depending on whether lists/tuples or generators are used).
+            values = (v for v in values)
+
+            while batch := [vals for vals in itertools.islice(values, batch_size)]:
+                if len(batch) == 0:
+                    break
+
                 try:
-                    yield generator(**doc_values, **self._inference_kwargs)
+                    calls = [generator(**doc_values, **self._inference_kwargs) for doc_values in batch]
+                    yield from asyncio.run(self._execute_async_calls(calls))
+
                 except ValueError as err:
                     if self._strict_mode:
                         raise ValueError(
@@ -98,6 +114,6 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                             "chunks contain sensible information."
                         ) from err
                     else:
-                        yield None
+                        yield [None] * len(batch)
 
         return execute

@@ -40,11 +40,11 @@ def test_custom_prompt_signature_desc():
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "engine",
+    "batch_engine",
     [engines.EngineType.outlines],
     indirect=True,
 )
-def test_run_readme_example_short(engine):
+def test_run_readme_example_short(batch_engine):
     # Define documents by text or URI.
     docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
@@ -52,7 +52,7 @@ def test_run_readme_example_short(engine):
     pipe = Pipeline(
         [
             # Run classification on provided document.
-            tasks.predictive.Classification(labels=["science", "politics"], engine=engine),
+            tasks.predictive.Classification(labels=["science", "politics"], engine=batch_engine),
         ]
     )
 
@@ -63,11 +63,11 @@ def test_run_readme_example_short(engine):
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "engine",
+    "batch_engine",
     [engines.EngineType.glix],
     indirect=True,
 )
-def test_run_readme_example_long(engine, tokenizer):
+def test_run_readme_example_long(batch_engine, tokenizer):
     # Define documents by text or URI.
     docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
@@ -79,7 +79,7 @@ def test_run_readme_example_long(engine, tokenizer):
             # Add chunking task to ensure we don't exceed our model's context window.
             tasks.preprocessing.Chonkie(chonkie.TokenChunker(tokenizer)),
             # Run classification on provided document.
-            tasks.predictive.Classification(labels=["science", "politics"], engine=engine),
+            tasks.predictive.Classification(labels=["science", "politics"], engine=batch_engine),
         ]
     )
 
@@ -100,7 +100,7 @@ def test_run_readme_example_long(engine, tokenizer):
                 (
                     {"doc_converter": None},
                     {"chunker": chonkie.TokenChunker(tokenizer)},
-                    {"engine": {"model": engine.model}},
+                    {"engine": {"model": batch_engine.model}},
                 ),
             )
 

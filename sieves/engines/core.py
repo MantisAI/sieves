@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import abc
+import asyncio
 import enum
-from collections.abc import Callable, Iterable
+import itertools
+import sys
+from collections.abc import Awaitable, Callable, Coroutine, Iterable
 from typing import Any, Generic, Protocol, TypeVar
 
 import jinja2
@@ -28,17 +31,28 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         init_kwargs: dict[str, Any] | None = None,
         inference_kwargs: dict[str, Any] | None = None,
         strict_mode: bool = False,
+        batch_size: int = -1,
     ):
         """
         :param model: Instantiated model instance.
         :param init_kwargs: Optional kwargs to supply to engine executable at init time.
         :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
         :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
+        :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
+            support batching.
         """
         self._model = model
         self._inference_kwargs = inference_kwargs or {}
         self._init_kwargs = init_kwargs or {}
         self._strict_mode = strict_mode
+        self._batch_size = self._validate_batch_size(batch_size)
+
+    def _validate_batch_size(self, batch_size: int) -> int:
+        """Validates batch_size. Noop by default.
+        :param batch_size: Specified batch size.
+        :returns int: Validated batch size.
+        """
+        return batch_size
 
     @property
     def model(self) -> EngineModel:
@@ -118,8 +132,25 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         """
         return cls(**config.to_init_dict(cls, **kwargs))
 
+    @staticmethod
+    async def _execute_async_calls(calls: list[Coroutine[Any, Any, Any]] | list[Awaitable[Any]]) -> Any:
+        """Executes batch of async functions.
+        :param calls: Async calls to execute.
+        :return: Parsed response objects.
+        """
+        return await asyncio.gather(*calls)
 
-class TemplateBasedEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
+
+class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
+    """Abstract super class for all engines working directly with Pydantic objects for prompt signatures and results.
+    Note that this class also assumes the engine accepts a prompt. This holds true for most engines - it doesn't only
+    for those with an idiocratic way to process prompts like DSPy, or decoder-only models which don't work with
+    object-based signatures anyway.
+    If and once we add support for a Pydantic-based engine that doesn't accept prompt templates, we'll adjust by
+    modifying `_infer()` to accept an additional parameter specifying how to handle prompt/instruction injection (and
+    we might have to make `supports_few_shotting()` engine-specific again).
+    """
+
     @classmethod
     def _create_template(cls, template: str | None) -> jinja2.Template:
         """Creates Jinja2 template from template string.
@@ -129,9 +160,13 @@ class TemplateBasedEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, E
         assert template, f"prompt_template has to be provided to {cls.__name__}."
         return jinja2.Template(template)
 
+    @property
+    def supports_few_shotting(self) -> bool:
+        return True
+
     def _infer(
         self,
-        generator: Callable[..., EngineResult],
+        generator: Callable[[list[str]], Iterable[EngineResult]],
         template: jinja2.Template,
         values: Iterable[dict[str, Any]],
         fewshot_examples: Iterable[pydantic.BaseModel],
@@ -145,15 +180,19 @@ class TemplateBasedEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, E
         :return: Results parsed from responses.
         """
         fewshot_examples_dict = Engine._convert_fewshot_examples(fewshot_examples)
+        examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
+        batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
+        # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use different
+        # batch handling depending on whether lists/tuples or generators are used).
+        values = (v for v in values)
 
-        for doc_values in values:
+        while batch := [vals for vals in itertools.islice(values, batch_size)]:
+            if len(batch) == 0:
+                break
+
             try:
-                yield generator(
-                    template.render(
-                        **doc_values, **({"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {})
-                    ),
-                    **self._inference_kwargs,
-                )
+                yield from generator([template.render(**doc_values, **examples) for doc_values in batch])
+
             except (TypeError, pydantic.ValidationError) as err:
                 if self._strict_mode:
                     raise ValueError(
@@ -161,4 +200,4 @@ class TemplateBasedEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, E
                         "chunks contain sensible information."
                     ) from err
                 else:
-                    yield None
+                    yield from (None for _ in range(len(batch)))

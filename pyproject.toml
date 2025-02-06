@@ -38,6 +38,7 @@ all = [
     "scikit-learn>=1,<2",
     "unstructured[all-docs]>=0.16,<1",
     "unstructured-inference>=0.8,<1",
+    "instructor>=1,<2",
 ]
 utils = [
     "chonkie>=0.3",
@@ -54,7 +55,8 @@ engines = [
     "gliner<1",
     "ollama<1",
     "langchain>=0.3,<0.4",
-    "scikit-learn>=1,<2"
+    "scikit-learn>=1,<2",
+    "instructor>=1,<2",
 ]
 test = [
     "pytest>=7.4.3",
