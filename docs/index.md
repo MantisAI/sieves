@@ -75,17 +75,18 @@ We've prepared several guides to help you get up to speed quickly:
 ## Supported Engines
 
 `sieves` supports multiple structured generation libraries:
-- [`outlines`](https://github.com/outlines-dev/outlines) - Lightweight and flexible
-- [`dspy`](https://github.com/stanfordnlp/dspy) - For complex reasoning chains
-- [`langchain`](https://github.com/langchain-ai/langchain) - Extensive ecosystem integration
-- [`gliner`](https://github.com/urchade/GLiNER) - Specialized in NER tasks
-- [`transformers`](https://github.com/huggingface/transformers) - Zero-shot pipelines
-- [`ollama`](https://github.com/ollama/ollama) - Local model deployment
+- [`outlines`](https://github.com/outlines-dev/outlines)
+- [`dspy`](https://github.com/stanfordnlp/dspy)
+- [`instructor`](https://github.com/instructor-ai/instructor)
+- [`langchain`](https://github.com/langchain-ai/langchain)
+- [`gliner`](https://github.com/urchade/GLiNER)
+- [`transformers`](https://github.com/huggingface/transformers)
+- [`ollama`](https://github.com/ollama/ollama)
 
 ## Best Practices
 
 1. Start with simple pipelines and gradually add complexity
-2. Use appropriate chunking for large documents
+2. Chunk large documents
 3. Leverage built-in tasks before creating custom ones
 4. Validate end evaluate task outputs for quality control
 5. Save and version your pipeline configurations

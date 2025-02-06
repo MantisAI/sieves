@@ -200,4 +200,4 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
                         "chunks contain sensible information."
                     ) from err
                 else:
-                    yield None
+                    yield from (None for _ in range(len(batch)))

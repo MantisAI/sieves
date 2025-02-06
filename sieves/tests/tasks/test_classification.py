@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import engines
 import pytest
 
 from sieves import Doc, Pipeline
@@ -7,9 +8,7 @@ from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
 
 
-@pytest.mark.parametrize("engine", [EngineType.instructor], indirect=["engine"])
-@pytest.mark.parametrize("fewshot", [True, False])
-def test_run(dummy_docs, engine, fewshot):
+def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
     fewshot_examples = [
         classification.TaskFewshotExample(
             text="On the properties of hydrogen atoms and red dwarfs.",
@@ -33,7 +32,7 @@ def test_run(dummy_docs, engine, fewshot):
             ),
         ]
     )
-    docs = list(pipe(dummy_docs))
+    docs = list(pipe(docs))
 
     assert len(docs) == 2
     for doc in docs:
@@ -42,9 +41,21 @@ def test_run(dummy_docs, engine, fewshot):
         assert "classifier" in doc.results
 
 
-@pytest.mark.parametrize("engine", [EngineType.huggingface], indirect=["engine"])
-def test_to_dataset(dummy_docs, engine) -> None:
-    task = classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)
+@pytest.mark.parametrize("engine_batch", EngineType.all(), indirect=["engine_batch"])
+@pytest.mark.parametrize("fewshot", [True, False])
+def test_run(dummy_docs, engine_batch, fewshot):
+    _run(engine_batch, dummy_docs, fewshot)
+
+
+@pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
+@pytest.mark.parametrize("fewshot", [True, False])
+def test_run_nonbatched(dummy_docs, engine, fewshot):
+    _run(engine, dummy_docs, fewshot)
+
+
+@pytest.mark.parametrize("engine_batch", [EngineType.huggingface], indirect=["engine_batch"])
+def test_to_dataset(dummy_docs, engine_batch) -> None:
+    task = classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine_batch)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_dataset(task(dummy_docs))
@@ -61,10 +72,10 @@ def test_to_dataset(dummy_docs, engine) -> None:
         task.to_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("engine", [EngineType.huggingface], indirect=["engine"])
-def test_serialization(dummy_docs, engine) -> None:
+@pytest.mark.parametrize("engine_batch", [EngineType.huggingface], indirect=["engine_batch"])
+def test_serialization(dummy_docs, engine_batch) -> None:
     pipe = Pipeline(
-        [classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)]
+        [classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine_batch)]
     )
     list(pipe(dummy_docs))
 
@@ -104,4 +115,4 @@ def test_serialization(dummy_docs, engine) -> None:
         "version": "0.4.0",
     }
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": engine.model}}])
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": engine_batch.model}}])

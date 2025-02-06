@@ -63,6 +63,7 @@ nav:
             - engines/dspy.md
             - engines/gliner.md
             - engines/huggingface.md
+            - engines/instructor.md
             - engines/langchain.md
             - engines/ollama.md
             - engines/outlines.md

@@ -11,7 +11,7 @@ from sieves import Doc, Pipeline, engines, tasks
     [engines.EngineType.outlines],
     indirect=True,
 )
-def test_double_task(dummy_docs, engine) -> None:
+def test_double_task(dummy_docs, engine_batch) -> None:
     class DummyTask(tasks.Task):
         def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)

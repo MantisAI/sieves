@@ -18,14 +18,14 @@ from sieves.tasks.predictive import classification
 @pytest.mark.parametrize(
     "engine",
     [EngineType.dspy],
-    indirect=["engine"],
+    indirect=["engine_batch"],
 )
-def test_serialization_pipeline(dummy_docs, engine, tokenizer):
+def test_serialization_pipeline(dummy_docs, engine_batch, tokenizer):
     """Tests serialization and deserialization of pipeline to files and config objects."""
     pipe = Pipeline(
         [
             preprocessing.Chonkie(chonkie.TokenChunker(tokenizer)),
-            classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
+            classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine_batch),
         ]
     )
 

@@ -50,7 +50,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         :param init_kwargs: Optional kwargs to supply to engine executable at init time.
         :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
         """
-        super().__init__(model, init_kwargs, inference_kwargs)
+        super().__init__(model, init_kwargs, inference_kwargs, batch_size=1)
         config_kwargs = {"max_tokens": 100000} | (config_kwargs or {})
         dspy.configure(lm=model, **config_kwargs)
 

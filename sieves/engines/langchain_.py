@@ -49,7 +49,8 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                             yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
                         except pydantic.ValidationError as ex:
                             raise pydantic.ValidationError(
-                                "Encountered problem in parsing Ollama output. Double-check your prompts and examples."
+                                f"Encountered problem in parsing {cls_name} output. Double-check your prompts and "
+                                f"examples."
                             ) from ex
 
                     generator = generate

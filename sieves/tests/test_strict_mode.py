@@ -7,16 +7,18 @@ from sieves.engines import EngineType
 from sieves.tasks.predictive import information_extraction
 
 
-@pytest.mark.parametrize("engine", (EngineType.dspy, EngineType.langchain, EngineType.ollama), indirect=["engine"])
+@pytest.mark.parametrize(
+    "engine_batch", (EngineType.dspy, EngineType.langchain, EngineType.ollama), indirect=["engine_batch"]
+)
 @pytest.mark.parametrize("strict_mode", [True, False])
-def test_strict_mode(engine, strict_mode):
-    engine._strict_mode = strict_mode
+def test_strict_mode(engine_batch, strict_mode):
+    engine_batch._strict_mode = strict_mode
 
     class Person(pydantic.BaseModel, frozen=True):
         name: str
         age: pydantic.PositiveInt
 
-    pipe = Pipeline([information_extraction.InformationExtraction(entity_type=Person, engine=engine)])
+    pipe = Pipeline([information_extraction.InformationExtraction(entity_type=Person, engine=engine_batch)])
 
     docs: list[Doc] = []
     hit_exception = False
