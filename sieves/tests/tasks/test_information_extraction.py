@@ -14,12 +14,12 @@ class Person(pydantic.BaseModel, frozen=True):
 
 
 @pytest.mark.parametrize(
-    "engine",
+    "batch_engine",
     (EngineType.dspy, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
-    indirect=["engine_batch"],
+    indirect=["batch_engine"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run(information_extraction_docs, engine_batch, fewshot) -> None:
+def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
     fewshot_examples = [
         information_extraction.TaskFewshotExample(
             text="Ada Lovelace lived to 47 years old. Zeno of Citium died with 72 years.",
@@ -36,7 +36,7 @@ def test_run(information_extraction_docs, engine_batch, fewshot) -> None:
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline(
         [
-            tasks.predictive.InformationExtraction(entity_type=Person, engine=engine_batch, **fewshot_args),
+            tasks.predictive.InformationExtraction(entity_type=Person, engine=batch_engine, **fewshot_args),
         ]
     )
     docs = list(pipe(information_extraction_docs))
@@ -64,9 +64,9 @@ def test_run(information_extraction_docs, engine_batch, fewshot) -> None:
         task.to_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("engine_batch", [EngineType.ollama], indirect=["engine_batch"])
-def test_to_dataset(information_extraction_docs, engine_batch) -> None:
-    task = tasks.predictive.InformationExtraction(entity_type=Person, engine=engine_batch)
+@pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
+def test_to_dataset(information_extraction_docs, batch_engine) -> None:
+    task = tasks.predictive.InformationExtraction(entity_type=Person, engine=batch_engine)
     docs = task(information_extraction_docs)
 
     assert isinstance(task, PredictiveTask)
@@ -88,9 +88,9 @@ def test_to_dataset(information_extraction_docs, engine_batch) -> None:
         task.to_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("engine_batch", [EngineType.ollama], indirect=["engine_batch"])
-def test_serialization(information_extraction_docs, engine_batch) -> None:
-    pipe = Pipeline([tasks.predictive.InformationExtraction(entity_type=Person, engine=engine_batch)])
+@pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
+def test_serialization(information_extraction_docs, batch_engine) -> None:
+    pipe = Pipeline([tasks.predictive.InformationExtraction(entity_type=Person, engine=batch_engine)])
     list(pipe(information_extraction_docs))
 
     config = pipe.serialize()
@@ -128,4 +128,4 @@ def test_serialization(information_extraction_docs, engine_batch) -> None:
         "version": "0.4.0",
     }
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": engine_batch.model}, "entity_type": Person}])
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}, "entity_type": Person}])

@@ -65,7 +65,7 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int):
 
 
 @pytest.fixture(scope="session")
-def engine_batch(request) -> engines.Engine:
+def batch_engine(request) -> engines.Engine:
     """Initializes engine with batching."""
     assert isinstance(request.param, engines.EngineType)
     return _make_engine(engine_type=request.param, batch_size=-1)

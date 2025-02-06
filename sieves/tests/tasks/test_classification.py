@@ -41,10 +41,10 @@ def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
         assert "classifier" in doc.results
 
 
-@pytest.mark.parametrize("engine_batch", EngineType.all(), indirect=["engine_batch"])
+@pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run(dummy_docs, engine_batch, fewshot):
-    _run(engine_batch, dummy_docs, fewshot)
+def test_run(dummy_docs, batch_engine, fewshot):
+    _run(batch_engine, dummy_docs, fewshot)
 
 
 @pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
@@ -53,9 +53,9 @@ def test_run_nonbatched(dummy_docs, engine, fewshot):
     _run(engine, dummy_docs, fewshot)
 
 
-@pytest.mark.parametrize("engine_batch", [EngineType.huggingface], indirect=["engine_batch"])
-def test_to_dataset(dummy_docs, engine_batch) -> None:
-    task = classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine_batch)
+@pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
+def test_to_dataset(dummy_docs, batch_engine) -> None:
+    task = classification.Classification(task_id="classifier", labels=["science", "politics"], engine=batch_engine)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_dataset(task(dummy_docs))
@@ -72,10 +72,10 @@ def test_to_dataset(dummy_docs, engine_batch) -> None:
         task.to_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("engine_batch", [EngineType.huggingface], indirect=["engine_batch"])
-def test_serialization(dummy_docs, engine_batch) -> None:
+@pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
+def test_serialization(dummy_docs, batch_engine) -> None:
     pipe = Pipeline(
-        [classification.Classification(task_id="classifier", labels=["science", "politics"], engine=engine_batch)]
+        [classification.Classification(task_id="classifier", labels=["science", "politics"], engine=batch_engine)]
     )
     list(pipe(dummy_docs))
 
@@ -115,4 +115,4 @@ def test_serialization(dummy_docs, engine_batch) -> None:
         "version": "0.4.0",
     }
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": engine_batch.model}}])
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

@@ -7,11 +7,11 @@ from sieves import Doc, Pipeline, engines, tasks
 
 
 @pytest.mark.parametrize(
-    "engine",
+    "batch_engine",
     [engines.EngineType.outlines],
     indirect=True,
 )
-def test_double_task(dummy_docs, engine_batch) -> None:
+def test_double_task(dummy_docs, batch_engine) -> None:
     class DummyTask(tasks.Task):
         def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)

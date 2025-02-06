@@ -6,11 +6,11 @@ from sieves.engines import EngineType
 
 
 @pytest.mark.parametrize(
-    "engine",
+    "batch_engine",
     [EngineType.huggingface],
-    indirect=["engine_batch"],
+    indirect=["batch_engine"],
 )
-def test_run(dummy_docs, engine_batch) -> None:
+def test_run(dummy_docs, batch_engine) -> None:
     """Tests whether chunking mechanism in PredictiveTask works as expected."""
     chunk_interval = 5
     pipe = Pipeline([tasks.preprocessing.NaiveChunker(interval=chunk_interval)])
