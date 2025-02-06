@@ -27,7 +27,9 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int):
     """
     match engine_type:
         case engines.EngineType.dspy:
-            return engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
+            return engines.dspy_.DSPy(
+                model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]), batch_size=batch_size
+            )
 
         case engines.EngineType.glix:
             model_id = "knowledgator/gliner-multitask-v1.0"

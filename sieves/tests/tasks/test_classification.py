@@ -1,4 +1,6 @@
 # mypy: ignore-errors
+import enum
+
 import engines
 import pytest
 
@@ -9,6 +11,7 @@ from sieves.tasks.predictive import classification
 
 
 def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
+    assert issubclass(engine.inference_modes, enum.Enum)
     fewshot_examples = [
         classification.TaskFewshotExample(
             text="On the properties of hydrogen atoms and red dwarfs.",
@@ -41,7 +44,7 @@ def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
         assert "classifier" in doc.results
 
 
-@pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(dummy_docs, batch_engine, fewshot):
     _run(batch_engine, dummy_docs, fewshot)

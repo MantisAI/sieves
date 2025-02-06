@@ -5,7 +5,7 @@ import asyncio
 import enum
 import itertools
 import sys
-from collections.abc import Callable, Coroutine, Iterable
+from collections.abc import Awaitable, Callable, Coroutine, Iterable
 from typing import Any, Generic, Protocol, TypeVar
 
 import jinja2
@@ -132,6 +132,14 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         """
         return cls(**config.to_init_dict(cls, **kwargs))
 
+    @staticmethod
+    async def _execute_async_calls(calls: list[Coroutine[Any, Any, Any]] | list[Awaitable[Any]]) -> Any:
+        """Executes batch of async functions.
+        :param calls: Async calls to execute.
+        :return: Parsed response objects.
+        """
+        return await asyncio.gather(*calls)
+
 
 class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
     """Abstract super class for all engines working directly with Pydantic objects for prompt signatures and results.
@@ -155,14 +163,6 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
     @property
     def supports_few_shotting(self) -> bool:
         return True
-
-    @staticmethod
-    async def _execute_async_calls(calls: list[Coroutine[Any, Any, Any]]) -> Any:
-        """Executes batch of async functions.
-        :param calls: Async calls to execute.
-        :return: Parsed response objects.
-        """
-        return await asyncio.gather(*calls)
 
     def _infer(
         self,

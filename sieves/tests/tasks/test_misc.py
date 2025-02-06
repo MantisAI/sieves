@@ -63,7 +63,7 @@ def test_run_readme_example_short(batch_engine):
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "batch_engine" "",
+    "batch_engine",
     [engines.EngineType.glix],
     indirect=True,
 )
