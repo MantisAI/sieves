@@ -28,7 +28,6 @@ plugins:
       default_handler: python
       handlers:
         python:
-          loading_strategy: import
           options:
             docstring_style: sphinx
             show_source: true
