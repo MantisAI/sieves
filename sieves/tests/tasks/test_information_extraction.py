@@ -46,23 +46,6 @@ def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
         assert doc.text
         assert "InformationExtraction" in doc.results
 
-    # Test docs-to-dataset conversion.
-    task = pipe["InformationExtraction"]
-    assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(docs)
-    assert all([key in dataset.features for key in ("text", "entities")])
-    assert len(dataset) == 2
-    records = list(dataset)
-    assert records[0]["text"] == "Mahatma Ghandi lived to 79 years old. Bugs Bunny is at least 85 years old."
-    assert records[1]["text"] == "Marie Curie passed away at the age of 67 years. Marie Curie was 67 years old."
-    for record in records:
-        assert isinstance(record["entities"], dict)
-        assert isinstance(record["entities"]["age"], list)
-        assert isinstance(record["entities"]["name"], list)
-
-    with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
-
 
 @pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
 def test_to_dataset(information_extraction_docs, batch_engine) -> None:
@@ -80,9 +63,6 @@ def test_to_dataset(information_extraction_docs, batch_engine) -> None:
         assert isinstance(record["entities"], dict)
         assert isinstance(record["entities"]["age"], list)
         assert isinstance(record["entities"]["name"], list)
-
-    with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
 
     with pytest.raises(KeyError):
         task.to_dataset([Doc(text="This is a dummy text.")])

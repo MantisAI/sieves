@@ -1,6 +1,14 @@
-# Getting Started with `sieves`
+# `sieves`
 
-Welcome to the `sieves` docs!
+`sieves` is a Python library designed for zero-shot and few-shot NLP tasks that focuses on structured generation, 
+allowing developers to build production-ready NLP prototypes without requiring training data. It provides a unified 
+interface that wraps popular NLP tools (like `outlines`, `dspy`, `langchain`, and others) while ensuring structured 
+outputs and observability.
+
+It bundles common NLP utilities, document parsing, and text chunking capabilities together with ready-to-use tasks like 
+classification and information extraction, all organized in an observable pipeline architecture. It's particularly 
+valuable for rapid prototyping scenarios where structured output is needed but training data is scarce.
+
 
 ## Quick Installation
 
@@ -46,17 +54,6 @@ pip install "sieves[engines]"
 4. **`Bridge`**: Connectors between Tasks and Engines
 5. **`Doc`**: The fundamental data structure for document processing
 
-## Documentation Structure
-
-Our documentation is organized as follows:
-
-- `/docs/guides/` - Step-by-step tutorials and how-to guides
-- `/docs/tasks/` - Detailed documentation for all available tasks
-- `/docs/engines/` - Information about supported engines and their configurations
-- `/docs/doc.md` - Documentation about the Doc class and its usage
-- `/docs/bridge.md` - Understanding the Bridge system
-- `/docs/pipeline.md` - Pipeline configuration and advanced usage
-
 ## Essential Links
 
 - [GitHub Repository](https://github.com/mantisai/sieves)
@@ -71,25 +68,6 @@ We've prepared several guides to help you get up to speed quickly:
 - [Document Preprocessing](guides/preprocessing.md) - Master document parsing, chunking, and text standardization.
 - [Creating Custom Tasks](guides/custom_tasks.md) - Learn to create your own tasks when the built-in ones aren't enough.
 - [Saving and Loading Pipelines](guides/serialization.md) - Version and share your pipeline configurations.
-
-## Supported Engines
-
-`sieves` supports multiple structured generation libraries:
-- [`outlines`](https://github.com/outlines-dev/outlines)
-- [`dspy`](https://github.com/stanfordnlp/dspy)
-- [`instructor`](https://github.com/instructor-ai/instructor)
-- [`langchain`](https://github.com/langchain-ai/langchain)
-- [`gliner`](https://github.com/urchade/GLiNER)
-- [`transformers`](https://github.com/huggingface/transformers)
-- [`ollama`](https://github.com/ollama/ollama)
-
-## Best Practices
-
-1. Start with simple pipelines and gradually add complexity
-2. Chunk large documents
-3. Leverage built-in tasks before creating custom ones
-4. Validate end evaluate task outputs for quality control
-5. Save and version your pipeline configurations
 
 ## Getting Help
 

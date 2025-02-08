@@ -81,6 +81,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             task_id=task_id,
             show_progress=show_progress,
             include_meta=include_meta,
+            overwrite=False,
             prompt_template=prompt_template,
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,

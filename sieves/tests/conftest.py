@@ -86,6 +86,11 @@ def dummy_docs() -> list[Doc]:
 
 
 @pytest.fixture(scope="session")
+def translation_docs() -> list[Doc]:
+    return [Doc(text="It is rainy today."), Doc(text="It is cloudy today.")]
+
+
+@pytest.fixture(scope="session")
 def information_extraction_docs() -> list[Doc]:
     return [
         Doc(text="Mahatma Ghandi lived to 79 years old. Bugs Bunny is at least 85 years old."),
