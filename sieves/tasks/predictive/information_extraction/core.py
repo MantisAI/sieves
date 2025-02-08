@@ -136,7 +136,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         )
         info = datasets.DatasetInfo(
             description=f"Information extraction dataset for entity type {self._entity_type.__class__.__name__}. "
-            f"Generated with sieves v{Config.get_version()}",
+            f"Generated with sieves v{Config.get_version()}.",
             features=features,
         )
 

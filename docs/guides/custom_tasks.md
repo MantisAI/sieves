@@ -220,7 +220,7 @@ class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, Out
         # Define metadata.
         info = datasets.DatasetInfo(
             description=f"Sentiment estimation dataset. Generated with sieves"
-            f"v{Config.get_version()}",
+            f"v{Config.get_version()}.",
             features=datasets.Features({"text": datasets.Value("string"), "score": datasets.Value("float32")}),
         )
 

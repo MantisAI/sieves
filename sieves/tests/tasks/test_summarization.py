@@ -4,7 +4,7 @@ import pytest
 from sieves import Doc, Pipeline
 from sieves.engines import EngineType
 from sieves.tasks import PredictiveTask
-from sieves.tasks.predictive import translation
+from sieves.tasks.predictive import summarization
 
 
 @pytest.mark.parametrize(
@@ -13,53 +13,58 @@ from sieves.tasks.predictive import translation
     indirect=["batch_engine"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run(translation_docs, batch_engine, fewshot) -> None:
+def test_run(summarization_docs, batch_engine, fewshot) -> None:
     fewshot_examples = [
-        translation.TaskFewshotExample(
-            text="The sun is shining today.",
-            to="Spanish",
-            translation="El sol brilla hoy.",
+        summarization.TaskFewshotExample(
+            text="They counted: one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, "
+            "fourteen.",
+            max_n=6,
+            summary="They counted from one to fourteen.",
         ),
-        translation.TaskFewshotExample(
-            text="There's a lot of fog today",
-            to="Spanish",
-            translation="Hay mucha niebla hoy.",
+        summarization.TaskFewshotExample(
+            text="Next in order were the Boeotians, led by Peneleos, Leitus, Arcesilaus, Prothoenor, and Clonius. "
+            "These had with them fifty ships, and on board of each were a hundred and twenty young men of the "
+            "Boeotians. Then came the men of Orchomenus, who lived in the realm of the Minyans, led by Ascalaphus"
+            " and Ialmenus, sons of Mars. In their command were thirty ships. Next were the Phocians, led by"
+            " Schedius and Epistrophus, sons of Iphitus the son of Naubolus. These had forty ships…",
+            max_n=10,
+            summary="Boeotians, Orchomenians, and Phocians sailed to Troy with many ships.",
         ),
     ]
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
-    pipe = Pipeline([translation.Translation(to="Spanish", engine=batch_engine, **fewshot_args)])
-    docs = list(pipe(translation_docs))
+    pipe = Pipeline([summarization.Summarization(max_n=10, engine=batch_engine, **fewshot_args)])
+    docs = list(pipe(summarization_docs))
 
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
-        assert "Translation" in doc.results
+        assert "Summarization" in doc.results
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_to_dataset(translation_docs, batch_engine) -> None:
-    task = translation.Translation(to="Spanish", engine=batch_engine)
-    docs = task(translation_docs)
+def test_to_dataset(summarization_docs, batch_engine) -> None:
+    task = summarization.Summarization(max_n=10, engine=batch_engine)
+    docs = task(summarization_docs)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_dataset(docs)
-    assert all([key in dataset.features for key in ("text", "translation")])
+    assert all([key in dataset.features for key in ("text", "summary")])
     assert len(dataset) == 2
     records = list(dataset)
-    assert records[0]["text"] == "It is rainy today."
-    assert records[1]["text"] == "It is cloudy today."
+    assert records[0]["text"].startswith("The decay spreads over the State")
+    assert records[1]["text"].startswith("After all, the practical reason")
     for record in records:
-        assert isinstance(record["translation"], str)
+        assert isinstance(record["summary"], str)
 
     with pytest.raises(KeyError):
         task.to_dataset([Doc(text="This is a dummy text.")])
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_serialization(translation_docs, batch_engine) -> None:
-    pipe = Pipeline([translation.Translation(to="Spanish", engine=batch_engine)])
-    list(pipe(translation_docs))
+def test_serialization(summarization_docs, batch_engine) -> None:
+    pipe = Pipeline([summarization.Summarization(max_n=10, engine=batch_engine)])
+    list(pipe(summarization_docs))
 
     config = pipe.serialize()
     assert config.model_dump() == {
@@ -68,7 +73,7 @@ def test_serialization(translation_docs, batch_engine) -> None:
             "is_placeholder": False,
             "value": [
                 {
-                    "cls_name": "sieves.tasks.predictive.translation.core.Translation",
+                    "cls_name": "sieves.tasks.predictive.summarization.core.Summarization",
                     "engine": {
                         "is_placeholder": False,
                         "value": {
@@ -81,11 +86,11 @@ def test_serialization(translation_docs, batch_engine) -> None:
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
                     "include_meta": {"is_placeholder": False, "value": True},
+                    "max_n": {"is_placeholder": False, "value": 10},
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
-                    "task_id": {"is_placeholder": False, "value": "Translation"},
-                    "to": {"is_placeholder": False, "value": "Spanish"},
+                    "task_id": {"is_placeholder": False, "value": "Summarization"},
                     "version": "0.5.0",
                 }
             ],
