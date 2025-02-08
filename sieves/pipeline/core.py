@@ -17,13 +17,12 @@ class Pipeline:
 
     def __init__(
         self,
-        tasks: Iterable[Task],
+        tasks: Iterable[Task] | Task,
     ):
-        """Initialize the pipeline.
-
+        """Initialize pipeline.
         :param tasks: List of tasks to execute.
         """
-        self._tasks = list(tasks)
+        self._tasks = [tasks] if isinstance(tasks, Task) else list(tasks)
         self._validate_tasks()
 
     def add_tasks(self, tasks: Iterable[Task]) -> None:

@@ -110,11 +110,12 @@ for result in results:
 
 `sieves` supports multiple engines for structured generation:
 
-- [`outlines`](https://github.com/dottxt-ai/outlines)
+- [`outlines`](https://github.com/outlines-dev/outlines)
 - [`dspy`](https://github.com/stanfordnlp/dspy)
+- [`instructor`](https://github.com/instructor-ai/instructor)
 - [`langchain`](https://github.com/langchain-ai/langchain)
 - [`gliner`](https://github.com/urchade/GLiNER)
-- [`transformer`](https://github.com/huggingface/transformers) zero-shot pipelines
+- [`transformers`](https://github.com/huggingface/transformers)
 - [`ollama`](https://github.com/ollama/ollama)
 
 Each engine has a different set of supported models, pros and cons. Choose the engine that best fits your use case and 
