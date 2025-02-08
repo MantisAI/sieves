@@ -143,7 +143,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         )
         info = datasets.DatasetInfo(
             description=f"Multi-label classification dataset with labels {self._labels}. Generated with sieves "
-            f"v{Config.get_version()}",
+            f"v{Config.get_version()}.",
             features=features,
         )
 

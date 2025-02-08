@@ -50,8 +50,10 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         LabelType = Literal[*labels]  # type: ignore[valid-type]
 
         class TextClassification(dspy.Signature):  # type: ignore[misc]
-            text: str = dspy.InputField()
-            confidence_per_label: dict[LabelType, float] = dspy.OutputField()
+            text: str = dspy.InputField(description="Text to classify.")
+            confidence_per_label: dict[LabelType, float] = dspy.OutputField(
+                description="Confidence per label that text should be classified with this label."
+            )
 
         TextClassification.__doc__ = jinja2.Template(self.prompt_signature_description).render()
 

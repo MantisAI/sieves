@@ -68,7 +68,9 @@ build modern NLP applications. It provides:
 - :label: **Ready-to-Use Tasks:**
   - Text Classification
   - Information Extraction
-  - Coming soon: NER, entity linking, summarization, translation, ...
+  - Summarization
+  - Translation
+  - Coming soon: NER, multi-QA, entity linking, knowledge graph creation, ...
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
 - :teacher: **Export:** Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for easy distillation
 
@@ -215,8 +217,8 @@ from this angle, there are two ways to explain why we settled on this name (pick
 
 ### Why not just prompt an LLM directly?
 
-You can, of course - but `sieves` offers:
-- Structured data output. Zero-/few-shot LLMs can be finicky without guardrails or parsing.
+Asked differently: what are the benefits of using `sieves` over directly interacting with an LLM?
+- Validated, structured data output - also for LLMs that don't offer structured outputs natively.  Zero-/few-shot language models can be finicky without guardrails or parsing.
 - A step-by-step pipeline, making it easier to debug and track each stage. 
 - The flexibility to switch between different models and ways to ensure structured and validated output.
 - A bunch of useful utilities for pre- and post-processing you might need.
