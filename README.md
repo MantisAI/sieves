@@ -55,12 +55,13 @@ build modern NLP applications. It provides:
 
 - :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models 
 - :robot: **Unified Generation Interface:** Seamlessly use multiple libraries
-  - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`dspy`](https://github.com/stanfordnlp/dspy)
-  - [`langchain`](https://github.com/langchain-ai/langchain)
   - [`gliner`](https://github.com/urchade/GLiNER)
-  - [`transformer`](https://github.com/huggingface/transformers)
+  - [`instructor`](https://github.com/instructor-ai/instructor)
+  - [`langchain`](https://github.com/langchain-ai/langchain)
   - [`ollama`](https://github.com/ollama/ollama)
+  - [`outlines`](https://github.com/dottxt-ai/outlines)
+  - [`transformer`](https://github.com/huggingface/transformers)
 - :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
 - :hammer_and_wrench: **Integrated Tools:** 
   - Document parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
