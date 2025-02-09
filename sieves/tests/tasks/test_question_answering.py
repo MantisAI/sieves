@@ -7,10 +7,6 @@ from sieves.engines import EngineType, GliX
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import question_answering
 
-# todo
-#  - move bridge stuff into predictive.core.bridges
-#  - inject prompts into gliner
-
 
 @pytest.mark.parametrize(
     "batch_engine",
