@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from typing import Any, TypeAlias
 
 import gliner.multitask.base
+import jinja2
 import pydantic
 
 from sieves.engines.core import Engine, Executable
@@ -43,10 +44,13 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
     ) -> Executable[Result]:
         assert isinstance(prompt_signature, list)
         cls_name = self.__class__.__name__
-        if prompt_template:
-            warnings.warn(f"prompt_template is ignored by engine {cls_name}.")
         if len(list(fewshot_examples)):
             warnings.warn(f"Few-shot examples are not supported by engine {cls_name}.")
+
+        # Overwrite prompt default template, if template specified. Note that this is a static prompt and GliX doesn't
+        # do few-shotting, so we don't inject anything into the template.
+        if prompt_template:
+            self._model.prompt = jinja2.Template(prompt_template).render()
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             """Execute prompts with engine for given values.

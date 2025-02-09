@@ -85,17 +85,6 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         :return _TaskBridge: Engine task bridge.
         :raises ValueError: If engine type is not supported.
         """
-        # if engine_type == EngineType.glix:
-        #     # GliXBridge needs different arguments than other bridges, hence we instantiate it differently.
-        #     return GliXBridge(
-        #         task_id=self._task_id,
-        #         prompt_template=self._custom_prompt_template,
-        #         prompt_signature_desc=self._custom_prompt_signature_desc,
-        #         prompt_signature=self._labels,
-        #         inference_mode=glix_.InferenceMode.classification,
-        #         label_whitelist=tuple(self._labels),
-        #     )
-
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyInformationExtraction,
             EngineType.instructor: InstructorInformationExtraction,
