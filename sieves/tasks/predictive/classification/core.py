@@ -10,6 +10,7 @@ from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
+from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.classification.bridges import (
     DSPyClassification,
     HuggingFaceClassification,
@@ -18,7 +19,7 @@ from sieves.tasks.predictive.classification.bridges import (
     OllamaClassification,
     OutlinesClassification,
 )
-from sieves.tasks.predictive.core import GliXBridge, PredictiveTask
+from sieves.tasks.predictive.core import PredictiveTask
 
 _TaskPromptSignature: TypeAlias = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
 _TaskInferenceMode: TypeAlias = (

@@ -10,7 +10,14 @@ from sieves.tasks.predictive import summarization
 
 @pytest.mark.parametrize(
     "batch_engine",
-    (EngineType.glix, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
+    (
+        EngineType.dspy,
+        EngineType.glix,
+        EngineType.instructor,
+        EngineType.langchain,
+        EngineType.ollama,
+        EngineType.outlines,
+    ),
     indirect=["batch_engine"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -91,7 +98,7 @@ def test_serialization(summarization_docs, batch_engine) -> None:
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
                     "include_meta": {"is_placeholder": False, "value": True},
-                    "max_n": {"is_placeholder": False, "value": 10},
+                    "n_words": {"is_placeholder": False, "value": 10},
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},

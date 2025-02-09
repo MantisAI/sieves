@@ -10,7 +10,8 @@ from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
-from sieves.tasks.predictive.core import GliXBridge, PredictiveTask
+from sieves.tasks.predictive.bridges import GliXBridge
+from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.summarization.bridges import (
     DSPySummarization,
     InstructorSummarization,
@@ -66,7 +67,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
         :param fewshot_examples: Few-shot examples.
         """
-        self._max_n = n_words
+        self._n_words = n_words
 
         super().__init__(
             engine=engine,
@@ -110,7 +111,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
-                max_n=self._max_n,
+                n_words=self._n_words,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
@@ -129,7 +130,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         """
         return {
             **super()._state,
-            "max_n": self._max_n,
+            "n_words": self._n_words,
         }
 
     def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:

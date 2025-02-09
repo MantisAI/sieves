@@ -8,7 +8,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
@@ -21,7 +21,7 @@ from sieves.tasks.predictive.information_extraction.bridges import (
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
+_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature
 _TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
 _TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
 _TaskBridge: TypeAlias = (
@@ -85,6 +85,17 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         :return _TaskBridge: Engine task bridge.
         :raises ValueError: If engine type is not supported.
         """
+        # if engine_type == EngineType.glix:
+        #     # GliXBridge needs different arguments than other bridges, hence we instantiate it differently.
+        #     return GliXBridge(
+        #         task_id=self._task_id,
+        #         prompt_template=self._custom_prompt_template,
+        #         prompt_signature_desc=self._custom_prompt_signature_desc,
+        #         prompt_signature=self._labels,
+        #         inference_mode=glix_.InferenceMode.classification,
+        #         label_whitelist=tuple(self._labels),
+        #     )
+
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyInformationExtraction,
             EngineType.instructor: InstructorInformationExtraction,

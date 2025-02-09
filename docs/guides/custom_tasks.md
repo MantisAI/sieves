@@ -75,7 +75,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import EngineInferenceMode, outlines_
-from sieves.tasks.predictive.core import Bridge
+from sieves.tasks.predictive.bridges import Bridge
 
 
 # This is how we require our response to look like - we require not just the score, but also a reasoning/justification 
