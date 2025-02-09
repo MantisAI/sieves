@@ -93,6 +93,9 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
 class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode], abc.ABC):
     @property
     def _prompt_template(self) -> str | None:
+        questions_block = "\n\t\t" + "\n\t\t".join(
+            [f"{i + 1}. {question}" for i, question in enumerate(self._questions)]
+        )
         return f"""
         Use the given text to answer the following questions. Ensure you answer each question exactly once. Prefix each 
         question with the number of the corresponding question. Provide a concise reasoning for your answers. 
@@ -116,7 +119,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
 
         ========
         Text: {{{{ text }}}}
-        Questions: {"\n\t\t" + "\n\t\t".join([f"{i + 1}. {question}" for i, question in enumerate(self._questions)])}
+        Questions: {questions_block}
         Output: 
         """
 
