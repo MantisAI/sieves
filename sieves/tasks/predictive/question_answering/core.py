@@ -7,10 +7,10 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, glix_, instructor_, langchain_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
-from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.predictive.core import GliXBridge, PredictiveTask
 from sieves.tasks.predictive.question_answering.bridges import (
     DSPyQA,
     InstructorQA,
@@ -19,16 +19,17 @@ from sieves.tasks.predictive.question_answering.bridges import (
     OutlinesQA,
 )
 
-_TaskPromptSignature: TypeAlias = list[str] | pydantic.BaseModel | dspy_.PromptSignature
+_TaskPromptSignature: TypeAlias = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
 _TaskInferenceMode: TypeAlias = (
     dspy_.InferenceMode
+    | glix_.InferenceMode
     | instructor_.InferenceMode
     | langchain_.InferenceMode
     | ollama_.InferenceMode
     | outlines_.InferenceMode
 )
 _TaskResult: TypeAlias = pydantic.BaseModel | dspy_.Result
-_TaskBridge: TypeAlias = DSPyQA | InstructorQA | LangChainQA | OllamaQA | OutlinesQA
+_TaskBridge: TypeAlias = DSPyQA | GliXBridge | InstructorQA | LangChainQA | OllamaQA | OutlinesQA
 
 
 class TaskFewshotExample(pydantic.BaseModel):
@@ -78,6 +79,15 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         :return: Engine task.
         :raises ValueError: If engine type is not supported.
         """
+        if engine_type == EngineType.glix:
+            return GliXBridge(
+                task_id=self._task_id,
+                prompt_template=self._custom_prompt_template,
+                prompt_signature_desc=self._custom_prompt_signature_desc,
+                prompt_signature=self._questions,
+                inference_mode=glix_.InferenceMode.question_answering,
+            )
+
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyQA,
             EngineType.instructor: InstructorQA,
@@ -87,7 +97,10 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         }
 
         try:
-            bridge = bridge_types[engine_type](
+            bridge_type = bridge_types[engine_type]
+            assert not issubclass(bridge_type, GliXBridge)
+
+            return bridge_type(
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
@@ -95,8 +108,6 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
-
-        return bridge
 
     @property
     def supports(self) -> set[EngineType]:

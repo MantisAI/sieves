@@ -66,6 +66,30 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int):
             return engines.outlines_.Outlines(model=outlines.models.transformers(model_name), batch_size=batch_size)
 
 
+def make_glix_engine(mode: engines.glix_.InferenceMode) -> engines.Engine:
+    model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
+
+    match mode:
+        case engines.glix_.InferenceMode.classification:
+            model = gliner.multitask.GLiNERClassifier(model=model)
+        case engines.glix_.InferenceMode.question_answering:
+            model = gliner.multitask.GLiNERQuestionAnswerer(model=model)
+        case engines.glix_.InferenceMode.summarization:
+            model = gliner.multitask.GLiNERSummarizer(model=model)
+        case engines.glix_.InferenceMode.ner:
+            pass
+        case _:
+            raise ValueError
+
+    return engines.glix_.GliX(model=model, batch_size=-1)
+
+
+@pytest.fixture(scope="session")
+def glix_engine(request) -> engines.Engine:
+    assert isinstance(request.param, engines.glix_.InferenceMode)
+    return make_glix_engine(request.param)
+
+
 @pytest.fixture(scope="session")
 def batch_engine(request) -> engines.Engine:
     """Initializes engine with batching."""

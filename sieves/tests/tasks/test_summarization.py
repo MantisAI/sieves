@@ -1,15 +1,16 @@
 # mypy: ignore-errors
+import gliner.multitask
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType
+from sieves.engines import EngineType, GliX
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import summarization
 
 
 @pytest.mark.parametrize(
     "batch_engine",
-    (EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
+    (EngineType.glix, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
     indirect=["batch_engine"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -18,7 +19,7 @@ def test_run(summarization_docs, batch_engine, fewshot) -> None:
         summarization.TaskFewshotExample(
             text="They counted: one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, "
             "fourteen.",
-            max_n=6,
+            n_words=6,
             summary="They counted from one to fourteen.",
         ),
         summarization.TaskFewshotExample(
@@ -27,13 +28,17 @@ def test_run(summarization_docs, batch_engine, fewshot) -> None:
             "Boeotians. Then came the men of Orchomenus, who lived in the realm of the Minyans, led by Ascalaphus"
             " and Ialmenus, sons of Mars. In their command were thirty ships. Next were the Phocians, led by"
             " Schedius and Epistrophus, sons of Iphitus the son of Naubolus. These had forty ships…",
-            max_n=10,
+            n_words=10,
             summary="Boeotians, Orchomenians, and Phocians sailed to Troy with many ships.",
         ),
     ]
 
+    # If GliX engine: by default initialized as classifier, change that to QA.
+    if isinstance(batch_engine, GliX):
+        batch_engine._model = gliner.multitask.GLiNERSummarizer(model=batch_engine._model.model)
+
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
-    pipe = Pipeline([summarization.Summarization(max_n=10, engine=batch_engine, **fewshot_args)])
+    pipe = Pipeline([summarization.Summarization(n_words=10, engine=batch_engine, **fewshot_args)])
     docs = list(pipe(summarization_docs))
 
     assert len(docs) == 2
@@ -44,7 +49,7 @@ def test_run(summarization_docs, batch_engine, fewshot) -> None:
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_to_dataset(summarization_docs, batch_engine) -> None:
-    task = summarization.Summarization(max_n=10, engine=batch_engine)
+    task = summarization.Summarization(n_words=10, engine=batch_engine)
     docs = task(summarization_docs)
 
     assert isinstance(task, PredictiveTask)
@@ -52,8 +57,8 @@ def test_to_dataset(summarization_docs, batch_engine) -> None:
     assert all([key in dataset.features for key in ("text", "summary")])
     assert len(dataset) == 2
     records = list(dataset)
-    assert records[0]["text"].startswith("The decay spreads over the State")
-    assert records[1]["text"].startswith("After all, the practical reason")
+    assert records[0]["text"].strip().startswith("The decay spreads over the State")
+    assert records[1]["text"].strip().startswith("After all, the practical reason")
     for record in records:
         assert isinstance(record["summary"], str)
 
@@ -63,7 +68,7 @@ def test_to_dataset(summarization_docs, batch_engine) -> None:
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_serialization(summarization_docs, batch_engine) -> None:
-    pipe = Pipeline([summarization.Summarization(max_n=10, engine=batch_engine)])
+    pipe = Pipeline([summarization.Summarization(n_words=10, engine=batch_engine)])
     list(pipe(summarization_docs))
 
     config = pipe.serialize()

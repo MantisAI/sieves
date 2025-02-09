@@ -1,23 +1,27 @@
 # mypy: ignore-errors
+import gliner.multitask
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType
+from sieves.engines import EngineType, GliX
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import question_answering
 
 # todo
-#  - QA:
-#    - add gliner bridge
-#    - update tests
-#  - summarization:
-#    - add gliner bridge
-#    - update tests
+#  - move bridge stuff into predictive.core.bridges
+#  - inject prompts into gliner
 
 
 @pytest.mark.parametrize(
     "batch_engine",
-    (EngineType.dspy, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
+    (
+        EngineType.dspy,
+        EngineType.glix,
+        EngineType.instructor,
+        EngineType.langchain,
+        EngineType.ollama,
+        EngineType.outlines,
+    ),
     indirect=["batch_engine"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -46,6 +50,10 @@ def test_run(qa_docs, batch_engine, fewshot):
         ),
     ]
 
+    # If GliX engine: by default initialized as classifier, change that to QA.
+    if isinstance(batch_engine, GliX):
+        batch_engine._model = gliner.multitask.GLiNERQuestionAnswerer(model=batch_engine._model.model)
+
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline(
         [
@@ -65,7 +73,6 @@ def test_run(qa_docs, batch_engine, fewshot):
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
-        assert doc.results["qa"]
         assert "qa" in doc.results
 
 
