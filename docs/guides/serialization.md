@@ -91,7 +91,7 @@ Pipeline configurations are saved as YAML files. Here's an example of what a con
 
 ```yaml
 cls_name: sieves.pipeline.core.Pipeline
-version: 0.5.0
+version: 0.6.0
 tasks:
   is_placeholder: false
   value:

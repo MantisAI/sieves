@@ -76,7 +76,7 @@ def test_serialization(translation_docs, batch_engine) -> None:
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
-                            "version": "0.5.0",
+                            "version": "0.6.0",
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -86,11 +86,11 @@ def test_serialization(translation_docs, batch_engine) -> None:
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Translation"},
                     "to": {"is_placeholder": False, "value": "Spanish"},
-                    "version": "0.5.0",
+                    "version": "0.6.0",
                 }
             ],
         },
-        "version": "0.5.0",
+        "version": "0.6.0",
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])
