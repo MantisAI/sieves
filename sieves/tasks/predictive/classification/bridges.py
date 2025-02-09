@@ -8,8 +8,8 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
-from sieves.tasks.predictive.core import Bridge
+from sieves.engines import EngineInferenceMode, dspy_, huggingface_, instructor_, langchain_, ollama_, outlines_
+from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -174,59 +174,6 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
                 "labels": [rec["label"] for rec in sorted_label_scores],  # type: ignore[dict-item]
                 "scores": [rec["score"] for rec in sorted_label_scores],  # type: ignore[dict-item]
             }
-
-
-class GliXClassification(ClassificationBridge[list[str], glix_.Result, glix_.InferenceMode]):
-    @property
-    def _prompt_template(self) -> str | None:
-        return None
-
-    @property
-    def _prompt_signature_description(self) -> str | None:
-        return None
-
-    @property
-    def prompt_signature(self) -> list[str]:
-        return self._labels
-
-    @property
-    def inference_mode(self) -> glix_.InferenceMode:
-        return glix_.InferenceMode.classification
-
-    def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        for doc, result in zip(docs, results):
-            doc.results[self._task_id] = [
-                (res["label"], res["score"]) for res in sorted(result, key=lambda x: x["score"], reverse=True)
-            ]
-        return docs
-
-    def consolidate(
-        self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[glix_.Result]:
-        results = list(results)
-
-        # Determine label scores for chunks per document.
-        for doc_offset in docs_offsets:
-            label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
-
-            for rec in results[doc_offset[0] : doc_offset[1]]:
-                for entry in rec:
-                    assert isinstance(entry["label"], str)
-                    assert isinstance(entry["score"], float)
-                    # GliNER might return scores for undefined labels, which we silently ignore.
-                    if entry["label"] in label_scores:
-                        label_scores[entry["label"]] += entry["score"]
-
-            # Average score, sort by it in descending order.
-            sorted_label_scores: list[dict[str, str | float]] = sorted(
-                [
-                    {"label": label, "score": score / (doc_offset[1] - doc_offset[0])}
-                    for label, score in label_scores.items()
-                ],
-                key=lambda x: x["score"],
-                reverse=True,
-            )
-            yield sorted_label_scores
 
 
 class PydanticBasedClassification(

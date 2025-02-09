@@ -8,7 +8,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
@@ -21,7 +21,7 @@ from sieves.tasks.predictive.information_extraction.bridges import (
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
+_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature
 _TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
 _TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
 _TaskBridge: TypeAlias = (

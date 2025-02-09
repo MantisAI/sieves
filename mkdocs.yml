@@ -56,8 +56,9 @@ nav:
       - Predictive:
         - tasks/predictive/classification.md
         - tasks/predictive/information_extraction.md
-        - tasks/predictive/translation.md
         - tasks/predictive/summarization.md
+        - tasks/predictive/translation.md
+        - tasks/predictive/question_answering.md
     - Engines:
         - engines/engine.md
         - All Engines:

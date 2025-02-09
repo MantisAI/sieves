@@ -9,7 +9,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_
-from sieves.tasks.predictive.core import Bridge
+from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -24,20 +24,20 @@ class SummarizationBridge(
         task_id: str,
         prompt_template: str | None,
         prompt_signature_desc: str | None,
-        max_n: int,
+        n_words: int,
     ):
         """
         Initializes InformationExtractionBridge.
         :param task_id: Task ID.
         :param prompt_template: Custom prompt template.
         :param prompt_signature_desc: Custom prompt signature description.
-        :param max_n: Maximal number of words (consider this a guideline, not a strict limit).
+        :param n_words: Approximate number of words in summary.
         """
         super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
-        self._max_n = max_n
+        self._n_words = n_words
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None, "max_n": self._max_n} for doc in docs)
+        return ({"text": doc.text if doc.text else None, "n_words": self._n_words} for doc in docs)
 
 
 class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -53,7 +53,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
         class Summary(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to summarize.")
-            max_n: str = dspy.InputField(description="Maximal number of words to use for summary.")
+            n_words: str = dspy.InputField(description="Number of words to approximately use for summary.")
             summary: str = dspy.OutputField(description="Summary of text.")
 
         Summary.__doc__ = jinja2.Template(self.prompt_signature_description).render()
@@ -97,14 +97,14 @@ class PydanticBasedSummarization(
     @property
     def _prompt_template(self) -> str | None:
         return """
-        Your goal is to summarize a text. This summary shouldn't be longer than {{ max_n }} words.
+        Your goal is to summarize a text. This summary should be around {{ max_n }} words.
 
         {% if examples|length > 0 -%}
             Examples:
             ----------
             {%- for example in examples %}
                 Text: "{{ example.text }}":
-                Max. number of words in summary: {{ example.max_n }}
+                Approximate number of words in summary: {{ example.n_words }}
                 Summary: "{{ example.summary }}"
             {% endfor -%}
             ----------
@@ -112,7 +112,7 @@ class PydanticBasedSummarization(
 
         ========
         Text: {{ text }}
-        Max. number of words in summary: {{ max_n }}
+        Approximate number of words in summary: {{ n_words }}
         Summary: 
         """
 
@@ -150,7 +150,7 @@ class PydanticBasedSummarization(
                     assert hasattr(res, "summary")
                     summaries.append(res.summary)
 
-            yield self.prompt_signature(summary="\n".join(summaries))
+            yield self.prompt_signature(summary="\n".join(summaries).strip())
 
 
 class OutlinesSummarization(PydanticBasedSummarization[outlines_.InferenceMode]):

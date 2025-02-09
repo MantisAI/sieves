@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import enum
 from collections.abc import Iterable
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic
 
 import datasets
 import pydantic
@@ -19,14 +19,11 @@ from sieves.engines import (
 )
 from sieves.serialization import Config, Serializable
 from sieves.tasks.core import Task
-
-_TaskPromptSignature = TypeVar("_TaskPromptSignature", covariant=True)
-_TaskResult = TypeVar("_TaskResult")
-_TaskBridge = TypeVar("_TaskBridge", bound="Bridge[_TaskPromptSignature, _TaskResult, EngineInferenceMode]")  # type: ignore[valid-type]
+from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
 
 
 class PredictiveTask(
-    Generic[_TaskPromptSignature, _TaskResult, _TaskBridge],
+    Generic[TaskPromptSignature, TaskResult, TaskBridge],
     Task,
     abc.ABC,
 ):
@@ -70,7 +67,7 @@ class PredictiveTask(
         pass
 
     @abc.abstractmethod
-    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
+    def _init_bridge(self, engine_type: EngineType) -> TaskBridge:
         """Initialize bridge.
         :param engine_type: Type of engine to initialize bridge for.
         :return _TaskBridge: Engine task bridge.
@@ -165,7 +162,7 @@ class PredictiveTask(
     @classmethod
     def deserialize(
         cls, config: Config, **kwargs: dict[str, Any]
-    ) -> PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]:
+    ) -> PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge]:
         """Generate PredictiveTask instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
@@ -188,90 +185,4 @@ class PredictiveTask(
         """Creates Hugging Face datasets.Dataset from docs.
         :param docs: Docs to convert.
         :return datasets.Dataset: Hugging Face dataset.
-        """
-
-
-class Bridge(Generic[_TaskPromptSignature, _TaskResult, EngineInferenceMode], abc.ABC):
-    def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None):
-        """
-        Initializes new bridge.
-        :param task_id: Task ID.
-        :param prompt_template: Custom prompt template. If None, default will be used.
-        :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
-        """
-        self._task_id = task_id
-        self._custom_prompt_template = prompt_template
-        self._custom_prompt_signature_desc = prompt_signature_desc
-
-    @property
-    @abc.abstractmethod
-    def _prompt_template(self) -> str | None:
-        """Returns default prompt template.
-        :return str | None: Default prompt template.
-        """
-
-    @property
-    def prompt_template(self) -> str | None:
-        """Returns prompt template.
-        Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
-        Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
-        a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
-        expectations when creating a prompt template.
-        :return str | None: Prompt template as string. None if not used by engine.
-        """
-        return self._custom_prompt_template or self._prompt_template
-
-    @property
-    @abc.abstractmethod
-    def _prompt_signature_description(self) -> str | None:
-        """Returns default prompt signature description.
-        :return str | None: Default prompt signature description.
-        """
-
-    @property
-    def prompt_signature_description(self) -> str | None:
-        """Returns prompt signature description. This is used by some engines to aid the language model in generating
-        structured output.
-        :return str | None: Prompt signature description. None if not used by engine.
-        """
-        return self._custom_prompt_signature_desc or self._prompt_signature_description
-
-    @property
-    @abc.abstractmethod
-    def prompt_signature(self) -> type[_TaskPromptSignature] | _TaskPromptSignature:
-        """Creates output signature (e.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in
-        jsonformers). This is engine-specific.
-        :return type[_TaskPromptSignature] | _TaskPromptSignature: Output signature object. This can be an instance
-            (e.g. a regex string) or a class (e.g. a Pydantic class).
-        """
-
-    @property
-    @abc.abstractmethod
-    def inference_mode(self) -> EngineInferenceMode:
-        """Returns inference mode.
-        :return EngineInferenceMode: Inference mode.
-        """
-
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        """Extract all values from doc instances that are to be injected into the prompts.
-        :param docs: Docs to extract values from.
-        :return Iterable[dict[str, Any]]: All values from doc instances that are to be injected into the prompts
-        """
-        return ({"text": doc.text if doc.text else None} for doc in docs)
-
-    @abc.abstractmethod
-    def integrate(self, results: Iterable[_TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
-        """Integrate results into Doc instances.
-        :param results: Results from prompt executable.
-        :param docs: Doc instances to update.
-        :return Iterable[Doc]: Updated doc instances.
-        """
-
-    @abc.abstractmethod
-    def consolidate(self, results: Iterable[_TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[_TaskResult]:
-        """Consolidates results for document chunks into document results.
-        :param results: Results per document chunk.
-        :param docs_offsets: Chunk offsets per document. Chunks per document can be obtained with
-            results[docs_chunk_offsets[i][0]:docs_chunk_offsets[i][1]].
-        :return Iterable[_TaskResult]: Results per document.
         """

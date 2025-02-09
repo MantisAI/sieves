@@ -66,11 +66,12 @@ build modern NLP applications. It provides:
   - Document parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
   - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
 - :label: **Ready-to-Use Tasks:**
-  - Text Classification
-  - Information Extraction
+  - Multi-label classification
+  - Information extraction
   - Summarization
   - Translation
-  - Coming soon: NER, multi-QA, entity linking, knowledge graph creation, ...
+  - Multi-question answering
+  - Coming soon: NER, entity linking, knowledge graph creation, ...
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
 - :teacher: **Export:** Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for easy distillation
 

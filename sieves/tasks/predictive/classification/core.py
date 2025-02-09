@@ -5,27 +5,28 @@ from typing import Any, TypeAlias
 
 import datasets
 import pydantic
-from tasks.predictive.classification.bridges import InstructorClassification
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, langchain_, ollama_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
+from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.classification.bridges import (
     DSPyClassification,
-    GliXClassification,
     HuggingFaceClassification,
+    InstructorClassification,
     LangChainClassification,
     OllamaClassification,
     OutlinesClassification,
 )
 from sieves.tasks.predictive.core import PredictiveTask
 
-_TaskPromptSignature: TypeAlias = list[str] | pydantic.BaseModel | dspy_.PromptSignature
+_TaskPromptSignature: TypeAlias = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
 _TaskInferenceMode: TypeAlias = (
     outlines_.InferenceMode
     | dspy_.InferenceMode
     | huggingface_.InferenceMode
+    | instructor_.InferenceMode
     | glix_.InferenceMode
     | langchain_.InferenceMode
     | ollama_.InferenceMode
@@ -33,7 +34,8 @@ _TaskInferenceMode: TypeAlias = (
 _TaskResult: TypeAlias = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | glix_.Result
 _TaskBridge: TypeAlias = (
     DSPyClassification
-    | GliXClassification
+    | GliXBridge
+    | InstructorClassification
     | LangChainClassification
     | HuggingFaceClassification
     | OllamaClassification
@@ -93,9 +95,19 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         :return: Engine task.
         :raises ValueError: If engine type is not supported.
         """
+        if engine_type == EngineType.glix:
+            # GliXBridge needs different arguments than other bridges, hence we instantiate it differently.
+            return GliXBridge(
+                task_id=self._task_id,
+                prompt_template=self._custom_prompt_template,
+                prompt_signature_desc=self._custom_prompt_signature_desc,
+                prompt_signature=self._labels,
+                inference_mode=glix_.InferenceMode.classification,
+                label_whitelist=tuple(self._labels),
+            )
+
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyClassification,
-            EngineType.glix: GliXClassification,
             EngineType.instructor: InstructorClassification,
             EngineType.huggingface: HuggingFaceClassification,
             EngineType.outlines: OutlinesClassification,
@@ -104,7 +116,10 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         }
 
         try:
-            bridge = bridge_types[engine_type](
+            bridge_type = bridge_types[engine_type]
+            assert not issubclass(bridge_type, GliXBridge)
+
+            return bridge_type(
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
@@ -113,11 +128,17 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
 
-        return bridge
-
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.outlines, EngineType.dspy, EngineType.huggingface, EngineType.glix, EngineType.ollama}
+        return {
+            EngineType.dspy,
+            EngineType.instructor,
+            EngineType.glix,
+            EngineType.huggingface,
+            EngineType.langchain,
+            EngineType.ollama,
+            EngineType.outlines,
+        }
 
     def _validate_fewshot_examples(self) -> None:
         for fs_example in self._fewshot_examples or []:

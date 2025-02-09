@@ -9,7 +9,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_
-from sieves.tasks.predictive.core import Bridge
+from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
