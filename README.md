@@ -91,13 +91,13 @@ docs = [Doc(text="Special relativity applies to all physical phenomena in the ab
 
 # 2. Create engine responsible for generating structured output.
 model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
+engine = engines.Outlines(model=outlines.models.transformers(model_name))
 
 # 3. Create pipeline with tasks.
 pipe = Pipeline(
     [
-        # 4. Run classification on provided document.
-        tasks.predictive.Classification(labels=["science", "politics"], engine=engine),
+        # 4. Add classification task to pipeline.
+        tasks.Classification(labels=["science", "politics"], engine=engine),
     ]
 )
 
@@ -123,9 +123,9 @@ from sieves import Pipeline, engines, tasks, Doc
 docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
 # 2. Create engine responsible for generating structured output.
-model_id = 'knowledgator/gliner-multitask-v1.0'
-engine = engines.glix_.GliX(model=
-    gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_id))
+model_name = 'knowledgator/gliner-multitask-v1.0'
+engine = engines.GliX(model=
+    gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_name))
 )
 
 # 3. Create chunker object.
@@ -135,11 +135,11 @@ chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
 pipe = Pipeline(
     [
         # 4. Add document parsing task.
-        tasks.preprocessing.Docling(),
+        tasks.Docling(),
         # 5. Add chunking task to ensure we don't exceed our model's context window.
-        tasks.preprocessing.Chonkie(chunker),
-        # 6. Run classification on provided document.
-        tasks.predictive.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
+        tasks.Chonkie(chunker),
+        # 6. Add classification task to pipeline.
+        tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
     ]
 )
 
