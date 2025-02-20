@@ -11,28 +11,26 @@ from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, instr
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 
-# Bridges to add in the bridges file yet.
 from sieves.tasks.predictive.ner.bridges import (
     DSPyNER,
     HuggingFaceNER,
-    InstructorNER,
-    LangChainNER,
-    OllamaNER,
-    OutlinesNER,
+    # InstructorNER,
+    # LangChainNER,
+    # OllamaNER,
+    # OutlinesNER,
     # GliXNER,
 )
 from sieves.tasks.predictive.core import PredictiveTask
 
 _TaskPromptSignature: TypeAlias = None
-# Remove unused
 _TaskResult: TypeAlias = list[tuple[str, int, int]] | list[tuple[str, str, int, int]] | pydantic.BaseModel | dspy_.Result | glix_.Result | huggingface_.Result | instructor_.Result | langchain_.Result | ollama_.Result | outlines_.Result
 _TaskBridge: TypeAlias = (
     None
 )
 
-class TaskFewshotExample(pydantic.BaseModel):
-    text: str
-    entities: tuple[tuple[str, int, int], ...]
+# class TaskFewshotExample(pydantic.BaseModel):
+#     text: str
+#     entities: tuple[tuple[str, int, int], ...]
 
 
 class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -45,7 +43,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             include_meta: bool = True,
             prompt_template: str | None = None,
             prompt_signature_desc: str | None = None,
-            fewshot_examples: Iterable[TaskFewshotExample] = (),
+            # fewshot_examples: Iterable[TaskFewshotExample] = (),
     ) -> None:
         """"
         Initializes new PredictiveTask.
@@ -56,7 +54,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
         :param fewshot_examples: Few-shot examples.
         """
-        self._entities = entities
+        self._entities = entities or ["PERSON", "LOCATION", "ORGANIZATION"]
         super().__init__(
             engine=engine,
             task_id=task_id,
@@ -65,9 +63,10 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             overwrite=False,
             prompt_template=prompt_template,
             prompt_signature_desc=prompt_signature_desc,
-            fewshot_examples=fewshot_examples,
+            # fewshot_examples=fewshot_examples,
+            fewshot_examples=None,
         ) 
-        self._fewshot_examples: Iterable[TaskFewshotExample]
+        # self._fewshot_examples: Iterable[TaskFewshotExample]
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize bridge.
@@ -76,18 +75,15 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         """
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.huggingface: HuggingFaceNER,
-            EngineType.langchain: LangChainNER,
-            EngineType.ollama: OllamaNER,
-            EngineType.outlines: OutlinesNER,
+            # EngineType.langchain: LangChainNER,
+            # EngineType.ollama: OllamaNER,
+            # EngineType.outlines: OutlinesNER,
             EngineType.dspy: DSPyNER,
-            EngineType.instructor: InstructorNER,
+            # EngineType.instructor: InstructorNER,
             # EngineType.glix: GliXNER,
         }
         try:
-            bridge_type = bridge_types[engine_type]
-            # assert not issubclass(bridge_type, GliXNER)
-
-            return bridge_type(
+            bridge_type = bridge_types[engine_type](
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
@@ -95,6 +91,8 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
+
+        return bridge_type
 
     @property
     def supports(self) -> set[EngineType]:
@@ -108,12 +106,6 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             # EngineType.glix,
         }
     
-    # def _validate_fewshot_examples(self) -> None:
-    #     for fs_example in self._fewshot_examples or []:
-    #         if any([entity not in self._entities for entity in fs_example.entities]) or not all(
-    #             [entity in fs_example.entities for entity in self._entities]
-    #         ):
-    #             raise ValueError(f"Entity mismatch: {self._task_id} has entities {self._entities}. Few-shot examples has entities {fs_example.entities}.")
 
     @property
     def _state(self) -> dict[str, Any]:
@@ -122,4 +114,12 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             "entities": self._entities,
         }
     
-    # def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    # def _validate_fewshot_examples(self) -> None:
+    #     for fs_example in self._fewshot_examples or []:
+    #         if any([entity not in self._entities for entity in fs_example.entities]) or not all(
+    #             [entity in fs_example.entities for entity in self._entities]
+    #         ):
+    #             raise ValueError(f"Entity mismatch: {self._task_id} has entities {self._entities}. Few-shot examples has entities {fs_example.entities}.")
+    
+    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+        return None
