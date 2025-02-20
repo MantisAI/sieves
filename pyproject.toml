@@ -10,7 +10,20 @@ license = { text = "MIT" }
 dynamic = ["version", "authors"]
 requires-python = ">=3.10"
 dependencies = [
-    "loguru>=0.7.3"
+    "chonkie>=0.5.0",
+    "datasets>=3.3.1",
+    "docling>=2.23.0",
+    "dspy>=2.6.3",
+    "gliner>=0.2.16",
+    "instructor>=1.7.2",
+    "langchain-core>=0.3.35",
+    "loguru>=0.7.3",
+    "nltk>=3.9.1",
+    "ollama>=0.4.7",
+    "outlines>=0.1.14",
+    "pre-commit>=4.1.0",
+    "scikit-learn>=1.6.1",
+    "unstructured>=0.16.21",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
