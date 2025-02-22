@@ -20,7 +20,6 @@ from sieves.tasks.predictive.translation.bridges import (
 )
 
 _TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
-_TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
 _TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
 _TaskBridge: TypeAlias = (
     DSPyTranslation | InstructorTranslation | LangChainTranslation | OutlinesTranslation | OllamaTranslation

@@ -56,6 +56,7 @@ nav:
       - Predictive:
         - tasks/predictive/classification.md
         - tasks/predictive/information_extraction.md
+        - tasks/predictive/sentiment_analysis.md
         - tasks/predictive/summarization.md
         - tasks/predictive/translation.md
         - tasks/predictive/question_answering.md

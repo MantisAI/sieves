@@ -7,7 +7,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, glix_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, glix_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.bridges import GliXBridge
@@ -21,14 +21,6 @@ from sieves.tasks.predictive.question_answering.bridges import (
 )
 
 _TaskPromptSignature: TypeAlias = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
-_TaskInferenceMode: TypeAlias = (
-    dspy_.InferenceMode
-    | glix_.InferenceMode
-    | instructor_.InferenceMode
-    | langchain_.InferenceMode
-    | ollama_.InferenceMode
-    | outlines_.InferenceMode
-)
 _TaskResult: TypeAlias = pydantic.BaseModel | dspy_.Result
 _TaskBridge: TypeAlias = DSPyQA | GliXBridge | InstructorQA | LangChainQA | OllamaQA | OutlinesQA
 

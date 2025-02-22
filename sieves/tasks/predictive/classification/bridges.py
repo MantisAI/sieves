@@ -37,7 +37,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     def _prompt_signature_description(self) -> str | None:
         return """
         Multi-label classification of the provided text given the provided labels.
-        For each label, provide the conficence with which you believe that the provided text should be assigned 
+        For each label, provide the confidence with which you believe that the provided text should be assigned 
         this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
         opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
         add up to 1.
@@ -65,9 +65,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
-            assert len(result.completions.confidence_per_label) == 1
+            assert len(result.completions.sentiment_per_aspect) == 1
             sorted_preds = sorted(
-                [(label, score) for label, score in result.completions.confidence_per_label[0].items()],
+                [(label, score) for label, score in result.completions.sentiment_per_aspect[0].items()],
                 key=lambda x: x[1],
                 reverse=True,
             )
@@ -85,9 +85,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for res in doc_results:
-                assert len(res.completions.confidence_per_label) == 1
-                for label, score in res.completions.confidence_per_label[0].items():
-                    # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
+                assert len(res.completions.sentiment_per_aspect) == 1
+                for label, score in res.completions.sentiment_per_aspect[0].items():
+                    # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
                     # useful?).
                     label_scores[label] += max(0, min(score, 1))
@@ -183,7 +183,7 @@ class PydanticBasedClassification(
     def _prompt_template(self) -> str | None:
         return f"""
         Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
-        For each label, provide the conficence with which you believe that the provided text should be assigned
+        For each label, provide the confidence with which you believe that the provided text should be assigned
         this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
         opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision. 
 
@@ -253,7 +253,7 @@ class PydanticBasedClassification(
                 assert hasattr(rec, "reasoning")
                 reasonings.append(rec.reasoning)
                 for label in self._labels:
-                    # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
+                    # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
                     # useful?).
                     label_scores[label] += max(0, min(getattr(rec, label), 1))

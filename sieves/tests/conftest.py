@@ -115,6 +115,17 @@ def translation_docs() -> list[Doc]:
 
 
 @pytest.fixture(scope="session")
+def sentiment_analysis_docs() -> list[Doc]:
+    return [
+        Doc(
+            text="Beautiful dishes, haven't eaten so well in a long time. Overall pretty good, if you can ignore the "
+            "annoying waiters."
+        ),
+        Doc(text="Horrible place. Service is unfriendly, food overpriced and bland. Do not go."),
+    ]
+
+
+@pytest.fixture(scope="session")
 def qa_docs() -> list[Doc]:
     return [
         Doc(
