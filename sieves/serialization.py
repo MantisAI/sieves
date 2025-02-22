@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import configparser
 import importlib
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -75,10 +74,13 @@ class Config(pydantic.BaseModel):
         """Returns version string from setup.cfg metadata.
         :return str: Version string from setup.cfg metadata.
         """
-        config = configparser.ConfigParser()
-        setup_cfg = Path(__file__).parent.parent / "setup.cfg"
-        config.read(setup_cfg)
-        return config["metadata"]["version"]
+        # TODO This doesn't work in PyPi package. Alternative way to fetch version dynamically?
+        # config = configparser.ConfigParser()
+        # setup_cfg = Path(__file__).parent.parent / "setup.cfg"
+        # config.read(setup_cfg)
+        # version = config["metadata"]["version"]
+
+        return "0.7.0"
 
     version: str = get_version()
     cls_name: str
