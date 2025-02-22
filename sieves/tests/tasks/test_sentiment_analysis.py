@@ -86,7 +86,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
             "is_placeholder": False,
             "value": [
                 {
-                    "aspects": {"is_placeholder": False, "value": ["food", "overall", "service"]},
+                    "aspects": {"is_placeholder": False, "value": ("food", "overall", "service")},
                     "cls_name": "sieves.tasks.predictive.sentiment_analysis.core.SentimentAnalysis",
                     "engine": {
                         "is_placeholder": False,
