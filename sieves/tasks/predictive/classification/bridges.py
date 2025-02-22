@@ -85,8 +85,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for res in doc_results:
-                assert len(res.completions.sentiment_per_aspect) == 1
-                for label, score in res.completions.sentiment_per_aspect[0].items():
+                assert len(res.completions.confidence_per_label) == 1
+                for label, score in res.completions.confidence_per_label[0].items():
                     # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
                     # useful?).
