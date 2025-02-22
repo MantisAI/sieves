@@ -1,10 +1,9 @@
 # mypy: ignore-errors
 import enum
 
-import engines
 import pytest
 
-from sieves import Doc, Pipeline
+from sieves import Doc, Pipeline, engines
 from sieves.engines import EngineType
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
