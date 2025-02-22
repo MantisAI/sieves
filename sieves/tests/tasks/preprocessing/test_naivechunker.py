@@ -39,11 +39,11 @@ def test_serialization(dummy_docs) -> None:
                     "interval": {"is_placeholder": False, "value": 5},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "NaiveChunker"},
-                    "version": "0.6.1",
+                    "version": "0.7.0",
                 }
             ],
         },
-        "version": "0.6.1",
+        "version": "0.7.0",
     }
 
     deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{}])
