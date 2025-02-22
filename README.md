@@ -72,6 +72,7 @@ build modern NLP applications. It provides:
   - Summarization
   - Translation
   - Multi-question answering
+  - Aspect-based sentiment analysis
   - Coming soon: NER, entity linking, knowledge graph creation, ...
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
 - :teacher: **Export:** Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for easy distillation
