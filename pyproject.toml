@@ -10,20 +10,10 @@ license = { text = "MIT" }
 dynamic = ["version", "authors"]
 requires-python = ">=3.10"
 dependencies = [
-    "loguru>=0.7.3"
-]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Libraries",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12"
-]
-
-[project.optional-dependencies]
-all = [
+    "loguru>=0.7.3",
+    "pydantic>=2,<3",
+    "datasets>=3,<4",
+    "jinja2>=3,<4",
     "chonkie>=0.3",
     "docling>=2",
     "outlines>=0.0.34",
@@ -40,23 +30,19 @@ all = [
     "unstructured-inference>=0.8,<1",
     "instructor>=1,<2",
 ]
-utils = [
-    "chonkie>=0.3",
-    "docling>=2",
-    "unstructured[all-docs]>=0.16,<1",
-    "unstructured-inference>=0.8,<1",
-    "tesseract>=0.1,<1"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
 ]
-engines = [
-    "outlines>=0.0.34",
-    "dspy-ai>=2,<3",
-    "transformers>=4,<5",
-    "sentencepiece<1",
-    "gliner<1",
-    "ollama<1",
-    "langchain>=0.3,<0.4",
-    "scikit-learn>=1,<2",
-    "instructor>=1,<2",
+
+[project.optional-dependencies]
+utils = [
+    "tesseract>=0.1,<1"
 ]
 test = [
     "pytest>=7.4.3",
