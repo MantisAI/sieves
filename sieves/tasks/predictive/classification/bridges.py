@@ -65,9 +65,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
-            assert len(result.completions.sentiment_per_aspect) == 1
+            assert len(result.completions.confidence_per_label) == 1
             sorted_preds = sorted(
-                [(label, score) for label, score in result.completions.sentiment_per_aspect[0].items()],
+                [(label, score) for label, score in result.completions.confidence_per_label[0].items()],
                 key=lambda x: x[1],
                 reverse=True,
             )
