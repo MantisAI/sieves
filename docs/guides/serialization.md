@@ -51,10 +51,8 @@ from sieves import Pipeline, engines, tasks, Doc
 
 # Create a tokenizer for chunking
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
-chunker = tasks.preprocessing.Chunker(
-    tokenizer=tokenizer,
-    chunk_size=512,
-    chunk_overlap=50
+chunker = tasks.preprocessing.Chonkie(
+    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
 )
 
 # Create an information extraction task
