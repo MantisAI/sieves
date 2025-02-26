@@ -13,11 +13,10 @@ from sieves.serialization import Config
 
 from sieves.tasks.predictive.ner.bridges import (
     DSPyNER,
-    HuggingFaceNER,
-    # InstructorNER,
-    # LangChainNER,
-    # OllamaNER,
-    # OutlinesNER,
+    InstructorNER,
+    LangChainNER,
+    OllamaNER,
+    OutlinesNER,
     # GliXNER,
 )
 from sieves.tasks.predictive.core import PredictiveTask
@@ -74,12 +73,11 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         :raises ValueError: If engine type is not supported.
         """
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
-            EngineType.huggingface: HuggingFaceNER,
-            # EngineType.langchain: LangChainNER,
-            # EngineType.ollama: OllamaNER,
-            # EngineType.outlines: OutlinesNER,
+            EngineType.langchain: LangChainNER,
+            EngineType.ollama: OllamaNER,
+            EngineType.outlines: OutlinesNER,
             EngineType.dspy: DSPyNER,
-            # EngineType.instructor: InstructorNER,
+            EngineType.instructor: InstructorNER,
             # EngineType.glix: GliXNER,
         }
         try:
@@ -97,7 +95,6 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     @property
     def supports(self) -> set[EngineType]:
         return {
-            EngineType.huggingface,
             EngineType.langchain,
             EngineType.ollama,
             EngineType.dspy,
