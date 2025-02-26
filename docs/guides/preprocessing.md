@@ -118,12 +118,8 @@ from sieves import Pipeline, tasks, Doc
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
 
 # Create a token-based chunker
-chunker = tasks.preprocessing.Chunker(
-    chunker=chonkie.TokenChunker(
-        tokenizer=tokenizer,
-        chunk_size=512,
-        chunk_overlap=50
-    )
+chunker = tasks.preprocessing.Chonkie(
+    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
 )
 
 # Create and run the pipeline
@@ -147,12 +143,9 @@ import tokenizers
 
 # Create the preprocessing tasks
 parser = tasks.preprocessing.Docling()
-chunker = tasks.preprocessing.Chunker(
-    chunker=chonkie.TokenChunker(
-        tokenizer=tokenizers.Tokenizer.from_pretrained("bert-base-uncased"),
-        chunk_size=512,
-        chunk_overlap=50
-    )
+tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
+chunker = tasks.preprocessing.Chonkie(
+    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
 )
 
 # Create a pipeline with both tasks

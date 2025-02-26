@@ -62,18 +62,18 @@ Here's a more involved example that:
 3. Performs information extraction on each chunk
 
 ```python
+import outlines
 import chonkie
 import tokenizers
+import pydantic
 from sieves import Pipeline, engines, tasks, Doc
 
 # Create a tokenizer for chunking
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
 
 # Initialize components
-chunker = tasks.preprocessing.Chunker(
-    tokenizer=tokenizer,
-    chunk_size=512,
-    chunk_overlap=50
+chunker = tasks.preprocessing.Chonkie(
+    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
 )
 
 # Initialize an engine for information extraction
