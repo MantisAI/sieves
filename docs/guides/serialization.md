@@ -47,7 +47,9 @@ print(results[0].results["Classification"])
 ```python
 import chonkie
 import tokenizers
-from sieves import Pipeline, engines, tasks, Doc
+import outlines
+import pydantic
+from sieves import Pipeline, engines, tasks
 
 # Create a tokenizer for chunking
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")

@@ -13,13 +13,9 @@ The `Docling` task uses the [docling](https://github.com/DS4SD/docling) library 
 
 ```python
 from sieves import Pipeline, tasks, Doc
-import docling
 
 # Create a document parser
-parser = tasks.preprocessing.Docling(
-    # Optionally customize the document converter
-    doc_converter=docling.document_converter.DocumentConverter()
-)
+parser = tasks.preprocessing.Docling()
 
 # Create a pipeline with the parser
 pipeline = Pipeline([parser])
@@ -42,28 +38,19 @@ The `Unstructured` task uses the [unstructured](https://github.com/Unstructured-
 
 ```python
 from sieves import Pipeline, tasks, Doc
-from unstructured.partition.auto import partition
 from unstructured.cleaners.core import (
-    clean_bullets,
-    clean_extra_whitespace,
-    clean_non_ascii_chars
+    clean_extra_whitespace
 )
 
 # Create an unstructured parser with cleaning functions
 parser = tasks.preprocessing.Unstructured(
-    # Use the default auto-partition function
-    partition=partition,
     # Add cleaning functions to process the text
-    cleaners=(
-        clean_bullets,           # Remove bullet points
-        clean_extra_whitespace,  # Normalize whitespace
-        clean_non_ascii_chars    # Remove non-ASCII characters
-    )
+    cleaners=(clean_extra_whitespace,)  # Normalize whitespace
 )
 
 # Create and run the pipeline
 pipeline = Pipeline([parser])
-docs = [Doc(uri="path/to/document.pdf")]
+docs = [Doc(text="● This is a dummy   document.®")]
 processed_docs = list(pipeline(docs))
 ```
 
@@ -82,23 +69,6 @@ from unstructured.cleaners.core import (
     clean_trailing_punctuation,  # Remove trailing punctuation
     bytes_string_to_string  # Convert byte strings to normal strings
 )
-
-# Example 1: Using the combined clean function
-text = "● An important point!    "
-cleaned = clean(
-    text,
-    bullets=True,           # Remove bullets
-    extra_whitespace=True,  # Clean whitespace
-    dashes=True,           # Remove dashes
-    lowercase=True         # Convert to lowercase
-)
-# Result: "an important point!"
-
-# Example 2: Using individual cleaning functions
-text = "1.1 Another point with ® special chars"
-cleaned = clean_ordered_bullets(text)
-cleaned = clean_non_ascii_chars(cleaned)
-# Result: "Another point with special chars"
 ```
 
 ## Document Chunking
@@ -134,7 +104,8 @@ for chunk in chunked_docs[0].chunks:
 
 ## Combining Preprocessing Tasks
 
-You can combine multiple preprocessing tasks in a pipeline. Here's an example that parses a PDF and then chunks it:
+You can combine multiple preprocessing tasks in a pipeline. Here's an example that parses a PDF using Docling and then 
+chunks it with Chonkie:
 
 ```python
 from sieves import Pipeline, tasks, Doc

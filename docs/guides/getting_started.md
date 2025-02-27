@@ -98,7 +98,7 @@ pipeline = Pipeline([
 ])
 
 # Process a PDF document
-doc = Doc(uri="path/to/document.pdf")
+doc = Doc(text="Marie Curie died at the age of 66 years.")
 results = list(pipeline([doc]))
 
 # Access the extracted information
