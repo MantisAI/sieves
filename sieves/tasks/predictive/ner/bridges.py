@@ -59,11 +59,11 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
             text: str = dspy.OutputField(description="The extracted entity text")
             start: int = dspy.OutputField(description="Starting character position of the entity")
             end: int = dspy.OutputField(description="Ending character position of the entity")
-            entity: str = dspy.OutputField(description="The type of entity")
+            entity: LiteralType = dspy.OutputField(description="The type of entity")
         
         class Entities(dspy.Signature):
             text: str = dspy.InputField(description="Text to extract entities from")
-            entity_types: list[LiteralType] = dspy.InputField(description="List of entity types to extract")
+            entity_types: list[str] = dspy.InputField(description="List of entity types to extract")
 
             entities: list[Entity] = dspy.OutputField(description="List of entities found in the text")
 
@@ -91,68 +91,97 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         return """
         Your goal is to extract named entities from the text. Only extract entities of the specified types: {{ entity_types }}.
 
-    For each entity you find:
-    - Extract the exact text of the entity
-    - Note its starting and ending character positions
-    - Specify which type of entity it is
+        For each entity you find:
+        - Extract the exact text of the entity
+        - Note its starting and ending character positions
+        - Specify which type of entity it is
 
-    Return the results in the following format exactly:
-    Results: {'NER': Prediction(
-        entities=[Entity(text='<ENTITY_TEXT>', start=<START_INDEX>, end=<END_INDEX>, entity='<ENTITY_TYPE>'), ...]
-    )}
+        Return the results in the following format exactly:
+        Results: {'NER': Prediction(
+            entities=[Entity(text='<ENTITY_TEXT>', start=<START_INDEX>, end=<END_INDEX>, entity='<ENTITY_TYPE>'), ...]
+        )}
 
-    ========
-    Text: {{ text }}
-    Entity Types: {{ entity_types }}
-    Results:
-    """
+        ========
+        Text: {{ text }}
+        Entity Types: {{ entity_types }}
+        Results:
+        """
     @property
     def _prompt_signature_description(self) -> str | None:
-        return None
+        return """
+        Extract named entities from the provided text. For each entity found:
+        - Extract the exact text of the entity
+        - Provide the starting and ending character positions
+        - Specify the entity type from the provided list of entity types
+        Only extract entities of the specified types.
+        """
     @cached_property
     def _prompt_signature(self) -> type[pydantic.BaseModel]:
+        
+        # entity_types = self._entities
+        # LiteralType = Literal[*entity_types]
+
+        # class Entity(pydantic.BaseModel):
+        #     text: str
+        #     start: int
+        #     end: int
+        #     entity: LiteralType
+        
+        # class Entities(pydantic.BaseModel):
+        #     entities: list[Entity]
+
         prompt_sig = pydantic.create_model(
             "Entities",
             __base__=pydantic.BaseModel,
             reasoning=(str, ...),
             **{entity: (str, ...) for entity in self._entities}
         )
-    
-        if self.prompt_signature_description:
-            prompt_sig.__doc__ = jinja2.Template(self.prompt_signature_description).render()
-        assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
 
         return prompt_sig
+
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
+        print("Raw results",results)
         for doc, result in zip(docs, results):
-            doc.results[self._task_id] = result.entities
+            doc.results[self._task_id] = result
         return docs
+
     def consolidate(
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel]:
-        class Entity(pydantic.BaseModel):
-            text: str
-            start: int
-            end: int
-            entity: str
-        
-        class Entities(pydantic.BaseModel):
-            entities: list[Entity]
-        print("Results",results)
-        results = list(results)
-        for doc_offset in docs_offsets:
-            entities: list[Entity] = []
-            for res in results[doc_offset[0] : doc_offset[1]]:
-                if res:
-                    assert hasattr(res, "entities")
-                    entities.extend(res.entities)
-            yield Entities(entities=entities)  # Return consolidated results for each document
+        return results
 
 class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.text
+        return outlines_.InferenceMode.json
+        
     @property
+    def _prompt_template(self) -> str | None:
+        return """
+        Your goal is to extract named entities from the text. Only extract entities of the specified types: {{ entity_types }}.
+
+        For each entity you find:
+        - Extract the exact text of the entity
+        - Note its starting and ending character positions
+        - Specify which type of entity it is
+
+        Return the results as a JSON object with this exact structure:
+        {
+            "entities": [
+                {
+                    "text": "<ENTITY_TEXT>",
+                    "start": <START_INDEX>,
+                    "end": <END_INDEX>,
+                    "entity": "<ENTITY_TYPE>"
+                }
+            ]
+        }
+
+        Text: {{ text }}
+        Entity Types: {{ entity_types }}
+        """
+        
+    @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         return self._prompt_signature
 

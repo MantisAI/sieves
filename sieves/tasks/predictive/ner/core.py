@@ -27,9 +27,9 @@ _TaskBridge: TypeAlias = (
     None
 )
 
-# class TaskFewshotExample(pydantic.BaseModel):
-#     text: str
-#     entities: tuple[tuple[str, int, int], ...]
+class TaskFewshotExample(pydantic.BaseModel):
+    text: str
+    entities: tuple[tuple[str, int, int], ...]
 
 
 class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -42,7 +42,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             include_meta: bool = True,
             prompt_template: str | None = None,
             prompt_signature_desc: str | None = None,
-            # fewshot_examples: Iterable[TaskFewshotExample] = (),
+            fewshot_examples: Iterable[TaskFewshotExample] = (),
     ) -> None:
         """"
         Initializes new PredictiveTask.
@@ -62,10 +62,9 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             overwrite=False,
             prompt_template=prompt_template,
             prompt_signature_desc=prompt_signature_desc,
-            # fewshot_examples=fewshot_examples,
-            fewshot_examples=None,
+            fewshot_examples=fewshot_examples,
         ) 
-        # self._fewshot_examples: Iterable[TaskFewshotExample]
+        # self._fewshot_examples: Iterable[TaskFewshotExample]    
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize bridge.
