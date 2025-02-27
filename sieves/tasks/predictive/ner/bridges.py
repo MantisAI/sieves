@@ -118,26 +118,29 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
     @cached_property
     def _prompt_signature(self) -> type[pydantic.BaseModel]:
         
-        # entity_types = self._entities
-        # LiteralType = Literal[*entity_types]
+        entity_types = self._entities
+        LiteralType = Literal[*entity_types]
 
-        # class Entity(pydantic.BaseModel):
-        #     text: str
-        #     start: int
-        #     end: int
-        #     entity: LiteralType
+        class Entity(pydantic.BaseModel):
+            text: str
+            start: int
+            end: int
+            entity: LiteralType
         
-        # class Entities(pydantic.BaseModel):
-        #     entities: list[Entity]
+        class Entities(pydantic.BaseModel):
+            entities: list[Entity]
 
-        prompt_sig = pydantic.create_model(
-            "Entities",
-            __base__=pydantic.BaseModel,
-            reasoning=(str, ...),
-            **{entity: (str, ...) for entity in self._entities}
-        )
+        # prompt_sig = pydantic.create_model(
+        #     "Entities",
+        #     __base__=pydantic.BaseModel,
+        #     reasoning=(str, ...),
+        #     **{entity: (str, ...) for entity in self._entities}
+        # )
 
-        return prompt_sig
+        if self.prompt_signature_description:
+            Entities.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+
+        return Entities
 
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
         print("Raw results",results)
@@ -155,36 +158,9 @@ class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
         
-    @property
-    def _prompt_template(self) -> str | None:
-        return """
-        Your goal is to extract named entities from the text. Only extract entities of the specified types: {{ entity_types }}.
-
-        For each entity you find:
-        - Extract the exact text of the entity
-        - Note its starting and ending character positions
-        - Specify which type of entity it is
-
-        Return the results as a JSON object with this exact structure:
-        {
-            "entities": [
-                {
-                    "text": "<ENTITY_TEXT>",
-                    "start": <START_INDEX>,
-                    "end": <END_INDEX>,
-                    "entity": "<ENTITY_TYPE>"
-                }
-            ]
-        }
-
-        Text: {{ text }}
-        Entity Types: {{ entity_types }}
-        """
-        
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         return self._prompt_signature
-
 
 class OllamaNER(PydanticBasedNER[ollama_.InferenceMode]):
     @property
