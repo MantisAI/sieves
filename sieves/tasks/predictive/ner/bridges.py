@@ -91,21 +91,35 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         return """
         Your goal is to extract named entities from the text. Only extract entities of the specified types: {{ entity_types }}.
 
-        For each entity you find:
+        For each entity you find in the text:
         - Extract the exact text of the entity
-        - Note its starting and ending character positions
-        - Specify which type of entity it is
+        - Note its starting and ending character positions (0-indexed)
+        - Specify which type of entity it is (must be one of the provided entity types)
 
-        Return the results in the following format exactly:
-        Results: {'NER': Prediction(
-            entities=[Entity(text='<ENTITY_TEXT>', start=<START_INDEX>, end=<END_INDEX>, entity='<ENTITY_TYPE>'), ...]
-        )}
+        Return a JSON object with a list of entities, each with text, start, end, and entity fields.
+        
+        Example output format:
+        {
+            "entities": [
+                {
+                    "text": "John Smith",
+                    "start": 0,
+                    "end": 10,
+                    "entity": "PERSON"
+                },
+                {
+                    "text": "New York",
+                    "start": 15,
+                    "end": 23,
+                    "entity": "LOCATION"
+                }
+            ]
+        }
 
-        ========
         Text: {{ text }}
         Entity Types: {{ entity_types }}
-        Results:
         """
+        
     @property
     def _prompt_signature_description(self) -> str | None:
         return """
@@ -115,9 +129,9 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         - Specify the entity type from the provided list of entity types
         Only extract entities of the specified types.
         """
+        
     @cached_property
     def _prompt_signature(self) -> type[pydantic.BaseModel]:
-        
         entity_types = self._entities
         LiteralType = Literal[*entity_types]
 
@@ -128,14 +142,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
             entity: LiteralType
         
         class Entities(pydantic.BaseModel):
-            entities: list[Entity]
-
-        # prompt_sig = pydantic.create_model(
-        #     "Entities",
-        #     __base__=pydantic.BaseModel,
-        #     reasoning=(str, ...),
-        #     **{entity: (str, ...) for entity in self._entities}
-        # )
+            entities: list[Entity] = []  # Default to empty list
 
         if self.prompt_signature_description:
             Entities.__doc__ = jinja2.Template(self.prompt_signature_description).render()
@@ -143,7 +150,6 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         return Entities
 
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
-        print("Raw results",results)
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = result
         return docs
