@@ -128,4 +128,72 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         }
 
     def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
-        return None
+        """Convert NER results to a dataset.
+        
+        :param docs: Documents with NER results.
+        :return: Dataset with NER results.
+        """
+        # Define metadata and features for the dataset
+        features = datasets.Features({
+            "text": datasets.Value("string"),
+            "entities": datasets.Sequence({
+                "text": datasets.Value("string"),
+                "start": datasets.Value("int32"),
+                "end": datasets.Value("int32"),
+                "entity": datasets.Value("string")
+            })
+        })
+        
+        info = datasets.DatasetInfo(
+            description=f"Named Entity Recognition dataset with entity types {self._entities}. Generated with sieves "
+            f"v{Config.get_version()}.",
+            features=features,
+        )
+
+        # Fetch data used for generating dataset
+        try:
+            data = []
+            for doc in docs:
+                if self._task_id not in doc.results:
+                    raise KeyError(f"Document does not have results for task ID {self._task_id}")
+                
+                # Get the entities from the document results
+                result = doc.results[self._task_id]
+                entities = []
+                
+                # Handle different result formats
+                if hasattr(result, 'entities'):
+                    # Pydantic model format
+                    for entity in result.entities:
+                        entities.append({
+                            "text": entity.text,
+                            "start": entity.start,
+                            "end": entity.end,
+                            "entity": entity.entity
+                        })
+                elif isinstance(result, list):
+                    # List format (could be list of dictionaries or other entities)
+                    for entity in result:
+                        if isinstance(entity, dict) and "text" in entity:
+                            # Dictionary format with text key
+                            entity_dict = {
+                                "text": entity["text"],
+                                "start": entity.get("start", 0),
+                                "end": entity.get("end", len(entity["text"])),
+                                "entity": entity.get("label", entity.get("entity", "UNKNOWN"))
+                            }
+                            entities.append(entity_dict)
+                
+                data.append((doc.text, entities))
+        except KeyError as err:
+            raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
+
+        def generate_data() -> Iterable[dict[str, Any]]:
+            """Yields results as dicts.
+            :return: Results as dicts.
+            """
+            for text, entities in data:
+                yield {"text": text, "entities": entities}
+
+        # Create dataset
+        return datasets.Dataset.from_generator(generate_data, features=features, info=info)

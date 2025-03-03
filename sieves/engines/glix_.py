@@ -62,6 +62,7 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
                     InferenceMode.classification: {"classes": prompt_signature, "multi_label": True},
                     InferenceMode.question_answering: {"questions": prompt_signature},
                     InferenceMode.summarization: {},
+                    InferenceMode.ner: {"entity_types": prompt_signature},
                 }[inference_mode]
             except KeyError:
                 raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
@@ -74,8 +75,24 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
             while batch := [vals["text"] for vals in itertools.islice(values, batch_size)]:
                 if len(batch) == 0:
                     break
-
-                assert isinstance(params, dict)
-                yield from self._model(batch, **(params | self._inference_kwargs))
+                # Instead of passing the batch directly, we use the predict_entities method (recommended way to use GLiNER)
+                if hasattr(self._model, 'predict_entities') and params["entity_types"]:
+                    if len(batch) > 1:
+                        results = self._model.batch_predict_entities(
+                            texts=batch,
+                            labels=params["entity_types"]
+                        )
+                        for result in results:
+                            yield result
+                    # Use predict_entities for a single text
+                    elif len(batch) == 1:
+                        result = self._model.predict_entities(
+                            text=batch[0],
+                            labels=params["entity_types"]
+                        )
+                        yield result
+                else:
+                    # Fallback to the original method if predict_entities is not available
+                    yield from self._model(batch, **(params | self._inference_kwargs))
 
         return execute
