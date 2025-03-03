@@ -3,6 +3,7 @@ from .core import Task
 from .predictive import (
     Classification,
     InformationExtraction,
+    PIIMasking,
     QuestionAnswering,
     SentimentAnalysis,
     Summarization,
@@ -21,6 +22,7 @@ __all__ = [
     "Summarization",
     "Translation",
     "QuestionAnswering",
+    "PIIMasking",
     "Task",
     "predictive",
     "PredictiveTask",

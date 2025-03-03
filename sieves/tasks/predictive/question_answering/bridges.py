@@ -78,7 +78,7 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     ) -> Iterable[dspy_.Result]:
         results = list(results)
 
-        # Determine label scores for chunks per document.
+        # Merge all QAs.
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
             answers: list[str] = [""] * len(self._questions)
