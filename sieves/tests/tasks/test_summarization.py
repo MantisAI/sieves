@@ -1,9 +1,8 @@
 # mypy: ignore-errors
-import gliner.multitask
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType, GliX
+from sieves.engines import EngineType
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import summarization
 
@@ -39,10 +38,6 @@ def test_run(summarization_docs, batch_engine, fewshot) -> None:
             summary="Boeotians, Orchomenians, and Phocians sailed to Troy with many ships.",
         ),
     ]
-
-    # If GliX engine: by default initialized as classifier, change that to QA.
-    if isinstance(batch_engine, GliX):
-        batch_engine._model = gliner.multitask.GLiNERSummarizer(model=batch_engine._model.model)
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline([summarization.Summarization(n_words=10, engine=batch_engine, **fewshot_args)])

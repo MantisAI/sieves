@@ -10,12 +10,12 @@ from sieves.tasks.predictive import question_answering
 @pytest.mark.parametrize(
     "batch_engine",
     (
-        # EngineType.dspy,
+        EngineType.dspy,
         EngineType.glix,
-        # EngineType.instructor,
-        # EngineType.langchain,
-        # EngineType.ollama,
-        # EngineType.outlines,
+        EngineType.instructor,
+        EngineType.langchain,
+        EngineType.ollama,
+        EngineType.outlines,
     ),
     indirect=["batch_engine"],
 )
