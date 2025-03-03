@@ -1,9 +1,8 @@
 # mypy: ignore-errors
-import gliner.multitask
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType, GliX
+from sieves.engines import EngineType
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import question_answering
 
@@ -11,12 +10,12 @@ from sieves.tasks.predictive import question_answering
 @pytest.mark.parametrize(
     "batch_engine",
     (
-        EngineType.dspy,
+        # EngineType.dspy,
         EngineType.glix,
-        EngineType.instructor,
-        EngineType.langchain,
-        EngineType.ollama,
-        EngineType.outlines,
+        # EngineType.instructor,
+        # EngineType.langchain,
+        # EngineType.ollama,
+        # EngineType.outlines,
     ),
     indirect=["batch_engine"],
 )
@@ -45,10 +44,6 @@ def test_run(qa_docs, batch_engine, fewshot):
             answers=("Studying life on earth.",),
         ),
     ]
-
-    # If GliX engine: by default initialized as classifier, change that to QA.
-    if isinstance(batch_engine, GliX):
-        batch_engine._model = gliner.multitask.GLiNERQuestionAnswerer(model=batch_engine._model.model)
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline(

@@ -12,21 +12,33 @@ import pydantic
 from sieves.engines.core import Engine, Executable
 
 PromptSignature: TypeAlias = list[str]
-Model: TypeAlias = gliner.multitask.base.GLiNERBasePipeline
+Model: TypeAlias = gliner.model.GLiNER
 Result: TypeAlias = list[dict[str, str | float]] | str
 
 
 class InferenceMode(enum.Enum):
     """Available inference modes."""
 
-    ner = 0
-    classification = 1
-    question_answering = 2
-    information_extraction = 3
-    summarization = 4
+    ner = gliner.multitask.GLiNERClassifier
+    classification = gliner.multitask.GLiNERClassifier
+    question_answering = gliner.multitask.GLiNERQuestionAnswerer
+    information_extraction = gliner.multitask.GLiNEROpenExtractor
+    summarization = gliner.multitask.GLiNERSummarizer
+    relation_extraction = gliner.multitask.GLiNERRelationExtractor
 
 
 class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
+    def __init__(
+        self,
+        model: Model,
+        init_kwargs: dict[str, Any] | None = None,
+        inference_kwargs: dict[str, Any] | None = None,
+        strict_mode: bool = False,
+        batch_size: int = -1,
+    ):
+        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
+        self._model_wrappers: dict[InferenceMode, gliner.multitask.base.GLiNERBasePipeline] = {}
+
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
@@ -46,6 +58,11 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
         cls_name = self.__class__.__name__
         if len(list(fewshot_examples)):
             warnings.warn(f"Few-shot examples are not supported by engine {cls_name}.")
+
+        # Lazily initialize multi-task wrapper for underlying GliNER model.
+        if inference_mode not in self._model_wrappers:
+            self._model_wrappers[inference_mode] = inference_mode.value(model=self._model)
+        model = self._model_wrappers[inference_mode]
 
         # Overwrite prompt default template, if template specified. Note that this is a static prompt and GliX doesn't
         # do few-shotting, so we don't inject anything into the template.
@@ -76,6 +93,6 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
                     break
 
                 assert isinstance(params, dict)
-                yield from self._model(batch, **(params | self._inference_kwargs))
+                yield from model(batch, **(params | self._inference_kwargs))
 
         return execute

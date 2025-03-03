@@ -125,7 +125,7 @@ docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
 # 2. Create engine responsible for generating structured output.
 model_name = 'knowledgator/gliner-multitask-v1.0'
-engine = engines.GliX(model=gliner.multitask.GLiNERClassifier(model_name))
+engine = engines.GliX(model=gliner.GLiNER.from_pretrained(model_name))
 
 # 3. Create chunker object.
 chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
