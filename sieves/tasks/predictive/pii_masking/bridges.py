@@ -38,10 +38,14 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         :param mask_placeholder: String to replace PII with.
         :param pii_types: Types of PII to mask. If None, all common PII types will be masked.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=overwrite,
+        )
         self._mask_placeholder = mask_placeholder
         self._pii_types = pii_types
-        self._overwrite = overwrite
         self._pii_entity_cls = self._create_pii_entity_cls()
 
     def _create_pii_entity_cls(self) -> type[pydantic.BaseModel]:

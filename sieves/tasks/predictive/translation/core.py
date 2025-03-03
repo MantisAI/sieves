@@ -90,6 +90,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
+                overwrite=self._overwrite,
                 language=self._to,
             )
         except KeyError as err:

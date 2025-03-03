@@ -108,6 +108,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
+                overwrite=self._overwrite,
                 n_words=self._n_words,
             )
         except KeyError as err:

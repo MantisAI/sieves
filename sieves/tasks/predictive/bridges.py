@@ -14,16 +14,19 @@ TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult
 
 
 class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.ABC):
-    def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None):
+    def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, overwrite: bool):
         """
         Initializes new bridge.
         :param task_id: Task ID.
         :param prompt_template: Custom prompt template. If None, default will be used.
         :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
+        :param overwrite: Whether to overwrite text with produced text. Considered only by bridges for tasks producing
+            fluent text - like translation, summarization, PII masking, etc.
         """
         self._task_id = task_id
         self._custom_prompt_template = prompt_template
         self._custom_prompt_signature_desc = prompt_signature_desc
+        self._overwrite = overwrite
 
     @property
     @abc.abstractmethod
@@ -118,7 +121,12 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
         :param inference_mode: Inference mode.
         :param label_whitelist: Labels to record predictions for. If None, predictions for all labels are recorded.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=False,
+        )
         self._prompt_signature = prompt_signature
         self._inference_mode = inference_mode
         self._label_whitelist = label_whitelist

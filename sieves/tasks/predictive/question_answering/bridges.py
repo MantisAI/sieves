@@ -26,7 +26,12 @@ class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode
         :param prompt_signature_desc: Custom prompt signature description.
         :param questions: Questions to answer.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=False,
+        )
         self._questions = questions
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
