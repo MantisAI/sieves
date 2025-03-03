@@ -1,6 +1,5 @@
 import asyncio
 import enum
-import warnings
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
@@ -13,7 +12,7 @@ from sieves.engines.core import Executable, PydanticEngine
 class Model(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
     name: str
-    client: instructor.Instructor | instructor.AsyncInstructor
+    client: instructor.AsyncInstructor
 
 
 PromptSignature: TypeAlias = pydantic.BaseModel
@@ -25,17 +24,6 @@ class InferenceMode(enum.Enum):
 
 
 class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
-    def _validate_batch_size(self, batch_size: int) -> int:
-        if not isinstance(self._model.client, instructor.AsyncInstructor):
-            if batch_size != 1:
-                warnings.warn(
-                    f"`batch_size` is forced to 1 when {self.__class__.__name__} engine is run with `Instructor`, as "
-                    f"it runs a synchronous workflow."
-                )
-                batch_size = 1
-
-        return batch_size
-
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
@@ -60,7 +48,7 @@ class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                 case InferenceMode.chat:
 
                     def generate(prompts: list[str]) -> Iterable[Result]:
-                        responses = [
+                        calls = [
                             self._model.client.chat.completions.create(
                                 messages=[{"role": "user", "content": prompt}],
                                 model=self._model.name,
@@ -69,10 +57,7 @@ class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                             )
                             for prompt in prompts
                         ]
-
-                        # For async client: responses are coroutines waiting to be executed.
-                        if isinstance(self._model.client, instructor.AsyncInstructor):
-                            responses = asyncio.run(self._execute_async_calls(responses))
+                        responses = asyncio.run(self._execute_async_calls(calls))
 
                         yield from responses
 

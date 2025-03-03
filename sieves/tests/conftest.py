@@ -34,7 +34,7 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int):
         case engines.EngineType.glix:
             model_id = "knowledgator/gliner-multitask-v1.0"
             return engines.glix_.GliX(
-                model=gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_id)),
+                model=gliner.multitask.GLiNERClassifier(model_id),
                 batch_size=batch_size,
             )
 
