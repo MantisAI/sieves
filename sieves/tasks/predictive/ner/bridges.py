@@ -9,7 +9,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, glix_, huggingface_
-from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.bridges import Bridge, GliXBridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -91,6 +91,25 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         return """
         Your goal is to extract named entities from the text. Only extract entities of the specified types: {{ entity_types }}.
 
+        {% if examples|length > 0 -%}
+            Examples:
+            ----------
+            {%- for example in examples %}
+                Text: "{{ example.text }}":
+                Entities: [
+                    {%- for entity in example.entities %}
+                    {
+                        "text": "{{ entity.text }}",
+                        "start": {{ entity.start }},
+                        "end": {{ entity.end }},
+                        "entity": "{{ entity.entity }}"
+                    }{%- if not loop.last %}, {% endif %}
+                    {%- endfor %}
+                ]
+            {% endfor -%}
+            ----------
+        {% endif %}
+
         For each entity you find in the text:
         - Extract the exact text of the entity
         - Note its starting and ending character positions (0-indexed)
@@ -142,7 +161,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
             entity: LiteralType
         
         class Entities(pydantic.BaseModel):
-            entities: list[Entity] = []  # Default to empty list
+            entities: list[Entity] = []
 
         if self.prompt_signature_description:
             Entities.__doc__ = jinja2.Template(self.prompt_signature_description).render()
@@ -193,3 +212,92 @@ class InstructorNER(PydanticBasedNER[instructor_.InferenceMode]):
     @property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         return self._prompt_signature
+
+
+class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
+    def __init__(
+        self,
+        entities: list[str],
+        task_id: str,
+        prompt_template: str | None,
+        prompt_signature_desc: str | None,
+    ):
+        """
+        Initializes GliXNER bridge.
+        :param entities: List of entity types to extract.
+        :param task_id: Task ID.
+        :param prompt_template: Custom prompt template.
+        :param prompt_signature_desc: Custom prompt signature description.
+        """
+        super().__init__(
+            entities=entities,
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+        )
+
+    @property
+    def _prompt_template(self) -> str | None:
+        return None
+
+    @property
+    def _prompt_signature_description(self) -> str | None:
+        return None
+
+    @property
+    def prompt_signature(self) -> list[str]:
+        return self._entities
+
+    @property
+    def inference_mode(self) -> glix_.InferenceMode:
+        return glix_.InferenceMode.ner
+
+    def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+        entity_types = self._entities
+        LiteralType = Literal[*entity_types]
+
+        class Entity(pydantic.BaseModel):
+            text: str
+            start: int
+            end: int
+            entity: LiteralType
+        
+        class Entities(pydantic.BaseModel):
+            entities: list[Entity] = []  # Default to empty list
+
+        for doc, result in zip(docs, results):
+            # GLiNER returns a list of dictionaries with "text" and "label" keys
+            # We need to convert this to a format that matches the Pydantic model
+            entities_list = []
+            if result:
+                for entity in result:
+                    if isinstance(entity, dict) and "text" in entity and "label" in entity:
+                        # Convert GLiNER entity format to our format
+                        # We don't have start/end positions from GLiNER, so we'll find them in the text
+                        entity_text = entity["text"]
+                        entity_label = entity["label"]
+                        start = doc.text.find(entity_text)
+                        if start >= 0:
+                            end = start + len(entity_text)
+                            # Only add entities with valid labels
+                            if entity_label in entity_types:
+                                entities_list.append(Entity(
+                                    text=entity_text,
+                                    start=start,
+                                    end=end,
+                                    entity=entity_label
+                                ))
+            
+            # Create the Entities object with the list of entities
+            entities_obj = Entities(entities=entities_list)
+            doc.results[self._task_id] = entities_obj
+        
+        return docs
+
+    def consolidate(
+        self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[glix_.Result]:
+        results = list(results)
+        for doc_offset in docs_offsets:
+            for rec in results[doc_offset[0]:doc_offset[1]]:
+                yield rec

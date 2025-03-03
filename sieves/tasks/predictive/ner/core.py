@@ -17,7 +17,7 @@ from sieves.tasks.predictive.ner.bridges import (
     LangChainNER,
     OllamaNER,
     OutlinesNER,
-    # GliXNER,
+    GliXNER,
 )
 from sieves.tasks.predictive.core import PredictiveTask
 
@@ -27,9 +27,15 @@ _TaskBridge: TypeAlias = (
     None
 )
 
+class Entity(pydantic.BaseModel):
+    text: str
+    start: int
+    end: int
+    entity: str
+
 class TaskFewshotExample(pydantic.BaseModel):
     text: str
-    entities: tuple[tuple[str, int, int], ...]
+    entities: list[Entity]
 
 
 class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -64,7 +70,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,
         ) 
-        # self._fewshot_examples: Iterable[TaskFewshotExample]    
+        self._fewshot_examples: Iterable[TaskFewshotExample]    
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize bridge.
@@ -77,7 +83,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.outlines: OutlinesNER,
             EngineType.dspy: DSPyNER,
             EngineType.instructor: InstructorNER,
-            # EngineType.glix: GliXNER,
+            EngineType.glix: GliXNER,
         }
         try:
             bridge_type = bridge_types[engine_type](
@@ -99,23 +105,27 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.dspy,
             EngineType.outlines,
             EngineType.instructor,
-            # EngineType.glix,
+            EngineType.glix,
         }
     
-
+    def _validate_fewshot_examples(self) -> None:
+        for fs_example in self._fewshot_examples or []:
+            for entity in fs_example.entities:
+                if entity.entity not in self._entities:
+                    raise ValueError(f"Entity {entity.entity} not in {self._entities}.")
+                if entity.start < 0 or entity.end < 0:
+                    raise ValueError(f"Entity {entity.entity} has start or end less than 0.")
+                if entity.start > entity.end:
+                    raise ValueError(f"Entity {entity.entity} has start greater than end.")
+                if entity.start >= len(fs_example.text) or entity.end >= len(fs_example.text):
+                    raise ValueError(f"Entity {entity.entity} has start or end greater than the text length.")
+        
     @property
     def _state(self) -> dict[str, Any]:
         return {
             **super()._state,
             "entities": self._entities,
         }
-    
-    # def _validate_fewshot_examples(self) -> None:
-    #     for fs_example in self._fewshot_examples or []:
-    #         if any([entity not in self._entities for entity in fs_example.entities]) or not all(
-    #             [entity in fs_example.entities for entity in self._entities]
-    #         ):
-    #             raise ValueError(f"Entity mismatch: {self._task_id} has entities {self._entities}. Few-shot examples has entities {fs_example.entities}.")
-    
+
     def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         return None
