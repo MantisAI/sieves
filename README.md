@@ -125,9 +125,7 @@ docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
 # 2. Create engine responsible for generating structured output.
 model_name = 'knowledgator/gliner-multitask-v1.0'
-engine = engines.GliX(model=
-    gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_name))
-)
+engine = engines.GliX(model=gliner.GLiNER.from_pretrained(model_name))
 
 # 3. Create chunker object.
 chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
@@ -146,7 +144,8 @@ pipe = Pipeline(
 
 # 7. Run pipe and output results.
 docs = list(pipe(docs))
-print(docs[0].results["classifier"])
+for doc in docs:
+    print(doc.results["classifier"])
 
 # 8. Serialize pipeline and docs.
 pipe.dump("pipeline.yml")
