@@ -22,13 +22,13 @@ from sieves.tasks.predictive import summarization
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(summarization_docs, batch_engine, fewshot) -> None:
     fewshot_examples = [
-        summarization.TaskFewshotExample(
+        summarization.FewshotExample(
             text="They counted: one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, "
             "fourteen.",
             n_words=6,
             summary="They counted from one to fourteen.",
         ),
-        summarization.TaskFewshotExample(
+        summarization.FewshotExample(
             text="Next in order were the Boeotians, led by Peneleos, Leitus, Arcesilaus, Prothoenor, and Clonius. "
             "These had with them fifty ships, and on board of each were a hundred and twenty young men of the "
             "Boeotians. Then came the men of Orchomenus, who lived in the realm of the Minyans, led by Ascalaphus"

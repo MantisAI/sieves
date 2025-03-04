@@ -26,7 +26,12 @@ class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode
         :param prompt_signature_desc: Custom prompt signature description.
         :param questions: Questions to answer.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=False,
+        )
         self._questions = questions
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
@@ -78,7 +83,7 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     ) -> Iterable[dspy_.Result]:
         results = list(results)
 
-        # Determine label scores for chunks per document.
+        # Merge all QAs.
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
             answers: list[str] = [""] * len(self._questions)

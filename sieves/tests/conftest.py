@@ -58,7 +58,7 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int):
             return engines.huggingface_.HuggingFace(model=model, batch_size=batch_size)
 
         case engines.EngineType.ollama:
-            model = engines.ollama_.Model(client_mode="async", host="http://localhost:11434", name="smollm:135m")
+            model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m")
             return engines.ollama_.Ollama(model=model, batch_size=batch_size)
 
         case engines.EngineType.outlines:
@@ -171,4 +171,12 @@ def information_extraction_docs() -> list[Doc]:
     return [
         Doc(text="Mahatma Ghandi lived to 79 years old. Bugs Bunny is at least 85 years old."),
         Doc(text="Marie Curie passed away at the age of 67 years. Marie Curie was 67 years old."),
+    ]
+
+
+@pytest.fixture(scope="session")
+def pii_masking_docs() -> list[Doc]:
+    return [
+        Doc(text="Her SSN is 222-333-444. Her credit card number is 1234 5678."),
+        Doc(text="You can reach Michael at michael.michaels@gmail.com."),
     ]

@@ -32,7 +32,7 @@ _TaskBridge: TypeAlias = (
 )
 
 
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     text: str
     reasoning: str
     entities: list[pydantic.BaseModel]
@@ -48,7 +48,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         include_meta: bool = True,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initializes new PredictiveTask.

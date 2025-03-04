@@ -1,5 +1,5 @@
 """Information extraction task."""
 
-from .core import TaskFewshotExample, Translation, _TaskPromptSignature, _TaskResult
+from .core import FewshotExample, Translation, _TaskPromptSignature, _TaskResult
 
-__all__ = ["Translation", "TaskFewshotExample", "_TaskResult", "_TaskPromptSignature"]
+__all__ = ["Translation", "FewshotExample", "_TaskResult", "_TaskPromptSignature"]

@@ -24,6 +24,7 @@ class TranslationBridge(
         task_id: str,
         prompt_template: str | None,
         prompt_signature_desc: str | None,
+        overwrite: bool,
         language: str,
     ):
         """
@@ -31,9 +32,15 @@ class TranslationBridge(
         :param task_id: Task ID.
         :param prompt_template: Custom prompt template.
         :param prompt_signature_desc: Custom prompt signature description.
+        :param overwrite: Whether to overwrite text with translation.
         :param language: Language to translate to.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=overwrite,
+        )
         self._to = language
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
@@ -67,7 +74,10 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.translation) == 1
-            doc.results[self._task_id] = result.completions.translation[0]
+            doc.results[self._task_id] = result.translation
+
+            if self._overwrite:
+                doc.text = result.translation
         return docs
 
     def consolidate(
@@ -134,6 +144,9 @@ class PydanticBasedTranslation(
         for doc, result in zip(docs, results):
             assert hasattr(result, "translation")
             doc.results[self._task_id] = result.translation
+
+            if self._overwrite:
+                doc.text = result.translation
         return docs
 
     def consolidate(

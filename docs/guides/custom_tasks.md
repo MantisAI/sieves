@@ -191,7 +191,7 @@ from sieves.tasks.predictive.core import PredictiveTask
 
 # We'll define that class we require fewshot examples to be provided in. In our case we can just inherit from our 
 # prompt signature class and add a `text` property.
-class TaskFewshotExample(SentimentEstimate):
+class FewshotExample(SentimentEstimate):
     text: str
 
 

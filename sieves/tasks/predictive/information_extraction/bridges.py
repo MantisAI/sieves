@@ -33,7 +33,12 @@ class InformationExtractionBridge(
         :param prompt_signature_desc: Custom prompt signature description.
         :param entity_type: Type to extract.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=False,
+        )
         self._entity_type = entity_type
 
 
