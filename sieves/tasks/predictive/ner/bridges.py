@@ -45,59 +45,87 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         return ({"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs)
     
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        for doc, result in zip(docs, results):
+        docs_list = list(docs)
+        results_list = list(results)
+        
+        for doc, result in zip(docs_list, results_list):
             # Create a new result with the same structure as the original
             new_entities = []
             
             # Get the original text from the document
-            doc_text = doc.text.lower()
+            doc_text = doc.text
+            doc_text_lower = doc_text.lower()
             
             # Skip if result is None
             if result is None:
                 doc.results[self._task_id] = Entities(text=doc_text, entities=[])
                 continue
-            
             # Handle different result types
             if hasattr(result, 'entities'):
                 # Extract the entities with context and convert them to entities with start/end indices
                 for entity_with_context in result.entities:
+                    if not entity_with_context:
+                        continue
                     # Find the entity text in the original text
                     entity_text = entity_with_context.text
+                    entity_text_lower = entity_text.lower()
                     context = entity_with_context.context
+                    context_lower = context.lower()
                     
-                    # Find the exact context in the document text
-                    context_start = doc_text.find(context.lower())
-                    if context_start >= 0 and entity_text in context:
-                        # Found exact match
-                        entity_start_in_context = context.lower().find(entity_text.lower())
-                        start = context_start + entity_start_in_context
-                        end = start + len(entity_text)
+                    # First try to find the entity using the context
+                    if context and entity_text in context:
+                        # Find all occurrences of the context in the document
+                        context_positions = []
+                        pos = 0
+                        while True:
+                            pos = doc_text_lower.find(context_lower, pos)
+                            if pos == -1:
+                                break
+                            context_positions.append(pos)
+                            pos += 1  # Move past the current position to find the next occurrence
                         
-                        # Create a new entity with start/end indices using the Entity class
-                        new_entity = Entity(
-                            text=entity_text,
-                            start=start,
-                            end=end,
-                            entity_type=entity_with_context.entity_type
-                        )
-                        new_entities.append(new_entity)
-                    elif doc_text.find(entity_text.lower()) >= 0:
-                        # Found exact match at the beginning of the document
-                        start = doc_text.lower().find(entity_text.lower())
-                        end = start + len(entity_text)        
-                        new_entity = Entity(
-                            text=entity_text,
-                            start=start,
-                            end=end,
-                            entity_type=entity_with_context.entity_type
-                        )
-                        new_entities.append(new_entity)
+                        # For each context position, find the entity within that context
+                        for context_start in context_positions:
+                            entity_start_in_context = context_lower.find(entity_text_lower)
+                            if entity_start_in_context >= 0:
+                                start = context_start + entity_start_in_context
+                                end = start + len(entity_text)
+                                
+                                # Create a new entity with start/end indices
+                                new_entity = Entity(
+                                    text=doc_text[start:end],  # Use the exact text from the document
+                                    start=start,
+                                    end=end,
+                                    entity_type=entity_with_context.entity_type
+                                )
+                                new_entities.append(new_entity)
+                    else:
+                        # If context approach fails, find all occurrences of the entity directly
+                        entity_positions = []
+                        pos = 0
+                        while True:
+                            pos = doc_text_lower.find(entity_text_lower, pos)
+                            if pos == -1:
+                                break
+                            entity_positions.append(pos)
+                            pos += 1  # Move past the current position to find the next occurrence
+                        
+                        # Create entities for each occurrence
+                        for start in entity_positions:
+                            end = start + len(entity_text)
+                            new_entity = Entity(
+                                text=doc_text[start:end],  # Use the exact text from the document
+                                start=start,
+                                end=end,
+                                entity_type=entity_with_context.entity_type
+                            )
+                            new_entities.append(new_entity)
             
             # Create a new result with the updated entities
             new_result = Entities(text=doc_text, entities=new_entities)
             doc.results[self._task_id] = new_result
         
-        return docs
+        return docs_list
 
 
 
@@ -142,7 +170,6 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         return dspy_.InferenceMode.predict
     
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        print("\n\nresults, ", results, '\n\n')
         return super().integrate(results, docs)
     
     def consolidate(
@@ -180,19 +207,6 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         - Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words after it. DO NOT include the entire text as context. DO NOT include words that are not present in the original text as introductory words (Eg. 'Text:' before context string).
         - Specify which type of entity it is (must be one of the provided entity types)
 
-        Return a JSON object with a list of entities, each with text, context, and entity fields.
-        
-        Example output format:
-        {
-            "entities": [
-                {
-                    "text": "John Smith",
-                    "context": "meet John Smith at the",
-                    "entity": "PERSON"
-                }
-            ]
-        }
-
         IMPORTANT:
         - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
 
@@ -229,7 +243,6 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         return Prediction
 
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
-        print("\n\nresults, ", results, '\n\n')
         return super().integrate(results, docs)
 
     def consolidate(
@@ -314,6 +327,9 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
     def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         entity_types = self._entities
         LiteralType = Literal[*entity_types]
+        
+        docs_list = list(docs)
+        results_list = list(results)
 
         class Entity(pydantic.BaseModel):
             text: str
@@ -324,24 +340,46 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
         class Entities(pydantic.BaseModel):
             entities: list[Entity] = []  # Default to empty list
 
-        for doc, result in zip(docs, results):
+        for doc, result in zip(docs_list, results_list):
+            # Get the original text from the document
+            doc_text = doc.text
+            
             # GLiNER returns a list of dictionaries with "text" and "label" keys
             # We need to convert this to a format that matches the Pydantic model
             entities_list = []
+            
             if result:
                 for entity in result:
                     if isinstance(entity, dict) and "text" in entity and "label" in entity:
                         # Convert GLiNER entity format to our format
-                        # We don't have start/end positions from GLiNER, so we'll find them in the text
                         entity_text = entity["text"]
                         entity_label = entity["label"]
-                        start = doc.text.find(entity_text)
-                        if start >= 0:
-                            end = start + len(entity_text)
-                            # Only add entities with valid labels
-                            if entity_label in entity_types:
+                        
+                        # Only process entities with valid labels
+                        if entity_label in entity_types:
+                            # Find exact matches of the entity in the text (case-sensitive)
+                            entity_positions = []
+                            pos = 0
+                            while True:
+                                pos = doc_text.find(entity_text, pos)
+                                if pos == -1:
+                                    break
+                                
+                                # Check if this is a standalone word by checking boundaries
+                                # This helps avoid matching "Apple" within "Pineapple" for example
+                                is_word_start = pos == 0 or not doc_text[pos-1].isalnum()
+                                is_word_end = pos + len(entity_text) == len(doc_text) or not doc_text[pos + len(entity_text)].isalnum()
+                                
+                                if is_word_start and is_word_end:
+                                    entity_positions.append(pos)
+                                
+                                pos += 1  # Move past the current position to find the next occurrence
+                            
+                            # Create entities for each occurrence
+                            for start in entity_positions:
+                                end = start + len(entity_text)
                                 entities_list.append(Entity(
-                                    text=entity_text,
+                                    text=doc_text[start:end],  # Use the exact text from the document
                                     start=start,
                                     end=end,
                                     entity=entity_label
@@ -351,7 +389,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
             entities_obj = Entities(entities=entities_list)
             doc.results[self._task_id] = entities_obj
         
-        return docs
+        return docs_list
 
     def consolidate(
         self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
