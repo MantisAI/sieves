@@ -128,7 +128,6 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         return docs_list
 
 
-
 class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     @property
     def _prompt_template(self) -> str | None:
@@ -325,8 +324,6 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
         return glix_.InferenceMode.ner
 
     def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        entity_types = self._entities
-        LiteralType = Literal[*entity_types]
         
         docs_list = list(docs)
         results_list = list(results)
@@ -335,58 +332,29 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
             text: str
             start: int
             end: int
-            entity: LiteralType
+            entity_type: str
         
         class Entities(pydantic.BaseModel):
-            entities: list[Entity] = []  # Default to empty list
+            text: str
+            entities: list[Entity] = []
 
         for doc, result in zip(docs_list, results_list):
+            entities_list = []
             # Get the original text from the document
             doc_text = doc.text
             
-            # GLiNER returns a list of dictionaries with "text" and "label" keys
-            # We need to convert this to a format that matches the Pydantic model
-            entities_list = []
-            
             if result:
                 for entity in result:
-                    if isinstance(entity, dict) and "text" in entity and "label" in entity:
-                        # Convert GLiNER entity format to our format
-                        entity_text = entity["text"]
-                        entity_label = entity["label"]
-                        
-                        # Only process entities with valid labels
-                        if entity_label in entity_types:
-                            # Find exact matches of the entity in the text (case-sensitive)
-                            entity_positions = []
-                            pos = 0
-                            while True:
-                                pos = doc_text.find(entity_text, pos)
-                                if pos == -1:
-                                    break
-                                
-                                # Check if this is a standalone word by checking boundaries
-                                # This helps avoid matching "Apple" within "Pineapple" for example
-                                is_word_start = pos == 0 or not doc_text[pos-1].isalnum()
-                                is_word_end = pos + len(entity_text) == len(doc_text) or not doc_text[pos + len(entity_text)].isalnum()
-                                
-                                if is_word_start and is_word_end:
-                                    entity_positions.append(pos)
-                                
-                                pos += 1  # Move past the current position to find the next occurrence
-                            
-                            # Create entities for each occurrence
-                            for start in entity_positions:
-                                end = start + len(entity_text)
-                                entities_list.append(Entity(
-                                    text=doc_text[start:end],  # Use the exact text from the document
-                                    start=start,
-                                    end=end,
-                                    entity=entity_label
-                                ))
+                        if isinstance(entity, dict) and "text" in entity and "label" in entity:
+                            entities_list.append(Entity(
+                                text=entity["text"],  # Use the exact text from the document
+                                start=entity["start"],
+                                end=entity["end"],
+                                entity_type=entity["label"]
+                            ))
             
             # Create the Entities object with the list of entities
-            entities_obj = Entities(entities=entities_list)
+            entities_obj = Entities(text=doc_text, entities=entities_list)
             doc.results[self._task_id] = entities_obj
         
         return docs_list
