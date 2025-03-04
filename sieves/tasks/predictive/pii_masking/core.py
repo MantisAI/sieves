@@ -4,8 +4,6 @@ from typing import Any, TypeAlias
 
 import datasets
 import pydantic
-from engines import dspy_
-from serialization import Config
 
 from sieves.data.doc import Doc
 from sieves.engines import (
@@ -15,7 +13,9 @@ from sieves.engines import (
     EnginePromptSignature,
     EngineResult,
     EngineType,
+    dspy_,
 )
+from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.pii_masking.bridges import (
     DSPyPIIMasking,
