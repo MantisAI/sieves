@@ -1,5 +1,5 @@
 """Aspect-based sentiment analysis."""
 
-from .core import SentimentAnalysis, TaskFewshotExample
+from .core import FewshotExample, SentimentAnalysis
 
-__all__ = ["SentimentAnalysis", "TaskFewshotExample"]
+__all__ = ["SentimentAnalysis", "FewshotExample"]

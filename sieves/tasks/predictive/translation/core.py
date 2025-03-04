@@ -26,7 +26,7 @@ _TaskBridge: TypeAlias = (
 )
 
 
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     text: str
     to: str
     translation: str
@@ -40,10 +40,10 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
-        overwrite: bool = True,
+        overwrite: bool = False,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initializes new PredictiveTask.
@@ -116,7 +116,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         }
 
     def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
-        """
+        """Converts docs to Hugging Face dataset.
         :param docs: Documents to convert.
         :return datasets.Dataset: Converted dataset.
         """

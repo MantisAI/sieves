@@ -1,5 +1,5 @@
 """Classification task."""
 
-from .core import QuestionAnswering, TaskFewshotExample
+from .core import FewshotExample, QuestionAnswering
 
-__all__ = ["QuestionAnswering", "TaskFewshotExample"]
+__all__ = ["QuestionAnswering", "FewshotExample"]

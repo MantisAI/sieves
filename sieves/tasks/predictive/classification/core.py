@@ -34,13 +34,13 @@ _TaskBridge: TypeAlias = (
 )
 
 
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     text: str
     reasoning: str
     confidence_per_label: dict[str, float]
 
     @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> TaskFewshotExample:
+    def check_confidence(self) -> FewshotExample:
         if any([conf for conf in self.confidence_per_label.values() if not 0 <= conf <= 1]):
             raise ValueError("Confidence has to be between 0 and 1.")
         return self
@@ -56,7 +56,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         include_meta: bool = True,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initializes new PredictiveTask.
@@ -79,7 +79,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,
         )
-        self._fewshot_examples: Iterable[TaskFewshotExample]
+        self._fewshot_examples: Iterable[FewshotExample]
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize bridge.

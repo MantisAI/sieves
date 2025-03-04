@@ -15,13 +15,13 @@ from sieves.tasks.predictive import sentiment_analysis
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(sentiment_analysis_docs, batch_engine, fewshot):
     fewshot_examples = [
-        sentiment_analysis.TaskFewshotExample(
+        sentiment_analysis.FewshotExample(
             text="The food was perfect, the service only ok.",
             reasoning="The text is very positive about the quality of the food, and neutral about the service quality."
             " The overall sentiment is hence positive.",
             sentiment_per_aspect={"food": 1.0, "service": 0.5, "overall": 0.8},
         ),
-        sentiment_analysis.TaskFewshotExample(
+        sentiment_analysis.FewshotExample(
             text="The service was amazing - they take excellent care of their customers. The food was despicable "
             "though, I strongly recommend not to go.",
             reasoning="While the service is judged as amazing, hence very positive, the assessment of the food is very "

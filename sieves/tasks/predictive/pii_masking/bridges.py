@@ -51,12 +51,12 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
     def _create_pii_entity_cls(self) -> type[pydantic.BaseModel]:
         """Creates PII entity class."""
         pii_types = self._pii_types
-        PIIType = Literal[*pii_types]  # type: ignore[valid-type]
+        PIIType = Literal[*pii_types] if pii_types else str
 
         class PIIEntity(pydantic.BaseModel, frozen=True):
             """PII entity."""
 
-            entity_type: PIIType
+            entity_type: PIIType  # type: ignore[valid-type]
             text: str
 
         return PIIEntity
@@ -121,6 +121,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
         # Merge results for each document
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
+            seen_entities: set[PIIEntity] = set()  # type: ignore[valid-type]
             entities: list[PIIEntity] = []  # type: ignore[valid-type]
             masked_texts: list[str] = []
             reasonings: list[str] = []
@@ -128,7 +129,10 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
             for res in doc_results:
                 reasonings.append(res.reasoning)
                 masked_texts.append(res.masked_text)
-                entities.extend(res.pii_entities)
+                for entity in res.pii_entities:
+                    if entity not in seen_entities:
+                        entities.extend(res.pii_entities)
+                        seen_entities.add(entity)
 
             yield dspy.Prediction.from_completions(
                 {"masked_text": [" ".join(masked_texts)], "pii_entities": [entities], "reasoning": [str(reasonings)]},
@@ -210,21 +214,29 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
 
         # Merge results for each document
         for doc_offset in docs_offsets:
-            all_entities: list[PIIEntity] = []  # type: ignore[valid-type]
-            all_masked_texts: list[str] = []
-            all_reasonings: list[str] = []
+            doc_results = results[doc_offset[0] : doc_offset[1]]
+            seen_entities: set[PIIEntity] = set()  # type: ignore[valid-type]
+            entities: list[PIIEntity] = []  # type: ignore[valid-type]
+            masked_texts: list[str] = []
+            reasonings: list[str] = []
 
-            for res in results[doc_offset[0] : doc_offset[1]]:
+            for res in doc_results:
+                if res:
+                    continue
+
                 assert hasattr(res, "reasoning")
                 assert hasattr(res, "masked_text")
                 assert hasattr(res, "pii_entities")
 
-                all_reasonings.append(res.reasoning)
-                all_masked_texts.append(res.masked_text)
-                all_entities.extend(res.pii_entities)
+                reasonings.append(res.reasoning)
+                masked_texts.append(res.masked_text)
+                for entity in res.pii_entities:
+                    if entity not in seen_entities:
+                        entities.extend(res.pii_entities)
+                        seen_entities.add(entity)
 
             yield self.prompt_signature(
-                reasoning=str(all_reasonings), masked_text=" ".join(all_masked_texts), pii_entities=all_entities
+                reasoning=str(reasonings), masked_text=" ".join(masked_texts), pii_entities=entities
             )
 
 

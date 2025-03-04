@@ -21,12 +21,12 @@ class Person(pydantic.BaseModel, frozen=True):
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
     fewshot_examples = [
-        information_extraction.TaskFewshotExample(
+        information_extraction.FewshotExample(
             text="Ada Lovelace lived to 47 years old. Zeno of Citium died with 72 years.",
             reasoning="There is mention of two people in this text, including lifespans. I will extract those.",
             entities=[Person(name="Ada Loveloace", age=47), Person(name="Zeno of Citium", age=72)],
         ),
-        information_extraction.TaskFewshotExample(
+        information_extraction.FewshotExample(
             text="Alan Watts passed away at the age of 58 years. Alan Watts was 58 years old at the time of his death.",
             reasoning="There is mention of one person in this text, including lifespan. I will extract this person.",
             entities=[Person(name="Alan Watts", age=58)],

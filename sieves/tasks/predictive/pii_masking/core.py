@@ -2,8 +2,10 @@
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
+import datasets
 import pydantic
 from engines import dspy_
+from serialization import Config
 
 from sieves.data.doc import Doc
 from sieves.engines import (
@@ -23,6 +25,12 @@ from sieves.tasks.predictive.pii_masking.bridges import (
     OutlinesPIIMasking,
 )
 
+_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult: TypeAlias = pydantic.BaseModel | dspy_.Result
+_TaskBridge: TypeAlias = (
+    DSPyPIIMasking | InstructorPIIMasking | LangChainPIIMasking | OutlinesPIIMasking | OllamaPIIMasking
+)
+
 
 class PIIEntity(pydantic.BaseModel, frozen=True):
     """PII entity."""
@@ -31,14 +39,7 @@ class PIIEntity(pydantic.BaseModel, frozen=True):
     text: str
 
 
-_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult: TypeAlias = pydantic.BaseModel | dspy_.Result
-_TaskBridge: TypeAlias = (
-    DSPyPIIMasking | InstructorPIIMasking | LangChainPIIMasking | OutlinesPIIMasking | OllamaPIIMasking
-)
-
-
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     """Example for PII masking few-shot prompting."""
 
     text: str
@@ -58,10 +59,10 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
-        overwrite: bool = True,
+        overwrite: bool = False,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initialize PIIMasking task.
@@ -137,5 +138,29 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         }
 
     def to_dataset(self, docs: Iterable[Doc]) -> Any:
-        """Not implemented for PII masking task."""
-        raise NotImplementedError("to_dataset is not implemented for PIIMasking task.")
+        """Converts docs to Hugging Face dataset.
+        :param docs: Documents to convert.
+        :return datasets.Dataset: Converted dataset.
+        """
+        # Define metadata.
+        features = datasets.Features({"text": datasets.Value("string"), "masked_text": datasets.Value("string")})
+        info = datasets.DatasetInfo(
+            description=f"PII masking dataset. Generated with sieves v{Config.get_version()}.",
+            features=features,
+        )
+
+        # Fetch data used for generating dataset.
+        try:
+            data = [(doc.text, doc.results[self._task_id]["masked_text"]) for doc in docs]
+        except KeyError as err:
+            raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
+
+        def generate_data() -> Iterable[dict[str, Any]]:
+            """Yields results as dicts.
+            :return: Results as dicts.
+            """
+            for text, masked_text in data:
+                yield {"text": text, "masked_text": masked_text}
+
+        # Create dataset.
+        return datasets.Dataset.from_generator(generate_data, features=features, info=info)

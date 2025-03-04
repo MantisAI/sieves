@@ -32,7 +32,7 @@ _TaskBridge: TypeAlias = (
 )
 
 
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     text: str
     n_words: int
     summary: str
@@ -46,10 +46,10 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
-        overwrite: bool = True,
+        overwrite: bool = False,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initializes new Summarization task.

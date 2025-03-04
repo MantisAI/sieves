@@ -1,5 +1,5 @@
 """PII masking."""
 
-from .core import PIIMasking, TaskFewshotExample
+from .core import FewshotExample, PIIEntity, PIIMasking
 
-__all__ = ["TaskFewshotExample", "PIIMasking"]
+__all__ = ["FewshotExample", "PIIEntity", "PIIMasking"]

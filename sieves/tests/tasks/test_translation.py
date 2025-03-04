@@ -15,12 +15,12 @@ from sieves.tasks.predictive import translation
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(translation_docs, batch_engine, fewshot) -> None:
     fewshot_examples = [
-        translation.TaskFewshotExample(
+        translation.FewshotExample(
             text="The sun is shining today.",
             to="Spanish",
             translation="El sol brilla hoy.",
         ),
-        translation.TaskFewshotExample(
+        translation.FewshotExample(
             text="There's a lot of fog today",
             to="Spanish",
             translation="Hay mucha niebla hoy.",

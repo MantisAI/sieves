@@ -22,7 +22,7 @@ from sieves.tasks.predictive import question_answering
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(qa_docs, batch_engine, fewshot):
     fewshot_examples = [
-        question_answering.TaskFewshotExample(
+        question_answering.FewshotExample(
             text="""
             Physics is the scientific study of matter, its fundamental constituents, its motion and behavior through 
             space and time, and the related entities of energy and force. Physics is one of the most fundamental 
@@ -32,7 +32,7 @@ def test_run(qa_docs, batch_engine, fewshot):
             questions=("What's a scientist called who specializes in the field of physics?",),
             answers=("A physicist.",),
         ),
-        question_answering.TaskFewshotExample(
+        question_answering.FewshotExample(
             text="""
             A biologist is a scientist who conducts research in biology. Biologists are interested in studying life on 
             Earth, whether it is an individual cell, a multicellular organism, or a community of interacting 

@@ -30,13 +30,13 @@ _TaskBridge: TypeAlias = (
 )
 
 
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     text: str
     reasoning: str
     sentiment_per_aspect: dict[str, float]
 
     @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> TaskFewshotExample:
+    def check_confidence(self) -> FewshotExample:
         assert "overall" in self.sentiment_per_aspect, ValueError(
             "'overall' score has to be given in `sentiment_per_aspect` dict."
         )
@@ -55,7 +55,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         include_meta: bool = True,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initializes new SentimentAnalysis task.
@@ -79,7 +79,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,
         )
-        self._fewshot_examples: Iterable[TaskFewshotExample]
+        self._fewshot_examples: Iterable[FewshotExample]
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize bridge.

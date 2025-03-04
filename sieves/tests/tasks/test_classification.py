@@ -12,13 +12,13 @@ from sieves.tasks.predictive import classification
 def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
     assert issubclass(engine.inference_modes, enum.Enum)
     fewshot_examples = [
-        classification.TaskFewshotExample(
+        classification.FewshotExample(
             text="On the properties of hydrogen atoms and red dwarfs.",
             reasoning="Atoms, hydrogen and red dwarfs are terms from physics. There is no mention of any "
             "politics-related terms.",
             confidence_per_label={"science": 1.0, "politics": 0.0},
         ),
-        classification.TaskFewshotExample(
+        classification.FewshotExample(
             text="A parliament is elected by casting votes.",
             reasoning="The election of a parliament by the casting of votes is a component of a democratic political "
             "system.",
