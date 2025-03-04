@@ -14,6 +14,16 @@ from sieves.tasks.predictive.bridges import Bridge, GliXBridge
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
+class Entity(pydantic.BaseModel):
+            text: str
+            start: int | None
+            end: int | None
+            entity_type: str
+        
+class Entities(pydantic.BaseModel):
+    entities: list[Entity]
+    text: str
+
 class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
     def __init__(
             self,
@@ -33,6 +43,62 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs)
+    
+    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+        for doc, result in zip(docs, results):
+            # Create a new result with the same structure as the original
+            new_entities = []
+            
+            # Get the original text from the document
+            doc_text = doc.text.lower()
+            
+            # Skip if result is None
+            if result is None:
+                doc.results[self._task_id] = Entities(text=doc_text, entities=[])
+                continue
+            
+            # Handle different result types
+            if hasattr(result, 'entities'):
+                # Extract the entities with context and convert them to entities with start/end indices
+                for entity_with_context in result.entities:
+                    # Find the entity text in the original text
+                    entity_text = entity_with_context.text
+                    context = entity_with_context.context
+                    
+                    # Find the exact context in the document text
+                    context_start = doc_text.find(context.lower())
+                    if context_start >= 0 and entity_text in context:
+                        # Found exact match
+                        entity_start_in_context = context.lower().find(entity_text.lower())
+                        start = context_start + entity_start_in_context
+                        end = start + len(entity_text)
+                        
+                        # Create a new entity with start/end indices using the Entity class
+                        new_entity = Entity(
+                            text=entity_text,
+                            start=start,
+                            end=end,
+                            entity_type=entity_with_context.entity_type
+                        )
+                        new_entities.append(new_entity)
+                    elif doc_text.find(entity_text.lower()) >= 0:
+                        # Found exact match at the beginning of the document
+                        start = doc_text.lower().find(entity_text.lower())
+                        end = start + len(entity_text)        
+                        new_entity = Entity(
+                            text=entity_text,
+                            start=start,
+                            end=end,
+                            entity_type=entity_with_context.entity_type
+                        )
+                        new_entities.append(new_entity)
+            
+            # Create a new result with the updated entities
+            new_result = Entities(text=doc_text, entities=new_entities)
+            doc.results[self._task_id] = new_result
+        
+        return docs
+
 
 
 class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -45,7 +111,8 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         return """
         Extract named entities from the provided text. For each entity found:
         - Extract the exact text of the entity
-        - Provide the starting and ending character positions
+        - Include a context string that MUST contain the exact entity text along with a few surrounding words (two or three surronding words). The context MUST include the entity text itself.
+        - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
         - Specify the entity type from the provided list of entity types
         Only extract entities of the specified types.
         """
@@ -56,35 +123,33 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         LiteralType = Literal[*entity_types]
 
         class Entity(dspy.Signature):
-            text: str = dspy.OutputField(description="The extracted entity text")
-            start: int = dspy.OutputField(description="Starting character position of the entity")
-            end: int = dspy.OutputField(description="Ending character position of the entity")
-            entity: LiteralType = dspy.OutputField(description="The type of entity")
+            text: str = dspy.OutputField(description="The extracted entity text, if the same entity appears multiple times in the text, includes each occurrence separately.")
+            context: str = dspy.OutputField(description="A context string that MUST include the exact entity text. The context should include the entity and a few surrounding words (two or three surrounding words). IMPORTANT: The entity text MUST be present in the context string exactly as it appears in the text.")
+            entity_type: LiteralType = dspy.OutputField(description="The type of entity")
         
-        class Entities(dspy.Signature):
+        class Prediction(dspy.Signature):
             text: str = dspy.InputField(description="Text to extract entities from")
             entity_types: list[str] = dspy.InputField(description="List of entity types to extract")
+            
+            entities: list[Entity] = dspy.OutputField(description="List of entities found in the text. If the same entity appears multiple times in different contexts, include each occurrence separately.")
 
-            entities: list[Entity] = dspy.OutputField(description="List of entities found in the text")
+        Prediction.__doc__ = jinja2.Template(self.prompt_signature_description).render()
 
-        Entities.__doc__ = jinja2.Template(self.prompt_signature_description).render()
-
-        return Entities
+        return Prediction
 
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.predict
     
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        for doc, result in zip(docs, results):
-            doc.results[self._task_id] = result
-        return docs
+        print("\n\nresults, ", results, '\n\n')
+        return super().integrate(results, docs)
     
     def consolidate(
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
         return results
-    
+
 class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode]):
     @property
     def _prompt_template(self) -> str | None:
@@ -110,30 +175,26 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
             ----------
         {% endif %}
 
-        For each entity you find in the text:
+        For each entity:
         - Extract the exact text of the entity
-        - Note its starting and ending character positions (0-indexed)
+        - Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words after it. DO NOT include the entire text as context. DO NOT include words that are not present in the original text as introductory words (Eg. 'Text:' before context string).
         - Specify which type of entity it is (must be one of the provided entity types)
 
-        Return a JSON object with a list of entities, each with text, start, end, and entity fields.
+        Return a JSON object with a list of entities, each with text, context, and entity fields.
         
         Example output format:
         {
             "entities": [
                 {
                     "text": "John Smith",
-                    "start": 0,
-                    "end": 10,
+                    "context": "meet John Smith at the",
                     "entity": "PERSON"
-                },
-                {
-                    "text": "New York",
-                    "start": 15,
-                    "end": 23,
-                    "entity": "LOCATION"
                 }
             ]
         }
+
+        IMPORTANT:
+        - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
 
         Text: {{ text }}
         Entity Types: {{ entity_types }}
@@ -144,7 +205,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         return """
         Extract named entities from the provided text. For each entity found:
         - Extract the exact text of the entity
-        - Provide the starting and ending character positions
+        - Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words after it. DO NOT include the entire text as context.
         - Specify the entity type from the provided list of entity types
         Only extract entities of the specified types.
         """
@@ -154,24 +215,22 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         entity_types = self._entities
         LiteralType = Literal[*entity_types]
 
-        class Entity(pydantic.BaseModel):
+        class EntityWithContext(pydantic.BaseModel):
             text: str
-            start: int
-            end: int
-            entity: LiteralType
+            context: str
+            entity_type: LiteralType
         
-        class Entities(pydantic.BaseModel):
-            entities: list[Entity] = []
+        class Prediction(pydantic.BaseModel):
+            entities: list[EntityWithContext] = []
 
         if self.prompt_signature_description:
-            Entities.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+            Prediction.__doc__ = jinja2.Template(self.prompt_signature_description).render()
 
-        return Entities
+        return Prediction
 
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
-        for doc, result in zip(docs, results):
-            doc.results[self._task_id] = result
-        return docs
+        print("\n\nresults, ", results, '\n\n')
+        return super().integrate(results, docs)
 
     def consolidate(
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]

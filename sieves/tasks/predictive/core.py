@@ -111,7 +111,6 @@ class PredictiveTask(
         :return Iterable[Doc]: Processed documents.
         """
         docs = list(docs)
-
         # 1. Compile expected prompt signatures.
         signature = self._bridge.prompt_signature
 
@@ -126,7 +125,6 @@ class PredictiveTask(
 
         # 3. Extract values from docs to inject/render those into prompt templates.
         docs_values = self._bridge.extract(docs)
-
         # 4. Map extracted docs values onto chunks.
         docs_chunks_offsets: list[tuple[int, int]] = []
         docs_chunks_values: list[dict[str, Any]] = []
@@ -135,7 +133,6 @@ class PredictiveTask(
             doc_chunks_values = [doc_values | {"text": chunk} for chunk in (doc.chunks or [doc.text])]
             docs_chunks_offsets.append((len(docs_chunks_values), len(docs_chunks_values) + len(doc_chunks_values)))
             docs_chunks_values.extend(doc_chunks_values)
-
         # 5. Execute prompts per chunk.
         results = list(executable(docs_chunks_values))
         assert len(results) == len(docs_chunks_values)
