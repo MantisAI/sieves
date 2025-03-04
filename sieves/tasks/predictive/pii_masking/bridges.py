@@ -221,8 +221,8 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
             reasonings: list[str] = []
 
             for res in doc_results:
-                if res:
-                    continue
+                if res is None:
+                    continue  # type: ignore[unreachable]
 
                 assert hasattr(res, "reasoning")
                 assert hasattr(res, "masked_text")
