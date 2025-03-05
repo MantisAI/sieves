@@ -29,8 +29,7 @@ _TaskBridge: TypeAlias = (
 
 class Entity(pydantic.BaseModel):
     text: str
-    start: int
-    end: int
+    context: str
     entity: str
 
 class TaskFewshotExample(pydantic.BaseModel):
@@ -113,12 +112,6 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             for entity in fs_example.entities:
                 if entity.entity not in self._entities:
                     raise ValueError(f"Entity {entity.entity} not in {self._entities}.")
-                if entity.start < 0 or entity.end < 0:
-                    raise ValueError(f"Entity {entity.entity} has start or end less than 0.")
-                if entity.start > entity.end:
-                    raise ValueError(f"Entity {entity.entity} has start greater than end.")
-                if entity.start >= len(fs_example.text) or entity.end >= len(fs_example.text):
-                    raise ValueError(f"Entity {entity.entity} has start or end greater than the text length.")
         
     @property
     def _state(self) -> dict[str, Any]:

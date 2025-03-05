@@ -64,14 +64,16 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             if hasattr(result, 'entities'):
                 # Extract the entities with context and convert them to entities with start/end indices
                 for entity_with_context in result.entities:
+                    # Skip if there is no entity with context
                     if not entity_with_context:
                         continue
-                    # Find the entity text in the original text
+                    # Get the enitity and context texts from the model
                     entity_text = entity_with_context.text
-                    entity_text_lower = entity_text.lower()
                     context = entity_with_context.context
+                    entity_text_lower = entity_text.lower()
                     context_lower = context.lower()
-                    
+
+
                     # First try to find the entity using the context
                     if context and entity_text in context:
                         # Find all occurrences of the context in the document
@@ -174,7 +176,52 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     def consolidate(
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
-        return results
+        results = list(results)
+        
+        # Process each document (which may consist of multiple chunks)
+        for doc_offset in docs_offsets:
+            doc_results = results[doc_offset[0]:doc_offset[1]]
+            
+            # Skip if no results for this document
+            if not doc_results:
+                yield dspy.Prediction.from_completions(
+                    {"entities": [[]]},
+                    signature=self.prompt_signature
+                )
+                continue
+            
+            # Combine all entities from all chunks
+            all_entities = []
+            
+            # Track the current character offset for adjusting entity positions
+            char_offset = 0
+            
+            # Process each chunk for this document
+            for chunk_result in doc_results:
+                if not hasattr(chunk_result, 'entities') or not chunk_result.entities:
+                    continue
+                
+                # Get the text of this chunk to calculate its length
+                chunk_text = ""
+                if hasattr(chunk_result, 'text'):
+                    chunk_text = chunk_result.text
+                
+                # Process entities in this chunk
+                for entity in chunk_result.entities:
+                    # Create a copy of the entity with adjusted context if needed
+                    # For DSPy, we don't have start/end positions, but we can adjust the context
+                    # to reflect the position in the full document if needed
+                    all_entities.append(entity)
+                
+                # Update the character offset for the next chunk
+                if chunk_text:
+                    char_offset += len(chunk_text)
+            
+            # Create a consolidated result for this document
+            yield dspy.Prediction.from_completions(
+                {"entities": [all_entities]},
+                signature=self.prompt_signature
+            )
 
 class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode]):
     @property
@@ -191,9 +238,8 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
                     {%- for entity in example.entities %}
                     {
                         "text": "{{ entity.text }}",
-                        "start": {{ entity.start }},
-                        "end": {{ entity.end }},
-                        "entity": "{{ entity.entity }}"
+                        
+                        "entity_type": "{{ entity.entity_type }}"
                     }{%- if not loop.last %}, {% endif %}
                     {%- endfor %}
                 ]
@@ -247,7 +293,45 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
     def consolidate(
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel]:
-        return results
+        results = list(results)
+        
+        # Process each document (which may consist of multiple chunks)
+        for doc_offset in docs_offsets:
+            doc_results = results[doc_offset[0]:doc_offset[1]]
+            
+            # Skip if no results for this document
+            if not doc_results:
+                yield self.prompt_signature(entities=[])
+                continue
+            
+            # Combine all entities from all chunks
+            all_entities = []
+            
+            # Track the current character offset for adjusting entity positions
+            char_offset = 0
+            
+            # Process each chunk for this document
+            for chunk_result in doc_results:
+                if not hasattr(chunk_result, 'entities') or not chunk_result.entities:
+                    continue
+                
+                # Get the text of this chunk to calculate its length
+                chunk_text = ""
+                if hasattr(chunk_result, 'text'):
+                    chunk_text = chunk_result.text
+                
+                # Process entities in this chunk
+                for entity in chunk_result.entities:
+                    # For Pydantic-based NER, we don't have start/end positions in the entity objects
+                    # We just need to combine all entities from all chunks
+                    all_entities.append(entity)
+                
+                # Update the character offset for the next chunk
+                if chunk_text:
+                    char_offset += len(chunk_text)
+            
+            # Create a consolidated result for this document
+            yield self.prompt_signature(entities=all_entities)
 
 class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
     @property
@@ -363,6 +447,60 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
         self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[glix_.Result]:
         results = list(results)
+        print("docs_offsets:\n\n", docs_offsets)
+        # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
-            for rec in results[doc_offset[0]:doc_offset[1]]:
-                yield rec
+            all_entities = []
+            
+            # Track the current character offset for adjusting entity positions
+            char_offset = 0
+            chunk_texts = []
+            
+            # Process each chunk for this document
+            for chunk_idx in range(doc_offset[0], doc_offset[1]):
+                chunk_result = results[chunk_idx]
+                if not chunk_result:
+                    continue
+                
+                chunk_text = ""
+                for entity in chunk_result:
+                    if isinstance(entity, dict) and "chunk_text" in entity:
+                        chunk_text = entity["chunk_text"]
+                        break
+                
+                # If we couldn't find the chunk text in the result, use a default approach
+                if not chunk_text and chunk_result and isinstance(chunk_result[0], dict) and "text" in chunk_result[0]:
+                    # Use the first entity's text as a reference to find the chunk text
+                    # This is a fallback and might not be accurate
+                    first_entity = chunk_result[0]
+                    if "context" in first_entity:
+                        chunk_text = first_entity["context"]
+                
+                chunk_texts.append(chunk_text)
+                
+                # Process entities in this chunk
+                for entity in chunk_result:
+                    if isinstance(entity, dict) and "text" in entity and "label" in entity:
+                        # Create a copy of the entity to avoid modifying the original
+                        adjusted_entity = entity.copy()
+                        
+                        # Adjust start and end positions based on the current character offset
+                        if "start" in adjusted_entity and adjusted_entity["start"] is not None:
+                            adjusted_entity["start"] += char_offset
+                        
+                        if "end" in adjusted_entity and adjusted_entity["end"] is not None:
+                            adjusted_entity["end"] += char_offset
+                        
+                        # Add the adjusted entity to our collection
+                        all_entities.append(adjusted_entity)
+                
+                # Update the character offset for the next chunk
+                if chunk_text:
+                    char_offset += len(chunk_text)
+            
+            # Yield the consolidated result for this document
+            if all_entities:
+                yield all_entities
+            else:
+                # If no entities were found, yield an empty result
+                yield []
