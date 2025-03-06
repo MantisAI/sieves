@@ -111,6 +111,7 @@ class PredictiveTask(
         :return Iterable[Doc]: Processed documents.
         """
         docs = list(docs)
+        
         # 1. Compile expected prompt signatures.
         signature = self._bridge.prompt_signature
 

@@ -125,7 +125,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         
         for doc, result in zip(docs_list, results_list):
             # Create a new result with the same structure as the original
-            entities_with_position = []
+            entities_with_position: list[Entity] = []
             
             # Get the original text from the document
             doc_text = doc.text            
@@ -202,7 +202,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
                 continue
             
             # Combine all entities from all chunks
-            all_entities = []
+            all_entities: list[Entity] = []
             
             # Process each chunk for this document
             for chunk_result in doc_results:
@@ -297,7 +297,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
                 continue
             
             # Combine all entities from all chunks
-            all_entities = []
+            all_entities: list[Entity] = []
             
             # Process each chunk for this document
             for chunk_result in doc_results:
@@ -429,7 +429,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
         
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
-            all_entities = []
+            all_entities: list[Entity] = []
             char_offset = 0
             
             # Process each chunk for this document
