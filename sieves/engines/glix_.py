@@ -75,24 +75,21 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
             while batch := [vals["text"] for vals in itertools.islice(values, batch_size)]:
                 if len(batch) == 0:
                     break
-                # Instead of passing the batch directly, we use the predict_entities method (recommended way to use GLiNER)
-                if hasattr(self._model, 'predict_entities') and params["entity_types"]:
+                # Instead of passing the batch directly, we use the predict_entities method
+                # (recommended way to use GLiNER)
+                if hasattr(self._model, "predict_entities") and isinstance(params, dict) and "entity_types" in params:
                     if len(batch) > 1:
-                        results = self._model.batch_predict_entities(
-                            texts=batch,
-                            labels=params["entity_types"]
-                        )
+                        results = self._model.batch_predict_entities(texts=batch, labels=params["entity_types"])
                         for result in results:
                             yield result
                     # Use predict_entities for a single text
                     elif len(batch) == 1:
-                        result = self._model.predict_entities(
-                            text=batch[0],
-                            labels=params["entity_types"]
-                        )
+                        result = self._model.predict_entities(text=batch[0], labels=params["entity_types"])
                         yield result
                 else:
-                    # Fallback to the original method if predict_entities is not available
-                    yield from self._model(batch, **(params | self._inference_kwargs))
+                    if isinstance(params, dict):
+                        yield from self._model(batch, **(params | self._inference_kwargs))
+                    else:
+                        yield from self._model(batch, **self._inference_kwargs)
 
         return execute

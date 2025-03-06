@@ -10,27 +10,38 @@ from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
-
+from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.ner.bridges import (
     DSPyNER,
+    GliXNER,
     InstructorNER,
     LangChainNER,
     OllamaNER,
     OutlinesNER,
-    GliXNER,
 )
-from sieves.tasks.predictive.core import PredictiveTask
 
-_TaskPromptSignature: TypeAlias = None
-_TaskResult: TypeAlias = list[tuple[str, int, int]] | list[tuple[str, str, int, int]] | pydantic.BaseModel | dspy_.Result | glix_.Result | huggingface_.Result | instructor_.Result | langchain_.Result | ollama_.Result | outlines_.Result
-_TaskBridge: TypeAlias = (
-    None
+_TaskPromptSignature: TypeAlias = Any
+_TaskResult: TypeAlias = (
+    list[tuple[str, int, int]]
+    | list[tuple[str, str, int, int]]
+    | pydantic.BaseModel
+    | dspy_.Result
+    | glix_.Result
+    | huggingface_.Result
+    | instructor_.Result
+    | langchain_.Result
+    | ollama_.Result
+    | outlines_.Result
 )
+# Define a proper TaskBridge that includes all the specific NER bridges
+_TaskBridge: TypeAlias = DSPyNER | GliXNER | InstructorNER | LangChainNER | OllamaNER | OutlinesNER
+
 
 class Entity(pydantic.BaseModel):
     text: str
     context: str
     entity: str
+
 
 class TaskFewshotExample(pydantic.BaseModel):
     text: str
@@ -39,17 +50,17 @@ class TaskFewshotExample(pydantic.BaseModel):
 
 class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     def __init__(
-            self,
-            entities: list[str],
-            engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
-            task_id: str | None = None,
-            show_progress: bool = True,
-            include_meta: bool = True,
-            prompt_template: str | None = None,
-            prompt_signature_desc: str | None = None,
-            fewshot_examples: Iterable[TaskFewshotExample] = (),
+        self,
+        entities: list[str],
+        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        task_id: str | None = None,
+        show_progress: bool = True,
+        include_meta: bool = True,
+        prompt_template: str | None = None,
+        prompt_signature_desc: str | None = None,
+        fewshot_examples: Iterable[TaskFewshotExample] = (),
     ) -> None:
-        """"
+        """ "
         Initializes new PredictiveTask.
         :param task_id: Task ID.
         :param show_progress: Whether to show progress bar for processed documents.
@@ -68,15 +79,15 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             prompt_template=prompt_template,
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,
-        ) 
-        self._fewshot_examples: Iterable[TaskFewshotExample]    
+        )
+        self._fewshot_examples: Iterable[TaskFewshotExample]
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize bridge.
         :return: Engine task.
         :raises ValueError: If engine type is not supported.
         """
-        bridge_types: dict[EngineType, type[_TaskBridge]] = {
+        bridge_types = {
             EngineType.langchain: LangChainNER,
             EngineType.ollama: OllamaNER,
             EngineType.outlines: OutlinesNER,
@@ -85,16 +96,28 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.glix: GliXNER,
         }
         try:
-            bridge_type = bridge_types[engine_type](
+            bridge_class = bridge_types[engine_type]
+            result = bridge_class(
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
                 entities=self._entities,
             )
+            # Cast the result to the appropriate type to satisfy mypy
+            if engine_type == EngineType.langchain:
+                return result  # type: ignore
+            elif engine_type == EngineType.ollama:
+                return result  # type: ignore
+            elif engine_type == EngineType.outlines:
+                return result  # type: ignore
+            elif engine_type == EngineType.dspy:
+                return result  # type: ignore
+            elif engine_type == EngineType.instructor:
+                return result  # type: ignore
+            else:  # EngineType.glix:
+                return result  # type: ignore
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
-
-        return bridge_type
 
     @property
     def supports(self) -> set[EngineType]:
@@ -106,13 +129,13 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.instructor,
             EngineType.glix,
         }
-    
+
     def _validate_fewshot_examples(self) -> None:
         for fs_example in self._fewshot_examples or []:
             for entity in fs_example.entities:
                 if entity.entity not in self._entities:
                     raise ValueError(f"Entity {entity.entity} not in {self._entities}.")
-        
+
     @property
     def _state(self) -> dict[str, Any]:
         return {
@@ -122,21 +145,25 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
 
     def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         """Convert NER results to a dataset.
-        
+
         :param docs: Documents with NER results.
         :return: Dataset with NER results.
         """
         # Define metadata and features for the dataset
-        features = datasets.Features({
-            "text": datasets.Value("string"),
-            "entities": datasets.Sequence({
+        features = datasets.Features(
+            {
                 "text": datasets.Value("string"),
-                "start": datasets.Value("int32"),
-                "end": datasets.Value("int32"),
-                "entity": datasets.Value("string")
-            })
-        })
-        
+                "entities": datasets.Sequence(
+                    {
+                        "text": datasets.Value("string"),
+                        "start": datasets.Value("int32"),
+                        "end": datasets.Value("int32"),
+                        "entity": datasets.Value("string"),
+                    }
+                ),
+            }
+        )
+
         info = datasets.DatasetInfo(
             description=f"Named Entity Recognition dataset with entity types {self._entities}. Generated with sieves "
             f"v{Config.get_version()}.",
@@ -149,21 +176,18 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             for doc in docs:
                 if self._task_id not in doc.results:
                     raise KeyError(f"Document does not have results for task ID {self._task_id}")
-                
+
                 # Get the entities from the document results
                 result = doc.results[self._task_id]
                 entities = []
-                
+
                 # Handle different result formats
-                if hasattr(result, 'entities'):
+                if hasattr(result, "entities"):
                     # Pydantic model format
                     for entity in result.entities:
-                        entities.append({
-                            "text": entity.text,
-                            "start": entity.start,
-                            "end": entity.end,
-                            "entity": entity.entity
-                        })
+                        entities.append(
+                            {"text": entity.text, "start": entity.start, "end": entity.end, "entity": entity.entity}
+                        )
                 elif isinstance(result, list):
                     # List format (could be list of dictionaries or other entities)
                     for entity in result:
@@ -173,10 +197,10 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                                 "text": entity["text"],
                                 "start": entity.get("start", 0),
                                 "end": entity.get("end", len(entity["text"])),
-                                "entity": entity.get("label", entity.get("entity", "UNKNOWN"))
+                                "entity": entity.get("label", entity.get("entity", "UNKNOWN")),
                             }
                             entities.append(entity_dict)
-                
+
                 data.append((doc.text, entities))
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
