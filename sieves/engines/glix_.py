@@ -88,7 +88,16 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
                         yield result
                 else:
                     if isinstance(params, dict):
-                        yield from self._model(batch, **(params | self._inference_kwargs))
+                        # Fix for GLiNERClassifier.prepare_texts() missing 'classes' parameter
+                        if "entity_types" in params and hasattr(self._model, "prepare_texts"):
+                            # Copy params and modify for the call
+                            call_params = dict(params)
+                            # Add classes parameter if missing
+                            if "classes" not in call_params:
+                                call_params["classes"] = call_params["entity_types"]
+                            yield from self._model(batch, **(call_params | self._inference_kwargs))
+                        else:
+                            yield from self._model(batch, **(params | self._inference_kwargs))
                     else:
                         yield from self._model(batch, **self._inference_kwargs)
 

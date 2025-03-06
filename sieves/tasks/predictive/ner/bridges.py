@@ -1,4 +1,3 @@
-# mypy: disable-error-code="misc,valid-type,unreachable"
 import abc
 from collections.abc import Iterable
 from functools import cached_property
@@ -182,9 +181,9 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
         entity_types = self._entities
-        LiteralType = Literal[*entity_types]
+        LiteralType = Literal[*entity_types]  # type: ignore[valid-type]
 
-        class Entity(dspy.Signature):
+        class Entity(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.OutputField(
                 description="The extracted entity text, if the same entity appears multiple times in the text, "
                 "includes each occurrence separately."
@@ -196,7 +195,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
             )
             entity_type: LiteralType = dspy.OutputField(description="The type of entity")
 
-        class Prediction(dspy.Signature):
+        class Prediction(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to extract entities from")
             entity_types: list[str] = dspy.InputField(description="List of entity types to extract")
 
@@ -296,7 +295,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
     @cached_property
     def _prompt_signature(self) -> type[pydantic.BaseModel]:
         entity_types = self._entities
-        LiteralType = Literal[*entity_types]
+        LiteralType = Literal[*entity_types]  # type: ignore[valid-type]
 
         class EntityWithContext(pydantic.BaseModel):
             text: str

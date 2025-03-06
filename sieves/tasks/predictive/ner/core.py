@@ -40,7 +40,7 @@ _TaskBridge: TypeAlias = DSPyNER | GliXNER | InstructorNER | LangChainNER | Olla
 class Entity(pydantic.BaseModel):
     text: str
     context: str
-    entity: str
+    entity_type: str
 
 
 class TaskFewshotExample(pydantic.BaseModel):
@@ -133,8 +133,8 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     def _validate_fewshot_examples(self) -> None:
         for fs_example in self._fewshot_examples or []:
             for entity in fs_example.entities:
-                if entity.entity not in self._entities:
-                    raise ValueError(f"Entity {entity.entity} not in {self._entities}.")
+                if entity.entity_type not in self._entities:
+                    raise ValueError(f"Entity {entity.entity_type} not in {self._entities}.")
 
     @property
     def _state(self) -> dict[str, Any]:
@@ -186,7 +186,12 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                     # Pydantic model format
                     for entity in result.entities:
                         entities.append(
-                            {"text": entity.text, "start": entity.start, "end": entity.end, "entity": entity.entity}
+                            {
+                                "text": entity.text,
+                                "start": entity.start,
+                                "end": entity.end,
+                                "entity": entity.entity_type,
+                            }
                         )
                 elif isinstance(result, list):
                     # List format (could be list of dictionaries or other entities)
