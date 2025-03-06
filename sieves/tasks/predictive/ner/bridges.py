@@ -44,87 +44,101 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs)
     
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def find_entity_positions(self, doc_text: str, result: dict, new_entities: list[Entity]) -> list[tuple[int, int]]:
+        """
+        Find all positions of an entity in a document.
+        :param doc_text: The text of the document.
+        :param result: The result of the model.
+        :param new_entities: The list of entities to be updated.
+        :return: The list of entities with start/end indices.
+        """
+        doc_text_lower = doc_text.lower()
+        
+        # Extract the entities with context and convert them to entities with start/end indices
+        for entity_with_context in result.entities:
+            # Skip if there is no entity
+            if not entity_with_context:
+                continue
+
+            # Get the enitity and context texts from the model
+            entity_text = entity_with_context.text
+            context = entity_with_context.context
+            entity_text_lower = entity_text.lower()
+            context_lower = context.lower()
+
+            # First try to find the entity in the context
+            if context and entity_text in context:
+                # Find all occurrences of the context in the document (in case there are multiple occurrences which is rare but might happen)
+                context_positions = []
+                pos = 0
+                while True:
+                    pos = doc_text_lower.find(context_lower, pos)
+                    # If the context is not found, break
+                    if pos == -1:
+                        break
+                    context_positions.append(pos)
+                    # Move past the current position to find the next occurrence
+                    pos += 1
+                
+                # For each context position that was found (usually is just one), find the entity within that context
+                for context_start in context_positions:
+                    entity_start_in_context = context_lower.find(entity_text_lower)
+
+                    if entity_start_in_context >= 0:
+                        start = context_start + entity_start_in_context
+                        end = start + len(entity_text)
+                        
+                        # Create a new entity with start/end indices
+                        new_entity = Entity(
+                            text=doc_text[start:end],
+                            start=start,
+                            end=end,
+                            entity_type=entity_with_context.entity_type
+                        )
+                        new_entities.append(new_entity)
+            else:
+                # If context approach fails, find all occurrences of the entity directly
+                entity_positions = []
+                pos = 0
+                while True:
+                    pos = doc_text_lower.find(entity_text_lower, pos)
+                    if pos == -1:
+                        break
+                    entity_positions.append(pos)
+                    pos += 1  # Move past the current position to find the next occurrence
+                
+                # Create entities for each occurrence
+                for start in entity_positions:
+                    end = start + len(entity_text)
+                    new_entity = Entity(
+                        text=doc_text[start:end],  # Use the exact text from the document
+                        start=start,
+                        end=end,
+                        entity_type=entity_with_context.entity_type
+                    )
+                    new_entities.append(new_entity)
+        return new_entities
+    
+    def integrate(self, results: Iterable[_BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         docs_list = list(docs)
         results_list = list(results)
         
         for doc, result in zip(docs_list, results_list):
             # Create a new result with the same structure as the original
-            new_entities = []
+            entities_with_position = []
             
             # Get the original text from the document
-            doc_text = doc.text
-            doc_text_lower = doc_text.lower()
-            
+            doc_text = doc.text            
             # Skip if result is None
             if result is None:
                 doc.results[self._task_id] = Entities(text=doc_text, entities=[])
                 continue
             # Handle different result types
             if hasattr(result, 'entities'):
-                # Extract the entities with context and convert them to entities with start/end indices
-                for entity_with_context in result.entities:
-                    # Skip if there is no entity with context
-                    if not entity_with_context:
-                        continue
-                    # Get the enitity and context texts from the model
-                    entity_text = entity_with_context.text
-                    context = entity_with_context.context
-                    entity_text_lower = entity_text.lower()
-                    context_lower = context.lower()
-
-
-                    # First try to find the entity using the context
-                    if context and entity_text in context:
-                        # Find all occurrences of the context in the document
-                        context_positions = []
-                        pos = 0
-                        while True:
-                            pos = doc_text_lower.find(context_lower, pos)
-                            if pos == -1:
-                                break
-                            context_positions.append(pos)
-                            pos += 1  # Move past the current position to find the next occurrence
-                        
-                        # For each context position, find the entity within that context
-                        for context_start in context_positions:
-                            entity_start_in_context = context_lower.find(entity_text_lower)
-                            if entity_start_in_context >= 0:
-                                start = context_start + entity_start_in_context
-                                end = start + len(entity_text)
-                                
-                                # Create a new entity with start/end indices
-                                new_entity = Entity(
-                                    text=doc_text[start:end],  # Use the exact text from the document
-                                    start=start,
-                                    end=end,
-                                    entity_type=entity_with_context.entity_type
-                                )
-                                new_entities.append(new_entity)
-                    else:
-                        # If context approach fails, find all occurrences of the entity directly
-                        entity_positions = []
-                        pos = 0
-                        while True:
-                            pos = doc_text_lower.find(entity_text_lower, pos)
-                            if pos == -1:
-                                break
-                            entity_positions.append(pos)
-                            pos += 1  # Move past the current position to find the next occurrence
-                        
-                        # Create entities for each occurrence
-                        for start in entity_positions:
-                            end = start + len(entity_text)
-                            new_entity = Entity(
-                                text=doc_text[start:end],  # Use the exact text from the document
-                                start=start,
-                                end=end,
-                                entity_type=entity_with_context.entity_type
-                            )
-                            new_entities.append(new_entity)
+                entities_with_position = self.find_entity_positions(doc_text, result, entities_with_position)
             
             # Create a new result with the updated entities
-            new_result = Entities(text=doc_text, entities=new_entities)
+            new_result = Entities(text=doc_text, entities=entities_with_position)
             doc.results[self._task_id] = new_result
         
         return docs_list
@@ -170,9 +184,6 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.predict
     
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        return super().integrate(results, docs)
-    
     def consolidate(
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
@@ -193,29 +204,14 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
             # Combine all entities from all chunks
             all_entities = []
             
-            # Track the current character offset for adjusting entity positions
-            char_offset = 0
-            
             # Process each chunk for this document
             for chunk_result in doc_results:
                 if not hasattr(chunk_result, 'entities') or not chunk_result.entities:
                     continue
                 
-                # Get the text of this chunk to calculate its length
-                chunk_text = ""
-                if hasattr(chunk_result, 'text'):
-                    chunk_text = chunk_result.text
-                
                 # Process entities in this chunk
                 for entity in chunk_result.entities:
-                    # Create a copy of the entity with adjusted context if needed
-                    # For DSPy, we don't have start/end positions, but we can adjust the context
-                    # to reflect the position in the full document if needed
                     all_entities.append(entity)
-                
-                # Update the character offset for the next chunk
-                if chunk_text:
-                    char_offset += len(chunk_text)
             
             # Create a consolidated result for this document
             yield dspy.Prediction.from_completions(
@@ -287,9 +283,6 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
 
         return Prediction
 
-    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
-        return super().integrate(results, docs)
-
     def consolidate(
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel]:
@@ -298,7 +291,6 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0]:doc_offset[1]]
-            
             # Skip if no results for this document
             if not doc_results:
                 yield self.prompt_signature(entities=[])
@@ -307,28 +299,15 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
             # Combine all entities from all chunks
             all_entities = []
             
-            # Track the current character offset for adjusting entity positions
-            char_offset = 0
-            
             # Process each chunk for this document
             for chunk_result in doc_results:
                 if not hasattr(chunk_result, 'entities') or not chunk_result.entities:
                     continue
                 
-                # Get the text of this chunk to calculate its length
-                chunk_text = ""
-                if hasattr(chunk_result, 'text'):
-                    chunk_text = chunk_result.text
-                
                 # Process entities in this chunk
                 for entity in chunk_result.entities:
-                    # For Pydantic-based NER, we don't have start/end positions in the entity objects
                     # We just need to combine all entities from all chunks
                     all_entities.append(entity)
-                
-                # Update the character offset for the next chunk
-                if chunk_text:
-                    char_offset += len(chunk_text)
             
             # Create a consolidated result for this document
             yield self.prompt_signature(entities=all_entities)
@@ -447,14 +426,11 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
         self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[glix_.Result]:
         results = list(results)
-        print("docs_offsets:\n\n", docs_offsets)
+        
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
             all_entities = []
-            
-            # Track the current character offset for adjusting entity positions
             char_offset = 0
-            chunk_texts = []
             
             # Process each chunk for this document
             for chunk_idx in range(doc_offset[0], doc_offset[1]):
@@ -462,45 +438,28 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
                 if not chunk_result:
                     continue
                 
-                chunk_text = ""
-                for entity in chunk_result:
-                    if isinstance(entity, dict) and "chunk_text" in entity:
-                        chunk_text = entity["chunk_text"]
-                        break
-                
-                # If we couldn't find the chunk text in the result, use a default approach
-                if not chunk_text and chunk_result and isinstance(chunk_result[0], dict) and "text" in chunk_result[0]:
-                    # Use the first entity's text as a reference to find the chunk text
-                    # This is a fallback and might not be accurate
-                    first_entity = chunk_result[0]
-                    if "context" in first_entity:
-                        chunk_text = first_entity["context"]
-                
-                chunk_texts.append(chunk_text)
+                # Get chunk text length for offset calculation
+                chunk_text = next((entity.get("chunk_text") for entity in chunk_result 
+                                  if isinstance(entity, dict) and "chunk_text" in entity), "")
                 
                 # Process entities in this chunk
                 for entity in chunk_result:
                     if isinstance(entity, dict) and "text" in entity and "label" in entity:
-                        # Create a copy of the entity to avoid modifying the original
+                        # Create a copy with adjusted positions
                         adjusted_entity = entity.copy()
                         
-                        # Adjust start and end positions based on the current character offset
+                        # Adjust start and end positions
                         if "start" in adjusted_entity and adjusted_entity["start"] is not None:
                             adjusted_entity["start"] += char_offset
                         
                         if "end" in adjusted_entity and adjusted_entity["end"] is not None:
                             adjusted_entity["end"] += char_offset
                         
-                        # Add the adjusted entity to our collection
                         all_entities.append(adjusted_entity)
                 
-                # Update the character offset for the next chunk
+                # Update offset for next chunk
                 if chunk_text:
                     char_offset += len(chunk_text)
             
-            # Yield the consolidated result for this document
-            if all_entities:
-                yield all_entities
-            else:
-                # If no entities were found, yield an empty result
-                yield []
+            # Yield the consolidated result
+            yield all_entities if all_entities else []
