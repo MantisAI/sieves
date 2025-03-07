@@ -169,19 +169,21 @@ class PydanticBasedInformationExtraction(
             seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
 
             for res in results[doc_offset[0] : doc_offset[1]]:
-                if res:
-                    assert hasattr(res, "reasoning")
-                    reasonings.append(res.reasoning)
+                if res is None:
+                    continue  # type: ignore[unreachable]
 
-                    assert hasattr(res, "entities")
-                    if entity_type_is_frozen:
-                        # Ensure not to add duplicate entities.
-                        for entity in res.entities:
-                            if entity not in seen_entities:
-                                entities.append(entity)
-                                seen_entities.add(entity)
-                    else:
-                        entities.extend(res.entities)
+                assert hasattr(res, "reasoning")
+                reasonings.append(res.reasoning)
+
+                assert hasattr(res, "entities")
+                if entity_type_is_frozen:
+                    # Ensure not to add duplicate entities.
+                    for entity in res.entities:
+                        if entity not in seen_entities:
+                            entities.append(entity)
+                            seen_entities.add(entity)
+                else:
+                    entities.extend(res.entities)
 
             yield self.prompt_signature(entities=entities, reasoning=str(reasonings))
 

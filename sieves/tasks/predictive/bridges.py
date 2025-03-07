@@ -174,10 +174,10 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
             if self._has_scores:
                 scores: dict[str, float] = defaultdict(lambda: 0)
 
-                for rec in results[doc_offset[0] : doc_offset[1]]:
+                for res in results[doc_offset[0] : doc_offset[1]]:
                     seen_attrs: set[str] = set()
 
-                    for entry in rec:
+                    for entry in res:
                         assert isinstance(entry, dict)
                         # Fetch attribute name for predicted dict. Note that this assumes a (ATTR, score) structure.
                         if self._pred_attr is None:
@@ -217,5 +217,5 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
                     yield sorted_scores
 
             else:
-                for rec in results[doc_offset[0] : doc_offset[1]]:
-                    yield rec
+                for res in results[doc_offset[0] : doc_offset[1]]:
+                    yield res

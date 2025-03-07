@@ -196,6 +196,9 @@ class PydanticBasedSentAnalysis(
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for rec in doc_results:
+                if rec is None:
+                    continue  # type: ignore[unreachable]
+
                 assert hasattr(rec, "reasoning")
                 reasonings.append(rec.reasoning)
                 for aspect in self._aspects:
