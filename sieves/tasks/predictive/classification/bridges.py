@@ -160,8 +160,8 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
 
-            for rec in results[doc_offset[0] : doc_offset[1]]:
-                for label, score in zip(rec["labels"], rec["scores"]):
+            for res in results[doc_offset[0] : doc_offset[1]]:
+                for label, score in zip(res["labels"], res["scores"]):
                     assert isinstance(label, str)
                     assert isinstance(score, float)
                     label_scores[label] += score

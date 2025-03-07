@@ -159,9 +159,11 @@ class PydanticBasedTranslation(
             translations: list[str] = []
 
             for res in results[doc_offset[0] : doc_offset[1]]:
-                if res:
-                    assert hasattr(res, "translation")
-                    translations.append(res.translation)
+                if res is None:
+                    continue  # type: ignore[unreachable]
+
+                assert hasattr(res, "translation")
+                translations.append(res.translation)
 
             yield self.prompt_signature(translation="\n".join(translations))
 

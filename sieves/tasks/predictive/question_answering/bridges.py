@@ -165,6 +165,9 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
             reasonings: list[str] = []
 
             for rec in doc_results:
+                if rec is None:
+                    continue  # type: ignore[unreachable]
+
                 assert hasattr(rec, "reasoning")
                 assert hasattr(rec, "answers")
                 reasonings.append(rec.reasoning)

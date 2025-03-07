@@ -160,9 +160,11 @@ class PydanticBasedSummarization(
             summaries: list[str] = []
 
             for res in results[doc_offset[0] : doc_offset[1]]:
-                if res:
-                    assert hasattr(res, "summary")
-                    summaries.append(res.summary)
+                if res is None:
+                    continue  # type: ignore[unreachable]
+
+                assert hasattr(res, "summary")
+                summaries.append(res.summary)
 
             yield self.prompt_signature(summary="\n".join(summaries).strip())
 
