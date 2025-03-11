@@ -83,7 +83,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             if context and entity_text in context:
                 # Find all occurrences of the context in the document
                 # (in case there are multiple occurrences, which is rare but might happen)
-                context_positions = []
+                context_positions: list[int] = []
                 pos = 0
                 while True:
                     pos = doc_text_lower.find(context_lower, pos)
@@ -107,7 +107,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                         new_entities.append(new_entity)
             else:
                 # If context approach fails, find all occurrences of the entity directly
-                entity_positions = []
+                entity_positions: list[int] = []
                 pos = 0
                 while True:
                     pos = doc_text_lower.find(entity_text_lower, pos)
@@ -143,7 +143,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             if result is None:
                 # Skip if result is None
                 doc.results[self._task_id] = Entities(text=doc_text, entities=[])  # type: ignore
-            elif hasattr(result, "entities"):
+            if hasattr(result, "entities"):
                 # Process entities from result if available
                 entities_with_position = self._find_entity_positions(doc_text, result, entities_with_position)
                 # Create a new result with the updated entities
@@ -164,12 +164,13 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @property
     def _prompt_signature_description(self) -> str | None:
         return """
-        Extract named entities from the provided text. For each entity found:
-        - Extract the exact text of the entity
-        - Include a context string that MUST contain the exact entity text along with a few surrounding words 
-          (two or three surronding words). The context MUST include the entity text itself.
-        - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
-        - Specify the entity type from the provided list of entity types
+        A named entity recognition signature that extracts named entities from the provided text. For each entity found:
+        - it extracts the exact text of the entity
+        - it includes a context string that contains the exact entity text along with a few surrounding words 
+          (two or three surronding words). The context includes the entity text itself.
+        - if the same entity appears multiple times in the text, it extracts each occurrence separately with its 
+        own context
+        - it specifies the entity type from the provided list of entity types
         Only extract entities of the specified types.
         """
 
@@ -215,11 +216,6 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
-
-            # Skip if no results for this document
-            if not doc_results:
-                yield dspy.Prediction.from_completions({"entities": [[]]}, signature=self.prompt_signature)
-                continue
 
             # Combine all entities from all chunks
             all_entities: list[Entity] = []
@@ -279,11 +275,11 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
     @property
     def _prompt_signature_description(self) -> str | None:
         return """
-        Extract named entities from the provided text. For each entity found:
-        - Extract the exact text of the entity
-        - Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words 
+        A named entity recognition signature that extracts named entities from the provided text. For each entity found:
+        - it extracts the exact text of the entity
+        - it includes a context string that contains ONLY the entity and AT MOST 3 words before and 3 words 
           after it. DO NOT include the entire text as context.
-        - Specify the entity type from the provided list of entity types
+        - it specifies the entity type from the provided list of entity types
         Only extract entities of the specified types.
         """
 
@@ -429,33 +425,31 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
             entities: list[Entity] = []
 
         for doc, result in zip(docs_list, results_list):
-            entities_list = []
-            # Get the original text from the document
+            entities_list: list[Entity] = []
             doc_text = doc.text if doc.text is not None else ""
 
             if result:
-                for entity in result:
-                    if isinstance(entity, dict) and "text" in entity and "label" in entity:
-                        # Convert types safely
-                        try:
-                            entity_text = str(entity["text"] or "")
-                            entity_start = int(entity["start"]) if entity["start"] is not None else 0
-                            entity_end = int(entity["end"]) if entity["end"] is not None else 0
-                            entity_type = str(entity["label"]) if entity["label"] is not None else ""
+                for entity_dict in result:
+                    if not isinstance(entity_dict, dict):
+                        continue
 
-                            entities_list.append(
-                                Entity(
-                                    text=entity_text,
-                                    start=entity_start,
-                                    end=entity_end,
-                                    entity_type=entity_type,
-                                )
+                    try:
+                        entity_text = str(entity_dict.get("text", ""))
+                        entity_start = int(entity_dict.get("start", 0))
+                        entity_end = int(entity_dict.get("end", 0))
+                        entity_type = str(entity_dict.get("label", ""))
+
+                        entities_list.append(
+                            Entity(
+                                text=entity_text,
+                                start=entity_start,
+                                end=entity_end,
+                                entity_type=entity_type,
                             )
-                        except (ValueError, TypeError):
-                            # Skip entities that can't be properly converted
-                            continue
+                        )
+                    except (ValueError, TypeError):
+                        continue
 
-            # Create the Entities object with the list of entities
             entities_obj = Entities(text=doc_text, entities=entities_list)
             doc.results[self._task_id] = entities_obj
 
@@ -468,12 +462,12 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
 
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
-            all_entities = []
+            doc_results = results[doc_offset[0] : doc_offset[1]]
+            all_entities: list[dict[str, Any]] = []
             char_offset = 0
 
             # Process each chunk for this document
-            for chunk_idx in range(doc_offset[0], doc_offset[1]):
-                chunk_result = results[chunk_idx]
+            for chunk_result in doc_results:
                 if not chunk_result:
                     continue
 
