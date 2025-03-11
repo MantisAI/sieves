@@ -103,19 +103,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                 prompt_signature_desc=self._custom_prompt_signature_desc,
                 entities=self._entities,
             )
-            # Cast the result to the appropriate type to satisfy mypy
-            if engine_type == EngineType.langchain:
-                return result  # type: ignore
-            elif engine_type == EngineType.ollama:
-                return result  # type: ignore
-            elif engine_type == EngineType.outlines:
-                return result  # type: ignore
-            elif engine_type == EngineType.dspy:
-                return result  # type: ignore
-            elif engine_type == EngineType.instructor:
-                return result  # type: ignore
-            else:  # EngineType.glix:
-                return result  # type: ignore
+            return result  # type: ignore[return-value]
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
 
