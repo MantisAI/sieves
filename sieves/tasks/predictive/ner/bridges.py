@@ -438,7 +438,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
                     if isinstance(entity, dict) and "text" in entity and "label" in entity:
                         # Convert types safely
                         try:
-                            entity_text = str(entity["text"]) if entity["text"] is not None else ""
+                            entity_text = str(entity["text"] or "")
                             entity_start = int(entity["start"]) if entity["start"] is not None else 0
                             entity_end = int(entity["end"]) if entity["end"] is not None else 0
                             entity_type = str(entity["label"]) if entity["label"] is not None else ""
