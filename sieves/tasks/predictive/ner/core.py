@@ -188,9 +188,9 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                             # Dictionary format with text key
                             entity_dict = {
                                 "text": entity["text"],
-                                "start": entity.get("start", 0),
-                                "end": entity.get("end", len(entity["text"])),
-                                "entity": entity.get("label", entity.get("entity", "UNKNOWN")),
+                                "start": entity["start"],
+                                "end": entity["end"],
+                                "entity": entity["label"],
                             }
                             entities.append(entity_dict)
 
