@@ -58,12 +58,13 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
             :return Iterable[Result]: Results for prompts.
             """
             try:
-                params = {
+                params: dict[InferenceMode, dict[str, Any]] = {
                     InferenceMode.classification: {"classes": prompt_signature, "multi_label": True},
                     InferenceMode.question_answering: {"questions": prompt_signature},
                     InferenceMode.summarization: {},
                     InferenceMode.ner: {"entity_types": prompt_signature},
-                }[inference_mode]
+                }
+                selected_params = params[inference_mode]  # Select parameters based on inference mode
             except KeyError:
                 raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
@@ -75,30 +76,17 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
             while batch := [vals["text"] for vals in itertools.islice(values, batch_size)]:
                 if len(batch) == 0:
                     break
-                # Instead of passing the batch directly, we use the predict_entities method
-                # (recommended way to use GLiNER)
-                if hasattr(self._model, "predict_entities") and isinstance(params, dict) and "entity_types" in params:
+                if inference_mode == InferenceMode.ner:
                     if len(batch) > 1:
-                        results = self._model.batch_predict_entities(texts=batch, labels=params["entity_types"])
+                        results = self._model.batch_predict_entities(
+                            texts=batch, labels=selected_params["entity_types"]
+                        )
                         for result in results:
                             yield result
-                    # Use predict_entities for a single text
                     elif len(batch) == 1:
-                        result = self._model.predict_entities(text=batch[0], labels=params["entity_types"])
+                        result = self._model.predict_entities(text=batch[0], labels=selected_params["entity_types"])
                         yield result
                 else:
-                    if isinstance(params, dict):
-                        # Fix for GLiNERClassifier.prepare_texts() missing 'classes' parameter
-                        if "entity_types" in params and hasattr(self._model, "prepare_texts"):
-                            # Copy params and modify for the call
-                            call_params = dict(params)
-                            # Add classes parameter if missing
-                            if "classes" not in call_params:
-                                call_params["classes"] = call_params["entity_types"]
-                            yield from self._model(batch, **(call_params | self._inference_kwargs))
-                        else:
-                            yield from self._model(batch, **(params | self._inference_kwargs))
-                    else:
-                        yield from self._model(batch, **self._inference_kwargs)
+                    yield from self._model(batch, **{**selected_params, **self._inference_kwargs})
 
         return execute
