@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from marker.converters.pdf import PdfConverter
+from marker.converters.table import TableConverter
 from marker.models import create_model_dict
 from marker.output import text_from_rendered
 from tqdm import tqdm
@@ -18,7 +19,7 @@ class Marker(Task):
 
     def __init__(
         self,
-        marker_converter: PdfConverter | None = None,
+        marker_converter: PdfConverter | TableConverter | None = None,
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = False,
@@ -37,15 +38,16 @@ class Marker(Task):
         super().__init__(task_id=task_id, show_progress=show_progress, include_meta=include_meta)
 
         if marker_converter is None:
-            # Use the simpler version if no custom converter is provided
+            # Use the PDF converter version if no custom converter is provided
             self._converter = PdfConverter(
                 artifact_dict=create_model_dict(),
             )
         else:
             self._converter = marker_converter
 
-        self._extract_images = extract_images
         self._config = config
+
+        self._extract_images = extract_images
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Process documents using Marker.
@@ -88,6 +90,8 @@ class Marker(Task):
         :return: State dictionary.
         """
         return {
+            **super()._state,
+            "converter": self._converter,
             "extract_images": self._extract_images,
             "config": self._config,
         }
