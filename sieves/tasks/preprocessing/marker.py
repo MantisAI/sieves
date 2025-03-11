@@ -91,7 +91,7 @@ class Marker(Task):
         """
         return {
             **super()._state,
-            "converter": self._converter,
+            "marker_converter": self._converter,
             "extract_images": self._extract_images,
             "config": self._config,
         }

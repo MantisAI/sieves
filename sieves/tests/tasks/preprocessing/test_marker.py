@@ -1,0 +1,62 @@
+from pathlib import Path
+
+from marker.converters.pdf import PdfConverter
+from marker.models import create_model_dict
+
+from sieves import Doc, Pipeline, tasks
+
+
+def test_run() -> None:
+    resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
+    pipe = Pipeline(tasks=[tasks.preprocessing.Marker()])
+    docs = list(pipe(resources))
+
+    assert len(docs) == 1
+    assert docs[0].text
+
+
+def test_with_extract_images() -> None:
+    resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
+    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(extract_images=True, include_meta=True)])
+    docs = list(pipe(resources))
+
+    assert len(docs) == 1
+    assert docs[0].text
+    assert "images" in docs[0].meta
+
+
+def test_serialization() -> None:
+    resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
+    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(include_meta=True)])
+    docs = list(pipe(resources))
+
+    config = pipe.serialize()
+    assert config.model_dump() == {
+        "cls_name": "sieves.pipeline.core.Pipeline",
+        "tasks": {
+            "is_placeholder": False,
+            "value": [
+                {
+                    "cls_name": "sieves.tasks.preprocessing.marker.Marker",
+                    "marker_converter": {"is_placeholder": True, "value": "marker.converters.pdf.PdfConverter"},
+                    "extract_images": {"is_placeholder": False, "value": False},
+                    "config": {"is_placeholder": False, "value": None},
+                    "include_meta": {"is_placeholder": False, "value": True},
+                    "show_progress": {"is_placeholder": False, "value": True},
+                    "task_id": {"is_placeholder": False, "value": "Marker"},
+                    "version": "0.7.0",
+                }
+            ],
+        },
+        "version": "0.7.0",
+    }
+
+    # For deserialization, we need to provide the converter
+
+    converter = PdfConverter(artifact_dict=create_model_dict())
+
+    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"marker_converter": converter}])
+    deserialized_docs = list(deserialized_pipeline(resources))
+
+    assert len(deserialized_docs) == 1
+    assert deserialized_docs[0].text == docs[0].text
