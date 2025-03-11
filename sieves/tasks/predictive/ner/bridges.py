@@ -47,7 +47,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs)
 
-    def find_entity_positions(
+    def _find_entity_positions(
         self,
         doc_text: str,
         result: _BridgeResult,
@@ -61,11 +61,6 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         :return: The list of entities with start/end indices.
         """
         doc_text_lower = doc_text.lower()
-
-        # Extract the entities with context and convert them to entities with start/end indices
-        # Check if the result has entities and is a valid type
-        if not hasattr(result, "entities"):
-            return new_entities
 
         entities_list = getattr(result, "entities", [])
         for entity_with_context in entities_list:
@@ -150,7 +145,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                 doc.results[self._task_id] = Entities(text=doc_text, entities=[])  # type: ignore
             elif hasattr(result, "entities"):
                 # Process entities from result if available
-                entities_with_position = self.find_entity_positions(doc_text, result, entities_with_position)
+                entities_with_position = self._find_entity_positions(doc_text, result, entities_with_position)
                 # Create a new result with the updated entities
                 new_result = Entities(text=doc_text, entities=entities_with_position)
                 doc.results[self._task_id] = new_result

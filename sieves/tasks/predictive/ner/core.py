@@ -172,14 +172,14 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
 
         # Fetch data used for generating dataset
         try:
-            data = []
+            data: list[tuple[str, list[dict[str, Any]]]] = []
             for doc in docs:
                 if self._task_id not in doc.results:
                     raise KeyError(f"Document does not have results for task ID {self._task_id}")
 
                 # Get the entities from the document results
                 result = doc.results[self._task_id]
-                entities = []
+                entities: list[dict[str, Any]] = []
 
                 # Handle different result formats
                 if hasattr(result, "entities"):
@@ -206,7 +206,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                             }
                             entities.append(entity_dict)
 
-                data.append((doc.text, entities))
+                data.append((doc.text or "", entities))
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
