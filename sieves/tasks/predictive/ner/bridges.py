@@ -73,7 +73,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             if not entity_with_context:
                 continue
 
-            # Get the enitity and context texts from the model
+            # Get the entity and context texts from the model
             entity_text = getattr(entity_with_context, "text", "")
             context = getattr(entity_with_context, "context", "")
             entity_type = getattr(entity_with_context, "entity_type", "")
