@@ -29,6 +29,10 @@ dependencies = [
     "unstructured[all-docs]>=0.16,<1",
     "unstructured-inference>=0.8,<1",
     "instructor>=1,<2",
+    "pre-commit>=4,<5",
+    "marker-pdf[full]>=1.6.1",
+    "pytest>=8.3.4",
+    "langchain-anthropic>=0.3.7",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
