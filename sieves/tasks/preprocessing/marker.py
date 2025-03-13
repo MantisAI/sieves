@@ -15,7 +15,7 @@ from sieves.tasks.core import Task
 
 
 class Marker(Task):
-    """Marker task for converting PDF documents to text with high accuracy."""
+    """Marker task for converting PDF documents to text."""
 
     def __init__(
         self,
@@ -24,7 +24,6 @@ class Marker(Task):
         show_progress: bool = True,
         include_meta: bool = False,
         extract_images: bool = False,
-        config: dict[str, Any] | None = None,
     ):
         """Initialize the Marker task.
 
@@ -37,15 +36,8 @@ class Marker(Task):
         """
         super().__init__(task_id=task_id, show_progress=show_progress, include_meta=include_meta)
 
-        if marker_converter is None:
-            # Use the PDF converter version if no custom converter is provided
-            self._converter = PdfConverter(
-                artifact_dict=create_model_dict(),
-            )
-        else:
-            self._converter = marker_converter
-
-        self._config = config
+        # Use the PDF converter version if no custom converter is provided
+        self._converter = marker_converter or PdfConverter(artifact_dict=create_model_dict())
 
         self._extract_images = extract_images
 
@@ -93,5 +85,4 @@ class Marker(Task):
             **super()._state,
             "marker_converter": self._converter,
             "extract_images": self._extract_images,
-            "config": self._config,
         }

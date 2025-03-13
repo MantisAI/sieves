@@ -8,7 +8,7 @@ readme = "README.md"
 description = "Rapid prototyping and robust baselines for information extraction with zero- and few-shot models."
 license = { text = "MIT" }
 dynamic = ["version", "authors"]
-requires-python = ">=3.11,<=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "loguru>=0.7.3",
     "pydantic>=2,<3",
@@ -29,9 +29,10 @@ dependencies = [
     "unstructured[all-docs]>=0.16,<1",
     "unstructured-inference>=0.8,<1",
     "instructor>=1,<2",
-    "olmocr>=0.1.58",
-    "pre-commit>=4.1.0",
+    "pre-commit>=4,<5",
     "marker-pdf[full]>=1.6.1",
+    "pytest>=8.3.4",
+    "langchain-anthropic>=0.3.7",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
