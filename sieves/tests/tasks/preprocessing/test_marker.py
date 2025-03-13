@@ -40,7 +40,6 @@ def test_serialization() -> None:
                     "cls_name": "sieves.tasks.preprocessing.marker.Marker",
                     "marker_converter": {"is_placeholder": True, "value": "marker.converters.pdf.PdfConverter"},
                     "extract_images": {"is_placeholder": False, "value": False},
-                    "config": {"is_placeholder": False, "value": None},
                     "include_meta": {"is_placeholder": False, "value": True},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Marker"},
