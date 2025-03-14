@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import abc
-import enum
 from collections.abc import Iterable
 from typing import Any, Generic
 
@@ -9,14 +8,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import (
-    Engine,
-    EngineInferenceMode,
-    EngineModel,
-    EnginePromptSignature,
-    EngineResult,
-    EngineType,
-)
+from sieves.engines import Engine, EngineInferenceMode, EngineType  # noqa: F401
 from sieves.serialization import Config, Serializable
 from sieves.tasks.core import Task
 from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
@@ -29,7 +21,7 @@ class PredictiveTask(
 ):
     def __init__(
         self,
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         task_id: str | None,
         show_progress: bool,
         include_meta: bool,
@@ -55,7 +47,7 @@ class PredictiveTask(
         self._overwrite = overwrite
         self._custom_prompt_template = prompt_template
         self._custom_prompt_signature_desc = prompt_signature_desc
-        self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
+        self._bridge = self._init_bridge(self._engine.get_engine_type())
         self._fewshot_examples = fewshot_examples
 
         self._validate_fewshot_examples()
@@ -116,7 +108,6 @@ class PredictiveTask(
         signature = self._bridge.prompt_signature
 
         # 2. Build executable.
-        assert isinstance(self._bridge.inference_mode, enum.Enum)
         executable = self._engine.build_executable(
             inference_mode=self._bridge.inference_mode,
             prompt_template=self.prompt_template,

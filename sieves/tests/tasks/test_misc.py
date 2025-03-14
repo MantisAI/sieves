@@ -10,13 +10,13 @@ import dspy
 import pydantic
 import pytest
 
-from sieves import Doc, Pipeline, engines, tasks
+from sieves import Doc, Engine, Pipeline, engines, tasks
 from sieves.tasks.utils import PydanticToHFDatasets
 
 
 def test_custom_prompt_template():
     prompt_template = "This is a different prompt template."
-    engine = engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
+    engine = Engine(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     task = tasks.predictive.Classification(
         task_id="classifier",
         labels=["science", "politics"],
@@ -28,7 +28,7 @@ def test_custom_prompt_template():
 
 def test_custom_prompt_signature_desc():
     prompt_sig_desc = "This is a different prompt signature description."
-    engine = engines.dspy_.DSPy(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
+    engine = Engine(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     task = tasks.predictive.Classification(
         task_id="classifier",
         labels=["science", "politics"],

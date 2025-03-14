@@ -11,7 +11,7 @@ import pytest
 import tokenizers
 import transformers
 
-from sieves import Doc, engines
+from sieves import Doc, Engine, engines
 
 
 @pytest.fixture(scope="session")
@@ -19,7 +19,7 @@ def tokenizer() -> tokenizers.Tokenizer:
     return tokenizers.Tokenizer.from_pretrained("gpt2")
 
 
-def _make_engine(engine_type: engines.EngineType, batch_size: int):
+def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
     """Create engine.
     :param engine_type: Engine type.
     :param batch_size: Batch size to use in engine.
@@ -27,43 +27,43 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int):
     """
     match engine_type:
         case engines.EngineType.dspy:
-            return engines.dspy_.DSPy(
+            return Engine(
                 model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]), batch_size=batch_size
             )
 
         case engines.EngineType.glix:
             model_id = "knowledgator/gliner-multitask-v1.0"
-            return engines.glix_.GliX(
+            return Engine(
                 model=gliner.GLiNER.from_pretrained(model_id),
                 batch_size=batch_size,
             )
 
         case engines.EngineType.langchain:
             model = langchain_anthropic.ChatAnthropic(
-                model="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]
+                model_name="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]
             )
-            return engines.langchain_.LangChain(model=model, batch_size=batch_size)
+            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.instructor:
             model = engines.instructor_.Model(
                 name="claude-3-haiku-20240307",
                 client=instructor.from_anthropic(anthropic.AsyncClient()),
             )
-            return engines.instructor_.Instructor(model=model, batch_size=batch_size)
+            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.huggingface:
             model = transformers.pipeline(
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
             )
-            return engines.huggingface_.HuggingFace(model=model, batch_size=batch_size)
+            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.ollama:
             model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m")
-            return engines.ollama_.Ollama(model=model, batch_size=batch_size)
+            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-            return engines.outlines_.Outlines(model=outlines.models.transformers(model_name), batch_size=batch_size)
+            return Engine(model=outlines.models.transformers(model_name), batch_size=batch_size)
 
 
 @pytest.fixture(scope="session")
@@ -74,7 +74,7 @@ def batch_engine(request) -> engines.Engine:
 
 
 @pytest.fixture(scope="session")
-def engine(request) -> engines.Engine:
+def engine(request) -> engines.InternalEngine:
     """Initializes engine without batching."""
     assert isinstance(request.param, engines.EngineType)
     return _make_engine(engine_type=request.param, batch_size=1)

@@ -9,7 +9,7 @@ import gliner.multitask.base
 import jinja2
 import pydantic
 
-from sieves.engines.core import Engine, Executable
+from sieves.engines.core import Executable, InternalEngine
 
 PromptSignature: TypeAlias = list[str]
 Model: TypeAlias = gliner.model.GLiNER
@@ -27,14 +27,14 @@ class InferenceMode(enum.Enum):
     relation_extraction = gliner.multitask.GLiNERRelationExtractor
 
 
-class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
+class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
     def __init__(
         self,
         model: Model,
-        init_kwargs: dict[str, Any] | None = None,
-        inference_kwargs: dict[str, Any] | None = None,
-        strict_mode: bool = False,
-        batch_size: int = -1,
+        init_kwargs: dict[str, Any] | None,
+        inference_kwargs: dict[str, Any] | None,
+        strict_mode: bool,
+        batch_size: int,
     ):
         super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
         self._model_wrappers: dict[InferenceMode, gliner.multitask.base.GLiNERBasePipeline] = {}
