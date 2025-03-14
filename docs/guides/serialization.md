@@ -12,12 +12,12 @@ Here's a simple example of saving and loading a classification pipeline:
 
 ```python
 import outlines
-from sieves import Pipeline, engines, tasks, Doc
+from sieves import Pipeline, Engine, tasks, Doc
 from pathlib import Path
 
 # Create a basic classification pipeline
 model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
+engine = Engine(model=outlines.models.transformers(model_name))
 classifier = tasks.predictive.Classification(
     labels=["science", "politics"], 
     engine=engine
@@ -49,7 +49,7 @@ import chonkie
 import tokenizers
 import outlines
 import pydantic
-from sieves import Pipeline, engines, tasks
+from sieves import Pipeline, Engine, tasks
 
 # Create a tokenizer for chunking
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
@@ -58,7 +58,7 @@ chunker = tasks.preprocessing.Chonkie(
 )
 
 # Create an information extraction task
-engine = engines.outlines_.Outlines(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
+engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
 class PersonInfo(pydantic.BaseModel):
     name: str
     age: int | None = None

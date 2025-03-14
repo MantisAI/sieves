@@ -8,7 +8,6 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_
-from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.sentiment_analysis.bridges import (
@@ -48,7 +47,7 @@ class FewshotExample(pydantic.BaseModel):
 class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     def __init__(
         self,
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         aspects: tuple[str, ...] = tuple(),
         task_id: str | None = None,
         show_progress: bool = True,

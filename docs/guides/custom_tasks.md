@@ -242,11 +242,12 @@ And that's it! Our sentiment analysis task is finished.
 We can now use our sentiment analysis task like every built-in task:
 
 ```python
-from sieves import Doc, Pipeline, engines
+from sieves import Doc, Pipeline, Engine
+import outlines
 from .sentiment_analysis_task import SentimentAnalysis
 
 model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
+engine = Engine(model=outlines.models.transformers(model_name))
             
 docs = [Doc(text="I'm feeling happy today."), Doc(text="I was sad yesterday.")]
 pipe = Pipeline([SentimentAnalysis(engine=engine)])

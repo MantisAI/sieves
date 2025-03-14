@@ -8,7 +8,6 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_
-from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.core import PredictiveTask
@@ -36,7 +35,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
     def __init__(
         self,
         questions: list[str],
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,

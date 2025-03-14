@@ -9,7 +9,6 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_
-from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
@@ -42,7 +41,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
     def __init__(
         self,
         entity_type: type[pydantic.BaseModel],
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,

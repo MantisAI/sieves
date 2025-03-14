@@ -86,14 +86,14 @@ Here's a simple classification example using [`outlines`](https://github.com/dot
 ```python
 import outlines
 
-from sieves import Pipeline, engines, tasks, Doc
+from sieves import Pipeline, Engine, tasks, Doc
 
 # 1. Define documents by text or URI.
 docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
 # 2. Create engine responsible for generating structured output.
 model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = engines.Outlines(model=outlines.models.transformers(model_name))
+engine = Engine(model=outlines.models.transformers(model_name))
 
 # 3. Create pipeline with tasks.
 pipe = Pipeline(
@@ -119,14 +119,14 @@ import gliner.multitask
 import chonkie
 import tokenizers
 
-from sieves import Pipeline, engines, tasks, Doc
+from sieves import Pipeline, Engine, tasks, Doc
 
 # 1. Define documents by text or URI.
 docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
 # 2. Create engine responsible for generating structured output.
 model_name = 'knowledgator/gliner-multitask-v1.0'
-engine = engines.GliX(model=gliner.GLiNER.from_pretrained(model_name))
+engine = Engine(model=gliner.GLiNER.from_pretrained(model_name))
 
 # 3. Create chunker object.
 chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))

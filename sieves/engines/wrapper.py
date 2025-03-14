@@ -1,0 +1,140 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import Any, TypeAlias
+
+import pydantic
+
+from sieves.engines import InternalEngine, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult, Executable
+from sieves.engines.engine_type import EngineType
+
+PromptSignature: TypeAlias = (
+    dspy_.PromptSignature
+    | glix_.PromptSignature
+    | huggingface_.PromptSignature
+    | instructor_.PromptSignature
+    | langchain_.PromptSignature
+    | ollama_.PromptSignature
+    | outlines_.PromptSignature
+)
+Model: TypeAlias = (
+    dspy_.Model
+    | glix_.Model
+    | huggingface_.Model
+    | instructor_.Model
+    | langchain_.Model
+    | ollama_.Model
+    | outlines_.Model
+)
+Result: TypeAlias = (
+    dspy_.Result
+    | glix_.Result
+    | huggingface_.Result
+    | instructor_.Result
+    | langchain_.Result
+    | ollama_.Result
+    | outlines_.Result
+)
+InferenceMode: TypeAlias = (
+    dspy_.InferenceMode
+    | glix_.InferenceMode
+    | huggingface_.InferenceMode
+    | instructor_.InferenceMode
+    | langchain_.InferenceMode
+    | ollama_.InferenceMode
+    | outlines_.InferenceMode
+)
+
+
+class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+    def __init__(
+        self,
+        model: Model,
+        init_kwargs: dict[str, Any] | None = None,
+        inference_kwargs: dict[str, Any] | None = None,
+        config_kwargs: dict[str, Any] | None = None,
+        strict_mode: bool = False,
+        batch_size: int = -1,
+    ):
+        """
+        :param model: Model to run.
+        :param init_kwargs: Optional kwargs to supply to engine executable at init time.
+        :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
+        :param config_kwargs: Used only if supplied model is a DSPy model object, ignored otherwise. Optional kwargs
+            supplied to dspy.configure().
+        :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
+        :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
+            support batching.
+        """
+        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
+        self._config_kwargs = config_kwargs
+        self._engine: InternalEngine[PromptSignature, Result, Model, InferenceMode] = self._init_engine()
+
+    def _init_engine(self) -> InternalEngine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:
+        """Initializes internal engine object.
+        :return Engine: Engine.
+        :raises: ValueError if model type isn't supported.
+        """
+        model_type = type(self._model)
+        module_engine_map = {
+            dspy_: dspy_.DSPy,
+            glix_: glix_.GliX,
+            huggingface_: huggingface_.HuggingFace,
+            instructor_: instructor_.Instructor,
+            langchain_: langchain_.LangChain,
+            ollama_: ollama_.Ollama,
+            outlines_: outlines_.Outlines,
+        }
+
+        for module, engine_type in module_engine_map.items():
+            try:
+                module_model_types = module.Model.__args__
+            except AttributeError:
+                module_model_types = (module.Model,)
+
+            if any(issubclass(model_type, module_model_type) for module_model_type in module_model_types):
+                internal_engine = engine_type(
+                    model=self._model,
+                    init_kwargs=self._init_kwargs,
+                    inference_kwargs=self._inference_kwargs,
+                    strict_mode=self._strict_mode,
+                    batch_size=self._batch_size,
+                    **{"config_kwargs": self._config_kwargs} if module == dspy_ else {},
+                )
+                assert isinstance(internal_engine, InternalEngine)
+                return internal_engine
+
+        raise ValueError(
+            f"Model type {self.model.__class__} is not supported. Please check the documentation and ensure you're "
+            f"providing a supported model type."
+        )
+
+    @property
+    def supports_few_shotting(self) -> bool:
+        return self._engine.supports_few_shotting
+
+    @property
+    def inference_modes(self) -> type[InferenceMode]:
+        return self._engine.inference_modes
+
+    def build_executable(
+        self,
+        inference_mode: InferenceMode,
+        prompt_template: str | None,
+        prompt_signature: type[PromptSignature] | PromptSignature,
+        fewshot_examples: Iterable[pydantic.BaseModel] = (),
+    ) -> Executable[Result | None]:
+        return self._engine.build_executable(
+            inference_mode=inference_mode,
+            prompt_template=prompt_template,
+            prompt_signature=prompt_signature,
+            fewshot_examples=fewshot_examples,
+        )
+
+    def get_engine_type(self) -> EngineType:
+        """Returns engine type for specified engine.
+        :return EngineType: Engine type for self._engine.
+        :raises: ValueError if engine class not found in EngineType.
+        """
+        return EngineType.get_engine_type(self._engine)

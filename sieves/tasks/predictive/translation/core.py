@@ -8,7 +8,6 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
-from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.translation.bridges import (
@@ -36,7 +35,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
     def __init__(
         self,
         to: str,
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,

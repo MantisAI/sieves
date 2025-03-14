@@ -8,7 +8,7 @@ from typing import Any, TypeAlias
 import dspy
 import pydantic
 
-from sieves.engines.core import Engine, Executable
+from sieves.engines.core import Executable, InternalEngine
 
 PromptSignature: TypeAlias = dspy.Signature | dspy.Module
 Model: TypeAlias = dspy.LM | dspy.BaseLM
@@ -31,16 +31,17 @@ class InferenceMode(enum.Enum):
     module = dspy.Module
 
 
-class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
+class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for DSPy."""
 
     def __init__(
         self,
         model: Model,
-        config_kwargs: dict[str, Any] | None = None,
-        init_kwargs: dict[str, Any] | None = None,
-        inference_kwargs: dict[str, Any] | None = None,
-        batch_size: int = -1,
+        config_kwargs: dict[str, Any],
+        init_kwargs: dict[str, Any],
+        inference_kwargs: dict[str, Any],
+        strict_mode: bool,
+        batch_size: int,
     ):
         """
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
@@ -52,10 +53,11 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         :param config_kwargs: Optional kwargs supplied to dspy.configure().
         :param init_kwargs: Optional kwargs to supply to engine executable at init time.
         :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
+        :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
         :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
             support batching.
         """
-        super().__init__(model, init_kwargs, inference_kwargs, batch_size=batch_size)
+        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
         config_kwargs = {"max_tokens": 100000} | (config_kwargs or {})
         dspy.configure(lm=model, **config_kwargs)
 

@@ -24,14 +24,14 @@ class Executable(Protocol[EngineResult]):
         ...
 
 
-class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
+class InternalEngine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
     def __init__(
         self,
         model: EngineModel,
-        init_kwargs: dict[str, Any] | None = None,
-        inference_kwargs: dict[str, Any] | None = None,
-        strict_mode: bool = False,
-        batch_size: int = -1,
+        init_kwargs: dict[str, Any] | None,
+        inference_kwargs: dict[str, Any] | None,
+        strict_mode: bool,
+        batch_size: int,
     ):
         """
         :param model: Instantiated model instance.
@@ -45,14 +45,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         self._inference_kwargs = inference_kwargs or {}
         self._init_kwargs = init_kwargs or {}
         self._strict_mode = strict_mode
-        self._batch_size = self._validate_batch_size(batch_size)
-
-    def _validate_batch_size(self, batch_size: int) -> int:
-        """Validates batch_size. Noop by default.
-        :param batch_size: Specified batch size.
-        :returns int: Validated batch size.
-        """
-        return batch_size
+        self._batch_size = batch_size
 
     @property
     def model(self) -> EngineModel:
@@ -124,7 +117,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
     @classmethod
     def deserialize(
         cls, config: Config, **kwargs: dict[str, Any]
-    ) -> Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:
+    ) -> InternalEngine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:
         """Generate Engine instance from config.
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
@@ -141,7 +134,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         return await asyncio.gather(*calls)
 
 
-class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
+class PydanticEngine(abc.ABC, InternalEngine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
     """Abstract super class for all engines working directly with Pydantic objects for prompt signatures and results.
     Note that this class also assumes the engine accepts a prompt. This holds true for most engines - it doesn't only
     for those with an idiocratic way to process prompts like DSPy, or decoder-only models which don't work with
@@ -179,7 +172,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         :param fewshot_examples: Fewshot examples.
         :return: Results parsed from responses.
         """
-        fewshot_examples_dict = Engine._convert_fewshot_examples(fewshot_examples)
+        fewshot_examples_dict = InternalEngine._convert_fewshot_examples(fewshot_examples)
         examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
         batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
         # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use different

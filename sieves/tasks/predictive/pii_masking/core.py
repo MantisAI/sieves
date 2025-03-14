@@ -6,15 +6,7 @@ import datasets
 import pydantic
 
 from sieves.data.doc import Doc
-from sieves.engines import (
-    Engine,
-    EngineInferenceMode,
-    EngineModel,
-    EnginePromptSignature,
-    EngineResult,
-    EngineType,
-    dspy_,
-)
+from sieves.engines import Engine, EngineType, dspy_
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.pii_masking.bridges import (
@@ -53,7 +45,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
 
     def __init__(
         self,
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         pii_types: list[str] | None = None,
         mask_placeholder: str = "[MASKED]",
         task_id: str | None = None,
