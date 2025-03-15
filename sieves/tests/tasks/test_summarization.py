@@ -88,7 +88,7 @@ def test_serialization(summarization_docs, batch_engine) -> None:
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
-                            "version": "0.7.0",
+                            "version": "0.8.0",
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -98,11 +98,11 @@ def test_serialization(summarization_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Summarization"},
-                    "version": "0.7.0",
+                    "version": "0.8.0",
                 }
             ],
         },
-        "version": "0.7.0",
+        "version": "0.8.0",
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])
