@@ -58,12 +58,10 @@ class Marker(Task):
                 rendered = self._converter(uri)
 
                 # Extract text and optionally images
+```suggestion
+                text, _, images = text_from_rendered(rendered)
                 if self._extract_images:
-                    text, _, images = text_from_rendered(rendered)
-                    # Store images in meta
                     doc.meta["images"] = images
-                else:
-                    text, _, _ = text_from_rendered(rendered)
 
                 # Update document text
                 doc.text = text
