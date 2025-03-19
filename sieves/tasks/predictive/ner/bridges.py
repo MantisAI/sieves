@@ -410,6 +410,30 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
     def inference_mode(self) -> glix_.InferenceMode:
         return glix_.InferenceMode.ner
 
+    def consolidate(
+        self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[glix_.Result]:
+        results = list(results)
+
+        # Simply group results by document without trying to adjust positions
+        # Position adjustment will happen in the integrate function
+        for doc_offset in docs_offsets:
+            doc_results = results[doc_offset[0] : doc_offset[1]]
+            all_entities: list[dict[str, Any]] = []
+
+            # Keep track of which chunk each entity came from
+            for chunk_idx, chunk_result in enumerate(doc_results):
+                # Process entities in this chunk
+                for entity in chunk_result:
+                    if isinstance(entity, dict):
+                        # Add chunk index to the entity for reference in integrate
+                        entity_copy = entity.copy()
+                        entity_copy["chunk_idx"] = chunk_idx
+                        all_entities.append(entity_copy)
+
+            # Yield results for this document (flattened list of entities)
+            yield all_entities
+
     def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         docs_list = list(docs)
         results_list = list(results)
@@ -424,10 +448,21 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
             text: str
             entities: list[Entity] = []
 
+        # Process each document
         for doc, result in zip(docs_list, results_list):
             entities_list: list[Entity] = []
             doc_text = doc.text if doc.text is not None else ""
 
+            # Get chunk information from the document
+            chunk_offsets = []
+            if hasattr(doc, "chunks") and doc.chunks:
+                # Calculate beginning position of each chunk in the original text
+                current_offset = 0
+                for chunk in doc.chunks:
+                    chunk_offsets.append(current_offset)
+                    current_offset += len(chunk)
+
+            # Process entities in this document
             if result:
                 for entity_dict in result:
                     if not isinstance(entity_dict, dict):
@@ -439,75 +474,32 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
                         entity_end = int(entity_dict.get("end", 0))
                         entity_type = str(entity_dict.get("label", ""))
 
+                        # Get the chunk index (added in consolidate)
+                        chunk_idx = int(entity_dict.get("chunk_idx", 0))
+
+                        # Add chunk offset to entity positions
+                        adjusted_start = entity_start
+                        adjusted_end = entity_end
+
+                        if chunk_offsets and chunk_idx < len(chunk_offsets):
+                            # Adjust positions based on chunk offset
+                            adjusted_start += chunk_offsets[chunk_idx]
+                            adjusted_end += chunk_offsets[chunk_idx]
+
                         entities_list.append(
                             Entity(
                                 text=entity_text,
-                                start=entity_start,
-                                end=entity_end,
+                                start=adjusted_start,
+                                end=adjusted_end,
                                 entity_type=entity_type,
                             )
                         )
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError) as e:
+                        print(f"Error processing entity: {e}")
                         continue
 
+            # Create the final entities object and store in document results
             entities_obj = Entities(text=doc_text, entities=entities_list)
             doc.results[self._task_id] = entities_obj
 
         return docs_list
-
-    def consolidate(
-        self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[glix_.Result]:
-        results = list(results)
-
-        # Process each document (which may consist of multiple chunks)
-        for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            all_entities: list[dict[str, Any]] = []
-            char_offset = 0
-
-            # Process each chunk for this document
-            for chunk_result in doc_results:
-                if not chunk_result:
-                    continue
-
-                # Get chunk text length for offset calculation
-                chunk_text = next(
-                    (
-                        entity.get("chunk_text")
-                        for entity in chunk_result
-                        if isinstance(entity, dict) and "chunk_text" in entity
-                    ),
-                    "",
-                )
-
-                # Process entities in this chunk
-                for entity in chunk_result:
-                    if isinstance(entity, dict) and "text" in entity and "label" in entity:
-                        # Create a copy with adjusted positions
-                        adjusted_entity = entity.copy()
-
-                        # Adjust start and end positions
-                        if "start" in adjusted_entity and adjusted_entity["start"] is not None:
-                            try:
-                                adjusted_entity["start"] = int(adjusted_entity["start"]) + char_offset
-                            except (ValueError, TypeError):
-                                pass  # Keep original if conversion fails
-
-                        if "end" in adjusted_entity and adjusted_entity["end"] is not None:
-                            try:
-                                adjusted_entity["end"] = int(adjusted_entity["end"]) + char_offset
-                            except (ValueError, TypeError):
-                                pass  # Keep original if conversion fails
-
-                        all_entities.append(adjusted_entity)
-
-                # Update offset for next chunk
-                if chunk_text:
-                    try:
-                        char_offset += len(str(chunk_text))
-                    except Exception:
-                        pass  # Skip if we can't get length
-
-            # Yield the consolidated result
-            yield all_entities
