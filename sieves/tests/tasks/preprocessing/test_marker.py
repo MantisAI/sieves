@@ -22,7 +22,7 @@ def test_with_extract_images() -> None:
 
     assert len(docs) == 1
     assert docs[0].text
-    assert "images" in docs[0].meta
+    assert docs[0].images
 
 
 def test_serialization() -> None:
