@@ -43,7 +43,7 @@ def test_serialization() -> None:
                     "include_meta": {"is_placeholder": False, "value": True},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Marker"},
-                    "version": "0.7.0",
+                    "version": "0.8.0",
                 }
             ],
         },
