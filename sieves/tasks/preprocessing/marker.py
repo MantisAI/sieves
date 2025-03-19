@@ -54,7 +54,6 @@ class Marker(Task):
             for doc in docs:
                 # Convert URI to string if it's a Path
                 uri = str(doc.uri) if isinstance(doc.uri, Path) else doc.uri
-
                 # Process the document
                 rendered = self._converter(uri)
 
