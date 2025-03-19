@@ -4,6 +4,8 @@ import dataclasses
 from pathlib import Path
 from typing import Any
 
+from PIL.Image import Image
+
 
 @dataclasses.dataclass
 class Doc:
@@ -15,6 +17,7 @@ class Doc:
     text: str | None = None
     chunks: list[str] | None = None
     id: str | None = None
+    images: list[Image] | None = None
 
     def __post_init__(self) -> None:
         if self.chunks is None and self.text is not None:
@@ -29,4 +32,5 @@ class Doc:
             and self.text == other.text
             and self.chunks == other.chunks
             and self.results == other.results
+            and self.images == other.images
         )
