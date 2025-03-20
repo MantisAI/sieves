@@ -24,6 +24,7 @@ class SummarizationBridge(
         task_id: str,
         prompt_template: str | None,
         prompt_signature_desc: str | None,
+        overwrite: bool,
         n_words: int,
     ):
         """
@@ -31,9 +32,15 @@ class SummarizationBridge(
         :param task_id: Task ID.
         :param prompt_template: Custom prompt template.
         :param prompt_signature_desc: Custom prompt signature description.
+        :param overwrite: Whether to overwrite text with summarization text.
         :param n_words: Approximate number of words in summary.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=overwrite,
+        )
         self._n_words = n_words
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
@@ -68,6 +75,10 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
         for doc, result in zip(docs, results):
             assert len(result.completions.summary) == 1
             doc.results[self._task_id] = result.summary
+
+            if self._overwrite:
+                doc.text = result.summary
+
         return docs
 
     def consolidate(
@@ -134,6 +145,9 @@ class PydanticBasedSummarization(
         for doc, result in zip(docs, results):
             assert hasattr(result, "summary")
             doc.results[self._task_id] = result.summary
+
+            if self._overwrite:
+                doc.text = result.summary
         return docs
 
     def consolidate(
@@ -146,9 +160,11 @@ class PydanticBasedSummarization(
             summaries: list[str] = []
 
             for res in results[doc_offset[0] : doc_offset[1]]:
-                if res:
-                    assert hasattr(res, "summary")
-                    summaries.append(res.summary)
+                if res is None:
+                    continue  # type: ignore[unreachable]
+
+                assert hasattr(res, "summary")
+                summaries.append(res.summary)
 
             yield self.prompt_signature(summary="\n".join(summaries).strip())
 

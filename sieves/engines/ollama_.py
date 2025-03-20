@@ -1,8 +1,7 @@
 import asyncio
 import enum
-import warnings
 from collections.abc import Iterable
-from typing import Any, Literal, TypeAlias
+from typing import Any, TypeAlias
 
 import ollama
 import pydantic
@@ -13,9 +12,8 @@ from sieves.engines.core import Executable, PydanticEngine
 class Model(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
     name: str
-    client_mode: Literal["sync", "async"]
-    client_config: dict[str, Any] = pydantic.Field(default_factory=dict)
     host: str
+    client_config: dict[str, Any] = pydantic.Field(default_factory=dict)
 
 
 PromptSignature: TypeAlias = pydantic.BaseModel
@@ -50,19 +48,7 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             batch_size=batch_size,
         )
         # Async client will be initialized for every prompt batch to sidestep an asyncio event loop issue.
-        self._client: ollama.Client | ollama.AsyncClient | None = (
-            ollama.Client(host=model.host, **model.client_config) if model.client_mode == "sync" else None
-        )
-
-    def _validate_batch_size(self, batch_size: int) -> int:
-        if not self._model.client_mode == "sync" and batch_size != 1:
-            warnings.warn(
-                f"`batch_size` is forced to 1 when {self.__class__.__name__} engine is run with `Instructor`, as "
-                f"it runs a synchronous workflow."
-            )
-            batch_size = 1
-
-        return batch_size
+        self._client: ollama.AsyncClient | None = None
 
     @property
     def inference_modes(self) -> type[InferenceMode]:
@@ -88,11 +74,10 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                 case InferenceMode.chat:
 
                     def generate(prompts: list[str]) -> Iterable[Result]:
-                        if self._model.client_mode == "async":
-                            self._client = ollama.AsyncClient(host=self._model.host, **self._model.client_config)
+                        self._client = ollama.AsyncClient(host=self._model.host, **self._model.client_config)
                         assert self._client
 
-                        responses = [
+                        calls = [
                             self._client.chat(
                                 messages=[{"role": "user", "content": prompt}],
                                 model=self._model.name,
@@ -101,10 +86,7 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                             )
                             for prompt in prompts
                         ]
-
-                        # For async client: responses are coroutines waiting to be executed.
-                        if self._model.client_mode == "async":
-                            responses = asyncio.run(self._execute_async_calls(responses))
+                        responses = asyncio.run(self._execute_async_calls(calls))
 
                         try:
                             for res in responses:

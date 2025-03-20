@@ -1,0 +1,97 @@
+# mypy: ignore-errors
+import pytest
+
+from sieves import Doc, Pipeline, tasks
+from sieves.engines import EngineType
+from sieves.tasks import PredictiveTask
+from sieves.tasks.predictive import pii_masking
+
+
+@pytest.mark.parametrize(
+    "batch_engine",
+    (EngineType.dspy, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
+    indirect=["batch_engine"],
+)
+@pytest.mark.parametrize("fewshot", [True, False])
+def test_run(pii_masking_docs, batch_engine, fewshot) -> None:
+    fewshot_examples = [
+        pii_masking.FewshotExample(
+            text="Jane Smith works at NASA.",
+            reasoning="Jane Smith is a person's name and should be masked.",
+            masked_text="[MASKED] works at NASA.",
+            pii_entities=[pii_masking.PIIEntity(entity_type="PERSON", text="Jane Smith")],
+        ),
+        pii_masking.FewshotExample(
+            text="He lives at Diagon Alley 37.",
+            reasoning="Diagon Alley 37 is a residential address and should be masked.",
+            masked_text="He lives at [MASKED].",
+            pii_entities=[pii_masking.PIIEntity(entity_type="ADDRESS", text="Diagon Alley 37")],
+        ),
+    ]
+
+    fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
+    pipe = Pipeline([tasks.predictive.PIIMasking(engine=batch_engine, **fewshot_args)])
+    docs = list(pipe(pii_masking_docs))
+
+    assert len(docs) == 2
+    for doc in docs:
+        assert doc.text
+        assert "PIIMasking" in doc.results
+
+
+@pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
+def test_to_dataset(pii_masking_docs, batch_engine) -> None:
+    task = tasks.predictive.PIIMasking(engine=batch_engine)
+    docs = task(pii_masking_docs)
+
+    assert isinstance(task, PredictiveTask)
+    dataset = task.to_dataset(docs)
+    assert all([key in dataset.features for key in ("text", "masked_text")])
+    assert len(dataset) == 2
+    records = list(dataset)
+    assert records[0]["text"] == "Her SSN is 222-333-444. Her credit card number is 1234 5678."
+    assert records[1]["text"] == "You can reach Michael at michael.michaels@gmail.com."
+
+    with pytest.raises(KeyError):
+        task.to_dataset([Doc(text="This is a dummy text.")])
+
+
+@pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
+def test_serialization(pii_masking_docs, batch_engine) -> None:
+    pipe = Pipeline([tasks.predictive.PIIMasking(engine=batch_engine)])
+    list(pipe(pii_masking_docs))
+
+    config = pipe.serialize()
+    assert config.model_dump() == {
+        "cls_name": "sieves.pipeline.core.Pipeline",
+        "tasks": {
+            "is_placeholder": False,
+            "value": [
+                {
+                    "cls_name": "sieves.tasks.predictive.pii_masking.core.PIIMasking",
+                    "engine": {
+                        "is_placeholder": False,
+                        "value": {
+                            "cls_name": "sieves.engines.wrapper.Engine",
+                            "inference_kwargs": {"is_placeholder": False, "value": {}},
+                            "init_kwargs": {"is_placeholder": False, "value": {}},
+                            "model": {"is_placeholder": True, "value": "sieves.engines.ollama_.Model"},
+                            "version": "0.8.0",
+                        },
+                    },
+                    "fewshot_examples": {"is_placeholder": False, "value": ()},
+                    "include_meta": {"is_placeholder": False, "value": True},
+                    "mask_placeholder": {"is_placeholder": False, "value": "[MASKED]"},
+                    "pii_types": {"is_placeholder": False, "value": None},
+                    "prompt_signature_desc": {"is_placeholder": False, "value": None},
+                    "prompt_template": {"is_placeholder": False, "value": None},
+                    "show_progress": {"is_placeholder": False, "value": True},
+                    "task_id": {"is_placeholder": False, "value": "PIIMasking"},
+                    "version": "0.8.0",
+                }
+            ],
+        },
+        "version": "0.8.0",
+    }
+
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

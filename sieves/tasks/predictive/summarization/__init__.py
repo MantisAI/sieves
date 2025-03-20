@@ -1,5 +1,5 @@
 """Information extraction task."""
 
-from .core import Summarization, TaskFewshotExample, _TaskInferenceMode, _TaskPromptSignature, _TaskResult
+from .core import FewshotExample, Summarization
 
-__all__ = ["Summarization", "TaskFewshotExample", "_TaskInferenceMode", "_TaskResult", "_TaskPromptSignature"]
+__all__ = ["Summarization", "FewshotExample"]

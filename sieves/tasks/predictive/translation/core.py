@@ -8,7 +8,6 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
-from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.translation.bridges import (
@@ -20,14 +19,13 @@ from sieves.tasks.predictive.translation.bridges import (
 )
 
 _TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
-_TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
 _TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
 _TaskBridge: TypeAlias = (
     DSPyTranslation | InstructorTranslation | LangChainTranslation | OutlinesTranslation | OllamaTranslation
 )
 
 
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     text: str
     to: str
     translation: str
@@ -37,14 +35,14 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
     def __init__(
         self,
         to: str,
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
-        overwrite: bool = True,
+        overwrite: bool = False,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initializes new PredictiveTask.
@@ -91,6 +89,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
                 task_id=self._task_id,
                 prompt_template=self._custom_prompt_template,
                 prompt_signature_desc=self._custom_prompt_signature_desc,
+                overwrite=self._overwrite,
                 language=self._to,
             )
         except KeyError as err:
@@ -116,7 +115,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         }
 
     def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
-        """
+        """Converts docs to Hugging Face dataset.
         :param docs: Documents to convert.
         :return datasets.Dataset: Converted dataset.
         """

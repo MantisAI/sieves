@@ -1,25 +1,24 @@
 # mypy: ignore-errors
 import enum
 
-import engines
 import pytest
 
-from sieves import Doc, Pipeline
+from sieves import Doc, Pipeline, engines
 from sieves.engines import EngineType
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
 
 
-def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
+def _run(engine: engines.InternalEngine, docs: list[Doc], fewshot: bool) -> None:
     assert issubclass(engine.inference_modes, enum.Enum)
     fewshot_examples = [
-        classification.TaskFewshotExample(
+        classification.FewshotExample(
             text="On the properties of hydrogen atoms and red dwarfs.",
             reasoning="Atoms, hydrogen and red dwarfs are terms from physics. There is no mention of any "
             "politics-related terms.",
             confidence_per_label={"science": 1.0, "politics": 0.0},
         ),
-        classification.TaskFewshotExample(
+        classification.FewshotExample(
             text="A parliament is elected by casting votes.",
             reasoning="The election of a parliament by the casting of votes is a component of a democratic political "
             "system.",
@@ -93,7 +92,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                     "engine": {
                         "is_placeholder": False,
                         "value": {
-                            "cls_name": "sieves.engines.huggingface_.HuggingFace",
+                            "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {
@@ -101,7 +100,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                                 "value": "transformers.pipelines.zero_shot_classification."
                                 "ZeroShotClassificationPipeline",
                             },
-                            "version": "0.6.0",
+                            "version": "0.8.0",
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -111,11 +110,11 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "classifier"},
-                    "version": "0.6.0",
+                    "version": "0.8.0",
                 }
             ],
         },
-        "version": "0.6.0",
+        "version": "0.8.0",
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

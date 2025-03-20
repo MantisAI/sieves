@@ -12,12 +12,12 @@ Here's a simple example of saving and loading a classification pipeline:
 
 ```python
 import outlines
-from sieves import Pipeline, engines, tasks, Doc
+from sieves import Pipeline, Engine, tasks, Doc
 from pathlib import Path
 
 # Create a basic classification pipeline
 model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
+engine = Engine(model=outlines.models.transformers(model_name))
 classifier = tasks.predictive.Classification(
     labels=["science", "politics"], 
     engine=engine
@@ -47,18 +47,18 @@ print(results[0].results["Classification"])
 ```python
 import chonkie
 import tokenizers
-from sieves import Pipeline, engines, tasks, Doc
+import outlines
+import pydantic
+from sieves import Pipeline, Engine, tasks
 
 # Create a tokenizer for chunking
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
-chunker = tasks.preprocessing.Chunker(
-    tokenizer=tokenizer,
-    chunk_size=512,
-    chunk_overlap=50
+chunker = tasks.preprocessing.Chonkie(
+    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
 )
 
 # Create an information extraction task
-engine = engines.outlines_.Outlines(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
+engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
 class PersonInfo(pydantic.BaseModel):
     name: str
     age: int | None = None
@@ -91,7 +91,7 @@ Pipeline configurations are saved as YAML files. Here's an example of what a con
 
 ```yaml
 cls_name: sieves.pipeline.core.Pipeline
-version: 0.6.0
+version: 0.8.0
 tasks:
   is_placeholder: false
   value:

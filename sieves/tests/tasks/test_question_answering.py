@@ -1,9 +1,8 @@
 # mypy: ignore-errors
-import gliner.multitask
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType, GliX
+from sieves.engines import EngineType
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import question_answering
 
@@ -23,7 +22,7 @@ from sieves.tasks.predictive import question_answering
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(qa_docs, batch_engine, fewshot):
     fewshot_examples = [
-        question_answering.TaskFewshotExample(
+        question_answering.FewshotExample(
             text="""
             Physics is the scientific study of matter, its fundamental constituents, its motion and behavior through 
             space and time, and the related entities of energy and force. Physics is one of the most fundamental 
@@ -33,7 +32,7 @@ def test_run(qa_docs, batch_engine, fewshot):
             questions=("What's a scientist called who specializes in the field of physics?",),
             answers=("A physicist.",),
         ),
-        question_answering.TaskFewshotExample(
+        question_answering.FewshotExample(
             text="""
             A biologist is a scientist who conducts research in biology. Biologists are interested in studying life on 
             Earth, whether it is an individual cell, a multicellular organism, or a community of interacting 
@@ -45,10 +44,6 @@ def test_run(qa_docs, batch_engine, fewshot):
             answers=("Studying life on earth.",),
         ),
     ]
-
-    # If GliX engine: by default initialized as classifier, change that to QA.
-    if isinstance(batch_engine, GliX):
-        batch_engine._model = gliner.multitask.GLiNERQuestionAnswerer(model=batch_engine._model.model)
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline(
@@ -123,11 +118,11 @@ def test_serialization(qa_docs, batch_engine) -> None:
                     "engine": {
                         "is_placeholder": False,
                         "value": {
-                            "cls_name": "sieves.engines.outlines_.Outlines",
+                            "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "outlines.models.transformers.Transformers"},
-                            "version": "0.6.0",
+                            "version": "0.8.0",
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -143,11 +138,11 @@ def test_serialization(qa_docs, batch_engine) -> None:
                     },
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "qa"},
-                    "version": "0.6.0",
+                    "version": "0.8.0",
                 }
             ],
         },
-        "version": "0.6.0",
+        "version": "0.8.0",
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

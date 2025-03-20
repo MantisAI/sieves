@@ -7,8 +7,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
-from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
+from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_
 from sieves.serialization import Config
 from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.classification.bridges import (
@@ -22,15 +21,6 @@ from sieves.tasks.predictive.classification.bridges import (
 from sieves.tasks.predictive.core import PredictiveTask
 
 _TaskPromptSignature: TypeAlias = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
-_TaskInferenceMode: TypeAlias = (
-    outlines_.InferenceMode
-    | dspy_.InferenceMode
-    | huggingface_.InferenceMode
-    | instructor_.InferenceMode
-    | glix_.InferenceMode
-    | langchain_.InferenceMode
-    | ollama_.InferenceMode
-)
 _TaskResult: TypeAlias = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | glix_.Result
 _TaskBridge: TypeAlias = (
     DSPyClassification
@@ -43,13 +33,13 @@ _TaskBridge: TypeAlias = (
 )
 
 
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     text: str
     reasoning: str
     confidence_per_label: dict[str, float]
 
     @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> TaskFewshotExample:
+    def check_confidence(self) -> FewshotExample:
         if any([conf for conf in self.confidence_per_label.values() if not 0 <= conf <= 1]):
             raise ValueError("Confidence has to be between 0 and 1.")
         return self
@@ -59,13 +49,13 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
     def __init__(
         self,
         labels: list[str],
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initializes new PredictiveTask.
@@ -88,7 +78,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,
         )
-        self._fewshot_examples: Iterable[TaskFewshotExample]
+        self._fewshot_examples: Iterable[FewshotExample]
 
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize bridge.
@@ -146,7 +136,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 [label in fs_example.confidence_per_label for label in self._labels]
             ):
                 raise ValueError(
-                    f"Label mismatch: {self._task_id} has labels {self._labels}. Few-shot examples has "
+                    f"Label mismatch: {self._task_id} has labels {self._labels}. Few-shot examples have "
                     f"labels {fs_example.confidence_per_label.keys()}."
                 )
 

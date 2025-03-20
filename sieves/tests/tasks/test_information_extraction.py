@@ -21,12 +21,12 @@ class Person(pydantic.BaseModel, frozen=True):
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
     fewshot_examples = [
-        information_extraction.TaskFewshotExample(
+        information_extraction.FewshotExample(
             text="Ada Lovelace lived to 47 years old. Zeno of Citium died with 72 years.",
             reasoning="There is mention of two people in this text, including lifespans. I will extract those.",
             entities=[Person(name="Ada Loveloace", age=47), Person(name="Zeno of Citium", age=72)],
         ),
-        information_extraction.TaskFewshotExample(
+        information_extraction.FewshotExample(
             text="Alan Watts passed away at the age of 58 years. Alan Watts was 58 years old at the time of his death.",
             reasoning="There is mention of one person in this text, including lifespan. I will extract this person.",
             entities=[Person(name="Alan Watts", age=58)],
@@ -84,11 +84,11 @@ def test_serialization(information_extraction_docs, batch_engine) -> None:
                     "engine": {
                         "is_placeholder": False,
                         "value": {
-                            "cls_name": "sieves.engines.ollama_.Ollama",
+                            "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "sieves.engines.ollama_.Model"},
-                            "version": "0.6.0",
+                            "version": "0.8.0",
                         },
                     },
                     "entity_type": {
@@ -101,11 +101,11 @@ def test_serialization(information_extraction_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "InformationExtraction"},
-                    "version": "0.6.0",
+                    "version": "0.8.0",
                 }
             ],
         },
-        "version": "0.6.0",
+        "version": "0.8.0",
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}, "entity_type": Person}])

@@ -1,9 +1,8 @@
 # mypy: ignore-errors
-import gliner.multitask
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType, GliX
+from sieves.engines import EngineType
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import summarization
 
@@ -23,13 +22,13 @@ from sieves.tasks.predictive import summarization
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(summarization_docs, batch_engine, fewshot) -> None:
     fewshot_examples = [
-        summarization.TaskFewshotExample(
+        summarization.FewshotExample(
             text="They counted: one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, "
             "fourteen.",
             n_words=6,
             summary="They counted from one to fourteen.",
         ),
-        summarization.TaskFewshotExample(
+        summarization.FewshotExample(
             text="Next in order were the Boeotians, led by Peneleos, Leitus, Arcesilaus, Prothoenor, and Clonius. "
             "These had with them fifty ships, and on board of each were a hundred and twenty young men of the "
             "Boeotians. Then came the men of Orchomenus, who lived in the realm of the Minyans, led by Ascalaphus"
@@ -39,10 +38,6 @@ def test_run(summarization_docs, batch_engine, fewshot) -> None:
             summary="Boeotians, Orchomenians, and Phocians sailed to Troy with many ships.",
         ),
     ]
-
-    # If GliX engine: by default initialized as classifier, change that to QA.
-    if isinstance(batch_engine, GliX):
-        batch_engine._model = gliner.multitask.GLiNERSummarizer(model=batch_engine._model.model)
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline([summarization.Summarization(n_words=10, engine=batch_engine, **fewshot_args)])
@@ -89,11 +84,11 @@ def test_serialization(summarization_docs, batch_engine) -> None:
                     "engine": {
                         "is_placeholder": False,
                         "value": {
-                            "cls_name": "sieves.engines.dspy_.DSPy",
+                            "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
-                            "version": "0.6.0",
+                            "version": "0.8.0",
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -103,11 +98,11 @@ def test_serialization(summarization_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Summarization"},
-                    "version": "0.6.0",
+                    "version": "0.8.0",
                 }
             ],
         },
-        "version": "0.6.0",
+        "version": "0.8.0",
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

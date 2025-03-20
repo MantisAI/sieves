@@ -24,7 +24,12 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         :param prompt_signature_desc: Custom prompt signature description.
         :param labels: Labels to classify.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=False,
+        )
         self._labels = labels
 
 
@@ -37,7 +42,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     def _prompt_signature_description(self) -> str | None:
         return """
         Multi-label classification of the provided text given the provided labels.
-        For each label, provide the conficence with which you believe that the provided text should be assigned 
+        For each label, provide the confidence with which you believe that the provided text should be assigned 
         this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
         opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
         add up to 1.
@@ -87,7 +92,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             for res in doc_results:
                 assert len(res.completions.confidence_per_label) == 1
                 for label, score in res.completions.confidence_per_label[0].items():
-                    # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
+                    # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
                     # useful?).
                     label_scores[label] += max(0, min(score, 1))
@@ -155,8 +160,8 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
 
-            for rec in results[doc_offset[0] : doc_offset[1]]:
-                for label, score in zip(rec["labels"], rec["scores"]):
+            for res in results[doc_offset[0] : doc_offset[1]]:
+                for label, score in zip(res["labels"], res["scores"]):
                     assert isinstance(label, str)
                     assert isinstance(score, float)
                     label_scores[label] += score
@@ -183,7 +188,7 @@ class PydanticBasedClassification(
     def _prompt_template(self) -> str | None:
         return f"""
         Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
-        For each label, provide the conficence with which you believe that the provided text should be assigned
+        For each label, provide the confidence with which you believe that the provided text should be assigned
         this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
         opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision. 
 
@@ -253,7 +258,7 @@ class PydanticBasedClassification(
                 assert hasattr(rec, "reasoning")
                 reasonings.append(rec.reasoning)
                 for label in self._labels:
-                    # Clamp label to range between 0 and 1. Alternatively we could force this in the prompt signature,
+                    # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
                     # useful?).
                     label_scores[label] += max(0, min(getattr(rec, label), 1))

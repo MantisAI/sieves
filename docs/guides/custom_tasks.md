@@ -191,7 +191,7 @@ from sieves.tasks.predictive.core import PredictiveTask
 
 # We'll define that class we require fewshot examples to be provided in. In our case we can just inherit from our 
 # prompt signature class and add a `text` property.
-class TaskFewshotExample(SentimentEstimate):
+class FewshotExample(SentimentEstimate):
     text: str
 
 
@@ -242,11 +242,12 @@ And that's it! Our sentiment analysis task is finished.
 We can now use our sentiment analysis task like every built-in task:
 
 ```python
-from sieves import Doc, Pipeline, engines
+from sieves import Doc, Pipeline, Engine
+import outlines
 from .sentiment_analysis_task import SentimentAnalysis
 
 model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = engines.outlines_.Outlines(model=outlines.models.transformers(model_name))
+engine = Engine(model=outlines.models.transformers(model_name))
             
 docs = [Doc(text="I'm feeling happy today."), Doc(text="I was sad yesterday.")]
 pipe = Pipeline([SentimentAnalysis(engine=engine)])

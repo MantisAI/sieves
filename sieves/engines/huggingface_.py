@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 import transformers
 
-from sieves.engines.core import Engine, Executable
+from sieves.engines.core import Executable, InternalEngine
 
 PromptSignature: TypeAlias = list[str]
 Model: TypeAlias = transformers.Pipeline
@@ -21,7 +21,7 @@ class InferenceMode(enum.Enum):
     zeroshot_cls = 0
 
 
-class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
+class HuggingFace(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode

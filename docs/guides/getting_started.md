@@ -17,15 +17,13 @@ Here's a simple example that performs text classification:
 
 ```python
 import outlines
-from sieves import Pipeline, engines, tasks, Doc
+from sieves import Pipeline, Engine, tasks, Doc
 
 # Create a document
 doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
 
 # Initialize the engine (using a small but capable model)
-engine = engines.outlines_.Outlines(
-    model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
-)
+engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
 
 # Create and run the pipeline
 pipeline = Pipeline([tasks.predictive.Classification(labels=["science", "politics"], engine=engine)])
@@ -40,6 +38,8 @@ for doc in pipeline([doc]):
 Documents can be created in several ways:
 
 ```python
+from sieves import Docs
+
 # From text
 doc = Doc(text="Your text here")
 
@@ -62,22 +62,22 @@ Here's a more involved example that:
 3. Performs information extraction on each chunk
 
 ```python
+import outlines
 import chonkie
 import tokenizers
-from sieves import Pipeline, engines, tasks, Doc
+import pydantic
+from sieves import Pipeline, Engine, tasks, Doc
 
 # Create a tokenizer for chunking
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
 
 # Initialize components
-chunker = tasks.preprocessing.Chunker(
-    tokenizer=tokenizer,
-    chunk_size=512,
-    chunk_overlap=50
+chunker = tasks.preprocessing.Chonkie(
+    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
 )
 
 # Initialize an engine for information extraction
-engine = engines.outlines_.Outlines(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
+engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
 
 # Define the structure of information you want to extract
 class PersonInfo(pydantic.BaseModel):
@@ -98,7 +98,7 @@ pipeline = Pipeline([
 ])
 
 # Process a PDF document
-doc = Doc(uri="path/to/document.pdf")
+doc = Doc(text="Marie Curie died at the age of 66 years.")
 results = list(pipeline([doc]))
 
 # Access the extracted information
@@ -108,7 +108,7 @@ for result in results:
 
 ## Supported Engines
 
-`sieves` supports multiple engines for structured generation:
+`sieves` supports multiple libraries for structured generation:
 
 - [`outlines`](https://github.com/outlines-dev/outlines)
 - [`dspy`](https://github.com/stanfordnlp/dspy)
@@ -118,5 +118,4 @@ for result in results:
 - [`transformers`](https://github.com/huggingface/transformers)
 - [`ollama`](https://github.com/ollama/ollama)
 
-Each engine has a different set of supported models, pros and cons. Choose the engine that best fits your use case and 
-model requirements.
+You can pass in models from either of these structured generation libraries into `Engine`.   

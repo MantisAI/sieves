@@ -11,7 +11,7 @@ import pytest
 import tokenizers
 import transformers
 
-from sieves import Doc, engines
+from sieves import Doc, Engine, engines
 
 
 @pytest.fixture(scope="session")
@@ -19,7 +19,7 @@ def tokenizer() -> tokenizers.Tokenizer:
     return tokenizers.Tokenizer.from_pretrained("gpt2")
 
 
-def _make_engine(engine_type: engines.EngineType, batch_size: int):
+def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
     """Create engine.
     :param engine_type: Engine type.
     :param batch_size: Batch size to use in engine.
@@ -27,67 +27,43 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int):
     """
     match engine_type:
         case engines.EngineType.dspy:
-            return engines.dspy_.DSPy(
+            return Engine(
                 model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]), batch_size=batch_size
             )
 
         case engines.EngineType.glix:
             model_id = "knowledgator/gliner-multitask-v1.0"
-            return engines.glix_.GliX(
-                model=gliner.multitask.GLiNERClassifier(model=gliner.GLiNER.from_pretrained(model_id)),
+            return Engine(
+                model=gliner.GLiNER.from_pretrained(model_id),
                 batch_size=batch_size,
             )
 
         case engines.EngineType.langchain:
             model = langchain_anthropic.ChatAnthropic(
-                model="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]
+                model_name="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]
             )
-            return engines.langchain_.LangChain(model=model, batch_size=batch_size)
+            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.instructor:
             model = engines.instructor_.Model(
                 name="claude-3-haiku-20240307",
                 client=instructor.from_anthropic(anthropic.AsyncClient()),
             )
-            return engines.instructor_.Instructor(model=model, batch_size=batch_size)
+            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.huggingface:
             model = transformers.pipeline(
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
             )
-            return engines.huggingface_.HuggingFace(model=model, batch_size=batch_size)
+            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.ollama:
-            model = engines.ollama_.Model(client_mode="async", host="http://localhost:11434", name="smollm:135m")
-            return engines.ollama_.Ollama(model=model, batch_size=batch_size)
+            model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m")
+            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-            return engines.outlines_.Outlines(model=outlines.models.transformers(model_name), batch_size=batch_size)
-
-
-def make_glix_engine(mode: engines.glix_.InferenceMode) -> engines.Engine:
-    model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
-
-    match mode:
-        case engines.glix_.InferenceMode.classification:
-            model = gliner.multitask.GLiNERClassifier(model=model)
-        case engines.glix_.InferenceMode.question_answering:
-            model = gliner.multitask.GLiNERQuestionAnswerer(model=model)
-        case engines.glix_.InferenceMode.summarization:
-            model = gliner.multitask.GLiNERSummarizer(model=model)
-        case engines.glix_.InferenceMode.ner:
-            pass
-        case _:
-            raise ValueError
-
-    return engines.glix_.GliX(model=model, batch_size=-1)
-
-
-@pytest.fixture(scope="session")
-def glix_engine(request) -> engines.Engine:
-    assert isinstance(request.param, engines.glix_.InferenceMode)
-    return make_glix_engine(request.param)
+            return Engine(model=outlines.models.transformers(model_name), batch_size=batch_size)
 
 
 @pytest.fixture(scope="session")
@@ -98,7 +74,7 @@ def batch_engine(request) -> engines.Engine:
 
 
 @pytest.fixture(scope="session")
-def engine(request) -> engines.Engine:
+def engine(request) -> engines.InternalEngine:
     """Initializes engine without batching."""
     assert isinstance(request.param, engines.EngineType)
     return _make_engine(engine_type=request.param, batch_size=1)
@@ -112,6 +88,17 @@ def dummy_docs() -> list[Doc]:
 @pytest.fixture(scope="session")
 def translation_docs() -> list[Doc]:
     return [Doc(text="It is rainy today."), Doc(text="It is cloudy today.")]
+
+
+@pytest.fixture(scope="session")
+def sentiment_analysis_docs() -> list[Doc]:
+    return [
+        Doc(
+            text="Beautiful dishes, haven't eaten so well in a long time. Overall pretty good, if you can ignore the "
+            "annoying waiters."
+        ),
+        Doc(text="Horrible place. Service is unfriendly, food overpriced and bland. Do not go."),
+    ]
 
 
 @pytest.fixture(scope="session")
@@ -184,4 +171,12 @@ def information_extraction_docs() -> list[Doc]:
     return [
         Doc(text="Mahatma Ghandi lived to 79 years old. Bugs Bunny is at least 85 years old."),
         Doc(text="Marie Curie passed away at the age of 67 years. Marie Curie was 67 years old."),
+    ]
+
+
+@pytest.fixture(scope="session")
+def pii_masking_docs() -> list[Doc]:
+    return [
+        Doc(text="Her SSN is 222-333-444. Her credit card number is 1234 5678."),
+        Doc(text="You can reach Michael at michael.michaels@gmail.com."),
     ]

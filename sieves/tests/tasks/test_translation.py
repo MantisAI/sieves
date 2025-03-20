@@ -15,12 +15,12 @@ from sieves.tasks.predictive import translation
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(translation_docs, batch_engine, fewshot) -> None:
     fewshot_examples = [
-        translation.TaskFewshotExample(
+        translation.FewshotExample(
             text="The sun is shining today.",
             to="Spanish",
             translation="El sol brilla hoy.",
         ),
-        translation.TaskFewshotExample(
+        translation.FewshotExample(
             text="There's a lot of fog today",
             to="Spanish",
             translation="Hay mucha niebla hoy.",
@@ -72,11 +72,11 @@ def test_serialization(translation_docs, batch_engine) -> None:
                     "engine": {
                         "is_placeholder": False,
                         "value": {
-                            "cls_name": "sieves.engines.dspy_.DSPy",
+                            "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
-                            "version": "0.6.0",
+                            "version": "0.8.0",
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -86,11 +86,11 @@ def test_serialization(translation_docs, batch_engine) -> None:
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Translation"},
                     "to": {"is_placeholder": False, "value": "Spanish"},
-                    "version": "0.6.0",
+                    "version": "0.8.0",
                 }
             ],
         },
-        "version": "0.6.0",
+        "version": "0.8.0",
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

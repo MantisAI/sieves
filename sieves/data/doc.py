@@ -20,13 +20,6 @@ class Doc:
         if self.chunks is None and self.text is not None:
             self.chunks = [self.text]
 
-    @property
-    def __str__(self) -> str:  # type: ignore[override]
-        """Returns document text.
-        :return str: Document text or empty string if no text.
-        """
-        return self.text if self.text else ""
-
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Doc):
             raise NotImplementedError

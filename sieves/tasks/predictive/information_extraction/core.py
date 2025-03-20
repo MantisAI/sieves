@@ -9,7 +9,6 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_
-from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
@@ -22,7 +21,6 @@ from sieves.tasks.predictive.information_extraction.bridges import (
 from sieves.tasks.utils import PydanticToHFDatasets
 
 _TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature
-_TaskInferenceMode: TypeAlias = outlines_.InferenceMode | dspy_.InferenceMode | ollama_.InferenceMode
 _TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
 _TaskBridge: TypeAlias = (
     DSPyInformationExtraction
@@ -33,7 +31,7 @@ _TaskBridge: TypeAlias = (
 )
 
 
-class TaskFewshotExample(pydantic.BaseModel):
+class FewshotExample(pydantic.BaseModel):
     text: str
     reasoning: str
     entities: list[pydantic.BaseModel]
@@ -43,13 +41,13 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
     def __init__(
         self,
         entity_type: type[pydantic.BaseModel],
-        engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode],
+        engine: Engine,
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = True,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
         """
         Initializes new PredictiveTask.
