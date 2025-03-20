@@ -41,7 +41,12 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         :param prompt_template: Custom prompt template.
         :param prompt_signature_desc: Custom prompt signature description.
         """
-        super().__init__(task_id=task_id, prompt_template=prompt_template, prompt_signature_desc=prompt_signature_desc)
+        super().__init__(
+            task_id=task_id,
+            prompt_template=prompt_template,
+            prompt_signature_desc=prompt_signature_desc,
+            overwrite=False,
+        )
         self._entities = entities
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
@@ -483,8 +488,8 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
 
                         if chunk_offsets and chunk_idx < len(chunk_offsets):
                             # Adjust positions based on chunk offset
-                            adjusted_start += chunk_offsets[chunk_idx]
-                            adjusted_end += chunk_offsets[chunk_idx]
+                            adjusted_start += chunk_offsets[chunk_idx] + 1
+                            adjusted_end += chunk_offsets[chunk_idx] + 1
 
                         entities_list.append(
                             Entity(
