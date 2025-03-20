@@ -29,6 +29,9 @@ dependencies = [
     "unstructured[all-docs]>=0.16,<1",
     "unstructured-inference>=0.8,<1",
     "instructor>=1,<2",
+    "marker-pdf[full]>=1.6.1",
+    "pytest>=8.3.4",
+    "langchain-anthropic>=0.3.7",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -55,7 +58,8 @@ test = [
     "tesseract>=0.1,<1",
     # For generating documentation.
     "mkdocstrings[python]>=0.27,<1",
-    "mkdocs-material>=9.6,<10"
+    "mkdocs-material>=9.6,<10",
+    "pre-commit>=4,<5"
 ]
 
 [tool.black]
