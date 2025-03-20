@@ -47,7 +47,7 @@ def test_serialization() -> None:
                 }
             ],
         },
-        "version": "0.7.0",
+        "version": "0.8.0",
     }
 
     # For deserialization, we need to provide the converter
