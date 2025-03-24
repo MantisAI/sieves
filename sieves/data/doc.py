@@ -24,7 +24,13 @@ class Doc:
         if self.chunks is None and self.text is not None:
             self.chunks = [self.text]
 
-    def _images_equal(self, im1: Image, im2: Image) -> bool:
+    @staticmethod
+    def _are_images_equal(im1: Image, im2: Image) -> bool:
+        """Check if two images are equal using PIL Image Channel operations."""
+        if im1 is None and im2 is None:
+            return True
+        if im1 is None or im2 is None:
+            return False
         if im1.size != im2.size or im1.mode != im2.mode:
             return False
         return ImageChops.difference(im1, im2).getbbox() is None
@@ -34,11 +40,15 @@ class Doc:
             raise NotImplementedError
         # Check if images are equal
         images_equal_check = False
-        if self.images is None or other.images is None:
+        if self.images is None and other.images is None:
             images_equal_check = True
+        elif self.images is None or other.images is None:
+            images_equal_check = False
         elif self.images is not None and other.images is not None:
             if len(self.images) == len(other.images):
-                images_equal_check = all(self._images_equal(im1, im2) for im1, im2 in zip(self.images, other.images))
+                images_equal_check = all(
+                    self._are_images_equal(im1, im2) for im1, im2 in zip(self.images, other.images)
+                )
             else:
                 images_equal_check = False
         return (
