@@ -4,6 +4,7 @@ from marker.converters.pdf import PdfConverter
 from marker.models import create_model_dict
 
 from sieves import Doc, Pipeline, tasks
+from sieves.serialization import Config
 
 
 def test_run() -> None:
@@ -31,6 +32,7 @@ def test_serialization() -> None:
     docs = list(pipe(resources))
 
     config = pipe.serialize()
+    version = Config.get_version()
     assert config.model_dump() == {
         "cls_name": "sieves.pipeline.core.Pipeline",
         "tasks": {
@@ -43,11 +45,11 @@ def test_serialization() -> None:
                     "include_meta": {"is_placeholder": False, "value": True},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Marker"},
-                    "version": "0.8.0",
+                    "version": version,
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": version,
     }
 
     # For deserialization, we need to provide the converter
