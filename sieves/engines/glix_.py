@@ -93,15 +93,8 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                 if len(batch) == 0:
                     break
                 if inference_mode == InferenceMode.ner:
-                    if len(batch) > 1:
-                        results = self._model.batch_predict_entities(
-                            texts=batch, labels=selected_params["entity_types"]
-                        )
-                        for result in results:
-                            yield result
-                    elif len(batch) == 1:
-                        result = self._model.predict_entities(text=batch[0], labels=selected_params["entity_types"])
-                        yield result
+                    results = self._model.batch_predict_entities(texts=batch, labels=selected_params["entity_types"])
+                    yield from results
                 else:
                     yield from self._model(batch, **(selected_params | self._inference_kwargs))
 
