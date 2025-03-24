@@ -168,19 +168,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                 result = doc.results[self._task_id]
                 entities: list[dict[str, Any]] = []
 
-                # Handle different result formats
-                if hasattr(result, "entities"):
-                    # Pydantic model format
-                    for entity in result.entities:
-                        entities.append(
-                            {
-                                "text": entity.text,
-                                "start": entity.start,
-                                "end": entity.end,
-                                "entity": entity.entity_type,
-                            }
-                        )
-                elif isinstance(result, list):
+                if isinstance(result, list):
                     # List format (could be list of dictionaries or other entities)
                     for entity in result:
                         if isinstance(entity, dict) and "text" in entity:
