@@ -26,7 +26,11 @@ class Doc:
 
     @staticmethod
     def _are_images_equal(im1: Image, im2: Image) -> bool:
-        """Check if two images are equal using PIL Image Channel operations."""
+        """Check if two images are equal using PIL Image Channel operations.
+        :param im1: First PIL image to compare.
+        :param im2: Second PIL image to compare.
+        :return: True if images are equal, False otherwise.
+        """
         if im1 is None and im2 is None:
             return True
         if im1 is None or im2 is None:
