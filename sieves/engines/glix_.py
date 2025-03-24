@@ -103,6 +103,6 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                         result = self._model.predict_entities(text=batch[0], labels=selected_params["entity_types"])
                         yield result
                 else:
-                    yield from self._model(batch, **{selected_params | self._inference_kwargs})
+                    yield from self._model(batch, **(selected_params | self._inference_kwargs))
 
         return execute
