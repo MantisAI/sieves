@@ -1,4 +1,5 @@
 import abc
+import re
 from collections.abc import Iterable
 from functools import cached_property
 from typing import Any, Literal, TypeVar
@@ -86,18 +87,9 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
             # First try to find the entity in the context
             if context and entity_text in context:
-                # Find all occurrences of the context in the document
-                # (in case there are multiple occurrences, which is rare but might happen)
-                context_positions: list[int] = []
-                pos = 0
-                while True:
-                    pos = doc_text_lower.find(context_lower, pos)
-                    # If the context is not found, break
-                    if pos == -1:
-                        break
-                    context_positions.append(pos)
-                    # Move past the current position to find the next occurrence
-                    pos += 1
+                # Find all occurrences of the context in the document using regex
+                matches = re.findall(re.escape(context_lower), doc_text_lower)
+                context_positions = [doc_text_lower.find(match) for match in matches]
 
                 # For each context position that was found (usually is just one), find the entity within that context
                 for context_start in context_positions:
