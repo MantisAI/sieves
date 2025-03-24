@@ -136,10 +136,6 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             # Get the original text from the document
             doc_text = doc.text if doc.text is not None else ""
 
-            # Handle result cases
-            if result is None:
-                # Skip if result is None
-                doc.results[self._task_id] = Entities(text=doc_text, entities=[])  # type: ignore
             if hasattr(result, "entities"):
                 # Process entities from result if available
                 entities_with_position = self._find_entity_positions(doc_text, result, entities_with_position)
@@ -209,7 +205,6 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
         results = list(results)
-
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
@@ -307,26 +302,22 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
-            # Skip if no results for this document
-            if not doc_results:
-                # Create instance with empty entities list
-                yield prediction_class(entities=[])
-            else:
-                # Combine all entities from all chunks
-                all_entities: list[dict[str, Any]] = []
 
-                # Process each chunk for this document
-                for chunk_result in doc_results:
-                    if not hasattr(chunk_result, "entities") or not chunk_result.entities:
-                        continue
+            # Combine all entities from all chunks
+            all_entities: list[dict[str, Any]] = []
 
-                    # Process entities in this chunk
-                    for entity in chunk_result.entities:
-                        # We just need to combine all entities from all chunks
-                        all_entities.append(entity)
+            # Process each chunk for this document
+            for chunk_result in doc_results:
+                if not hasattr(chunk_result, "entities") or not chunk_result.entities:
+                    continue
 
-                # Create a consolidated result for this document - instantiate the class with entities
-                yield prediction_class(entities=all_entities)
+                # Process entities in this chunk
+                for entity in chunk_result.entities:
+                    # We just need to combine all entities from all chunks
+                    all_entities.append(entity)
+
+            # Create a consolidated result for this document - instantiate the class with entities
+            yield prediction_class(entities=all_entities)
 
 
 class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
@@ -480,8 +471,8 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
 
                         if chunk_offsets and chunk_idx < len(chunk_offsets):
                             # Adjust positions based on chunk offset
-                            adjusted_start += chunk_offsets[chunk_idx] + 1
-                            adjusted_end += chunk_offsets[chunk_idx] + 1
+                            adjusted_start += chunk_offsets[chunk_idx]
+                            adjusted_end += chunk_offsets[chunk_idx]
 
                         entities_list.append(
                             Entity(
