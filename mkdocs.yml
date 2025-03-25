@@ -61,6 +61,7 @@ nav:
         - tasks/predictive/pii_masking.md
         - tasks/predictive/question_answering.md
         - tasks/predictive/translation.md
+        - tasks/predictive/ner.md
 
     - Engines:
         - engines/engine.md

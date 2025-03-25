@@ -19,7 +19,7 @@ Result: TypeAlias = list[dict[str, str | float]] | str
 class InferenceMode(enum.Enum):
     """Available inference modes."""
 
-    ner = gliner.multitask.GLiNERClassifier
+    ner = gliner.multitask.GLiNERDocREDEvaluator
     classification = gliner.multitask.GLiNERClassifier
     question_answering = gliner.multitask.GLiNERQuestionAnswerer
     information_extraction = gliner.multitask.GLiNEROpenExtractor
@@ -94,11 +94,11 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             while batch := [vals["text"] for vals in itertools.islice(values, batch_size)]:
                 if len(batch) == 0:
                     break
-                assert isinstance(selected_params, dict)
                 if inference_mode == InferenceMode.ner:
                     results = self._model.batch_predict_entities(texts=batch, labels=selected_params["entity_types"])
                     yield from results
                 else:
+                    assert isinstance(selected_params, dict)
                     yield from model(batch, **(selected_params | self._inference_kwargs))
 
         return execute
