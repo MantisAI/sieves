@@ -19,7 +19,7 @@ Result: TypeAlias = list[dict[str, str | float]] | str
 class InferenceMode(enum.Enum):
     """Available inference modes."""
 
-    ner = gliner.multitask.GLiNERDocREDEvaluator
+    ner = gliner.config.GLiNERConfig
     classification = gliner.multitask.GLiNERClassifier
     question_answering = gliner.multitask.GLiNERQuestionAnswerer
     information_extraction = gliner.multitask.GLiNEROpenExtractor
