@@ -63,6 +63,8 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         if inference_mode not in self._model_wrappers:
             self._model_wrappers[inference_mode] = inference_mode.value(model=self._model)
 
+        model = self._model_wrappers[inference_mode]
+
         # Overwrite prompt default template, if template specified. Note that this is a static prompt and GliX doesn't
         # do few-shotting, so we don't inject anything into the template.
         if prompt_template:
@@ -92,10 +94,11 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             while batch := [vals["text"] for vals in itertools.islice(values, batch_size)]:
                 if len(batch) == 0:
                     break
+                assert isinstance(selected_params, dict)
                 if inference_mode == InferenceMode.ner:
                     results = self._model.batch_predict_entities(texts=batch, labels=selected_params["entity_types"])
                     yield from results
                 else:
-                    yield from self._model(batch, **(selected_params | self._inference_kwargs))
+                    yield from model(batch, **(selected_params | self._inference_kwargs))
 
         return execute
