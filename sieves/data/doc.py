@@ -29,7 +29,7 @@ class Doc:
         """Check if two images are equal using PIL Image Channel operations.
         :param im1: First PIL image to compare.
         :param im2: Second PIL image to compare.
-        :return: True if images are equal, False otherwise.
+        :return bool: True if images are equal, False otherwise.
         """
         if im1 is None and im2 is None:
             return True

@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 from pathlib import Path
 
 from marker.converters.pdf import PdfConverter
