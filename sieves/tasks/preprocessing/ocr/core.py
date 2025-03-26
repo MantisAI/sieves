@@ -88,10 +88,10 @@ class OCR(Task):
             assert doc.uri, ValueError("Documents have to have a value for .uri.")
         try:
             result = self._task(docs)
-            return result
         except Exception as e:
             warnings.warn(f"Failed to process document {doc.uri}: {str(e)}")
-            return docs
+
+        return result
 
     @property
     def _state(self) -> dict[str, Any]:
