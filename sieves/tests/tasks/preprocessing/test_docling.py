@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from sieves import Doc, Pipeline, tasks
+from sieves.serialization import Config
 
 
 def test_run() -> None:
@@ -18,6 +19,7 @@ def test_serialization() -> None:
     docs = list(pipe(resources))
 
     config = pipe.serialize()
+    version = Config.get_version()
     assert config.model_dump() == {
         "cls_name": "sieves.pipeline.core.Pipeline",
         "tasks": {
@@ -25,16 +27,16 @@ def test_serialization() -> None:
             "value": [
                 {
                     "cls_name": "sieves.tasks.preprocessing.docling_.Docling",
-                    "doc_converter": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
+                    "model": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Docling"},
-                    "version": "0.8.0",
+                    "version": version,
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": version,
     }
 
-    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"doc_converter": None}])
+    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"model": None}])
     assert docs[0] == list(deserialized_pipeline(resources))[0]
