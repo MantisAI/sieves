@@ -51,6 +51,11 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         self._entities = entities
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
+        """Extract all values from doc instances that are to be injected into the prompts.
+        Overriding the default implementation to include the entity types in the extracted values.
+        :param docs: Docs to extract values from.
+        :return Iterable[dict[str, Any]]: All values from doc instances that are to be injected into the prompts
+        """
         return ({"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs)
 
     def _find_entity_positions(
@@ -158,7 +163,8 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @property
     def _prompt_signature_description(self) -> str | None:
         return """
-        A named entity recognition result that represents named entities from the provided text. For each entity found it includes:
+        A named entity recognition result that represents named entities from the provided text. 
+        For each entity found it includes:
         - exact text of the entity
         - a context string that contains the exact entity text along with a few surrounding words 
           (two or three surronding words). The context includes the entity text itself.
@@ -207,7 +213,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         results = list(results)
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0]:doc_offset[1]]
+            doc_results = results[doc_offset[0] : doc_offset[1]]
 
             # Combine all entities from all chunks
             all_entities: list[Entity] = []
