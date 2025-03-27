@@ -180,3 +180,11 @@ def pii_masking_docs() -> list[Doc]:
         Doc(text="Her SSN is 222-333-444. Her credit card number is 1234 5678."),
         Doc(text="You can reach Michael at michael.michaels@gmail.com."),
     ]
+
+
+@pytest.fixture(scope="session")
+def ner_docs() -> list[Doc]:
+    return [
+        Doc(text="John studied data science in Barcelona and lives with Jaume"),
+        Doc(text="Maria studied computer engineering in Madrid and works with Carlos"),
+    ]

@@ -126,7 +126,6 @@ class PredictiveTask(
             doc_chunks_values = [doc_values | {"text": chunk} for chunk in (doc.chunks or [doc.text])]
             docs_chunks_offsets.append((len(docs_chunks_values), len(docs_chunks_values) + len(doc_chunks_values)))
             docs_chunks_values.extend(doc_chunks_values)
-
         # 5. Execute prompts per chunk.
         results = list(executable(docs_chunks_values))
         assert len(results) == len(docs_chunks_values)
