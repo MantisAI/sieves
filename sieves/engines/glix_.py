@@ -95,8 +95,7 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                 if len(batch) == 0:
                     break
                 if inference_mode == InferenceMode.ner:
-                    results = self._model.batch_predict_entities(texts=batch, labels=selected_params["entity_types"])
-                    yield from results
+                    yield from self._model.batch_predict_entities(texts=batch, labels=selected_params["entity_types"])
                 else:
                     assert isinstance(selected_params, dict)
                     yield from model(batch, **(selected_params | self._inference_kwargs))
