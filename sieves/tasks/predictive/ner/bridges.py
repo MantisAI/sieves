@@ -207,7 +207,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         results = list(results)
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0] : doc_offset[1]]
+            doc_results = results[doc_offset[0]:doc_offset[1]]
 
             # Combine all entities from all chunks
             all_entities: list[Entity] = []
