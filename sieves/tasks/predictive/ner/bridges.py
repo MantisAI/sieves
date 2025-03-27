@@ -135,7 +135,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             entities_with_position: list[Entity] = []
 
             # Get the original text from the document
-            doc_text = doc.text if doc.text is not None else ""
+            doc_text = doc.text or ""
 
             if hasattr(result, "entities"):
                 # Process entities from result if available
