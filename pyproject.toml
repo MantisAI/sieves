@@ -23,7 +23,6 @@ dependencies = [
     "nltk>=3.9.1",
     "ollama>=0.4.7",
     "outlines>=0.1.14",
-    "pre-commit>=4.1.0",
     "pydantic>=2,<3",
     "pytest>=8.3.4",
     "scikit-learn>=1.6.1",
@@ -58,9 +57,10 @@ classifiers = [
 
 [project.optional-dependencies]
 utils = [
-    "tesseract>=0.1,<1"
+    "tesseract>=0.1,<1",
 ]
 test = [
+    "pre-commit>=4.1.0"
     "pytest>=7.4.3",
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.21.1",
