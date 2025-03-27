@@ -158,14 +158,13 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @property
     def _prompt_signature_description(self) -> str | None:
         return """
-        A named entity recognition signature that extracts named entities from the provided text. For each entity found:
-        - it extracts the exact text of the entity
-        - it includes a context string that contains the exact entity text along with a few surrounding words 
+        A named entity recognition result that represents named entities from the provided text. For each entity found it includes:
+        - exact text of the entity
+        - a context string that contains the exact entity text along with a few surrounding words 
           (two or three surronding words). The context includes the entity text itself.
-        - if the same entity appears multiple times in the text, it extracts each occurrence separately with its 
+        - if the same entity appears multiple times in the text, each occurrence is listed separately with its 
         own context
-        - it specifies the entity type from the provided list of entity types
-        Only extract entities of the specified types.
+        - the entity type from the provided list of entity types. Only entities of the specified types are included.
         """
 
     @cached_property
