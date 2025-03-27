@@ -123,6 +123,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                         entity_type=entity_type,
                     )
                     new_entities.append(new_entity)
+
         return new_entities
 
     def integrate(self, results: Iterable[_BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
