@@ -266,14 +266,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
 
     @property
     def _prompt_signature_description(self) -> str | None:
-        return """
-        A named entity recognition signature that extracts named entities from the provided text. For each entity found:
-        - it extracts the exact text of the entity
-        - it includes a context string that contains ONLY the entity and AT MOST 3 words before and 3 words 
-          after it. DO NOT include the entire text as context.
-        - it specifies the entity type from the provided list of entity types
-        Only extract entities of the specified types.
-        """
+        return ""
 
     @cached_property
     def _prompt_signature(self) -> type[pydantic.BaseModel]:
