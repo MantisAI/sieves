@@ -6,8 +6,7 @@ import unstructured.cleaners.core
 import unstructured.partition.auto
 
 from sieves import Doc, Pipeline, tasks
-
-#   - serialization: don't require task kwargs if default values exist
+from sieves.serialization import Config
 
 
 @pytest.mark.parametrize("to_chunk", [True, False])
@@ -61,11 +60,11 @@ def test_serialization() -> None:
                     "partition": {"is_placeholder": True, "value": "builtins.function"},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Unstructured"},
-                    "version": "0.8.0",
+                    "version": Config.get_version(),
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": Config.get_version(),
     }
 
     deserialized_pipeline = Pipeline.deserialize(

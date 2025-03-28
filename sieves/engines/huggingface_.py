@@ -65,8 +65,8 @@ class HuggingFace(InternalEngine[PromptSignature, Result, Model, InferenceMode])
                             break
 
                         yield from self._model(
-                            batch,
-                            prompt_signature,
+                            sequences=batch,
+                            candidate_labels=prompt_signature,
                             hypothesis_template=template,
                             multi_label=True,
                             **self._inference_kwargs,
