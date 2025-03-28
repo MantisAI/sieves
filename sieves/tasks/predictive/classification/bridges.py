@@ -57,9 +57,10 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
             else:
                 labels_with_descriptions.append(label)
 
+        label_desc_string = "\n\t\t\t".join(labels_with_descriptions)
         return f"""
         Here are some descriptions for those labels:
-            {'\n\t\t\t'.join(labels_with_descriptions)}
+            {label_desc_string}
         """
 
 
