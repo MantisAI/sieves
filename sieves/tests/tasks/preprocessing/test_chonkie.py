@@ -32,11 +32,11 @@ def test_serialization(tokenizer) -> None:
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Chonkie"},
-                    "version": Config.version,
+                    "version": Config.get_version(),
                 }
             ],
         },
-        "version": Config.version,
+        "version": Config.get_version(),
     }
 
     deserialized_pipeline = Pipeline.deserialize(

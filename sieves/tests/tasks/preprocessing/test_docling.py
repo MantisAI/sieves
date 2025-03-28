@@ -30,11 +30,11 @@ def test_serialization() -> None:
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Docling"},
-                    "version": Config.version,
+                    "version": Config.get_version(),
                 }
             ],
         },
-        "version": Config.version,
+        "version": Config.get_version(),
     }
 
     deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"doc_converter": None}])

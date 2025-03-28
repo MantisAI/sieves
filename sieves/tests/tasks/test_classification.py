@@ -120,7 +120,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                                 "value": "transformers.pipelines.zero_shot_classification."
                                 "ZeroShotClassificationPipeline",
                             },
-                            "version": Config.version,
+                            "version": Config.get_version(),
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -130,12 +130,12 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "classifier"},
-                    "version": Config.version,
+                    "version": Config.get_version(),
                     "label_descriptions": {"is_placeholder": False, "value": label_descriptions},
                 }
             ],
         },
-        "version": Config.version,
+        "version": Config.get_version(),
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

@@ -89,7 +89,7 @@ def test_serialization(information_extraction_docs, batch_engine) -> None:
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "sieves.engines.ollama_.Model"},
-                            "version": Config.version,
+                            "version": Config.get_version(),
                         },
                     },
                     "entity_type": {
@@ -102,11 +102,11 @@ def test_serialization(information_extraction_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "InformationExtraction"},
-                    "version": Config.version,
+                    "version": Config.get_version(),
                 }
             ],
         },
-        "version": Config.version,
+        "version": Config.get_version(),
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}, "entity_type": Person}])

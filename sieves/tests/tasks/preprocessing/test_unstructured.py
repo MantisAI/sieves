@@ -60,11 +60,11 @@ def test_serialization() -> None:
                     "partition": {"is_placeholder": True, "value": "builtins.function"},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Unstructured"},
-                    "version": Config.version,
+                    "version": Config.get_version(),
                 }
             ],
         },
-        "version": Config.version,
+        "version": Config.get_version(),
     }
 
     deserialized_pipeline = Pipeline.deserialize(
