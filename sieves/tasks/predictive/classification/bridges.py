@@ -16,13 +16,22 @@ _BridgeResult = TypeVar("_BridgeResult")
 
 
 class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
-    def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, labels: list[str]):
+    def __init__(
+        self,
+        task_id: str,
+        prompt_template: str | None,
+        prompt_signature_desc: str | None,
+        labels: list[str],
+        label_descriptions: dict[str, str] | None = None,
+    ):
         """
         Initializes InformationExtractionBridge.
+
         :param task_id: Task ID.
         :param prompt_template: Custom prompt template.
         :param prompt_signature_desc: Custom prompt signature description.
         :param labels: Labels to classify.
+        :param label_descriptions: Optional descriptions for each label.
         """
         super().__init__(
             task_id=task_id,
@@ -31,6 +40,21 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
             overwrite=False,
         )
         self._labels = labels
+        self._label_descriptions = label_descriptions or {}
+
+    def _get_label_descriptions(self) -> str:
+        """
+        Returns a string with the label descriptions.
+        :return: A string with the label descriptions.
+        """
+        labels_with_descriptions: list[str] = []
+        for label in self._labels:
+            if label in self._label_descriptions:
+                labels_with_descriptions.append(f"{label}: {self._label_descriptions[label]}\n")
+            else:
+                labels_with_descriptions.append(label)
+
+        return "Here are some descriptions for those labels: " + "\n\t".join(labels_with_descriptions)
 
 
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -40,12 +64,14 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
     @property
     def _prompt_signature_description(self) -> str | None:
-        return """
+        return f"""
         Multi-label classification of the provided text given the provided labels.
         For each label, provide the confidence with which you believe that the provided text should be assigned 
         this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
         opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
         add up to 1.
+
+        {self._get_label_descriptions()}
         """
 
     @cached_property
@@ -118,20 +144,21 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Result, huggingface_.InferenceMode]):
     @property
     def _prompt_template(self) -> str | None:
-        return """
-        This text is about {}.
-        {% if examples|length > 0 -%}
+        return f"""
+        This text is about {{}}.
+        {self._get_label_descriptions()}
+        {{% if examples|length > 0 -%}}
             Examples:
         ----------
-        {%- for example in examples %}
-        Text: "{{ example.text }}"
-        Reasoning: "{{ example.reasoning }}"
+        {{%- for example in examples %}}
+        <text>{{{{ example.text }}}}</text>
+        <reasoning>{{{{ example.reasoning }}}}</reasoning>
         Output: 
-        {% for l, s in example.confidence_per_label.items() %}    {{ l }}: {{ s }},
-        {% endfor -%}
-        {% endfor -%}
+        {{% for l, s in example.confidence_per_label.items() %}}    <label_score>{{{{ l }}}}: {{{{ s }}}}</label_score>
+        {{% endfor -%}}
+        {{% endfor -%}}
         ----------
-        {% endif -%}
+        {{% endif -%}}
         """
 
     @property
@@ -188,32 +215,36 @@ class PydanticBasedClassification(
     def _prompt_template(self) -> str | None:
         return f"""
         Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
+        {self._get_label_descriptions()}
         For each label, provide the confidence with which you believe that the provided text should be assigned
         this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
         opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision. 
 
         The output for two labels LABEL_1 and LABEL_2 should look like this:
-        Output:
-            Reasoning: REASONING
-            LABEL_1: CONFIDENCE_SCORE_1
-            LABEL_2: CONFIDENCE_SCORE_2
+        <output>
+            <reasoning>REASONING</reasoning>
+            <label_score>LABEL_1: CONFIDENCE_SCORE_1</label_score>
+            <label_score>LABEL_2: CONFIDENCE_SCORE_2</label_score>
+        </output>
 
         {{% if examples|length > 0 -%}}
             Examples:
             ----------
             {{%- for example in examples %}}
-                Text: "{{{{ example.text }}}}"
-                Output:
-                    Reasoning: "{{{{ example.reasoning }}}}" 
-                {{% for l, s in example.confidence_per_label.items() %}}    {{{{ l }}}}: {{{{ s }}}},
-                {{% endfor -%}}
+                <text>{{{{ example.text }}}}</text>
+                <output>
+                    <reasoning>{{{{ example.reasoning }}}}</reasoning>
+                    {{% for l, s in example.confidence_per_label.items() -%}}    
+                    <label_score>{{{{ l }}}}: {{{{ s }}}}</label_score>
+                    {{% endfor -%}}
+                </output>
             {{% endfor %}}
             ----------
         {{% endif -%}}
 
         ========
-        Text: {{{{ text }}}}
-        Output: 
+        <text>{{{{ text }}}}</text>
+        <output>
         """
 
     @property
