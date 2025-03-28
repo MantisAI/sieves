@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from sieves import Doc, Pipeline, tasks
+from sieves.serialization import Config
 
 
 def test_run() -> None:
@@ -29,11 +30,11 @@ def test_serialization() -> None:
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Docling"},
-                    "version": "0.8.0",
+                    "version": Config.version,
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": Config.version,
     }
 
     deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"doc_converter": None}])

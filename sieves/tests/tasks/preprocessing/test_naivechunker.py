@@ -3,6 +3,7 @@ import pytest
 
 from sieves import Pipeline, tasks
 from sieves.engines import EngineType
+from sieves.serialization import Config
 
 
 @pytest.mark.parametrize(
@@ -39,11 +40,11 @@ def test_serialization(dummy_docs) -> None:
                     "interval": {"is_placeholder": False, "value": 5},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "NaiveChunker"},
-                    "version": "0.8.0",
+                    "version": Config.version,
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": Config.version,
     }
 
     deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{}])

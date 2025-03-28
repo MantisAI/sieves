@@ -3,6 +3,7 @@ import pytest
 
 from sieves import Doc, Pipeline, tasks
 from sieves.engines import EngineType
+from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import pii_masking
 
@@ -76,7 +77,7 @@ def test_serialization(pii_masking_docs, batch_engine) -> None:
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "sieves.engines.ollama_.Model"},
-                            "version": "0.8.0",
+                            "version": Config.version,
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -87,11 +88,11 @@ def test_serialization(pii_masking_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "PIIMasking"},
-                    "version": "0.8.0",
+                    "version": Config.version,
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": Config.version,
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

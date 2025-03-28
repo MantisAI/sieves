@@ -5,6 +5,7 @@ import pytest
 
 from sieves import Doc, Pipeline, engines
 from sieves.engines import EngineType
+from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
 
@@ -119,7 +120,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                                 "value": "transformers.pipelines.zero_shot_classification."
                                 "ZeroShotClassificationPipeline",
                             },
-                            "version": "0.8.0",
+                            "version": Config.version,
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -129,12 +130,12 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "classifier"},
-                    "version": "0.8.0",
+                    "version": Config.version,
                     "label_descriptions": {"is_placeholder": False, "value": label_descriptions},
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": Config.version,
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

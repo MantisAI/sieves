@@ -50,11 +50,17 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         labels_with_descriptions: list[str] = []
         for label in self._labels:
             if label in self._label_descriptions:
-                labels_with_descriptions.append(f"{label}: {self._label_descriptions[label]}\n")
+                labels_with_descriptions.append(
+                    f"<label_description><label>{label}</label><description>"
+                    f"{self._label_descriptions[label]}</description></label_description>"
+                )
             else:
                 labels_with_descriptions.append(label)
 
-        return "Here are some descriptions for those labels: " + "\n\t".join(labels_with_descriptions)
+        return f"""
+        Here are some descriptions for those labels:
+            {'\n\t\t\t'.join(labels_with_descriptions)}
+        """
 
 
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -223,26 +229,26 @@ class PydanticBasedClassification(
         The output for two labels LABEL_1 and LABEL_2 should look like this:
         <output>
             <reasoning>REASONING</reasoning>
-            <label_score>LABEL_1: CONFIDENCE_SCORE_1</label_score>
-            <label_score>LABEL_2: CONFIDENCE_SCORE_2</label_score>
+            <label_score><label>LABEL_1</label><score>CONFIDENCE_SCORE_1</score></label_score>
+            <label_score><label>LABEL_2</label><score>CONFIDENCE_SCORE_2</score></label_score>
         </output>
 
         {{% if examples|length > 0 -%}}
             Examples:
-            ----------
+            <examples>
             {{%- for example in examples %}}
-                <text>{{{{ example.text }}}}</text>
-                <output>
-                    <reasoning>{{{{ example.reasoning }}}}</reasoning>
-                    {{% for l, s in example.confidence_per_label.items() -%}}    
-                    <label_score>{{{{ l }}}}: {{{{ s }}}}</label_score>
-                    {{% endfor -%}}
-                </output>
-            {{% endfor %}}
-            ----------
-        {{% endif -%}}
-
+                <example>
+                    <text>{{{{ example.text }}}}</text>
+                    <output>
+                        <reasoning>{{{{ example.reasoning }}}}</reasoning>
+                        {{%- for l, s in example.confidence_per_label.items() %}}    
+                        <label_score><label>{{{{ l }}}}</label><score>{{{{ s }}}}</score></label_score>{{% endfor %}}
+                    </output>
+                </example>
+            {{% endfor %}}</examples>
+        {{% endif %}}
         ========
+        
         <text>{{{{ text }}}}</text>
         <output>
         """
