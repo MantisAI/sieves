@@ -20,7 +20,7 @@ class EngineType(enum.Enum):
         """Returns all available engine types.
         :return tuple[EngineType, ...]: All available engine types.
         """
-        return tuple(engine_type for engine_type in EngineType if engine_type != EngineType.ollama)
+        return tuple(engine_type for engine_type in EngineType)
 
     @classmethod
     def get_engine_type(

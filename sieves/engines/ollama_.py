@@ -47,8 +47,9 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             strict_mode=strict_mode,
             batch_size=batch_size,
         )
+
         # Async client will be initialized for every prompt batch to sidestep an asyncio event loop issue.
-        self._client: ollama.AsyncClient | None = None
+        self._client = ollama.AsyncClient(host=self._model.host, **({"timeout": 30} | self._model.client_config))
 
     @property
     def inference_modes(self) -> type[InferenceMode]:
@@ -74,19 +75,25 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                 case InferenceMode.chat:
 
                     def generate(prompts: list[str]) -> Iterable[Result]:
-                        self._client = ollama.AsyncClient(host=self._model.host, **self._model.client_config)
-                        assert self._client
+                        responses: list[Any] | None = None
 
-                        calls = [
-                            self._client.chat(
-                                messages=[{"role": "user", "content": prompt}],
-                                model=self._model.name,
-                                format=prompt_signature.model_json_schema(),
-                                **self._inference_kwargs,
-                            )
-                            for prompt in prompts
-                        ]
-                        responses = asyncio.run(self._execute_async_calls(calls))
+                        while responses is None:
+                            calls = [
+                                self._client.chat(
+                                    messages=[{"role": "user", "content": prompt}],
+                                    model=self._model.name,
+                                    format=prompt_signature.model_json_schema(),
+                                    **self._inference_kwargs,
+                                )
+                                for prompt in prompts
+                            ]
+
+                            try:
+                                responses = asyncio.run(self._execute_async_calls(calls))
+                            except RuntimeError:
+                                self._client = ollama.AsyncClient(
+                                    host=self._model.host, **({"timeout": 30} | self._model.client_config)
+                                )
 
                         try:
                             for res in responses:
