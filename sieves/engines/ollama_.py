@@ -3,6 +3,7 @@ import enum
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
+import httpx
 import ollama
 import pydantic
 
@@ -13,6 +14,8 @@ class Model(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
     name: str
     host: str
+    max_retries: int = pydantic.Field(default=2)
+    timeout: int = pydantic.Field(default=60)
     client_config: dict[str, Any] = pydantic.Field(default_factory=dict)
 
 
@@ -70,12 +73,15 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             """Execute prompts with engine for given values.
             :param values: Values to inject into prompts.
             :return: Results for prompts. Results are None if corresponding prompt failed.
+            :raises: pydantic.ValidationError is response can't be parsed.
+            :raises: httpx.ReadTimeout if request times out.
             """
             match inference_mode:
                 case InferenceMode.chat:
 
                     def generate(prompts: list[str]) -> Iterable[Result]:
                         responses: list[Any] | None = None
+                        n_tries = 0
 
                         while responses is None:
                             calls = [
@@ -90,19 +96,25 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
                             try:
                                 responses = asyncio.run(self._execute_async_calls(calls))
-                            except RuntimeError:
-                                self._client = ollama.AsyncClient(
-                                    host=self._model.host, **({"timeout": 30} | self._model.client_config)
-                                )
 
-                        try:
-                            for res in responses:
-                                yield prompt_signature.model_validate_json(res.message.content)
-                        except pydantic.ValidationError as ex:
-                            raise pydantic.ValidationError(
-                                f"Encountered problem in parsing {cls_name} output. Double-check your prompts and "
-                                f"examples."
-                            ) from ex
+                                try:
+                                    for res in responses:
+                                        yield prompt_signature.model_validate_json(res.message.content)
+                                except pydantic.ValidationError as ex:
+                                    raise pydantic.ValidationError(
+                                        f"Encountered problem in parsing {cls_name} output. Double-check your "
+                                        f"prompts and examples."
+                                    ) from ex
+
+                            except (RuntimeError, httpx.ReadTimeout) as err:
+                                n_tries += 1
+                                if n_tries > self._model.max_retries:
+                                    raise err
+
+                                self._client = ollama.AsyncClient(
+                                    host=self._model.host,
+                                    **({"timeout": self._model.timeout} | self._model.client_config),
+                                )
 
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
