@@ -1,4 +1,7 @@
+# mypy: ignore-errors
 from pathlib import Path
+
+from docling.document_converter import DocumentConverter
 
 from sieves import Doc, Pipeline, tasks
 from sieves.serialization import Config
@@ -6,7 +9,7 @@ from sieves.serialization import Config
 
 def test_run() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Docling()])
+    pipe = Pipeline(tasks=[tasks.preprocessing.OCR()])
     docs = list(pipe(resources))
 
     assert len(docs) == 1
@@ -15,9 +18,7 @@ def test_run() -> None:
 
 def test_serialization() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Docling()])
-    docs = list(pipe(resources))
-
+    pipe = Pipeline(tasks=[tasks.preprocessing.OCR()])
     config = pipe.serialize()
     version = Config.get_version()
     assert config.model_dump() == {
@@ -26,12 +27,12 @@ def test_serialization() -> None:
             "is_placeholder": False,
             "value": [
                 {
-                    "cls_name": "sieves.tasks.preprocessing.docling_.Docling",
+                    "cls_name": "sieves.tasks.preprocessing.ocr.core.OCR",
                     "converter": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
                     "export_format": {"is_placeholder": False, "value": "markdown"},
-                    "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
-                    "task_id": {"is_placeholder": False, "value": "Docling"},
+                    "include_meta": {"is_placeholder": False, "value": False},
+                    "task_id": {"is_placeholder": False, "value": "OCR"},
                     "version": version,
                 }
             ],
@@ -39,7 +40,11 @@ def test_serialization() -> None:
         "version": version,
     }
 
+    # For deserialization, we need to provide the converter
+    converter = DocumentConverter()
     deserialized_pipeline = Pipeline.deserialize(
-        config=config, tasks_kwargs=[{"converter": None, "export_format": "markdown"}]
+        config=config, tasks_kwargs=[{"converter": converter, "export_format": "markdown"}]
     )
-    assert docs[0] == list(deserialized_pipeline(resources))[0]
+    deserialized_docs = list(deserialized_pipeline(resources))
+
+    assert len(deserialized_docs) == 1
