@@ -84,7 +84,7 @@ class OCR(Task):
         assert all(doc.uri for doc in docs), ValueError("Documents have to have a value for .uri.")
         result = self._task(docs)
 
-        return result
+        yield from result
 
     @property
     def _state(self) -> dict[str, Any]:
