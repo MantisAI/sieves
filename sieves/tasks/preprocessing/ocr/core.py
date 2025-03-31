@@ -40,9 +40,6 @@ class OCR(Task):
         """
         super().__init__(task_id=task_id, show_progress=show_progress, include_meta=include_meta)
         self._converter = converter
-        self._show_progress = show_progress
-        self._include_meta = include_meta
-        self._kwargs = kwargs
 
         print(self._kwargs)
         self._task = self._init_ocr_task()
