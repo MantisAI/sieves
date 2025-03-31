@@ -93,11 +93,11 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             # First try to find the entity in the context
             if context and entity_text in context:
                 # Find all occurrences of the context in the document using regex
-                matches = re.findall(re.escape(context_lower), doc_text_lower)
-                context_positions = [doc_text_lower.find(match) for match in matches]
+                context_positions = re.finditer(context_lower, doc_text_lower)
 
                 # For each context position that was found (usually is just one), find the entity within that context
-                for context_start in context_positions:
+                for match in context_positions:
+                    context_start = match.start()
                     entity_start_in_context = context_lower.find(entity_text_lower)
 
                     if entity_start_in_context >= 0:
@@ -441,13 +441,13 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
             doc_text = doc.text if doc.text is not None else ""
 
             # Get chunk information from the document
-            chunk_offsets: list[str] = []
+            chunk_offsets: list[int] = []
             if hasattr(doc, "chunks") and doc.chunks:
                 # Calculate beginning position of each chunk in the original text
                 current_offset = 0
                 for chunk in doc.chunks:
                     chunk_offsets.append(current_offset)
-                    current_offset += len(chunk)
+                    current_offset += len(chunk) + 1
 
             # Process entities in this document
             if result:
