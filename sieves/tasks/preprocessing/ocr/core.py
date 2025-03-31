@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
+import docling
 import docling.document_converter
+import marker
 from marker.converters.pdf import PdfConverter
 from marker.converters.table import TableConverter
 
@@ -24,7 +25,7 @@ class OCR(Task):
 
     def __init__(
         self,
-        converter: Converter = docling.document_converter.DocumentConverter,
+        converter: Converter = docling.document_converter.DocumentConverter(),
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = False,
@@ -40,37 +41,48 @@ class OCR(Task):
         """
         super().__init__(task_id=task_id, show_progress=show_progress, include_meta=include_meta)
         self._converter = converter
-
-        print(self._kwargs)
+        self._kwargs = kwargs
         self._task = self._init_ocr_task()
 
-    def _init_ocr_task(self) -> Converter:
+    def _init_ocr_task(self) -> Task:
         """
         Initialize the bridge for the specific OCR implementation.
         :return: OCR bridge implementation.
         """
         converter_type = type(self._converter)
-        module_task_map = {marker_: marker_.Marker, docling_: docling_.Docling}
-        for module, task_type in module_task_map.items():
-            try:
-                module_converter_types = module.Converter.__args__
-            except AttributeError:
-                module_converter_types = (module.Converter,)
-            if any(converter_type == module_converter_type for module_converter_type in module_converter_types):
-                ocr_task = task_type(
+        ocr_task: Task
+        match converter_type:
+            case marker.converters.pdf.PdfConverter:
+                ocr_task = marker_.Marker(
                     converter=self._converter,
                     task_id=self.id,
                     show_progress=self._show_progress,
                     include_meta=self._include_meta,
                     **self._kwargs,
                 )
-                assert isinstance(ocr_task, Task)
-                return ocr_task
-        else:
-            raise ValueError(
-                f"converter type {self._converter} is not supported. Please check the documentation and ensure you're "
-                f"providing a supported converter type."
-            )
+            case marker.converters.table.TableConverter:
+                ocr_task = marker_.Marker(
+                    converter=self._converter,
+                    task_id=self.id,
+                    show_progress=self._show_progress,
+                    include_meta=self._include_meta,
+                    **self._kwargs,
+                )
+            case docling.document_converter.DocumentConverter:
+                ocr_task = docling_.Docling(
+                    converter=self._converter,
+                    task_id=self.id,
+                    show_progress=self._show_progress,
+                    include_meta=self._include_meta,
+                    **self._kwargs,
+                )
+            case _:
+                raise ValueError(
+                    f"converter type {self._converter} is not supported. Please check the documentation "
+                    f"and ensure you're providing a supported converter type."
+                )
+        assert isinstance(ocr_task, Task)
+        return ocr_task
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """
