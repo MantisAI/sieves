@@ -1,6 +1,8 @@
 # mypy: ignore-errors
 from pathlib import Path
 
+from docling.document_converter import DocumentConverter
+
 from sieves import Doc, Pipeline, tasks
 from sieves.serialization import Config
 
@@ -15,6 +17,7 @@ def test_run() -> None:
 
 
 def test_serialization() -> None:
+    resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
     pipe = Pipeline(tasks=[tasks.preprocessing.OCR()])
     config = pipe.serialize()
     version = Config.get_version()
@@ -35,3 +38,10 @@ def test_serialization() -> None:
         },
         "version": version,
     }
+
+    # For deserialization, we need to provide the converter
+    converter = DocumentConverter()
+    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"converter": converter}])
+    deserialized_docs = list(deserialized_pipeline(resources))
+
+    assert len(deserialized_docs) == 1
