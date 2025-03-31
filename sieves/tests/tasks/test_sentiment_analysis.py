@@ -3,6 +3,7 @@ import pytest
 
 from sieves import Doc, Pipeline
 from sieves.engines import EngineType
+from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import sentiment_analysis
 
@@ -95,7 +96,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "outlines.models.transformers.Transformers"},
-                            "version": "0.8.0",
+                            "version": Config.get_version(),
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
@@ -104,11 +105,11 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "sentiment_analysis"},
-                    "version": "0.8.0",
+                    "version": Config.get_version(),
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": Config.get_version(),
     }
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])

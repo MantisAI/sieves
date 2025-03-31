@@ -25,7 +25,12 @@ def test_serialization_pipeline(dummy_docs, batch_engine, tokenizer):
     pipe = Pipeline(
         [
             preprocessing.Chonkie(chonkie.TokenChunker(tokenizer)),
-            classification.Classification(task_id="classifier", labels=["science", "politics"], engine=batch_engine),
+            classification.Classification(
+                task_id="classifier",
+                labels=["science", "politics"],
+                label_descriptions={"science": "Everything about science.", "politics": "Everything about politics."},
+                engine=batch_engine,
+            ),
         ]
     )
 
@@ -61,6 +66,10 @@ def test_serialization_pipeline(dummy_docs, batch_engine, tokenizer):
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
                     "include_meta": {"is_placeholder": False, "value": True},
                     "labels": {"is_placeholder": False, "value": ["science", "politics"]},
+                    "label_descriptions": {
+                        "is_placeholder": False,
+                        "value": {"science": "Everything about science.", "politics": "Everything about politics."},
+                    },
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
                     "show_progress": {"is_placeholder": False, "value": True},

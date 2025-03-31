@@ -2,6 +2,7 @@
 import chonkie
 
 from sieves import Doc, Pipeline, tasks
+from sieves.serialization import Config
 
 
 def test_chonkie(tokenizer) -> None:
@@ -31,11 +32,11 @@ def test_serialization(tokenizer) -> None:
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Chonkie"},
-                    "version": "0.8.0",
+                    "version": Config.get_version(),
                 }
             ],
         },
-        "version": "0.8.0",
+        "version": Config.get_version(),
     }
 
     deserialized_pipeline = Pipeline.deserialize(
