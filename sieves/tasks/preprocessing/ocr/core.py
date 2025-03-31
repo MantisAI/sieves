@@ -52,15 +52,9 @@ class OCR(Task):
         converter_type = type(self._converter)
         ocr_task: Task
         match converter_type:
-            case marker.converters.pdf.PdfConverter:
-                ocr_task = marker_.Marker(
-                    converter=self._converter,
-                    task_id=self.id,
-                    show_progress=self._show_progress,
-                    include_meta=self._include_meta,
-                    **self._kwargs,
-                )
-            case marker.converters.table.TableConverter:
+            case converter if issubclass(
+                converter, (marker.converters.pdf.PdfConverter | marker.converters.table.TableConverter)
+            ):
                 ocr_task = marker_.Marker(
                     converter=self._converter,
                     task_id=self.id,
