@@ -82,10 +82,7 @@ class OCR(Task):
         result: Iterable[Doc] = []
         # Validate docs
         assert all(doc.uri for doc in docs), ValueError("Documents have to have a value for .uri.")
-        try:
-            result = self._task(docs)
-        except Exception as e:
-            warnings.warn(f"Failed to process document {doc.uri}: {str(e)}")
+        result = self._task(docs)
 
         return result
 
