@@ -441,7 +441,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
             doc_text = doc.text if doc.text is not None else ""
 
             # Get chunk information from the document
-            chunk_offsets = []
+            chunk_offsets: list[str] = []
             if hasattr(doc, "chunks") and doc.chunks:
                 # Calculate beginning position of each chunk in the original text
                 current_offset = 0
