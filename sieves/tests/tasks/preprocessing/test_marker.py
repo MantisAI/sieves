@@ -10,7 +10,7 @@ from sieves.serialization import Config
 
 def test_run() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(model=PdfConverter(artifact_dict=create_model_dict()))])
+    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(converter=PdfConverter(artifact_dict=create_model_dict()))])
     docs = list(pipe(resources))
 
     assert len(docs) == 1
@@ -22,7 +22,7 @@ def test_with_extract_images() -> None:
     pipe = Pipeline(
         tasks=[
             tasks.preprocessing.Marker(
-                model=PdfConverter(artifact_dict=create_model_dict()), extract_images=True, include_meta=True
+                converter=PdfConverter(artifact_dict=create_model_dict()), extract_images=True, include_meta=True
             )
         ]
     )
@@ -36,7 +36,7 @@ def test_with_extract_images() -> None:
 def test_serialization() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
     pipe = Pipeline(
-        tasks=[tasks.preprocessing.Marker(model=PdfConverter(artifact_dict=create_model_dict()), include_meta=True)]
+        tasks=[tasks.preprocessing.Marker(converter=PdfConverter(artifact_dict=create_model_dict()), include_meta=True)]
     )
     docs = list(pipe(resources))
 
@@ -49,7 +49,7 @@ def test_serialization() -> None:
             "value": [
                 {
                     "cls_name": "sieves.tasks.preprocessing.marker_.Marker",
-                    "model": {"is_placeholder": True, "value": "marker.converters.pdf.PdfConverter"},
+                    "converter": {"is_placeholder": True, "value": "marker.converters.pdf.PdfConverter"},
                     "extract_images": {"is_placeholder": False, "value": False},
                     "include_meta": {"is_placeholder": False, "value": True},
                     "show_progress": {"is_placeholder": False, "value": True},
@@ -63,7 +63,7 @@ def test_serialization() -> None:
 
     # For deserialization, we need to provide the converter
     converter = PdfConverter(artifact_dict=create_model_dict())
-    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"model": converter}])
+    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"converter": converter}])
     deserialized_docs = list(deserialized_pipeline(resources))
 
     assert len(deserialized_docs) == 1

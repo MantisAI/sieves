@@ -27,7 +27,7 @@ def test_serialization() -> None:
             "value": [
                 {
                     "cls_name": "sieves.tasks.preprocessing.docling_.Docling",
-                    "model": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
+                    "converter": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Docling"},
@@ -38,5 +38,5 @@ def test_serialization() -> None:
         "version": version,
     }
 
-    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"model": None}])
+    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"converter": None}])
     assert docs[0] == list(deserialized_pipeline(resources))[0]
