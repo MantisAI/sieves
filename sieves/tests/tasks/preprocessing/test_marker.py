@@ -50,6 +50,7 @@ def test_serialization() -> None:
                 {
                     "cls_name": "sieves.tasks.preprocessing.marker_.Marker",
                     "converter": {"is_placeholder": True, "value": "marker.converters.pdf.PdfConverter"},
+                    "export_format": {"is_placeholder": False, "value": "markdown"},
                     "extract_images": {"is_placeholder": False, "value": False},
                     "include_meta": {"is_placeholder": False, "value": True},
                     "show_progress": {"is_placeholder": False, "value": True},
@@ -63,7 +64,9 @@ def test_serialization() -> None:
 
     # For deserialization, we need to provide the converter
     converter = PdfConverter(artifact_dict=create_model_dict())
-    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"converter": converter}])
+    deserialized_pipeline = Pipeline.deserialize(
+        config=config, tasks_kwargs=[{"converter": converter, "export_format": "markdown"}]
+    )
     deserialized_docs = list(deserialized_pipeline(resources))
 
     assert len(deserialized_docs) == 1

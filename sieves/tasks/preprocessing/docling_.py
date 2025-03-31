@@ -19,6 +19,7 @@ class Docling(Task):
     def __init__(
         self,
         converter: docling.document_converter.DocumentConverter = None,
+        export_format: str = "markdown",
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = False,
@@ -31,6 +32,7 @@ class Docling(Task):
         """
         super().__init__(task_id=task_id, show_progress=show_progress, include_meta=include_meta)
         self._converter = converter if converter else docling.document_converter.DocumentConverter()
+        self._export_format = export_format
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Parse resources using docling.
@@ -67,7 +69,12 @@ class Docling(Task):
             try:
                 if self._include_meta:
                     doc.meta |= {self.id: parsed_resource}
-                doc.text = parsed_resource.document.export_to_markdown()
+                if self._export_format == "markdown":
+                    doc.text = parsed_resource.document.export_to_markdown()
+                elif self._export_format == "html":
+                    doc.text = parsed_resource.document.export_to_html()
+                elif self._export_format == "json":
+                    doc.text = parsed_resource.document.export_to_dict()
             except Exception as e:
                 logger.error(f"Failed to parse file {doc.uri}: {str(e)}")
                 continue
@@ -79,4 +86,5 @@ class Docling(Task):
         return {
             **super()._state,
             "converter": self._converter,
+            "export_format": self._export_format,
         }

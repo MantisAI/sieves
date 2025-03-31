@@ -26,6 +26,7 @@ class OCR(Task):
     def __init__(
         self,
         converter: Converter = docling.document_converter.DocumentConverter(),
+        export_format: str = "markdown",
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = False,
@@ -40,6 +41,7 @@ class OCR(Task):
         :param kwargs: Additional arguments for specific OCR implementations.
         """
         super().__init__(task_id=task_id, show_progress=show_progress, include_meta=include_meta)
+        self._export_format = export_format
         self._converter = converter
         self._kwargs = kwargs
         self._task = self._init_ocr_task()
@@ -57,6 +59,7 @@ class OCR(Task):
             ):
                 ocr_task = marker_.Marker(
                     converter=self._converter,
+                    export_format=self._export_format,
                     task_id=self.id,
                     show_progress=self._show_progress,
                     include_meta=self._include_meta,
@@ -65,6 +68,7 @@ class OCR(Task):
             case docling.document_converter.DocumentConverter:
                 ocr_task = docling_.Docling(
                     converter=self._converter,
+                    export_format=self._export_format,
                     task_id=self.id,
                     show_progress=self._show_progress,
                     include_meta=self._include_meta,
@@ -101,6 +105,7 @@ class OCR(Task):
         return {
             **super()._state,
             "converter": self._converter,
+            "export_format": self._export_format,
             **self._kwargs,
         }
 

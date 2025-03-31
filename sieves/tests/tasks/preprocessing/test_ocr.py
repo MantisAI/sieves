@@ -29,6 +29,7 @@ def test_serialization() -> None:
                 {
                     "cls_name": "sieves.tasks.preprocessing.ocr.core.OCR",
                     "converter": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
+                    "export_format": {"is_placeholder": False, "value": "markdown"},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "include_meta": {"is_placeholder": False, "value": False},
                     "task_id": {"is_placeholder": False, "value": "OCR"},
@@ -41,7 +42,9 @@ def test_serialization() -> None:
 
     # For deserialization, we need to provide the converter
     converter = DocumentConverter()
-    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"converter": converter}])
+    deserialized_pipeline = Pipeline.deserialize(
+        config=config, tasks_kwargs=[{"converter": converter, "export_format": "markdown"}]
+    )
     deserialized_docs = list(deserialized_pipeline(resources))
 
     assert len(deserialized_docs) == 1
