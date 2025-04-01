@@ -22,6 +22,21 @@ class Entity(pydantic.BaseModel):
     end: int | None
     entity_type: str
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Entity):
+            return False
+        # Two entities are equal if they have the same start, end, text and entity_type
+        return (
+            self.start == other.start
+            and self.end == other.end
+            and self.text == other.text
+            and self.entity_type == other.entity_type
+        )
+
+    def __hash__(self) -> int:
+        # Implement hash to make Entity objects usable in sets and as dict keys
+        return hash((self.start, self.end, self.text, self.entity_type))
+
 
 class Entities(pydantic.BaseModel):
     entities: list[Entity]
@@ -73,6 +88,8 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         """
         doc_text_lower = doc_text.lower()
 
+        # Track entities by position to avoid duplicates
+        entities_by_position = {}
         context_list: list[str] = []
 
         entities_list = getattr(result, "entities", [])
@@ -111,7 +128,12 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
                         # Create a new entity with start/end indices
                         new_entity = Entity(text=doc_text[start:end], start=start, end=end, entity_type=entity_type)
-                        new_entities.append(new_entity)
+
+                        # Only add if this exact position hasn't been filled yet
+                        position_key = (start, end)
+                        if position_key not in entities_by_position:
+                            entities_by_position[position_key] = new_entity
+                            new_entities.append(new_entity)
             else:
                 # If context approach fails, find all occurrences of the entity directly
                 entity_positions: list[int] = []
@@ -132,7 +154,12 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                         end=end,
                         entity_type=entity_type,
                     )
-                    new_entities.append(new_entity)
+
+                    # Only add if this exact position hasn't been filled yet
+                    position_key = (start, end)
+                    if position_key not in entities_by_position:
+                        entities_by_position[position_key] = new_entity
+                        new_entities.append(new_entity)
         # Sort entities by start position, handling None values
         sorted_entities: list[Entity] = sorted(
             new_entities, key=lambda x: (x.start is None, x.start if x.start is not None else 0)
@@ -149,6 +176,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
             # Get the original text from the document
             doc_text = doc.text or ""
+            print(f"Results----> {result}")
             if hasattr(result, "entities"):
                 # Process entities from result if available
                 entities_with_position = self._find_entity_positions(doc_text, result, entities_with_position)
