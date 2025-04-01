@@ -113,7 +113,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             else:
                 continue
             # Find all occurrences of the context in the document using regex
-            context_positions = re.finditer(context_lower, doc_text_lower)
+            context_positions = re.finditer(re.escape(context_lower), doc_text_lower)
 
             # For each context position that was found (usually is just one), find the entity within that context
             for match in context_positions:
