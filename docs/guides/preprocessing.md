@@ -7,15 +7,40 @@
 
 ## Document Parsing
 
-### Using Docling
+### Using OCR
 
-The `Docling` task uses the [docling](https://github.com/DS4SD/docling) library to parse various document formats:
+The `OCR` task uses the [docling](https://github.com/DS4SD/docling) or alternatively the [marker](https://github.com/VikParuchuri/marker) libraries to parse various document formats:
 
 ```python
 from sieves import Pipeline, tasks, Doc
 
 # Create a document parser
-parser = tasks.preprocessing.Docling()
+parser = tasks.preprocessing.OCR()
+
+# Create a pipeline with the parser
+pipeline = Pipeline([parser])
+
+# Process documents
+docs = [
+    Doc(uri="path/to/document.pdf"),
+    Doc(uri="path/to/another.docx")
+]
+processed_docs = list(pipeline(docs))
+
+# Access the parsed text
+for doc in processed_docs:
+    print(doc.text)
+```
+
+It is possible to choose a specific output format between the supported (Markdown, HTML, JSON) and pass custom Docling or Marker converters in the `converter` parameter:
+
+```python
+from sieves import Pipeline, tasks, Doc
+
+from docling.document_converter import DocumentConverter
+
+# Create a document parser
+parser = tasks.preprocessing.OCR(converter=DocumentConverter(), export_format="html")
 
 # Create a pipeline with the parser
 pipeline = Pipeline([parser])
@@ -104,8 +129,7 @@ for chunk in chunked_docs[0].chunks:
 
 ## Combining Preprocessing Tasks
 
-You can combine multiple preprocessing tasks in a pipeline. Here's an example that parses a PDF using Docling and then 
-chunks it with Chonkie:
+You can combine multiple preprocessing tasks in a pipeline. Here's an example that parses a PDF using the OCR task (using Docling as default) and then chunks it with Chonkie:
 
 ```python
 from sieves import Pipeline, tasks, Doc
@@ -113,7 +137,7 @@ import chonkie
 import tokenizers
 
 # Create the preprocessing tasks
-parser = tasks.preprocessing.Docling()
+parser = tasks.preprocessing.OCR()
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
 chunker = tasks.preprocessing.Chonkie(
     chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
@@ -139,8 +163,8 @@ for i, chunk in enumerate(processed_doc.chunks):
 All preprocessing tasks support progress bars. You can enable/disable them:
 
 ```python
-parser = tasks.preprocessing.Docling(show_progress=True)
-chunker = tasks.preprocessing.Chunker(
+parser = tasks.preprocessing.OCR(show_progress=True)
+chunker = tasks.preprocessing.Chonkie(
     chunker=chonkie.TokenChunker(tokenizer),
     show_progress=True
 )
@@ -151,13 +175,13 @@ chunker = tasks.preprocessing.Chunker(
 Tasks can include metadata about their processing. Enable this with `include_meta`:
 
 ```python
-parser = tasks.preprocessing.Docling(include_meta=True)
+parser = tasks.preprocessing.OCR(include_meta=True)
 ```
 
 Access the metadata in the document's `meta` field:
 ```python
 doc = processed_docs[0]
-print(doc.meta["Docling"])  # Access parser metadata
+print(doc.meta["OCR"])  # Access parser metadata
 print(doc.meta["Chunker"])  # Access chunker metadata
 ```
 
