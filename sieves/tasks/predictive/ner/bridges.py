@@ -73,6 +73,8 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         """
         doc_text_lower = doc_text.lower()
 
+        context_list: list[str] = []
+
         entities_list = getattr(result, "entities", [])
         for entity_with_context in entities_list:
             # Skip if there is no entity
@@ -89,7 +91,10 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
             entity_text_lower = entity_text.lower()
             context_lower = context.lower() if context else ""
-
+            if context_lower not in context_list:
+                context_list.append(context_lower)
+            else:
+                continue
             # First try to find the entity in the context
             if context and entity_text in context:
                 # Find all occurrences of the context in the document using regex
@@ -122,14 +127,14 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                 for start in entity_positions:
                     end = start + len(entity_text)
                     new_entity = Entity(
-                        text=doc_text[start:end],  # Use the exact text from the document
+                        text=doc_text[start:end],
                         start=start,
                         end=end,
                         entity_type=entity_type,
                     )
                     new_entities.append(new_entity)
-
-        return new_entities
+        sorted_entities: list[Entity] = sorted(new_entities, key=lambda x: x.start if x.start is not None else -1)
+        return sorted_entities
 
     def integrate(self, results: Iterable[_BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         docs_list = list(docs)
@@ -141,7 +146,6 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
             # Get the original text from the document
             doc_text = doc.text or ""
-
             if hasattr(result, "entities"):
                 # Process entities from result if available
                 entities_with_position = self._find_entity_positions(doc_text, result, entities_with_position)
