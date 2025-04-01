@@ -112,33 +112,31 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                 context_list.append(context_lower)
             else:
                 continue
-            # First try to find the entity in the context
-            if context and entity_text in context:
-                # Find all occurrences of the context in the document using regex
-                context_positions = re.finditer(context_lower, doc_text_lower)
+            # Find all occurrences of the context in the document using regex
+            context_positions = re.finditer(context_lower, doc_text_lower)
 
-                # For each context position that was found (usually is just one), find the entity within that context
-                for match in context_positions:
-                    context_start = match.start()
-                    entity_start_in_context = context_lower.find(entity_text_lower)
+            # For each context position that was found (usually is just one), find the entity within that context
+            for match in context_positions:
+                context_start = match.start()
+                entity_start_in_context = context_lower.find(entity_text_lower)
 
-                    if entity_start_in_context >= 0:
-                        start = context_start + entity_start_in_context
-                        end = start + len(entity_text)
+                if entity_start_in_context >= 0:
+                    start = context_start + entity_start_in_context
+                    end = start + len(entity_text)
 
-                        # Create a new entity with start/end indices
-                        new_entity = Entity(
-                            text=doc_text[start:end],
-                            start=start,
-                            end=end,
-                            entity_type=entity_type,
-                        )
+                    # Create a new entity with start/end indices
+                    new_entity = Entity(
+                        text=doc_text[start:end],
+                        start=start,
+                        end=end,
+                        entity_type=entity_type,
+                    )
 
-                        # Only add if this exact position hasn't been filled yet
-                        position_key = (start, end)
-                        if position_key not in entities_by_position:
-                            entities_by_position[position_key] = new_entity
-                            new_entities.append(new_entity)
+                    # Only add if this exact position hasn't been filled yet
+                    position_key = (start, end)
+                    if position_key not in entities_by_position:
+                        entities_by_position[position_key] = new_entity
+                        new_entities.append(new_entity)
         # Sort entities by start position, handling None values
         sorted_entities: list[Entity] = sorted(
             new_entities, key=lambda x: (x.start is None, x.start if x.start is not None else 0)
