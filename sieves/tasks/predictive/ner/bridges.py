@@ -127,39 +127,18 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                         end = start + len(entity_text)
 
                         # Create a new entity with start/end indices
-                        new_entity = Entity(text=doc_text[start:end], start=start, end=end, entity_type=entity_type)
+                        new_entity = Entity(
+                            text=doc_text[start:end],
+                            start=start,
+                            end=end,
+                            entity_type=entity_type,
+                        )
 
                         # Only add if this exact position hasn't been filled yet
                         position_key = (start, end)
                         if position_key not in entities_by_position:
                             entities_by_position[position_key] = new_entity
                             new_entities.append(new_entity)
-            else:
-                # If context approach fails, find all occurrences of the entity directly
-                entity_positions: list[int] = []
-                pos = 0
-                while True:
-                    pos = doc_text_lower.find(entity_text_lower, pos)
-                    if pos == -1:
-                        break
-                    entity_positions.append(pos)
-                    pos += 1  # Move past the current position to find the next occurrence
-
-                # Create entities for each occurrence
-                for start in entity_positions:
-                    end = start + len(entity_text)
-                    new_entity = Entity(
-                        text=doc_text[start:end],
-                        start=start,
-                        end=end,
-                        entity_type=entity_type,
-                    )
-
-                    # Only add if this exact position hasn't been filled yet
-                    position_key = (start, end)
-                    if position_key not in entities_by_position:
-                        entities_by_position[position_key] = new_entity
-                        new_entities.append(new_entity)
         # Sort entities by start position, handling None values
         sorted_entities: list[Entity] = sorted(
             new_entities, key=lambda x: (x.start is None, x.start if x.start is not None else 0)
