@@ -140,9 +140,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                         entities_by_position[position_key] = new_entity
                         new_entities.append(new_entity)
         # Sort entities by start position, handling None values
-        sorted_entities: list[Entity] = sorted(
-            new_entities, key=lambda x: (x.start is None, x.start if x.start is not None else 0)
-        )
+        sorted_entities: list[Entity] = sorted(new_entities, key=lambda x: (x.start))  # type: ignore[arg-type, return-value]
         return sorted_entities
 
     def integrate(self, results: Iterable[_BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
