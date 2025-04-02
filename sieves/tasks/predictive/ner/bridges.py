@@ -89,7 +89,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         doc_text_lower = doc_text.lower()
 
         # Track entities by position to avoid duplicates
-        entities_by_position = {}
+        entities_by_position: dict[tuple[int, int], Entity] = {}
         context_list: list[str] = []
 
         entities_list = getattr(result, "entities", [])
@@ -108,6 +108,8 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
             entity_text_lower = entity_text.lower()
             context_lower = context.lower() if context else ""
+            # Create a list of the unique contexts
+            # Avoid adding duplicates as entities witht he same context would be captured twice
             if context_lower not in context_list:
                 context_list.append(context_lower)
             else:
