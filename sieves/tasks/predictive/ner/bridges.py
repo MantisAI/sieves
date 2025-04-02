@@ -155,7 +155,6 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
             # Get the original text from the document
             doc_text = doc.text or ""
-            print(f"Results----> {result}")
             if hasattr(result, "entities"):
                 # Process entities from result if available
                 entities_with_position = self._find_entity_positions(doc_text, result, entities_with_position)
