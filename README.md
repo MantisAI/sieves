@@ -64,7 +64,7 @@ build modern NLP applications. It provides:
   - [`transformer`](https://github.com/huggingface/transformers)
 - :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
 - :hammer_and_wrench: **Integrated Tools:** 
-  - Document parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/)
+  - Document parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/), [`marker`](https://github.com/VikParuchuri/marker)
   - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
 - :label: **Ready-to-Use Tasks:**
   - Multi-label classification
@@ -135,7 +135,7 @@ chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
 pipe = Pipeline(
     [
         # 4. Add document parsing task.
-        tasks.Docling(),
+        tasks.OCR(export_format="markdown"),
         # 5. Add chunking task to ensure we don't exceed our model's context window.
         tasks.Chonkie(chunker),
         # 6. Add classification task to pipeline.

@@ -6,6 +6,7 @@ import typing
 
 import chonkie
 import datasets
+import docling.document_converter
 import dspy
 import pydantic
 import pytest
@@ -75,7 +76,7 @@ def test_run_readme_example_long(batch_engine, tokenizer):
     pipe = Pipeline(
         [
             # Add document parsing task.
-            tasks.preprocessing.Docling(),
+            tasks.preprocessing.OCR(),
             # Add chunking task to ensure we don't exceed our model's context window.
             tasks.preprocessing.Chonkie(chonkie.TokenChunker(tokenizer)),
             # Run classification on provided document.
@@ -98,7 +99,7 @@ def test_run_readme_example_long(batch_engine, tokenizer):
             loaded_pipe = Pipeline.load(
                 tmp_pipeline_file.name,
                 (
-                    {"model": None},
+                    {"converter": docling.document_converter.DocumentConverter()},
                     {"chunker": chonkie.TokenChunker(tokenizer)},
                     {"engine": {"model": batch_engine.model}},
                 ),
