@@ -18,8 +18,8 @@ _BridgeResult = TypeVar("_BridgeResult")
 
 class Entity(pydantic.BaseModel):
     text: str
-    start: int | None
-    end: int | None
+    start: int
+    end: int
     entity_type: str
 
     def __eq__(self, other: object) -> bool:
@@ -73,8 +73,8 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         """
         return ({"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs)
 
+    @staticmethod
     def _find_entity_positions(
-        self,
         doc_text: str,
         result: _BridgeResult,
         new_entities: list[Entity],
@@ -139,9 +139,9 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                     if position_key not in entities_by_position:
                         entities_by_position[position_key] = new_entity
                         new_entities.append(new_entity)
-        # Sort entities by start position, handling None values
-        sorted_entities: list[Entity] = sorted(new_entities, key=lambda x: (x.start))  # type: ignore[arg-type, return-value]
-        return sorted_entities
+
+        # Sort entities by start position.
+        return sorted(new_entities, key=lambda x: x.start)
 
     def integrate(self, results: Iterable[_BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         docs_list = list(docs)
@@ -242,7 +242,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
             yield dspy.Prediction.from_completions({"entities": [all_entities]}, signature=self.prompt_signature)
 
 
-class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode]):
+class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode], abc.ABC):
     @property
     def _prompt_template(self) -> str | None:
         return """
@@ -307,7 +307,6 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel]:
         results = list(results)
-        prediction_class = self._prompt_signature  # Get the class, not an instance
 
         # Process each document (which may consist of multiple chunks)
         for doc_offset in docs_offsets:
@@ -327,7 +326,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
                     all_entities.append(entity)
 
             # Create a consolidated result for this document - instantiate the class with entities
-            yield prediction_class(entities=all_entities)
+            yield self._prompt_signature(entities=all_entities)
 
 
 class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
@@ -435,16 +434,6 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
     def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         docs_list = list(docs)
         results_list = list(results)
-
-        class Entity(pydantic.BaseModel):
-            text: str
-            start: int
-            end: int
-            entity_type: str
-
-        class Entities(pydantic.BaseModel):
-            text: str
-            entities: list[Entity] = []
 
         # Process each document
         for doc, result in zip(docs_list, results_list):

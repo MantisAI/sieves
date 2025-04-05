@@ -1,9 +1,10 @@
 # mypy: ignore-errors
 import pytest
 
-from sieves import Pipeline
+from sieves import Doc, Pipeline
 from sieves.engines import EngineType
 from sieves.serialization import Config
+from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import ner
 from sieves.tasks.predictive.ner.core import Entity
 
@@ -94,3 +95,26 @@ def test_serialization(ner_docs, batch_engine) -> None:
         config=config,
         tasks_kwargs=[{"engine": {"model": batch_engine.model}, "entities": ["PERSON", "LOCATION", "COMPANY"]}],
     )
+
+
+@pytest.mark.parametrize("batch_engine", [EngineType.glix], indirect=["batch_engine"])
+def test_to_dataset(ner_docs, batch_engine) -> None:
+    task = ner.NER(entities=["PERSON", "LOCATION", "COMPANY"], engine=batch_engine)
+
+    assert isinstance(task, PredictiveTask)
+    dataset = task.to_dataset(task(ner_docs))
+    assert all([key in dataset.features for key in ("text", "entities")])
+    assert len(dataset) == 2
+    dataset_records = list(dataset)
+    for rec in dataset_records:
+        assert isinstance(rec["entities"], dict)
+        assert (
+            len(rec["entities"]["entity_type"])
+            == len(rec["entities"]["start"])
+            == len(rec["entities"]["end"])
+            == len(rec["entities"]["text"])
+        )
+        assert isinstance(rec["text"], str)
+
+    with pytest.raises(KeyError):
+        task.to_dataset([Doc(text="This is a dummy text.")])

@@ -131,22 +131,19 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         }
 
     def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
-        """Convert NER results to a dataset.
-
-        :param docs: Documents with NER results.
-        :return: Dataset with NER results.
-        """
         # Define metadata and features for the dataset
         features = datasets.Features(
             {
                 "text": datasets.Value("string"),
                 "entities": datasets.Sequence(
-                    {
-                        "text": datasets.Value("string"),
-                        "start": datasets.Value("int32"),
-                        "end": datasets.Value("int32"),
-                        "entity": datasets.Value("string"),
-                    }
+                    datasets.Features(
+                        {
+                            "text": datasets.Value("string"),
+                            "start": datasets.Value("int32"),
+                            "end": datasets.Value("int32"),
+                            "entity_type": datasets.Value("string"),
+                        }
+                    )
                 ),
             }
         )
@@ -165,23 +162,27 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                     raise KeyError(f"Document does not have results for task ID {self._task_id}")
 
                 # Get the entities from the document results
-                result = doc.results[self._task_id]
+                result = doc.results[self._task_id].entities
                 entities: list[dict[str, Any]] = []
 
-                if isinstance(result, list):
-                    # List format (could be list of dictionaries or other entities)
-                    for entity in result:
-                        if isinstance(entity, dict) and "text" in entity:
-                            # Dictionary format with text key
-                            entity_dict = {
-                                "text": entity["text"],
-                                "start": entity["start"],
-                                "end": entity["end"],
-                                "entity": entity["label"],
-                            }
-                            entities.append(entity_dict)
+                # List format (could be list of dictionaries or other entities)
+                for entity in result:
+                    assert hasattr(entity, "text")
+                    assert hasattr(entity, "start")
+                    assert hasattr(entity, "end")
+                    assert hasattr(entity, "entity_type")
+
+                    entities.append(
+                        {
+                            "text": entity.text,
+                            "start": entity.start,
+                            "end": entity.end,
+                            "entity_type": entity.entity_type,
+                        }
+                    )
 
                 data.append((doc.text or "", entities))
+
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
