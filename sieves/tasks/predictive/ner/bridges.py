@@ -77,16 +77,16 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
     def _find_entity_positions(
         doc_text: str,
         result: _BridgeResult,
-        new_entities: list[Entity],
     ) -> list[Entity]:
         """
         Find all positions of an entity in a document.
         :param doc_text: The text of the document.
         :param result: The result of the model.
-        :param new_entities: The list of entities to be updated.
         :return: The list of entities with start/end indices.
         """
         doc_text_lower = doc_text.lower()
+        # Create a new result with the same structure as the original
+        new_entities: list[Entity] = []
 
         # Track entities by position to avoid duplicates
         entities_by_position: dict[tuple[int, int], Entity] = {}
@@ -140,7 +140,6 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
                         entities_by_position[position_key] = new_entity
                         new_entities.append(new_entity)
 
-        # Sort entities by start position.
         return sorted(new_entities, key=lambda x: x.start)
 
     def integrate(self, results: Iterable[_BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -148,14 +147,11 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         results_list = list(results)
 
         for doc, result in zip(docs_list, results_list):
-            # Create a new result with the same structure as the original
-            entities_with_position: list[Entity] = []
-
             # Get the original text from the document
             doc_text = doc.text or ""
             if hasattr(result, "entities"):
                 # Process entities from result if available
-                entities_with_position = self._find_entity_positions(doc_text, result, entities_with_position)
+                entities_with_position = self._find_entity_positions(doc_text, result)
                 # Create a new result with the updated entities
                 new_result = Entities(text=doc_text, entities=entities_with_position)
                 doc.results[self._task_id] = new_result
