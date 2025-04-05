@@ -10,43 +10,28 @@ license = { text = "MIT" }
 dynamic = ["version", "authors"]
 requires-python = ">=3.10"
 dependencies = [
-    "anthropic>=0.45.2",
-    "chonkie>=0.5.0",
-    "datasets>=3.3.1",
-    "docling>=2.23.0",
-    "dspy>=2.6.3",
-    "gliner>=0.2.16",
-    "instructor>=1.7.2",
-    "langchain-anthropic>=0.3.7",
-    "langchain-core>=0.3.35",
-    "loguru>=0.7.3",
-    "nltk>=3.9.1",
-    "ollama>=0.4.7",
-    "outlines>=0.1.14",
-    "pydantic>=2,<3",
-    "pytest>=8.3.4",
-    "scikit-learn>=1.6.1",
-    "unstructured>=0.16.21",
+    "accelerate>1.2,<2",
+    "chonkie>=0.3,<1",
     "datasets>=3,<4",
-    "jinja2>=3,<4",
-    "chonkie>=0.3",
-    "docling>=2",
-    "outlines>=0.0.34",
+    "docling>=2,<3",
     "dspy-ai>=2,<3",
-    "chonkie>=0.3",
-    "transformers>=4,<5",
-    "loguru>=0.7.3",
-    "sentencepiece<1",
+    "dspy>=2.6,<3",
     "gliner<1",
-    "ollama<1",
-    "langchain>=0.3,<0.4",
-    "scikit-learn>=1,<2",
-    "unstructured[all-docs]>=0.16,<1",
-    "unstructured-inference>=0.8,<1",
     "instructor>=1,<2",
+    "jinja2>=3,<4",
+    "langchain-core>=0.3,<0.4",
+    "langchain>=0.3,<0.4",
+    "loguru>=0.7,<1",
     "marker-pdf[full]>=1.6.1",
-    "pytest>=8.3.4",
-    "langchain-anthropic>=0.3.7",
+    "nltk>=3.9.1",
+    "ollama>=0.4,<1",
+    "outlines<1",
+    "pydantic>=2,<3",
+    "scikit-learn>=1.6,<2",
+    "sentencepiece<1",
+    "transformers>=4,<5",
+    "unstructured-inference>=0.8,<1",
+    "unstructured[all-docs]>=0.16,<1",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -59,9 +44,6 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-utils = [
-    "tesseract>=0.1,<1",
-]
 test = [
     "pre-commit>=4.1.0",
     "pytest>=7.4.3",
@@ -70,6 +52,7 @@ test = [
     "mypy>=1",
     "mypy-extensions>=1",
     "pytest-cov>=6",
+    "anthropic>=0.45.2",
     "langchain-anthropic>0.3,<0.4",
     "tesseract>=0.1,<1",
     # For generating documentation.
