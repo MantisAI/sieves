@@ -57,10 +57,11 @@ nav:
       - Predictive:
         - tasks/predictive/classification.md
         - tasks/predictive/information_extraction.md
-        - tasks/predictive/sentiment_analysis.md
-        - tasks/predictive/summarization.md
+        - tasks/predictive/ner.md
         - tasks/predictive/pii_masking.md
         - tasks/predictive/question_answering.md
+        - tasks/predictive/sentiment_analysis.md
+        - tasks/predictive/summarization.md
         - tasks/predictive/translation.md
 
     - Engines:

@@ -105,26 +105,16 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
     @property
     def supports(self) -> set[EngineType]:
-        """
-        :return set[EngineType]: Supported engine types.
-        """
         return {EngineType.dspy, EngineType.instructor, EngineType.ollama, EngineType.outlines}
 
     @property
     def _state(self) -> dict[str, Any]:
-        """
-        :return dict[str, Any]: Task state.
-        """
         return {
             **super()._state,
             "entity_type": self._entity_type,
         }
 
     def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
-        """
-        :param docs: Documents to convert.
-        :return datasets.Dataset: Converted dataset.
-        """
         # Define metadata.
         features = datasets.Features(
             {
