@@ -10,7 +10,7 @@ from sieves.serialization import Config
 
 def test_run() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Marker()])
+    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(converter=PdfConverter(artifact_dict=create_model_dict()))])
     docs = list(pipe(resources))
 
     assert len(docs) == 1
@@ -19,7 +19,13 @@ def test_run() -> None:
 
 def test_with_extract_images() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(extract_images=True, include_meta=True)])
+    pipe = Pipeline(
+        tasks=[
+            tasks.preprocessing.Marker(
+                converter=PdfConverter(artifact_dict=create_model_dict()), extract_images=True, include_meta=True
+            )
+        ]
+    )
     docs = list(pipe(resources))
 
     assert len(docs) == 1
@@ -29,7 +35,9 @@ def test_with_extract_images() -> None:
 
 def test_serialization() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(include_meta=True)])
+    pipe = Pipeline(
+        tasks=[tasks.preprocessing.Marker(converter=PdfConverter(artifact_dict=create_model_dict()), include_meta=True)]
+    )
     docs = list(pipe(resources))
 
     config = pipe.serialize()
@@ -40,8 +48,9 @@ def test_serialization() -> None:
             "is_placeholder": False,
             "value": [
                 {
-                    "cls_name": "sieves.tasks.preprocessing.marker.Marker",
-                    "marker_converter": {"is_placeholder": True, "value": "marker.converters.pdf.PdfConverter"},
+                    "cls_name": "sieves.tasks.preprocessing.marker_.Marker",
+                    "converter": {"is_placeholder": True, "value": "marker.converters.pdf.PdfConverter"},
+                    "export_format": {"is_placeholder": False, "value": "markdown"},
                     "extract_images": {"is_placeholder": False, "value": False},
                     "include_meta": {"is_placeholder": False, "value": True},
                     "show_progress": {"is_placeholder": False, "value": True},
@@ -54,10 +63,10 @@ def test_serialization() -> None:
     }
 
     # For deserialization, we need to provide the converter
-
     converter = PdfConverter(artifact_dict=create_model_dict())
-
-    deserialized_pipeline = Pipeline.deserialize(config=config, tasks_kwargs=[{"marker_converter": converter}])
+    deserialized_pipeline = Pipeline.deserialize(
+        config=config, tasks_kwargs=[{"converter": converter, "export_format": "markdown"}]
+    )
     deserialized_docs = list(deserialized_pipeline(resources))
 
     assert len(deserialized_docs) == 1
