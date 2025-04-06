@@ -11,15 +11,8 @@ import outlines
 import pytest
 import tokenizers
 import transformers
-from marker.converters.pdf import PdfConverter
-from marker.models import create_model_dict
 
 from sieves import Doc, Engine, engines
-
-
-@pytest.fixture(scope="session")
-def marker_converter() -> PdfConverter:
-    return PdfConverter(artifact_dict=create_model_dict())
 
 
 @pytest.fixture(scope="session")
