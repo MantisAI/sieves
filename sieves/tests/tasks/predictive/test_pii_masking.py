@@ -40,7 +40,7 @@ def test_run(pii_masking_docs, batch_engine, fewshot) -> None:
         assert "PIIMasking" in doc.results
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.outlines], indirect=["batch_engine"])
 def test_to_dataset(pii_masking_docs, batch_engine) -> None:
     task = tasks.predictive.PIIMasking(engine=batch_engine)
     docs = task(pii_masking_docs)
@@ -57,7 +57,7 @@ def test_to_dataset(pii_masking_docs, batch_engine) -> None:
         task.to_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.outlines], indirect=["batch_engine"])
 def test_serialization(pii_masking_docs, batch_engine) -> None:
     pipe = Pipeline([tasks.predictive.PIIMasking(engine=batch_engine)])
     list(pipe(pii_masking_docs))
@@ -76,7 +76,7 @@ def test_serialization(pii_masking_docs, batch_engine) -> None:
                             "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
-                            "model": {"is_placeholder": True, "value": "sieves.engines.ollama_.Model"},
+                            "model": {"is_placeholder": True, "value": "outlines.models.transformers.Transformers"},
                             "version": Config.get_version(),
                         },
                     },

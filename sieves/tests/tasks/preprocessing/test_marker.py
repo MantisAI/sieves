@@ -8,23 +8,19 @@ from sieves import Doc, Pipeline, tasks
 from sieves.serialization import Config
 
 
-def test_run() -> None:
+def test_run(marker_converter) -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(converter=PdfConverter(artifact_dict=create_model_dict()))])
+    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(converter=marker_converter)])
     docs = list(pipe(resources))
 
     assert len(docs) == 1
     assert docs[0].text
 
 
-def test_with_extract_images() -> None:
+def test_with_extract_images(marker_converter) -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
     pipe = Pipeline(
-        tasks=[
-            tasks.preprocessing.Marker(
-                converter=PdfConverter(artifact_dict=create_model_dict()), extract_images=True, include_meta=True
-            )
-        ]
+        tasks=[tasks.preprocessing.Marker(converter=marker_converter, extract_images=True, include_meta=True)]
     )
     docs = list(pipe(resources))
 
@@ -33,11 +29,9 @@ def test_with_extract_images() -> None:
     assert docs[0].images
 
 
-def test_serialization() -> None:
+def test_serialization(marker_converter) -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(
-        tasks=[tasks.preprocessing.Marker(converter=PdfConverter(artifact_dict=create_model_dict()), include_meta=True)]
-    )
+    pipe = Pipeline(tasks=[tasks.preprocessing.Marker(converter=marker_converter, include_meta=True)])
     docs = list(pipe(resources))
 
     config = pipe.serialize()
