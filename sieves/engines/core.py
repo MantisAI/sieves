@@ -8,6 +8,7 @@ import sys
 from collections.abc import Awaitable, Callable, Coroutine, Iterable
 from typing import Any, Generic, Protocol, TypeVar
 
+import instructor.exceptions
 import jinja2
 import pydantic
 
@@ -186,7 +187,12 @@ class PydanticEngine(abc.ABC, InternalEngine[EnginePromptSignature, EngineResult
             try:
                 yield from generator([template.render(**doc_values, **examples) for doc_values in batch])
 
-            except (TypeError, pydantic.ValidationError) as err:
+            except (
+                TypeError,
+                pydantic.ValidationError,
+                instructor.exceptions.InstructorRetryException,
+                instructor.exceptions.IncompleteOutputException,
+            ) as err:
                 if self._strict_mode:
                     raise ValueError(
                         "Encountered problem when executing prompt. Ensure your few-shot examples and document "
