@@ -48,7 +48,7 @@ def test_run(sentiment_analysis_docs, batch_engine, fewshot):
         assert "sentiment_analysis" in doc.results
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.outlines], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_to_dataset(dummy_docs, batch_engine) -> None:
     task = sentiment_analysis.SentimentAnalysis(
         task_id="sentiment_analysis", aspects=("food", "service"), engine=batch_engine
@@ -69,7 +69,7 @@ def test_to_dataset(dummy_docs, batch_engine) -> None:
         task.to_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.outlines], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_serialization(dummy_docs, batch_engine) -> None:
     pipe = Pipeline(
         [
@@ -95,7 +95,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
                             "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
-                            "model": {"is_placeholder": True, "value": "outlines.models.transformers.Transformers"},
+                            "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
                             "version": Config.get_version(),
                         },
                     },

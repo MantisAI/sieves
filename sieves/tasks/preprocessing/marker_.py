@@ -103,10 +103,13 @@ class Marker(Task):
                 doc.text = text
                 if pbar:
                     pbar.update(1)
-            return docs
+
         finally:
             if pbar:
                 pbar.close()
+
+        for doc in docs:
+            yield doc
 
     @property
     def _state(self) -> dict[str, Any]:

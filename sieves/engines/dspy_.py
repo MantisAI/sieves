@@ -116,6 +116,6 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                             "chunks contain sensible information."
                         ) from err
                     else:
-                        yield [None] * len(batch)
+                        yield from [None] * len(batch)
 
         return execute

@@ -14,8 +14,8 @@ class Model(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
     name: str
     host: str
-    max_retries: int = pydantic.Field(default=2)
-    timeout: int = pydantic.Field(default=60)
+    max_retries: int = pydantic.Field(default=5)
+    timeout: int = pydantic.Field(default=10)
     client_config: dict[str, Any] = pydantic.Field(default_factory=dict)
 
 
@@ -109,7 +109,7 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                             except (RuntimeError, httpx.ReadTimeout) as err:
                                 n_tries += 1
                                 if n_tries > self._model.max_retries:
-                                    raise err
+                                    raise TimeoutError("Hit timeout limit with Ollama.") from err
 
                                 self._client = ollama.AsyncClient(
                                     host=self._model.host,

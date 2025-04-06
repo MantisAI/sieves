@@ -55,7 +55,7 @@ def test_run(ner_docs, batch_engine, fewshot) -> None:
         assert "NER" in doc.results
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_serialization(ner_docs, batch_engine) -> None:
     pipe = Pipeline([ner.NER(entities=["PERSON", "LOCATION", "COMPANY"], engine=batch_engine)])
     list(pipe(ner_docs))
@@ -74,7 +74,7 @@ def test_serialization(ner_docs, batch_engine) -> None:
                             "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
-                            "model": {"is_placeholder": True, "value": "sieves.engines.ollama_.Model"},
+                            "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
                             "version": Config.get_version(),
                         },
                     },

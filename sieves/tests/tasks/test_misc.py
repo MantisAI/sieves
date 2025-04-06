@@ -3,6 +3,7 @@ import os
 import pickle
 import tempfile
 import typing
+from pathlib import Path
 
 import chonkie
 import datasets
@@ -70,7 +71,8 @@ def test_run_readme_example_short(batch_engine):
 )
 def test_run_readme_example_long(batch_engine, tokenizer):
     # Define documents by text or URI.
-    docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
+    # Readme example downlodads https://arxiv.org/pdf/2408.09869, but we'll use a local PDF here to speed up the test.
+    docs = [Doc(uri=Path(__file__).parent.parent / "assets" / "1204.0162v2.pdf")]
 
     # Create pipeline with tasks.
     pipe = Pipeline(
@@ -86,7 +88,6 @@ def test_run_readme_example_long(batch_engine, tokenizer):
 
     # Run pipe and output results.
     docs = list(pipe(docs))
-    print(docs[0].results["Classification"])
 
     # Serialize pipeline and docs.
     with tempfile.NamedTemporaryFile(suffix=".yml") as tmp_pipeline_file:
