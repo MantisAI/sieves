@@ -1,9 +1,6 @@
 # mypy: ignore-errors
 from pathlib import Path
 
-from marker.converters.pdf import PdfConverter
-from marker.models import create_model_dict
-
 from sieves import Doc, Pipeline, tasks
 from sieves.serialization import Config
 
@@ -57,7 +54,7 @@ def test_serialization(marker_converter) -> None:
     }
 
     # For deserialization, we need to provide the converter
-    converter = PdfConverter(artifact_dict=create_model_dict())
+    converter = marker_converter
     deserialized_pipeline = Pipeline.deserialize(
         config=config, tasks_kwargs=[{"converter": converter, "export_format": "markdown"}]
     )
