@@ -55,7 +55,7 @@ def test_run(ner_docs, batch_engine, fewshot) -> None:
         assert "NER" in doc.results
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.outlines], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_serialization(ner_docs, batch_engine) -> None:
     pipe = Pipeline([ner.NER(entities=["PERSON", "LOCATION", "COMPANY"], engine=batch_engine)])
     list(pipe(ner_docs))

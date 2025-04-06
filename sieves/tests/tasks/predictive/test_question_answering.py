@@ -68,7 +68,7 @@ def test_run(qa_docs, batch_engine, fewshot):
         assert "qa" in doc.results
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.outlines], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_to_dataset(qa_docs, batch_engine) -> None:
     task = question_answering.QuestionAnswering(
         task_id="qa",
@@ -92,7 +92,7 @@ def test_to_dataset(qa_docs, batch_engine) -> None:
         task.to_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.outlines], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_serialization(qa_docs, batch_engine) -> None:
     pipe = Pipeline(
         [
