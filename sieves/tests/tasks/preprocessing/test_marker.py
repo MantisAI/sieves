@@ -1,6 +1,7 @@
 # mypy: ignore-errors
 from pathlib import Path
 
+import pytest
 from marker.converters.pdf import PdfConverter
 from marker.models import create_model_dict
 
@@ -8,6 +9,7 @@ from sieves import Doc, Pipeline, tasks
 from sieves.serialization import Config
 
 
+@pytest.mark.skip(reason="Currently running into OOM issues with instantiating Marker converts.")
 def test_marker():
     """Workaround to keep memory usage low: run single function with one instantiated Marker instance."""
     marker_converter = PdfConverter(artifact_dict=create_model_dict())
