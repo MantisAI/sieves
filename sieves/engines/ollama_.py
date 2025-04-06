@@ -14,7 +14,7 @@ class Model(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
     name: str
     host: str
-    max_retries: int = pydantic.Field(default=3)
+    max_retries: int = pydantic.Field(default=5)
     timeout: int = pydantic.Field(default=10)
     client_config: dict[str, Any] = pydantic.Field(default_factory=dict)
 
