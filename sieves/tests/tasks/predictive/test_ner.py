@@ -74,7 +74,7 @@ def test_serialization(ner_docs, batch_engine) -> None:
                             "cls_name": "sieves.engines.wrapper.Engine",
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
-                            "model": {"is_placeholder": True, "value": "outlines.models.transformers.Transformers"},
+                            "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
                             "version": Config.get_version(),
                         },
                     },
