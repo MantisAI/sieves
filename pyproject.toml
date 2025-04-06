@@ -52,6 +52,7 @@ test = [
     "mypy>=1",
     "mypy-extensions>=1",
     "pytest-cov>=6",
+    "pytest-xdist>=3,<4",
     "anthropic>=0.45.2",
     "langchain-anthropic>0.3,<0.4",
     "tesseract>=0.1,<1",
