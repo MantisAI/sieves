@@ -74,7 +74,8 @@ build modern NLP applications. It provides:
   - Multi-question answering
   - Aspect-based sentiment analysis
   - PII (personally identifiable information) anonymization
-  - Coming soon: NER, entity linking, knowledge graph creation, ...
+  - Named entity recognition
+  - Coming soon: entity linking, knowledge graph creation, ...
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
 - :teacher: **Export:** Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for easy distillation
 
