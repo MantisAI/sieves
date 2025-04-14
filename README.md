@@ -137,7 +137,7 @@ pipe = Pipeline(
         # 4. Add document parsing task.
         tasks.OCR(export_format="markdown"),
         # 5. Add chunking task to ensure we don't exceed our model's context window.
-        tasks.Chonkie(chunker),
+        tasks.Chunking(chunker),
         # 6. Add classification task to pipeline.
         tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
     ]

@@ -50,10 +50,16 @@ nav:
     - Tasks:
       - tasks/task.md
       - Preprocessing:
-        - tasks/preprocessing/chunkers.md
-        - tasks/preprocessing/docling.md
-        - tasks/preprocessing/unstructured.md
-        - tasks/preprocessing/marker.md
+        - OCR:
+          - tasks/preprocessing/ocr/ocr.md
+          - tasks/preprocessing/ocr/docling.md
+          - tasks/preprocessing/ocr/unstructured.md
+          - tasks/preprocessing/ocr/marker.md
+        - Chunking:
+          - tasks/preprocessing/chunking/chunking.md
+          - tasks/preprocessing/chunking/chonkie.md
+          - tasks/preprocessing/chunking/naive.md
+
       - Predictive:
         - tasks/predictive/classification.md
         - tasks/predictive/information_extraction.md
