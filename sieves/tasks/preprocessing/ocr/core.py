@@ -12,9 +12,9 @@ from marker.converters.table import TableConverter
 from sieves.data.doc import Doc
 from sieves.serialization import Config
 from sieves.tasks.core import Task
-from sieves.tasks.preprocessing import docling_, marker_
+from sieves.tasks.preprocessing.ocr import docling_, marker_
 
-Converter: TypeAlias = docling.document_converter.DocumentConverter | PdfConverter | TableConverter
+_ConverterType: TypeAlias = docling.document_converter.DocumentConverter | PdfConverter | TableConverter
 
 
 class OCR(Task):
@@ -25,7 +25,7 @@ class OCR(Task):
 
     def __init__(
         self,
-        converter: Converter = docling.document_converter.DocumentConverter(),
+        converter: _ConverterType = docling.document_converter.DocumentConverter(),
         export_format: str = "markdown",
         task_id: str | None = None,
         show_progress: bool = True,
@@ -72,7 +72,6 @@ class OCR(Task):
                     task_id=self.id,
                     show_progress=self._show_progress,
                     include_meta=self._include_meta,
-                    **self._kwargs,
                 )
             case _:
                 raise ValueError(
@@ -89,8 +88,6 @@ class OCR(Task):
         :return: Processed documents with extracted text.
         """
         docs = list(docs)
-        result: Iterable[Doc] = []
-        # Validate docs
         assert all(doc.uri for doc in docs), ValueError("Documents have to have a value for .uri.")
         result = self._task(docs)
 

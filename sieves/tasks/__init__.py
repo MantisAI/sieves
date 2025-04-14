@@ -10,12 +10,13 @@ from .predictive import (
     Translation,
 )
 from .predictive.core import PredictiveTask
-from .preprocessing import Chonkie
+from .preprocessing import OCR, Chunking
 
 __all__ = [
-    "Chonkie",
+    "Chunking",
     "Classification",
     "InformationExtraction",
+    "OCR",
     "SentimentAnalysis",
     "Summarization",
     "Translation",

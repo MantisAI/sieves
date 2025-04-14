@@ -24,7 +24,7 @@ def test_serialization_pipeline(dummy_docs, batch_engine, tokenizer):
     """Tests serialization and deserialization of pipeline to files and config objects."""
     pipe = Pipeline(
         [
-            preprocessing.Chonkie(chonkie.TokenChunker(tokenizer)),
+            preprocessing.Chunking(chonkie.TokenChunker(tokenizer)),
             classification.Classification(
                 task_id="classifier",
                 labels=["science", "politics"],
@@ -45,10 +45,10 @@ def test_serialization_pipeline(dummy_docs, batch_engine, tokenizer):
             "value": [
                 {
                     "chunker": {"is_placeholder": True, "value": "chonkie.chunker.token.TokenChunker"},
-                    "cls_name": "sieves.tasks.preprocessing.chunkers.Chonkie",
+                    "cls_name": "sieves.tasks.preprocessing.chunking.core.Chunking",
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
-                    "task_id": {"is_placeholder": False, "value": "Chonkie"},
+                    "task_id": {"is_placeholder": False, "value": "Chunking"},
                     "version": version,
                 },
                 {

@@ -78,9 +78,9 @@ def test_run_readme_example_long(batch_engine, tokenizer):
     pipe = Pipeline(
         [
             # Add document parsing task.
-            tasks.preprocessing.OCR(),
+            tasks.OCR(export_format="markdown"),
             # Add chunking task to ensure we don't exceed our model's context window.
-            tasks.preprocessing.Chonkie(chonkie.TokenChunker(tokenizer)),
+            tasks.Chunking(chonkie.TokenChunker(tokenizer)),
             # Run classification on provided document.
             tasks.predictive.Classification(labels=["science", "politics"], engine=batch_engine),
         ]

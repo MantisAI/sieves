@@ -1,13 +1,16 @@
 # mypy: ignore-errors
 import chonkie
+import pytest
 
-from sieves import Doc, Pipeline, tasks
+from sieves import Doc, Pipeline
 from sieves.serialization import Config
+from sieves.tasks.preprocessing import Chunking
 
 
-def test_chonkie(tokenizer) -> None:
-    resources = [Doc(text="This is a text " * 100)]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Chonkie(chonkie.TokenChunker(tokenizer))])
+@pytest.mark.parametrize("chunker", ["chonkie", "naive"])
+def test_chonkie(chunker, tokenizer) -> None:
+    resources = [Doc(text="This is a text. " * 100)]
+    pipe = Pipeline(tasks=[Chunking(chonkie.TokenChunker(tokenizer) if chunker == "chonkie" else 5)])
     docs = list(pipe(resources))
 
     assert len(docs) == 1
@@ -17,7 +20,7 @@ def test_chonkie(tokenizer) -> None:
 
 def test_serialization(tokenizer) -> None:
     resources = [Doc(text="This is a text " * 100)]
-    pipe = Pipeline(tasks=[tasks.preprocessing.Chonkie(chonkie.TokenChunker(tokenizer))])
+    pipe = Pipeline(tasks=[Chunking(chonkie.TokenChunker(tokenizer))])
     docs = list(pipe(resources))
 
     config = pipe.serialize()
@@ -28,10 +31,10 @@ def test_serialization(tokenizer) -> None:
             "value": [
                 {
                     "chunker": {"is_placeholder": True, "value": "chonkie.chunker.token.TokenChunker"},
-                    "cls_name": "sieves.tasks.preprocessing.chunkers.Chonkie",
+                    "cls_name": "sieves.tasks.preprocessing.chunking.core.Chunking",
                     "include_meta": {"is_placeholder": False, "value": False},
                     "show_progress": {"is_placeholder": False, "value": True},
-                    "task_id": {"is_placeholder": False, "value": "Chonkie"},
+                    "task_id": {"is_placeholder": False, "value": "Chunking"},
                     "version": Config.get_version(),
                 }
             ],
