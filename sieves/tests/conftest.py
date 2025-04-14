@@ -29,46 +29,39 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
     """
     match engine_type:
         case engines.EngineType.dspy:
-            return Engine(
-                model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]), batch_size=batch_size
-            )
+            model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
 
         case engines.EngineType.glix:
             model_id = "knowledgator/gliner-multitask-v1.0"
-            return Engine(
-                model=gliner.GLiNER.from_pretrained(model_id),
-                batch_size=batch_size,
-            )
+            model = gliner.GLiNER.from_pretrained(model_id)
 
         case engines.EngineType.langchain:
             model = langchain_anthropic.ChatAnthropic(
                 model_name="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]
             )
-            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.instructor:
             model = engines.instructor_.Model(
                 name="claude-3-haiku-20240307",
                 client=instructor.from_anthropic(anthropic.AsyncClient()),
             )
-            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.huggingface:
             model = transformers.pipeline(
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
             )
-            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.ollama:
             model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m")
-            return Engine(model=model, batch_size=batch_size)
 
         case engines.EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-            return Engine(model=outlines.models.transformers(model_name), batch_size=batch_size)
+            model = outlines.models.transformers(model_name)
 
         case _:
             raise ValueError(f"Unsupported engine type {engine_type}.")
+
+    return Engine(model=model, batch_size=batch_size)
 
 
 @pytest.fixture(scope="session")
