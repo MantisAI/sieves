@@ -6,11 +6,11 @@ import anthropic
 import dspy
 import gliner.multitask
 import instructor
-import langchain_anthropic
 import outlines
 import pytest
 import tokenizers
 import transformers
+from langchain.chat_models import init_chat_model
 
 from sieves import Doc, Engine, engines
 
@@ -36,8 +36,8 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
             model = gliner.GLiNER.from_pretrained(model_id)
 
         case engines.EngineType.langchain:
-            model = langchain_anthropic.ChatAnthropic(
-                model_name="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]
+            model = init_chat_model(
+                model="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"], model_provider="anthropic"
             )
 
         case engines.EngineType.instructor:
@@ -52,7 +52,7 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
             )
 
         case engines.EngineType.ollama:
-            model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m")
+            model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
 
         case engines.EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"

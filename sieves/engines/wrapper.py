@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
+import outlines
 import pydantic
 
 from sieves.engines import InternalEngine, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
@@ -50,7 +51,7 @@ InferenceMode: TypeAlias = (
 class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
     def __init__(
         self,
-        model: Model,
+        model: Model = outlines.models.transformers("HuggingFaceTB/SmolLM-360M-Instruct"),
         init_kwargs: dict[str, Any] | None = None,
         inference_kwargs: dict[str, Any] | None = None,
         config_kwargs: dict[str, Any] | None = None,
