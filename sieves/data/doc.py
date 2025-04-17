@@ -42,6 +42,10 @@ class Doc:
         return ImageChops.difference(im1, im2).getbbox() is None
 
     def __eq__(self, other: object) -> bool:
+        """Compares two `Doc` instances.
+        :return: True if `self` is equal to `other`.
+        :raises: NotImplementedError if `other` isn't of type `Doc`.
+        """
         if not isinstance(other, Doc):
             raise NotImplementedError
 
