@@ -1,5 +1,6 @@
 # mypy: ignore-errors
 import pytest
+import regex
 from datasets import Dataset
 from PIL import Image
 
@@ -80,7 +81,6 @@ def test_docs_from_hf_dataset() -> None:
     )
     docs = Doc.from_hf_dataset(hf_dataset)
 
-    # 3. Add assertions
     assert len(docs) == 2
     assert docs[0].text == "This is the first document."
     assert docs[0].chunks == ["This is the first document."]  # Check post_init
@@ -93,14 +93,19 @@ def test_docs_from_hf_dataset() -> None:
     assert docs[1].text == "This is the second document."
     assert docs[1].chunks == ["This is the second document."]  # Check post_init
 
-    # Test with a different text column name
+    # Test with a different text column name.
     data_alt_col = {"content": ["Doc A", "Doc B"], "id": ["a", "b"]}
     hf_dataset_alt_col = Dataset.from_dict(data_alt_col)
-    docs_alt = Doc.from_hf_dataset(hf_dataset_alt_col, text_column="content")
+    docs_alt = Doc.from_hf_dataset(hf_dataset_alt_col, column_map={"text": "content", "id": "id"})
     assert len(docs_alt) == 2
     assert docs_alt[0].text == "Doc A"
     assert docs_alt[1].text == "Doc B"
+    assert docs_alt[0].id == "a"
+    assert docs_alt[1].id == "b"
 
-    # Test ValueError for missing column
-    with pytest.raises(ValueError, match="Specified text_column 'wrong_column' not found"):
-        Doc.from_hf_dataset(hf_dataset, text_column="wrong_column")
+    # Test ValueError for missing column.
+    with pytest.raises(
+        KeyError,
+        match=regex.escape("Specified columns '{'wrong_column'}' not found in dataset columns: ['text', 'label']."),
+    ):
+        Doc.from_hf_dataset(hf_dataset, column_map={"text": "wrong_column"})

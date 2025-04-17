@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from datasets import Dataset
 from PIL import Image, ImageChops
+
+Field = Literal["meta", "results", "uri", "text", "chunks", "id", "images"]
 
 
 @dataclasses.dataclass
@@ -65,25 +67,25 @@ class Doc:
         )
 
     @classmethod
-    def from_hf_dataset(cls, dataset: Dataset, text_column: str = "text") -> list[Doc]:
-        """Generate list of docs from Hugging Face dataset.
+    def from_hf_dataset(cls, dataset: Dataset, column_map: dict[Field, Any] | None = None) -> list[Doc]:
+        """Generate list of docs from Hugging Face `datasets.Dataset`.
 
-        :param dataset: Dataset to generate Docs from. Must have a column with a name that equals `text_column`.
-            Other columns are ignored.
-        :param text_column: Column to pull text from when creating Doc instances.
-        :return: List of Doc instances, each representing one row in the dataset.
-        :raises ValueError: If `text_column` is not present in the dataset features.
+        :param dataset: Dataset to generate `Doc` instances from. If column_map isn't specified to the contrary, dataset
+            must contain at least one column named "text".
+        :param column_map: Which `Doc` attribute to map to which attribute in `dataset`. If None, the mapping "text" ->
+            "text" is assumed.
+        :return: List of `Doc` instances, each representing one row in the dataset.
+        :raises ValueError: If expected columns are not present in the dataset features.
         """
-        if text_column not in dataset.column_names:
-            raise ValueError(
-                f"Specified text_column '{text_column}' not found in dataset columns: {dataset.column_names}."
-            )
+        if column_map is None:
+            column_map = {"text": "text"}
+
+        missing_cols = set(column_map.values()) - set(dataset.column_names)
+        if len(missing_cols):
+            raise KeyError(f"Specified columns '{missing_cols}' not found in dataset columns: {dataset.column_names}.")
 
         docs: list[Doc] = []
         for row in dataset:
-            # Assuming row is a dict-like object, typical for Hugging Face datasets.
-            text_content = row.get(text_column)
-            if isinstance(text_content, str):
-                docs.append(cls(text=text_content))
+            docs.append(cls(**{doc_col: row.get(data_col) for doc_col, data_col in column_map.items()}))  # type: ignore[misc]
 
         return docs
