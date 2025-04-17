@@ -43,7 +43,8 @@ class Doc:
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Doc):
-            return NotImplemented
+            raise NotImplementedError
+
         # Check if images are equal
         images_equal_check = False
         if self.images is None and other.images is None:
