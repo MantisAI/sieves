@@ -40,13 +40,7 @@ def test_custom_prompt_signature_desc():
     assert task.prompt_signature_description == prompt_sig_desc
 
 
-@pytest.mark.slow
-@pytest.mark.parametrize(
-    "batch_engine",
-    [engines.EngineType.outlines],
-    indirect=True,
-)
-def test_run_readme_example_short(batch_engine):
+def test_run_readme_example_short():
     # Define documents by text or URI.
     docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
@@ -54,7 +48,7 @@ def test_run_readme_example_short(batch_engine):
     pipe = Pipeline(
         [
             # Run classification on provided document.
-            tasks.predictive.Classification(labels=["science", "politics"], engine=batch_engine),
+            tasks.predictive.Classification(labels=["science", "politics"], engine=Engine()),
         ]
     )
 

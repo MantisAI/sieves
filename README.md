@@ -85,26 +85,22 @@ build modern NLP applications. It provides:
 
 Here's a simple classification example using [`outlines`](https://github.com/dottxt-ai/outlines):
 ```python
-import outlines
-
 from sieves import Pipeline, Engine, tasks, Doc
 
 # 1. Define documents by text or URI.
 docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
-# 2. Create engine responsible for generating structured output.
-model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = Engine(model=outlines.models.transformers(model_name))
-
-# 3. Create pipeline with tasks.
+# 2. Create pipeline with tasks.
 pipe = Pipeline(
     [
-        # 4. Add classification task to pipeline.
-        tasks.Classification(labels=["science", "politics"], engine=engine),
+        # 3. Add classification task to pipeline. 
+        # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you 
+        # might want to consider upgrading to a different model for better results. 
+        tasks.Classification(labels=["science", "politics"], engine=Engine()),
     ]
 )
 
-# 5. Run pipe and output results.
+# 4. Run pipe and output results.
 for doc in pipe(docs):
   print(doc.results)
 ```

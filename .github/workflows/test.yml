@@ -42,7 +42,7 @@ jobs:
         # Run as daemon if ollama default port is free (port usage fails if Ollama has been launched on this machine 
         # before otherwise). 
         ((! nc -z 127.0.0.1 11434) && (ollama serve &)) || true
-        ollama pull smollm:135m 
+        ollama pull smollm:135m-instruct-v0.2-q8_0
 
     - name: Run tests
       env:
