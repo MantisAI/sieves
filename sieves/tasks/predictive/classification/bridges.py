@@ -481,6 +481,9 @@ class OutlinesClassification(PydanticBasedClassification[outlines_.InferenceMode
         """
 
     def integrate(self, results: Iterable[pydantic.BaseModel | str], docs: Iterable[Doc]) -> Iterable[Doc]:
+        if self._multi_label:
+            return super().integrate(results, docs)
+
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = result
         return docs
@@ -491,12 +494,13 @@ class OutlinesClassification(PydanticBasedClassification[outlines_.InferenceMode
         if self._multi_label:
             yield from super().consolidate(results, docs_offsets)
 
-        # Determine label scores for chunks per document.
-        results = list(results)
-        for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            label_counts = Counter(doc_results)
-            yield label_counts.most_common()[0][0]
+        else:
+            # Determine label scores for chunks per document.
+            results = list(results)
+            for doc_offset in docs_offsets:
+                doc_results = results[doc_offset[0] : doc_offset[1]]
+                label_counts = Counter(doc_results)
+                yield label_counts.most_common()[0][0]
 
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
