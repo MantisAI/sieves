@@ -111,6 +111,7 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
         prompt_signature: tuple[str, ...] | list[str],
         inference_mode: glix_.InferenceMode,
         label_whitelist: tuple[str, ...] | None = None,
+        only_keep_best: bool = False,
     ):
         """
         Initializes GliX bridge.
@@ -120,6 +121,7 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
         :param prompt_signature: Prompt signature.
         :param inference_mode: Inference mode.
         :param label_whitelist: Labels to record predictions for. If None, predictions for all labels are recorded.
+        :param only_keep_best: Whether to only return the result with the highest score.
         """
         super().__init__(
             task_id=task_id,
@@ -134,6 +136,7 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
             glix_.InferenceMode.classification,
             glix_.InferenceMode.question_answering,
         )
+        self._only_keep_best = only_keep_best
         self._pred_attr: str | None = None
 
     @property
@@ -159,6 +162,9 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
                 for res in sorted(result, key=lambda x: x["score"], reverse=True):
                     assert isinstance(res, dict)
                     doc.results[self._task_id].append((res[self._pred_attr], res["score"]))
+
+                if self._only_keep_best:
+                    doc.results[self._task_id] = doc.results[self._task_id][0]
             else:
                 doc.results[self._task_id] = result
         return docs

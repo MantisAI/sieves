@@ -47,6 +47,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                     def generate(prompts: list[str]) -> Iterable[Result]:
                         try:
                             yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
+
                         except pydantic.ValidationError as ex:
                             raise pydantic.ValidationError(
                                 f"Encountered problem in parsing {cls_name} output. Double-check your prompts and "

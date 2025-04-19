@@ -10,22 +10,40 @@ from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
 
 
-def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
+def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool, multilabel: bool = True) -> None:
     assert issubclass(engine.inference_modes, enum.Enum)
-    fewshot_examples = [
-        classification.FewshotExample(
-            text="On the properties of hydrogen atoms and red dwarfs.",
-            reasoning="Atoms, hydrogen and red dwarfs are terms from physics. There is no mention of any "
-            "politics-related terms.",
-            confidence_per_label={"science": 1.0, "politics": 0.0},
-        ),
-        classification.FewshotExample(
-            text="A parliament is elected by casting votes.",
-            reasoning="The election of a parliament by the casting of votes is a component of a democratic political "
-            "system.",
-            confidence_per_label={"science": 0, "politics": 1.0},
-        ),
-    ]
+    if multilabel:
+        fewshot_examples = [
+            classification.FewshotExampleMultiLabel(
+                text="On the properties of hydrogen atoms and red dwarfs.",
+                reasoning="Atoms, hydrogen and red dwarfs are terms from physics. There is no mention of any "
+                "politics-related terms.",
+                confidence_per_label={"science": 1.0, "politics": 0.0},
+            ),
+            classification.FewshotExampleMultiLabel(
+                text="A parliament is elected by casting votes.",
+                reasoning="The election of a parliament by the casting of votes is a component of a democratic "
+                "political system.",
+                confidence_per_label={"science": 0, "politics": 1.0},
+            ),
+        ]
+    else:
+        fewshot_examples = [
+            classification.FewshotExampleSingleLabel(
+                text="On the properties of hydrogen atoms and red dwarfs.",
+                reasoning="Atoms, hydrogen and red dwarfs are terms from physics. There is no mention of any "
+                "politics-related terms. This is about science - scientists, papers, experiments, laws of nature.",
+                label="science",
+                confidence=1.0,
+            ),
+            classification.FewshotExampleSingleLabel(
+                text="A parliament is elected by casting votes.",
+                reasoning="The election of a parliament by the casting of votes is a component of a democratic "
+                "political system. This is about politics - parliament, laws, parties, politicians.",
+                label="politics",
+                confidence=1.0,
+            ),
+        ]
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     label_descriptions = {
@@ -40,6 +58,7 @@ def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
                 labels=["science", "politics"],
                 engine=engine,
                 label_descriptions=label_descriptions,
+                multi_label=multilabel,
                 **fewshot_args,
             ),
         ]
@@ -55,22 +74,28 @@ def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool) -> None:
 
 @pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run(dummy_docs, batch_engine, fewshot):
-    _run(batch_engine, dummy_docs, fewshot)
+def test_run(classification_docs, batch_engine, fewshot):
+    _run(batch_engine, classification_docs, fewshot)
 
 
 @pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run_nonbatched(dummy_docs, engine, fewshot):
-    _run(engine, dummy_docs, fewshot)
+def test_run_nonbatched(classification_docs, engine, fewshot):
+    _run(engine, classification_docs, fewshot)
+
+
+@pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
+@pytest.mark.parametrize("fewshot", [True, False])
+def test_run_singlelabel(classification_docs, batch_engine, fewshot):
+    _run(batch_engine, classification_docs, fewshot, False)
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
-def test_to_dataset(dummy_docs, batch_engine) -> None:
+def test_to_dataset(classification_docs, batch_engine) -> None:
     task = classification.Classification(task_id="classifier", labels=["science", "politics"], engine=batch_engine)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(task(dummy_docs))
+    dataset = task.to_dataset(task(classification_docs))
     assert all([key in dataset.features for key in ("text", "label")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -85,7 +110,7 @@ def test_to_dataset(dummy_docs, batch_engine) -> None:
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
-def test_serialization(dummy_docs, batch_engine) -> None:
+def test_serialization(classification_docs, batch_engine) -> None:
     label_descriptions = {
         "science": "Topics related to scientific disciplines and research",
         "politics": "Topics related to government, elections, and political systems",
@@ -99,7 +124,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
             label_descriptions=label_descriptions,
         )
     )
-    list(pipe(dummy_docs))
+    list(pipe(classification_docs))
 
     config = pipe.serialize()
     assert config.model_dump() == {
@@ -142,7 +167,7 @@ def test_serialization(dummy_docs, batch_engine) -> None:
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
-def test_label_descriptions_validation(dummy_docs, batch_engine) -> None:
+def test_label_descriptions_validation(batch_engine) -> None:
     """Test that invalid label descriptions raise a ValueError."""
     # Valid case - no label descriptions
     classification.Classification(

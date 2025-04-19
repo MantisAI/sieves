@@ -33,16 +33,32 @@ _TaskBridge: TypeAlias = (
 )
 
 
-class FewshotExample(pydantic.BaseModel):
+class FewshotExampleMultiLabel(pydantic.BaseModel):
     text: str
     reasoning: str
     confidence_per_label: dict[str, float]
 
     @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> FewshotExample:
+    def check_confidence(self) -> FewshotExampleMultiLabel:
         if any([conf for conf in self.confidence_per_label.values() if not 0 <= conf <= 1]):
             raise ValueError("Confidence has to be between 0 and 1.")
         return self
+
+
+class FewshotExampleSingleLabel(pydantic.BaseModel):
+    text: str
+    reasoning: str
+    label: str
+    confidence: float
+
+    @pydantic.model_validator(mode="after")
+    def check_confidence(self) -> FewshotExampleSingleLabel:
+        if not (0 <= self.confidence <= 1):
+            raise ValueError("Confidence has to be between 0 and 1.")
+        return self
+
+
+FewshotExample = FewshotExampleMultiLabel | FewshotExampleSingleLabel
 
 
 class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -57,6 +73,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         prompt_signature_desc: str | None = None,
         fewshot_examples: Iterable[FewshotExample] = (),
         label_descriptions: dict[str, str] | None = None,
+        multi_label: bool = True,
     ) -> None:
         """
         Initializes new PredictiveTask.
@@ -70,10 +87,14 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
         :param fewshot_examples: Few-shot examples.
         :param label_descriptions: Optional descriptions for each label. If provided, the keys must match the labels.
+        :param multi_label: If True, task returns confidence scores for all specified labels. If False, task returns
+            most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
+            accuracy.
         """
         self._labels = labels
         self._label_descriptions = label_descriptions or {}
         self._validate_label_descriptions()
+        self._multi_label = multi_label
 
         super().__init__(
             engine=engine,
@@ -115,6 +136,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 prompt_signature=self._labels,
                 inference_mode=glix_.InferenceMode.classification,
                 label_whitelist=tuple(self._labels),
+                only_keep_best=not self._multi_label,
             )
 
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
@@ -136,6 +158,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 prompt_signature_desc=self._custom_prompt_signature_desc,
                 labels=self._labels,
                 label_descriptions=self._label_descriptions,
+                multi_label=self._multi_label,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
@@ -153,14 +176,34 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         }
 
     def _validate_fewshot_examples(self) -> None:
+        label_error_text = (
+            "Label mismatch: {task_id} has labels {labels}. Few-shot examples have labels {example_labels}."
+        )
+        example_type_error_text = "Fewshot example type mismatch: multi_label = {multi_label} requires {example_type}."
+
         for fs_example in self._fewshot_examples or []:
-            if any([label not in self._labels for label in fs_example.confidence_per_label]) or not all(
-                [label in fs_example.confidence_per_label for label in self._labels]
-            ):
-                raise ValueError(
-                    f"Label mismatch: {self._task_id} has labels {self._labels}. Few-shot examples have "
-                    f"labels {fs_example.confidence_per_label.keys()}."
+            if self._multi_label:
+                assert isinstance(fs_example, FewshotExampleMultiLabel), TypeError(
+                    example_type_error_text.format(example_type=FewshotExampleMultiLabel, multi_label=self._multi_label)
                 )
+                if any([label not in self._labels for label in fs_example.confidence_per_label]) or not all(
+                    [label in fs_example.confidence_per_label for label in self._labels]
+                ):
+                    raise ValueError(
+                        label_error_text.format(
+                            task_id=self.id, labels=self._labels, example_labels=fs_example.confidence_per_label.keys()
+                        )
+                    )
+            else:
+                assert isinstance(fs_example, FewshotExampleSingleLabel), TypeError(
+                    example_type_error_text.format(
+                        example_type=FewshotExampleSingleLabel, multi_label=self._multi_label
+                    )
+                )
+                if fs_example.label not in self._labels:
+                    raise ValueError(
+                        label_error_text.format(task_id=self.id, labels=self._labels, example_labels=(fs_example.label))
+                    )
 
     @property
     def _state(self) -> dict[str, Any]:
