@@ -37,7 +37,10 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
 
         case engines.EngineType.langchain:
             model = init_chat_model(
-                model="claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"], model_provider="anthropic"
+                model="claude-3-haiku-20240307",
+                api_key=os.environ["ANTHROPIC_API_KEY"],
+                model_provider="anthropic",
+                temperature=0,
             )
 
         case engines.EngineType.instructor:
@@ -81,6 +84,20 @@ def engine(request) -> engines.Engine:
 @pytest.fixture(scope="session")
 def dummy_docs() -> list[Doc]:
     return [Doc(text="This is about politics stuff. " * 10), Doc(text="This is about science stuff. " * 10)]
+
+
+@pytest.fixture(scope="session")
+def classification_docs() -> list[Doc]:
+    return [
+        Doc(
+            text="A new law has been passed. The opposition doesn't support it, but parliament has voted on it. This "
+            "is about politics - parliament, laws, parties, politicians."
+        ),
+        Doc(
+            text="Scientists report that plasma is a state of matter. They published an academic paper. This is about "
+            "science - scientists, papers, experiments, laws of nature."
+        ),
+    ]
 
 
 @pytest.fixture(scope="session")
