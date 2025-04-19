@@ -424,14 +424,15 @@ class PydanticBasedClassification(
                     label_scores[getattr(res, "label")] += max(0, min(getattr(res, "score"), 1))
 
             avg_label_scores = {label: score / (doc_offset[1] - doc_offset[0]) for label, score in label_scores.items()}
+            prompt_signature = self.prompt_signature
+            assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
+            assert callable(prompt_signature)
 
-            assert isinstance(self.prompt_signature, pydantic.BaseModel)
-
-            if self._multi_label:  # type: ignore[unreachable]
-                yield self.prompt_signature(reasoning=str(reasonings), **avg_label_scores)
+            if self._multi_label:
+                yield prompt_signature(reasoning=str(reasonings), **avg_label_scores)
             else:
-                max_score_label = max(avg_label_scores, key=avg_label_scores.get)
-                yield self.prompt_signature(
+                max_score_label = max(avg_label_scores, key=avg_label_scores.__getitem__)
+                yield prompt_signature(
                     reasoning=str(reasonings),
                     label=max_score_label,
                     score=avg_label_scores[max_score_label],

@@ -69,7 +69,6 @@ def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool, multilabel: boo
     for doc in docs:
         assert doc.text
         assert doc.results["classifier"]
-        assert "classifier" in doc.results
 
 
 @pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
