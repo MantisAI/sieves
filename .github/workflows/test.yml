@@ -49,6 +49,7 @@ jobs:
         echo ":: Install torch CPU suite" 
         uv pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
         echo ":: Building wheel" 
+        source .venv/bin/activate
         VLLM_TARGET_DEVICE=cpu python setup.py install
         cd ..
 
