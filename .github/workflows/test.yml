@@ -42,8 +42,13 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 --slave /usr/bin/g++ g++ /usr/bin/g++-12
         git clone https://github.com/vllm-project/vllm.git vllm_source
         cd vllm_source
+        echo ":: Install auxiliary tools"
         uv pip install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy
+        echo ":: Install requirements/cpu.txt"
         uv pip install -v -r requirements/cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
+        echo ":: Install torch CPU suite" 
+        uv pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        echo ":: Building wheel" 
         VLLM_TARGET_DEVICE=cpu python setup.py install
         cd ..
 
