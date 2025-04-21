@@ -9,7 +9,16 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, huggingface_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import (
+    EngineInferenceMode,
+    dspy_,
+    huggingface_,
+    instructor_,
+    langchain_,
+    ollama_,
+    outlines_,
+    vllm_,
+)
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -63,8 +72,9 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
             else:
                 labels_with_descriptions.append(label)
 
-        label_desc_string = "\n\t\t\t" + "\n\t\t\t".join(labels_with_descriptions)
-        return f"\n\t\tHere are some descriptions for those labels:{label_desc_string}"
+        crlf = "\n\t\t"
+        label_desc_string = crlf + "\t" + crlf + "\t".join(labels_with_descriptions)
+        return f"{crlf}<label_descriptions>{label_desc_string}{crlf}</label_descriptions>\n\t\t"
 
 
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -112,7 +122,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             class SingleLabelTextClassification(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to classify.")
                 label: LabelType = dspy.OutputField(
-                    description=f"Correct label for the provided text. Must be exactly one of: {self._labels}."
+                    description="Correct label for the provided text. You MUST NOT provide a list for this attribute."
                 )
                 confidence: float = dspy.OutputField(
                     description="Confidence that this label is correct as a float between 0 and 1."
@@ -413,10 +423,10 @@ class PydanticBasedClassification(
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for res in doc_results:
-                # We clamp the score to 0 <= x <= 1. Alternatively we could force this in the prompt signature, but
-                # this fails occasionally with some models and feels too strict.
                 assert hasattr(res, "reasoning")
                 reasonings.append(res.reasoning)
+                # We clamp the score to 0 <= x <= 1. Alternatively we could force this in the prompt signature, but
+                # this fails occasionally with some models and feels too strict.
                 if self._multi_label:
                     for label in self._labels:
                         label_scores[label] += max(0, min(getattr(res, label), 1))
@@ -523,3 +533,9 @@ class InstructorClassification(PydanticBasedClassification[instructor_.Inference
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.chat
+
+
+class VLLMClassification(PydanticBasedClassification[vllm_.InferenceMode]):
+    @property
+    def inference_mode(self) -> vllm_.InferenceMode:
+        return vllm_.InferenceMode.json

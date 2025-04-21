@@ -7,10 +7,22 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import (
+    Engine,
+    EngineType,
+    dspy_,
+    glix_,
+    huggingface_,
+    instructor_,
+    langchain_,
+    ollama_,
+    outlines_,
+    vllm_,
+)
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.ner.bridges import (
+    VLLMNER,
     DSPyNER,
     GliXNER,
     InstructorNER,
@@ -31,9 +43,10 @@ _TaskResult: TypeAlias = (
     | langchain_.Result
     | ollama_.Result
     | outlines_.Result
+    | vllm_.Result
 )
 # Define a proper TaskBridge that includes all the specific NER bridges
-_TaskBridge: TypeAlias = DSPyNER | GliXNER | InstructorNER | LangChainNER | OllamaNER | OutlinesNER
+_TaskBridge: TypeAlias = DSPyNER | GliXNER | InstructorNER | LangChainNER | OllamaNER | OutlinesNER | VLLMNER
 
 
 class Entity(pydantic.BaseModel):
@@ -93,6 +106,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.dspy: DSPyNER,
             EngineType.instructor: InstructorNER,
             EngineType.glix: GliXNER,
+            EngineType.vllm: VLLMNER,
         }
         try:
             bridge_class = bridge_types[engine_type]
@@ -115,6 +129,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.outlines,
             EngineType.instructor,
             EngineType.glix,
+            EngineType.vllm,
         }
 
     def _validate_fewshot_examples(self) -> None:

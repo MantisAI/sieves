@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -99,33 +99,37 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
     @property
     def _prompt_template(self) -> str | None:
         questions_block = "\n\t\t" + "\n\t\t".join(
-            [f"{i + 1}. {question}" for i, question in enumerate(self._questions)]
+            [f"<question>{i + 1}. {question}</question>" for i, question in enumerate(self._questions)]
         )
         return f"""
         Use the given text to answer the following questions. Ensure you answer each question exactly once. Prefix each 
         question with the number of the corresponding question. Provide a concise reasoning for your answers. 
         
         {{% if examples|length > 0 -%}}
-            Examples:
-            ----------
+            <examples>
             {{%- for example in examples %}}
-                Text: "{{{{ example.text }}}}"
-                Questions:
-                {{% for q in example.questions %}}    {{{{ loop.index }}}}. {{{{ q }}}}
-                {{% endfor -%}}
-                Output:
-                    Reasoning: {{{{ example.reasoning }}}}
-                    Answers: 
-                    {{% for a in example.answers %}}  {{{{ loop.index }}}}. {{{{ a }}}}
+                <example>
+                    <text>"{{{{ example.text }}}}"</text>
+                    <questions>
+                    {{% for q in example.questions %}}    <question>{{{{ loop.index }}}}. {{{{ q }}}}</question>
                     {{% endfor -%}}
+                    </questions>
+                    <output>
+                        <reasoning>{{{{ example.reasoning }}}}</reasoning>
+                        <answers>
+                        {{% for a in example.answers %}}  <answer>{{{{ loop.index }}}}. {{{{ a }}}}</answer>
+                        {{% endfor -%}}
+                        <answers>
+                    </output>
+                </example>
             {{% endfor %}}
-            ----------
+            <examples>
         {{% endif -%}}
 
         ========
-        Text: {{{{ text }}}}
-        Questions: {questions_block}
-        Output: 
+        <text>{{{{ text }}}}</text>
+        <questions>{questions_block}</questions>
+        <output>
         """
 
     @property
@@ -199,3 +203,9 @@ class InstructorQA(PydanticBasedQA[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.chat
+
+
+class VLLMQA(PydanticBasedQA[vllm_.InferenceMode]):
+    @property
+    def inference_mode(self) -> vllm_.InferenceMode:
+        return vllm_.InferenceMode.json

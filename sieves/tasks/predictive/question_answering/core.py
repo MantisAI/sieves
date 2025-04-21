@@ -7,11 +7,12 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, glix_
+from sieves.engines import Engine, EngineType, dspy_, glix_, vllm_
 from sieves.serialization import Config
 from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.question_answering.bridges import (
+    VLLMQA,
     DSPyQA,
     InstructorQA,
     LangChainQA,
@@ -19,9 +20,11 @@ from sieves.tasks.predictive.question_answering.bridges import (
     OutlinesQA,
 )
 
-_TaskPromptSignature: TypeAlias = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult: TypeAlias = pydantic.BaseModel | dspy_.Result
-_TaskBridge: TypeAlias = DSPyQA | GliXBridge | InstructorQA | LangChainQA | OllamaQA | OutlinesQA
+_TaskPromptSignature: TypeAlias = (
+    glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature | vllm_.PromptSignature
+)
+_TaskResult: TypeAlias = pydantic.BaseModel | dspy_.Result | vllm_.Result
+_TaskBridge: TypeAlias = DSPyQA | GliXBridge | InstructorQA | LangChainQA | OllamaQA | OutlinesQA | VLLMQA
 
 
 class FewshotExample(pydantic.BaseModel):
@@ -86,6 +89,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             EngineType.outlines: OutlinesQA,
             EngineType.ollama: OllamaQA,
             EngineType.langchain: LangChainQA,
+            EngineType.vllm: VLLMQA,
         }
 
         try:
@@ -103,7 +107,14 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
 
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.dspy, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines}
+        return {
+            EngineType.dspy,
+            EngineType.instructor,
+            EngineType.langchain,
+            EngineType.ollama,
+            EngineType.outlines,
+            EngineType.vllm,
+        }
 
     @property
     def _state(self) -> dict[str, Any]:

@@ -10,7 +10,7 @@ from sieves.tasks.predictive import translation
 
 @pytest.mark.parametrize(
     "batch_engine",
-    (EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
+    (EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines, EngineType.vllm),
     indirect=["batch_engine"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])

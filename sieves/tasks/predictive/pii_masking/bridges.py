@@ -9,7 +9,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -156,21 +156,23 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
         Replace each instance of PII with "{{ mask_placeholder }}".
         
         {% if examples|length > 0 -%}
-            Examples:
-            ----------
+            <examples>
             {%- for example in examples %}
-                Text: "{{ example.text }}":
-                Output:
-                    Reasoning: "{{ example.reasoning }}"
-                    Masked Text: "{{ example.masked_text }}"
-                    PII Entities found: {{ example.pii_entities }}
+                <example>
+                    <text>"{{ example.text }}"</text>
+                    <output>
+                        <reasoning>{{ example.reasoning }}</reasoning>
+                        <masked_test>{{ example.masked_text }}</masked_test>
+                        <pii_entities_found>{{ example.pii_entities }}</pii_entities_found>
+                    </output>
+                </example>
             {% endfor -%}
-            ----------
+            </examples>
         {% endif -%}
 
         ========
-        Text: {{ text }}
-        Output: 
+        <text>{{ text }}</text>
+        <output>
         """
 
     @property
@@ -262,3 +264,12 @@ class InstructorPIIMasking(PydanticBasedPIIMasking[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.chat
+
+
+class VLLMPIIMasking(PydanticBasedPIIMasking[vllm_.InferenceMode]):
+    """VLLM bridge for PII masking."""
+
+    @property
+    def inference_mode(self) -> vllm_.InferenceMode:
+        """Return inference mode for VLLM engine."""
+        return vllm_.InferenceMode.json

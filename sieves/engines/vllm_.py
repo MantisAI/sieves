@@ -1,37 +1,34 @@
-import enum
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
+from enum import StrEnum
 from typing import Any, TypeAlias
 
-import outlines
 import pydantic
-from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformers, TransformersVision
+import pydantic_core
+from vllm import LLM, SamplingParams
+from vllm.sampling_params import GuidedDecodingParams
 
 from sieves.engines.core import Executable, PydanticEngine
 
 PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
-Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
+Model: TypeAlias = LLM
 Result: TypeAlias = pydantic.BaseModel | str
 
-# TODO Adjust InferenceMode, execute()
 
+class InferenceMode(StrEnum):
+    """Available inference modes."""
 
-class InferenceMode(enum.Enum):
-    """Available inference modes.
-    Note: generator functions are wrapped in tuples, as otherwise the Enum instance seems to be replaced by the function
-    itself - not sure why that happens. Should take another look at this.
-    """
-
-    # For normal text output, i.e. no structured generation.
-    text = (outlines.generate.text,)
-    # For limited set of choices, e.g. classification.
-    choice = (outlines.generate.choice,)
-    # Regex-conforming output.
-    regex = (outlines.generate.regex,)
-    # Output conforming to Pydantic models.
-    json = (outlines.generate.json,)
+    json = "json"
+    choice = "choice"
+    regex = "regex"
+    grammar = "grammar"
 
 
 class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
+    """vLLM engine.
+    Note: if you don't have a GPU, you have to install vLLM from source. Follow the instructions given in
+    https://docs.vllm.ai/en/v0.6.1/getting_started/cpu-installation.html.
+    """
+
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
@@ -43,7 +40,6 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
-        cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
@@ -51,31 +47,39 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             :param values: Values to inject into prompts.
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
             """
-            generator_factory: Callable[..., Any] = inference_mode.value[0]
+            # If Pydantic model: convert into JSON schema.
+            converted_decoding_params: type[PromptSignature] | PromptSignature | dict[str, Any] = prompt_signature
+            if inference_mode == InferenceMode.json:
+                assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
+                assert hasattr(prompt_signature, "model_json_schema")
+                converted_decoding_params = prompt_signature.model_json_schema()
 
-            match inference_mode:
-                case InferenceMode.text:
-                    seq_generator = generator_factory(self._model, **self._init_kwargs)
-                case InferenceMode.regex:
-                    assert isinstance(prompt_signature, str), ValueError(
-                        "PromptSignature has to be supplied as string in outlines regex mode."
-                    )
-                    seq_generator = generator_factory(self._model, regex_str=prompt_signature, **self._init_kwargs)
-                case InferenceMode.choice:
-                    assert isinstance(prompt_signature, list), ValueError(
-                        f"PromptSignature has to be supplied as list of strings or enum values in {cls_name} choice "
-                        f"mode."
-                    )
-                    seq_generator = generator_factory(self._model, choices=prompt_signature, **self._init_kwargs)
-
-                case InferenceMode.json:
-                    assert isinstance(prompt_signature, type) and issubclass(prompt_signature, pydantic.BaseModel)
-                    seq_generator = generator_factory(self._model, schema_object=prompt_signature, **self._init_kwargs)
-                case _:
-                    raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
+            guided_decoding_params = GuidedDecodingParams(**{inference_mode.value: converted_decoding_params})
+            sampling_params = SamplingParams(
+                guided_decoding=guided_decoding_params, **({"max_tokens": VLLM._MAX_TOKENS} | self._init_kwargs)
+            )
 
             def generate(prompts: list[str]) -> Iterable[Result]:
-                yield from seq_generator(prompts, **self._inference_kwargs)
+                results = self._model.generate(
+                    prompts=prompts, sampling_params=sampling_params, **({"use_tqdm": False} | self._inference_kwargs)
+                )
+
+                for result in results:
+                    match inference_mode:
+                        case InferenceMode.json:
+                            assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
+                            assert hasattr(prompt_signature, "model_validate")
+                            result_as_json = pydantic_core.from_json(result.outputs[0].text, allow_partial=True)
+                            result_structured = prompt_signature.model_validate(result_as_json)
+                            yield result_structured
+
+                        case InferenceMode.choice:
+                            assert isinstance(prompt_signature, list)
+                            result_as_json = pydantic_core.from_json(result.outputs[0].text, allow_partial=True)
+                            yield result_as_json
+
+                        case _:
+                            yield result.outputs[0].text
 
             yield from self._infer(
                 generate,

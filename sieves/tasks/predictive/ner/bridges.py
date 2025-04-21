@@ -9,7 +9,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, glix_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, glix_, instructor_, langchain_, ollama_, outlines_, vllm_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -246,21 +246,23 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         {{ entity_types }}.
 
         {% if examples|length > 0 -%}
-            Examples:
-            ----------
+            <examples>
             {%- for example in examples %}
-                Text: "{{ example.text }}":
-                Entities: [
-                    {%- for entity in example.entities %}
-                    {
-                        "text": "{{ entity.text }}",
-                        
-                        "entity_type": "{{ entity.entity_type }}"
-                    }{%- if not loop.last %}, {% endif %}
-                    {%- endfor %}
-                ]
+                <example>
+                    <text>{{ example.text }}</text>
+                    <entity_types>{{ entity_types }}</entity_types>
+                    <entities>
+                        {%- for entity in example.entities %}
+                        <entity>
+                            <text>{{ entity.text }}</text>
+                            <context>{{ entity.context }}</context>
+                            <entity_type>{{ entity.entity_type }}</entity_type>
+                        </entity>
+                        {%- endfor %}
+                    </entities>
+                </example>
             {% endfor -%}
-            ----------
+            </examples>
         {% endif %}
 
         For each entity:
@@ -273,8 +275,9 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         IMPORTANT:
         - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
 
-        Text: {{ text }}
-        Entity Types: {{ entity_types }}
+        <text>{{ text }}</text>
+        <entity_types>{{ entity_types }}</entity_types>
+        <entities>
         """
 
     @property
@@ -282,7 +285,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         return ""
 
     @cached_property
-    def _prompt_signature(self) -> type[pydantic.BaseModel]:
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
         entity_types = self._entities
         LiteralType = Literal[*entity_types]  # type: ignore[valid-type]
 
@@ -322,7 +325,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
                     all_entities.append(entity)
 
             # Create a consolidated result for this document - instantiate the class with entities
-            yield self._prompt_signature(entities=all_entities)
+            yield self.prompt_signature(entities=all_entities)
 
 
 class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
@@ -330,19 +333,11 @@ class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
 
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        return self._prompt_signature
-
 
 class OllamaNER(PydanticBasedNER[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
         return ollama_.InferenceMode.chat
-
-    @property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        return self._prompt_signature
 
 
 class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
@@ -350,19 +345,17 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured_output
 
-    @property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        return self._prompt_signature
-
 
 class InstructorNER(PydanticBasedNER[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.chat
 
+
+class VLLMNER(PydanticBasedNER[vllm_.InferenceMode]):
     @property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        return self._prompt_signature
+    def inference_mode(self) -> vllm_.InferenceMode:
+        return vllm_.InferenceMode.json
 
 
 class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):

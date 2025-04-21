@@ -7,7 +7,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_, vllm_
 from sieves.serialization import Config
 from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.core import PredictiveTask
@@ -17,10 +17,11 @@ from sieves.tasks.predictive.summarization.bridges import (
     LangChainSummarization,
     OllamaSummarization,
     OutlinesSummarization,
+    VLLMSummarization,
 )
 
-_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature
-_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
+_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature | vllm_.Result
+_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
 _TaskBridge: TypeAlias = (
     DSPySummarization
     | GliXBridge
@@ -28,6 +29,7 @@ _TaskBridge: TypeAlias = (
     | LangChainSummarization
     | OutlinesSummarization
     | OllamaSummarization
+    | VLLMSummarization
 )
 
 
@@ -97,6 +99,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
             EngineType.langchain: LangChainSummarization,
             EngineType.outlines: OutlinesSummarization,
             EngineType.ollama: OllamaSummarization,
+            EngineType.vllm: VLLMSummarization,
         }
 
         try:
@@ -118,7 +121,14 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         """
         :return set[EngineType]: Supported engine types.
         """
-        return {EngineType.dspy, EngineType.glix, EngineType.instructor, EngineType.ollama, EngineType.outlines}
+        return {
+            EngineType.dspy,
+            EngineType.glix,
+            EngineType.instructor,
+            EngineType.ollama,
+            EngineType.outlines,
+            EngineType.vllm,
+        }
 
     @property
     def _state(self) -> dict[str, Any]:

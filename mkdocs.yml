@@ -81,6 +81,7 @@ nav:
             - engines/langchain.md
             - engines/ollama.md
             - engines/outlines.md
+            - engines/vllm.md
   - Guides:
       - guides/getting_started.md
       - guides/serialization.md

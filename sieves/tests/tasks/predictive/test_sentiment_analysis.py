@@ -10,7 +10,14 @@ from sieves.tasks.predictive import sentiment_analysis
 
 @pytest.mark.parametrize(
     "batch_engine",
-    (EngineType.dspy, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
+    (
+        EngineType.dspy,
+        EngineType.instructor,
+        EngineType.langchain,
+        EngineType.ollama,
+        EngineType.outlines,
+        EngineType.vllm,
+    ),
     indirect=["batch_engine"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])

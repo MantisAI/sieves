@@ -58,7 +58,7 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             support batching.
         """
         super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
-        config_kwargs = {"max_tokens": 100000} | (config_kwargs or {})
+        config_kwargs = {"max_tokens": DSPy._MAX_TOKENS} | (config_kwargs or {})
         dspy.configure(lm=model, **config_kwargs)
 
     @property
@@ -92,9 +92,11 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                 generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
             # Compile predictor with few-shot examples.
-            fewshot_examples_dict = DSPy._convert_fewshot_examples(fewshot_examples)
-            examples = [dspy.Example(**fs_example) for fs_example in fewshot_examples_dict]
-            generator = dspy.asyncify(dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples))
+            fewshot_examples_dicts = DSPy._convert_fewshot_examples(fewshot_examples)
+            if len(fewshot_examples_dicts):
+                examples = [dspy.Example(**fs_example) for fs_example in fewshot_examples_dicts]
+                generator = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
+            generator_async = dspy.asyncify(generator)
 
             batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
             # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use
@@ -106,7 +108,7 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                     break
 
                 try:
-                    calls = [generator(**doc_values, **self._inference_kwargs) for doc_values in batch]
+                    calls = [generator_async(**doc_values, **self._inference_kwargs) for doc_values in batch]
                     yield from asyncio.run(self._execute_async_calls(calls))
 
                 except ValueError as err:

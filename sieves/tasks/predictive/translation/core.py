@@ -7,7 +7,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_, vllm_
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.translation.bridges import (
@@ -16,12 +16,18 @@ from sieves.tasks.predictive.translation.bridges import (
     LangChainTranslation,
     OllamaTranslation,
     OutlinesTranslation,
+    VLLMTranslation,
 )
 
-_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
+_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature | vllm_.PromptSignature
+_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
 _TaskBridge: TypeAlias = (
-    DSPyTranslation | InstructorTranslation | LangChainTranslation | OutlinesTranslation | OllamaTranslation
+    DSPyTranslation
+    | InstructorTranslation
+    | LangChainTranslation
+    | OutlinesTranslation
+    | OllamaTranslation
+    | VLLMTranslation
 )
 
 
@@ -82,6 +88,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
             EngineType.langchain: LangChainTranslation,
             EngineType.outlines: OutlinesTranslation,
             EngineType.ollama: OllamaTranslation,
+            EngineType.vllm: VLLMTranslation,
         }
 
         try:
@@ -102,7 +109,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         """
         :return set[EngineType]: Supported engine types.
         """
-        return {EngineType.dspy, EngineType.instructor, EngineType.ollama, EngineType.outlines}
+        return {EngineType.dspy, EngineType.instructor, EngineType.ollama, EngineType.outlines, EngineType.vllm}
 
     @property
     def _state(self) -> dict[str, Any]:

@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -124,9 +124,11 @@ class PydanticBasedSentAnalysis(
 ):
     @property
     def _prompt_template(self) -> str | None:
-        return f"""
+        return (
+            f"""
         Perform aspect-based sentiment analysis of the provided text given the provided aspects: 
-        {",".join(self._aspects)}.
+        {",".join(self._aspects)}."""
+            + """
         For each aspect, provide the sentiment in the provided text with respect to this aspect.
         The "overall" aspect should reflect the sentiment in the text overall.
         A score of 1.0 means that the sentiment in the text with respect to this aspect is extremely positive. 
@@ -134,28 +136,47 @@ class PydanticBasedSentAnalysis(
         The sentiment score per aspect should ALWAYS be between 0 and 1. Provide the reasoning for your decision.
 
         The output for two aspects ASPECT_1 and ASPECT_2 should look like this:
-        Output:
-            Reasoning: REASONING
-            ASPECT_1: SENTIMENT_SCORE_1
-            ASPECT_2: SENTIMENT_SCORE_2
-
-        {{% if examples|length > 0 -%}}
-            Examples:
-            ----------
-            {{%- for example in examples %}}
-                Text: "{{{{ example.text }}}}"
-                Output:
-                    Reasoning: "{{{{ example.reasoning }}}}" 
-                {{% for a, s in example.sentiment_per_aspect.items() %}}    {{{{ a }}}}: {{{{ s }}}},
-                {{% endfor -%}}
-            {{% endfor %}}
-            ----------
-        {{% endif -%}}
+        <output>
+            <reasoning>REASONING</reasoning>
+            <aspect_sentiments>
+                <aspect_sentiment>
+                    <aspect>ASPECT_1</aspect>
+                    <sentiment>SENTIMENT_SCORE_1</sentiment>
+                <aspect_sentiment>
+                <aspect_sentiment>
+                    <aspect>ASPECT_2</aspect>
+                    <sentiment>SENTIMENT_SCORE_2</sentiment>
+                <aspect_sentiment>
+            </aspect_sentiments>
+        </output>
+        
+        {% if examples|length > 0 -%}
+            <examples>
+            {%- for example in examples %}
+                <example>
+                    <text>{{ example.text }}</text>
+                    <output>
+                        <reasoning>{{ example.reasoning }}</reasoning> 
+                        <aspect_sentiments>
+                        {%- for a, s in example.sentiment_per_aspect.items() %}    
+                            <aspect_sentiment>
+                                <aspect>{{ a }}</aspect>
+                                <sentiment>{{ s }}</sentiment>
+                            </aspect_sentiment>
+                        {% endfor -%}
+                        </aspect_sentiments>
+                    </output>
+                </example>
+            {% endfor %}
+            </examples>
+        {% endif -%}
 
         ========
-        Text: {{{{ text }}}}
-        Output: 
+        
+        <text>{{ text }}</text>
+        <output>
         """
+        )
 
     @property
     def _prompt_signature_description(self) -> str | None:
@@ -235,3 +256,9 @@ class InstructorSentimentAnalysis(PydanticBasedSentAnalysis[instructor_.Inferenc
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.chat
+
+
+class VLLMSentimentAnalysis(PydanticBasedSentAnalysis[vllm_.InferenceMode]):
+    @property
+    def inference_mode(self) -> vllm_.InferenceMode:
+        return vllm_.InferenceMode.json

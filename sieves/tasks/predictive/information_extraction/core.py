@@ -8,7 +8,7 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_
+from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_, vllm_
 from sieves.serialization import Config
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
@@ -17,17 +17,21 @@ from sieves.tasks.predictive.information_extraction.bridges import (
     LangChainInformationExtraction,
     OllamaInformationExtraction,
     OutlinesInformationExtraction,
+    VLLMInformationExtraction,
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature
-_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result
+_TaskPromptSignature: TypeAlias = (
+    pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature | vllm_.PromptSignature
+)
+_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
 _TaskBridge: TypeAlias = (
     DSPyInformationExtraction
     | InstructorInformationExtraction
     | LangChainInformationExtraction
     | OutlinesInformationExtraction
     | OllamaInformationExtraction
+    | VLLMInformationExtraction
 )
 
 
@@ -89,6 +93,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             EngineType.langchain: LangChainInformationExtraction,
             EngineType.outlines: OutlinesInformationExtraction,
             EngineType.ollama: OllamaInformationExtraction,
+            EngineType.vllm: VLLMInformationExtraction,
         }
 
         try:
@@ -105,7 +110,14 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.dspy, EngineType.instructor, EngineType.ollama, EngineType.outlines}
+        return {
+            EngineType.dspy,
+            EngineType.instructor,
+            EngineType.langchain,
+            EngineType.ollama,
+            EngineType.outlines,
+            EngineType.vllm,
+        }
 
     @property
     def _state(self) -> dict[str, Any]:
