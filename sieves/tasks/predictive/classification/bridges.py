@@ -72,8 +72,8 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
             else:
                 labels_with_descriptions.append(label)
 
-        crlf = "\n\t\t"
-        label_desc_string = crlf + "\t" + crlf + "\t".join(labels_with_descriptions)
+        crlf = "\n\t\t\t"
+        label_desc_string = crlf + "\t" + (crlf + "\t").join(labels_with_descriptions)
         return f"{crlf}<label_descriptions>{label_desc_string}{crlf}</label_descriptions>\n\t\t"
 
 
@@ -211,7 +211,10 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
                         <output>
                             <reasoning>{{ example.reasoning }}</reasoning>
                             {%- for l, s in example.confidence_per_label.items() %}    
-                            <label_score><label>{{ l }}</label><score>{{ s }}</score></label_score>{% endfor %}
+                            <label_score>
+                                <label>{{ l }}</label><
+                                score>{{ s }}</score>
+                            </label_score>{% endfor %}
                         </output>
                     </example>
                 {% endfor %}</examples>
@@ -299,8 +302,7 @@ class PydanticBasedClassification(
             return (
                 f"""
             Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
-            {self._get_label_descriptions()}
-            """
+            {self._get_label_descriptions()}"""
                 + """ 
             For each label, provide the confidence with which you believe that the provided text should be assigned
             this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the

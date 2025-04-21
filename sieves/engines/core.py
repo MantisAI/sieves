@@ -26,7 +26,7 @@ class Executable(Protocol[EngineResult]):
 
 
 class InternalEngine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
-    _MAX_TOKENS = 2**14
+    _MAX_TOKENS = 2**12
 
     def __init__(
         self,
