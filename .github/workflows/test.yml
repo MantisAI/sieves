@@ -52,6 +52,7 @@ jobs:
         echo ":: Building wheel"
         VLLM_TARGET_DEVICE=cpu python setup.py install
         cd ..
+        rm -rf vllm_source
 
     - name: Set up ollama
       run: |
