@@ -42,6 +42,7 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 --slave /usr/bin/g++ g++ /usr/bin/g++-12
         git clone https://github.com/vllm-project/vllm.git vllm_source
         source .venv/bin/activate
+        uv pip uninstall vllm
         cd vllm_source
         echo ":: Install auxiliary tools"
         uv pip install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy
