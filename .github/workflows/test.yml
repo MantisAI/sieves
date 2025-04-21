@@ -36,6 +36,17 @@ jobs:
         uv venv
         uv pip install -e ".[all,test]"
 
+    - name: Set up vLLM for CPU
+      run: |
+        sudo apt-get install -y gcc-12 g++-12 libnuma-dev
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 --slave /usr/bin/g++ g++ /usr/bin/g++-12
+        git clone https://github.com/vllm-project/vllm.git vllm_source
+        cd vllm_source
+        uv pip install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy
+        uv pip install -v -r requirements/cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
+        VLLM_TARGET_DEVICE=cpu python setup.py install
+        cd ..
+
     - name: Set up ollama
       run: |
         curl -fsSL https://ollama.ai/install.sh | sh
