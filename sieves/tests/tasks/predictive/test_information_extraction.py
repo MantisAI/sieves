@@ -16,7 +16,14 @@ class Person(pydantic.BaseModel, frozen=True):
 
 @pytest.mark.parametrize(
     "batch_engine",
-    (EngineType.dspy, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines),
+    (
+        EngineType.dspy,
+        EngineType.instructor,
+        EngineType.langchain,
+        EngineType.ollama,
+        EngineType.outlines,
+        EngineType.vllm,
+    ),
     indirect=["batch_engine"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])

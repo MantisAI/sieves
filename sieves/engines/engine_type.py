@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 
-from . import dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
+from . import dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_, vllm_
 from .core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult, InternalEngine
 
 
@@ -14,6 +14,7 @@ class EngineType(enum.Enum):
     langchain = langchain_.LangChain
     ollama = ollama_.Ollama
     outlines = outlines_.Outlines
+    vllm = vllm_.VLLM
 
     @classmethod
     def all(cls) -> tuple[EngineType, ...]:

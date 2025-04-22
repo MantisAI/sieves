@@ -16,6 +16,7 @@ from sieves.tasks.predictive.sentiment_analysis.bridges import (
     LangChainSentimentAnalysis,
     OllamaSentimentAnalysis,
     OutlinesSentimentAnalysis,
+    VLLMSentimentAnalysis,
 )
 
 _TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
@@ -26,6 +27,7 @@ _TaskBridge: TypeAlias = (
     | LangChainSentimentAnalysis
     | OllamaSentimentAnalysis
     | OutlinesSentimentAnalysis
+    | VLLMSentimentAnalysis
 )
 
 
@@ -91,6 +93,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             EngineType.outlines: OutlinesSentimentAnalysis,
             EngineType.ollama: OllamaSentimentAnalysis,
             EngineType.langchain: LangChainSentimentAnalysis,
+            EngineType.vllm: VLLMSentimentAnalysis,
         }
 
         try:
@@ -113,6 +116,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             EngineType.langchain,
             EngineType.ollama,
             EngineType.outlines,
+            EngineType.vllm,
         }
 
     def _validate_fewshot_examples(self) -> None:

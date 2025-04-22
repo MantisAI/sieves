@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -111,20 +111,22 @@ class PydanticBasedSummarization(
         Your goal is to summarize a text. This summary should be around {{ max_n }} words.
 
         {% if examples|length > 0 -%}
-            Examples:
-            ----------
+            <examples>
             {%- for example in examples %}
-                Text: "{{ example.text }}":
-                Approximate number of words in summary: {{ example.n_words }}
-                Summary: "{{ example.summary }}"
+                <text>{{ example.text }}</text>
+                <approximate_number_of_words_in_summary>{{ example.n_words }}</approximate_number_of_words_in_summary>
+                <summary>
+                {{ example.summary }}
+                </summary>
             {% endfor -%}
-            ----------
+            </examples>
         {% endif -%}
 
         ========
-        Text: {{ text }}
-        Approximate number of words in summary: {{ n_words }}
-        Summary: 
+        
+        <text>{{ text }}</text>
+        <approximate_number_of_words_in_summary>{{ n_words }}</approximate_number_of_words_in_summary>
+        <summary> 
         """
 
     @property
@@ -191,3 +193,9 @@ class InstructorSummarization(PydanticBasedSummarization[instructor_.InferenceMo
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.chat
+
+
+class VLLMSummarization(PydanticBasedSummarization[vllm_.InferenceMode]):
+    @property
+    def inference_mode(self) -> vllm_.InferenceMode:
+        return vllm_.InferenceMode.json

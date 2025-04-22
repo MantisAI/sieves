@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -110,20 +110,24 @@ class PydanticBasedTranslation(
         Translate into {{ target_language }}.
 
         {% if examples|length > 0 -%}
-            Examples:
-            ----------
+            <examples>
             {%- for example in examples %}
-                Text: "{{ example.text }}":
-                Target language: {{ example.to }}
-                Translation: "{{ example.translation }}"
+                <example>
+                    <text>{{ example.text }}</text>
+                    <target_language>{{ example.to }}</target_language>
+                    <translation>
+                    {{ example.translation }}
+                    </translation>
+                </example>
             {% endfor -%}
-            ----------
+            </examples>
         {% endif -%}
 
         ========
-        Text: {{ text }}
-        Target language: {{ target_language }}
-        Translation: 
+        
+        <text>{{ text }}</text>
+        <target_language>{{ target_language }}</target_language>
+        <translation> 
         """
 
     @property
@@ -190,3 +194,9 @@ class InstructorTranslation(PydanticBasedTranslation[instructor_.InferenceMode])
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.chat
+
+
+class VLLMTranslation(PydanticBasedTranslation[vllm_.InferenceMode]):
+    @property
+    def inference_mode(self) -> vllm_.InferenceMode:
+        return vllm_.InferenceMode.json

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from . import dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
+from . import dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_, vllm_
 from .core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult, InternalEngine
 from .dspy_ import DSPy
 from .engine_type import EngineType
@@ -21,7 +21,7 @@ __all__ = [
     "langchain_",
     "huggingface_",
     "instructor_",
-    "Instructor",
     "ollama_",
     "outlines_",
+    "vllm_",
 ]

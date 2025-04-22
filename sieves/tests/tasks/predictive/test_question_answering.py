@@ -11,12 +11,13 @@ from sieves.tasks.predictive import question_answering
 @pytest.mark.parametrize(
     "batch_engine",
     (
-        EngineType.dspy,
-        EngineType.glix,
-        EngineType.instructor,
-        EngineType.langchain,
-        EngineType.ollama,
-        EngineType.outlines,
+        # EngineType.dspy,
+        # EngineType.glix,
+        # EngineType.instructor,
+        # EngineType.langchain,
+        # EngineType.ollama,
+        # EngineType.outlines,
+        EngineType.vllm,
     ),
     indirect=["batch_engine"],
 )

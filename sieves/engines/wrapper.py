@@ -6,7 +6,17 @@ from typing import Any, TypeAlias
 import outlines
 import pydantic
 
-from sieves.engines import InternalEngine, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import (
+    InternalEngine,
+    dspy_,
+    glix_,
+    huggingface_,
+    instructor_,
+    langchain_,
+    ollama_,
+    outlines_,
+    vllm_,
+)
 from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult, Executable
 from sieves.engines.engine_type import EngineType
 
@@ -18,6 +28,7 @@ PromptSignature: TypeAlias = (
     | langchain_.PromptSignature
     | ollama_.PromptSignature
     | outlines_.PromptSignature
+    | vllm_.PromptSignature
 )
 Model: TypeAlias = (
     dspy_.Model
@@ -27,6 +38,7 @@ Model: TypeAlias = (
     | langchain_.Model
     | ollama_.Model
     | outlines_.Model
+    | vllm_.Model
 )
 Result: TypeAlias = (
     dspy_.Result
@@ -36,6 +48,7 @@ Result: TypeAlias = (
     | langchain_.Result
     | ollama_.Result
     | outlines_.Result
+    | vllm_.Result
 )
 InferenceMode: TypeAlias = (
     dspy_.InferenceMode
@@ -45,6 +58,7 @@ InferenceMode: TypeAlias = (
     | langchain_.InferenceMode
     | ollama_.InferenceMode
     | outlines_.InferenceMode
+    | vllm_.InferenceMode
 )
 
 
@@ -86,6 +100,7 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             langchain_: langchain_.LangChain,
             ollama_: ollama_.Ollama,
             outlines_: outlines_.Outlines,
+            vllm_: vllm_.VLLM,
         }
 
         for module, engine_type in module_engine_map.items():

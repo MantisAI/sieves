@@ -15,12 +15,13 @@ from sieves.tasks.predictive.pii_masking.bridges import (
     LangChainPIIMasking,
     OllamaPIIMasking,
     OutlinesPIIMasking,
+    VLLMPIIMasking,
 )
 
 _TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
 _TaskResult: TypeAlias = pydantic.BaseModel | dspy_.Result
 _TaskBridge: TypeAlias = (
-    DSPyPIIMasking | InstructorPIIMasking | LangChainPIIMasking | OutlinesPIIMasking | OllamaPIIMasking
+    DSPyPIIMasking | InstructorPIIMasking | LangChainPIIMasking | OutlinesPIIMasking | OllamaPIIMasking | VLLMPIIMasking
 )
 
 
@@ -97,6 +98,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
             EngineType.langchain: LangChainPIIMasking,
             EngineType.outlines: OutlinesPIIMasking,
             EngineType.ollama: OllamaPIIMasking,
+            EngineType.vllm: VLLMPIIMasking,
         }
 
         try:
@@ -116,7 +118,14 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         """
         :return set[EngineType]: Supported engine types.
         """
-        return {EngineType.dspy, EngineType.instructor, EngineType.langchain, EngineType.ollama, EngineType.outlines}
+        return {
+            EngineType.dspy,
+            EngineType.instructor,
+            EngineType.langchain,
+            EngineType.ollama,
+            EngineType.outlines,
+            EngineType.vllm,
+        }
 
     @property
     def _state(self) -> dict[str, Any]:

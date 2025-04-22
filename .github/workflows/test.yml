@@ -18,6 +18,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -36,6 +38,25 @@ jobs:
         uv venv
         uv pip install -e ".[all,test]"
 
+    - name: Set up vLLM for CPU
+      run: |
+        sudo apt-get install -y gcc-12 g++-12 libnuma-dev
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 --slave /usr/bin/g++ g++ /usr/bin/g++-12
+        git clone https://github.com/vllm-project/vllm.git vllm_source
+        source .venv/bin/activate
+        uv pip uninstall vllm
+        cd vllm_source
+        echo ":: Install auxiliary tools"
+        uv pip install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy
+        echo ":: Install requirements/cpu.txt"
+        uv pip install -v -r requirements/cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
+        echo ":: Install torch CPU suite" 
+        uv pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        echo ":: Building wheel"
+        VLLM_TARGET_DEVICE=cpu python setup.py install
+        cd ..
+        rm -rf vllm_source
+
     - name: Set up ollama
       run: |
         curl -fsSL https://ollama.ai/install.sh | sh
@@ -43,6 +64,14 @@ jobs:
         # before otherwise). 
         ((! nc -z 127.0.0.1 11434) && (ollama serve &)) || true
         ollama pull smollm:135m-instruct-v0.2-q8_0
+
+    - name: Create and enable 4 GB swap
+      run: |
+        sudo fallocate -l 4G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        free -h
 
     - name: Run tests
       env:

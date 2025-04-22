@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -117,19 +117,23 @@ class PydanticBasedInformationExtraction(
         exhaustively list all identified entities in your reasoning.
 
         {% if examples|length > 0 -%}
-            Examples:
-            ----------
+            <examples>
             {%- for example in examples %}
-                Text: "{{ example.text }}":
-                Reasoning: "{{ example.reasoning }}"
-                Output: {{ example.entities }}
+                <example>
+                    <text>{{ example.text }}</text>
+                    <output>
+                        <reasoning>{{ example.reasoning }}</reasoning>
+                        <entities>{{ example.entities }}</entities>
+                    </output>
+                </example>
             {% endfor -%}
-            ----------
+            </examples>
         {% endif -%}
 
         ========
-        Text: {{ text }}
-        Output: 
+        
+        <text>{{ text }}</text>
+        <output> 
         """
 
     @property
@@ -210,3 +214,9 @@ class InstructorInformationExtraction(PydanticBasedInformationExtraction[instruc
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.chat
+
+
+class VLLMInformationExtraction(PydanticBasedInformationExtraction[vllm_.InferenceMode]):
+    @property
+    def inference_mode(self) -> vllm_.InferenceMode:
+        return vllm_.InferenceMode.json
