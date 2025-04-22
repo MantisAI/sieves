@@ -181,19 +181,19 @@ class OutlinesTranslation(PydanticBasedTranslation[outlines_.InferenceMode]):
 class OllamaTranslation(PydanticBasedTranslation[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
+        return ollama_.InferenceMode.structured
 
 
 class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured_output
+        return langchain_.InferenceMode.structured
 
 
 class InstructorTranslation(PydanticBasedTranslation[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.chat
+        return instructor_.InferenceMode.structured
 
 
 class VLLMTranslation(PydanticBasedTranslation[vllm_.InferenceMode]):

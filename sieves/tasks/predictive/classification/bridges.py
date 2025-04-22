@@ -426,6 +426,9 @@ class PydanticBasedClassification(
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for res in doc_results:
+                if res is None:
+                    continue  # type: ignore[unreachable]
+
                 assert hasattr(res, "reasoning")
                 reasonings.append(res.reasoning)
                 # We clamp the score to 0 <= x <= 1. Alternatively we could force this in the prompt signature, but
@@ -452,7 +455,25 @@ class PydanticBasedClassification(
                 )
 
 
-class OutlinesClassification(PydanticBasedClassification[outlines_.InferenceMode]):
+class OllamaClassification(PydanticBasedClassification[ollama_.InferenceMode]):
+    @property
+    def inference_mode(self) -> ollama_.InferenceMode:
+        return ollama_.InferenceMode.structured
+
+
+class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
+    @property
+    def inference_mode(self) -> langchain_.InferenceMode:
+        return langchain_.InferenceMode.structured
+
+
+class InstructorClassification(PydanticBasedClassification[instructor_.InferenceMode]):
+    @property
+    def inference_mode(self) -> instructor_.InferenceMode:
+        return instructor_.InferenceMode.structured
+
+
+class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[EngineInferenceMode], abc.ABC):
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel] | list[str]:
         return super().prompt_signature if self._multi_label else self._labels
@@ -465,7 +486,7 @@ class OutlinesClassification(PydanticBasedClassification[outlines_.InferenceMode
         return f"""
         Perform single-label classification of the provided text given the provided labels: {",".join(self._labels)}.
         {self._get_label_descriptions()}
-        
+
         Provide the best-fitting label for given text.
 
         The output for two labels LABEL_1 and LABEL_2 should look like this:
@@ -515,30 +536,14 @@ class OutlinesClassification(PydanticBasedClassification[outlines_.InferenceMode
                 label_counts = Counter(doc_results)
                 yield label_counts.most_common()[0][0]
 
+
+class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outlines_.InferenceMode]):
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json if self._multi_label else outlines_.InferenceMode.choice
 
 
-class OllamaClassification(PydanticBasedClassification[ollama_.InferenceMode]):
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
-
-
-class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured_output
-
-
-class InstructorClassification(PydanticBasedClassification[instructor_.InferenceMode]):
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.chat
-
-
-class VLLMClassification(PydanticBasedClassification[vllm_.InferenceMode]):
+class VLLMClassification(PydanticBasedClassificationWithLabelForcing[vllm_.InferenceMode]):
     @property
     def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json
+        return vllm_.InferenceMode.json if self._multi_label else vllm_.InferenceMode.choice

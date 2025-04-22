@@ -14,7 +14,7 @@ Result: TypeAlias = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):
-    structured_output = "structured_output"
+    structured = "structured"
 
 
 class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
@@ -41,7 +41,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
             """
             match inference_mode:
-                case InferenceMode.structured_output:
+                case InferenceMode.structured:
                     model = self._model.with_structured_output(prompt_signature)
 
                     def generate(prompts: list[str]) -> Iterable[Result]:

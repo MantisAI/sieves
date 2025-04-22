@@ -190,19 +190,19 @@ class OutlinesQA(PydanticBasedQA[outlines_.InferenceMode]):
 class OllamaQA(PydanticBasedQA[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
+        return ollama_.InferenceMode.structured
 
 
 class LangChainQA(PydanticBasedQA[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured_output
+        return langchain_.InferenceMode.structured
 
 
 class InstructorQA(PydanticBasedQA[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.chat
+        return instructor_.InferenceMode.structured
 
 
 class VLLMQA(PydanticBasedQA[vllm_.InferenceMode]):
