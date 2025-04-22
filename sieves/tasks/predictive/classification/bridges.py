@@ -426,6 +426,9 @@ class PydanticBasedClassification(
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for res in doc_results:
+                if res is None:
+                    continue  # type: ignore[unreachable]
+
                 assert hasattr(res, "reasoning")
                 reasonings.append(res.reasoning)
                 # We clamp the score to 0 <= x <= 1. Alternatively we could force this in the prompt signature, but

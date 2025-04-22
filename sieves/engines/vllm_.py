@@ -57,7 +57,8 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
             guided_decoding_params = GuidedDecodingParams(**{inference_mode.value: converted_decoding_params})
             sampling_params = SamplingParams(
-                guided_decoding=guided_decoding_params, **({"max_tokens": VLLM._MAX_TOKENS} | self._init_kwargs)
+                guided_decoding=guided_decoding_params,
+                **({"max_tokens": VLLM._MAX_TOKENS, "temperature": 0} | self._init_kwargs),
             )
 
             def generate(prompts: list[str]) -> Iterable[Result]:
