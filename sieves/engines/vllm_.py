@@ -1,3 +1,4 @@
+import re
 from collections.abc import Iterable
 from enum import StrEnum
 from typing import Any, TypeAlias
@@ -65,21 +66,25 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                 )
 
                 for result in results:
+                    # Sanitize output by removing invalid control characters.
+                    # This pattern matches all C0 controls except tab (\x09), LF (\x0A) and CR (\x0D)
+                    control_chars = re.compile(r"[\x00-\x08\x0B-\x0C\x0E-\x1F]+")
+                    sanitized_result = control_chars.sub("", result.outputs[0].text)
+
                     match inference_mode:
                         case InferenceMode.json:
                             assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
                             assert hasattr(prompt_signature, "model_validate")
-                            result_as_json = pydantic_core.from_json(result.outputs[0].text, allow_partial=True)
+                            result_as_json = pydantic_core.from_json(sanitized_result, allow_partial=True)
                             result_structured = prompt_signature.model_validate(result_as_json)
                             yield result_structured
 
                         case InferenceMode.choice:
                             assert isinstance(prompt_signature, list)
-                            result_as_json = pydantic_core.from_json(result.outputs[0].text, allow_partial=True)
-                            yield result_as_json
+                            yield sanitized_result
 
                         case _:
-                            yield result.outputs[0].text
+                            yield sanitized_result
 
             yield from self._infer(
                 generate,
