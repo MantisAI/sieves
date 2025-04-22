@@ -20,7 +20,7 @@ Result: TypeAlias = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):
-    chat = "chat"
+    structured = "structured"
 
 
 class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
@@ -45,7 +45,7 @@ class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
             """
             match inference_mode:
-                case InferenceMode.chat:
+                case InferenceMode.structured:
 
                     def generate(prompts: list[str]) -> Iterable[Result]:
                         calls = [

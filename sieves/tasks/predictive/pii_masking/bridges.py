@@ -251,19 +251,19 @@ class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):
 class OllamaPIIMasking(PydanticBasedPIIMasking[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
+        return ollama_.InferenceMode.structured
 
 
 class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured_output
+        return langchain_.InferenceMode.structured
 
 
 class InstructorPIIMasking(PydanticBasedPIIMasking[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.chat
+        return instructor_.InferenceMode.structured
 
 
 class VLLMPIIMasking(PydanticBasedPIIMasking[vllm_.InferenceMode]):

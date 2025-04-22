@@ -123,7 +123,7 @@ class PydanticBasedSummarization(
         {% endif -%}
 
         ========
-        
+
         <text>{{ text }}</text>
         <approximate_number_of_words_in_summary>{{ n_words }}</approximate_number_of_words_in_summary>
         <summary> 
@@ -180,19 +180,19 @@ class OutlinesSummarization(PydanticBasedSummarization[outlines_.InferenceMode])
 class OllamaSummarization(PydanticBasedSummarization[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
+        return ollama_.InferenceMode.structured
 
 
 class LangChainSummarization(PydanticBasedSummarization[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured_output
+        return langchain_.InferenceMode.structured
 
 
 class InstructorSummarization(PydanticBasedSummarization[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.chat
+        return instructor_.InferenceMode.structured
 
 
 class VLLMSummarization(PydanticBasedSummarization[vllm_.InferenceMode]):

@@ -458,19 +458,19 @@ class PydanticBasedClassification(
 class OllamaClassification(PydanticBasedClassification[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
+        return ollama_.InferenceMode.structured
 
 
 class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured_output
+        return langchain_.InferenceMode.structured
 
 
 class InstructorClassification(PydanticBasedClassification[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.chat
+        return instructor_.InferenceMode.structured
 
 
 class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[EngineInferenceMode], abc.ABC):

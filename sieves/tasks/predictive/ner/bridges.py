@@ -337,19 +337,19 @@ class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
 class OllamaNER(PydanticBasedNER[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
+        return ollama_.InferenceMode.structured
 
 
 class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured_output
+        return langchain_.InferenceMode.structured
 
 
 class InstructorNER(PydanticBasedNER[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.chat
+        return instructor_.InferenceMode.structured
 
 
 class VLLMNER(PydanticBasedNER[vllm_.InferenceMode]):

@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from enum import StrEnum
 from typing import Any, TypeAlias
 
+import json_repair
 import pydantic
 import pydantic_core
 from vllm import LLM, SamplingParams
@@ -55,6 +56,7 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                 assert hasattr(prompt_signature, "model_json_schema")
                 converted_decoding_params = prompt_signature.model_json_schema()
 
+            # Configure decoding params to encourage correct formatting.
             guided_decoding_params = GuidedDecodingParams(**{inference_mode.value: converted_decoding_params})
             sampling_params = SamplingParams(
                 guided_decoding=guided_decoding_params,
@@ -76,7 +78,9 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                         case InferenceMode.json:
                             assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
                             assert hasattr(prompt_signature, "model_validate")
-                            result_as_json = pydantic_core.from_json(sanitized_result, allow_partial=True)
+                            result_as_json = json_repair.repair_json(
+                                pydantic_core.from_json(sanitized_result, allow_partial=True)
+                            )
                             result_structured = prompt_signature.model_validate(result_as_json)
                             yield result_structured
 

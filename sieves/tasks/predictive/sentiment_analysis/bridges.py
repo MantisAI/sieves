@@ -243,19 +243,19 @@ class OutlinesSentimentAnalysis(PydanticBasedSentAnalysis[outlines_.InferenceMod
 class OllamaSentimentAnalysis(PydanticBasedSentAnalysis[ollama_.InferenceMode]):
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.chat
+        return ollama_.InferenceMode.structured
 
 
 class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured_output
+        return langchain_.InferenceMode.structured
 
 
 class InstructorSentimentAnalysis(PydanticBasedSentAnalysis[instructor_.InferenceMode]):
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.chat
+        return instructor_.InferenceMode.structured
 
 
 class VLLMSentimentAnalysis(PydanticBasedSentAnalysis[vllm_.InferenceMode]):
