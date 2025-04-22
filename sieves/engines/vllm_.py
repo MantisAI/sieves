@@ -77,7 +77,7 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                         case InferenceMode.json:
                             assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
                             assert hasattr(prompt_signature, "model_validate")
-                            result_as_json = json_repair.repair_json(sanitized_result)
+                            result_as_json = json_repair.repair_json(sanitized_result, ensure_ascii=False)
                             result_structured = prompt_signature.model_validate(result_as_json)
                             yield result_structured
 
