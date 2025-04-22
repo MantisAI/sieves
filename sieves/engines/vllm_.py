@@ -5,7 +5,6 @@ from typing import Any, TypeAlias
 
 import json_repair
 import pydantic
-import pydantic_core
 from vllm import LLM, SamplingParams
 from vllm.sampling_params import GuidedDecodingParams
 
@@ -78,9 +77,7 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                         case InferenceMode.json:
                             assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
                             assert hasattr(prompt_signature, "model_validate")
-                            result_as_json = json_repair.repair_json(
-                                pydantic_core.from_json(sanitized_result, allow_partial=True)
-                            )
+                            result_as_json = json_repair.repair_json(sanitized_result)
                             result_structured = prompt_signature.model_validate(result_as_json)
                             yield result_structured
 
