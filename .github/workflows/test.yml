@@ -18,6 +18,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -62,6 +64,14 @@ jobs:
         # before otherwise). 
         ((! nc -z 127.0.0.1 11434) && (ollama serve &)) || true
         ollama pull smollm:135m-instruct-v0.2-q8_0
+
+    - name: Create and enable 4 GB swap
+      run: |
+        sudo fallocate -l 4G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        free -h
 
     - name: Run tests
       env:
