@@ -122,7 +122,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             class SingleLabelTextClassification(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to classify.")
                 label: LabelType = dspy.OutputField(
-                    description="Correct label for the provided text. You MUST NOT provide a list for this attribute."
+                    description="Correct label for the provided text. You MUST NOT provide a list for this attribute. "
+                    "This a single label. Do not wrap this label in []."
                 )
                 confidence: float = dspy.OutputField(
                     description="Confidence that this label is correct as a float between 0 and 1."

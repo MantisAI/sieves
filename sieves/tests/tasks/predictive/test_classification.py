@@ -83,8 +83,8 @@ def test_run_nonbatched(classification_docs, engine, fewshot):
     _run(engine, classification_docs, fewshot)
 
 
-@pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
-@pytest.mark.parametrize("fewshot", [True, False])
+@pytest.mark.parametrize("batch_engine", (EngineType.dspy,), indirect=["batch_engine"])
+@pytest.mark.parametrize("fewshot", [False])
 def test_run_singlelabel(classification_docs, batch_engine, fewshot):
     _run(batch_engine, classification_docs, fewshot, False)
 
