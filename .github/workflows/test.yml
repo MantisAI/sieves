@@ -17,7 +17,17 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-    - uses: actions/checkout@v4
+
+    - name: Maximize build space
+      shell: bash
+      run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+
+    - name: Checkout repo
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
     
@@ -25,7 +35,7 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Install uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -48,10 +58,10 @@ jobs:
         cd vllm_source
         echo ":: Install auxiliary tools"
         uv pip install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy
-        echo ":: Install requirements/cpu.txt"
-        uv pip install -v -r requirements/cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
         echo ":: Install torch CPU suite" 
         uv pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        echo ":: Install requirements/cpu.txt"
+        uv pip install -v -r requirements/cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
         echo ":: Building wheel"
         VLLM_TARGET_DEVICE=cpu python setup.py install
         cd ..

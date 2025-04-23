@@ -10,29 +10,18 @@ license = { text = "MIT" }
 dynamic = ["version", "authors"]
 requires-python = ">=3.10"
 dependencies = [
-    "accelerate>1.2,<2",
     "chonkie>=0.3,<1",
     "datasets>=3,<4",
     "docling>=2,<3",
-    "dspy-ai>=2,<3",
-    "dspy>=2.6,<3",
-    "gliner<1",
-    "instructor>=1,<2",
     "jinja2>=3,<4",
-    "langchain-core>=0.3,<0.4",
-    "langchain>=0.3,<0.4",
     "loguru>=0.7,<1",
     "marker-pdf[full]>=1.6.1",
     "nltk>=3.9.1",
-    "ollama>=0.4,<1",
     "outlines<1",
     "pydantic>=2,<3",
     "scikit-learn>=1.6,<2",
-    "sentencepiece<1",
-    "transformers>=4,<5",
     "unstructured-inference>=0.8,<1",
     "unstructured[all-docs]>=0.16,<1",
-    "vllm>=0.8,<1"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -45,6 +34,19 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+all = [
+    "accelerate>1.2,<2",
+    "dspy-ai>=2,<3",
+    "dspy>=2.6,<3",
+    "gliner<1",
+    "instructor>=1,<2",
+    "langchain-core>=0.3,<0.4",
+    "langchain>=0.3,<0.4",
+    "ollama>=0.4,<1",
+    "sentencepiece<1",
+    "transformers>=4,<5",
+    "vllm>=0.8,<1"
+]
 test = [
     "pre-commit>=4.1.0",
     "pytest>=7.4.3",
