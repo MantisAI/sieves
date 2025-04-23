@@ -138,7 +138,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
             "mask_placeholder": self._mask_placeholder,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> Any:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> Any:
         """Converts docs to Hugging Face dataset.
         :param docs: Documents to convert.
         :return datasets.Dataset: Converted dataset.

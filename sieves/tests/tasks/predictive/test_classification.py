@@ -85,11 +85,11 @@ def test_run_nonbatched(classification_docs, engine, fewshot):
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
-def test_to_dataset(classification_docs, batch_engine) -> None:
+def test_to_hf_dataset(classification_docs, batch_engine) -> None:
     task = classification.Classification(task_id="classifier", labels=["science", "politics"], engine=batch_engine)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(task(classification_docs))
+    dataset = task.to_hf_dataset(task(classification_docs))
     assert all([key in dataset.features for key in ("text", "label")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -100,7 +100,7 @@ def test_to_dataset(classification_docs, batch_engine) -> None:
         assert isinstance(rec["text"], str)
 
     with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
+        task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])

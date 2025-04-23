@@ -1,0 +1,17 @@
+from __future__ import annotations
+
+import enum
+
+
+class DistillationFramework(enum.Enum):
+    fastfit = "fastfit"
+    model2vec = "model2vec"
+    sentence_transformers = "sentence_transformers"
+    setfit = "setfit"
+
+    @classmethod
+    def all(cls) -> tuple[DistillationFramework, ...]:
+        """Returns all available engine types.
+        :return tuple[EngineType, ...]: All available engine types.
+        """
+        return tuple(dist_type for dist_type in DistillationFramework)

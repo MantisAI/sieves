@@ -123,7 +123,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             "questions": self._questions,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
             {"text": datasets.Value("string"), "answers": datasets.Sequence(datasets.Value("string"))}

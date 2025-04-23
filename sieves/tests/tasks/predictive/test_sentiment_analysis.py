@@ -56,13 +56,13 @@ def test_run(sentiment_analysis_docs, batch_engine, fewshot):
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_to_dataset(dummy_docs, batch_engine) -> None:
+def test_to_hf_dataset(dummy_docs, batch_engine) -> None:
     task = sentiment_analysis.SentimentAnalysis(
         task_id="sentiment_analysis", aspects=("food", "service"), engine=batch_engine
     )
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(task(dummy_docs))
+    dataset = task.to_hf_dataset(task(dummy_docs))
     assert all([key in dataset.features for key in ("text", "aspect")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -73,7 +73,7 @@ def test_to_dataset(dummy_docs, batch_engine) -> None:
         assert isinstance(rec["text"], str)
 
     with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
+        task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])

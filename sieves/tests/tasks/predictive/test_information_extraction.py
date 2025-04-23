@@ -56,12 +56,12 @@ def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
-def test_to_dataset(information_extraction_docs, batch_engine) -> None:
+def test_to_hf_dataset(information_extraction_docs, batch_engine) -> None:
     task = tasks.predictive.InformationExtraction(entity_type=Person, engine=batch_engine)
     docs = task(information_extraction_docs)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(docs)
+    dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "entities")])
     assert len(dataset) == 2
     records = list(dataset)
@@ -73,7 +73,7 @@ def test_to_dataset(information_extraction_docs, batch_engine) -> None:
         assert isinstance(record["entities"]["name"], list)
 
     with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
+        task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])

@@ -99,11 +99,11 @@ def test_serialization(ner_docs, batch_engine) -> None:
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.glix], indirect=["batch_engine"])
-def test_to_dataset(ner_docs, batch_engine) -> None:
+def test_to_hf_dataset(ner_docs, batch_engine) -> None:
     task = ner.NER(entities=["PERSON", "LOCATION", "COMPANY"], engine=batch_engine)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(task(ner_docs))
+    dataset = task.to_hf_dataset(task(ner_docs))
     assert all([key in dataset.features for key in ("text", "entities")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -118,4 +118,4 @@ def test_to_dataset(ner_docs, batch_engine) -> None:
         assert isinstance(rec["text"], str)
 
     with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
+        task.to_hf_dataset([Doc(text="This is a dummy text.")])

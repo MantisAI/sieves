@@ -1,5 +1,6 @@
 from . import predictive, preprocessing
 from .core import Task
+from .postprocessing import Distillation
 from .predictive import (
     Classification,
     InformationExtraction,
@@ -15,6 +16,7 @@ from .preprocessing import OCR, Chunking
 __all__ = [
     "Chunking",
     "Classification",
+    "Distillation",
     "InformationExtraction",
     "OCR",
     "SentimentAnalysis",

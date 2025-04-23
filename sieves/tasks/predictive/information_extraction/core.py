@@ -126,7 +126,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             "entity_type": self._entity_type,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
             {

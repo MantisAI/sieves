@@ -39,12 +39,12 @@ def test_run(translation_docs, batch_engine, fewshot) -> None:
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_to_dataset(translation_docs, batch_engine) -> None:
+def test_to_hf_dataset(translation_docs, batch_engine) -> None:
     task = translation.Translation(to="Spanish", engine=batch_engine)
     docs = task(translation_docs)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(docs)
+    dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "translation")])
     assert len(dataset) == 2
     records = list(dataset)
@@ -54,7 +54,7 @@ def test_to_dataset(translation_docs, batch_engine) -> None:
         assert isinstance(record["translation"], str)
 
     with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
+        task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])

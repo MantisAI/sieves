@@ -70,7 +70,7 @@ def test_run(qa_docs, batch_engine, fewshot):
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_to_dataset(qa_docs, batch_engine) -> None:
+def test_to_hf_dataset(qa_docs, batch_engine) -> None:
     task = question_answering.QuestionAnswering(
         task_id="qa",
         questions=[
@@ -81,7 +81,7 @@ def test_to_dataset(qa_docs, batch_engine) -> None:
     )
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(task(qa_docs))
+    dataset = task.to_hf_dataset(task(qa_docs))
     assert all([key in dataset.features for key in ("text", "answers")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -90,7 +90,7 @@ def test_to_dataset(qa_docs, batch_engine) -> None:
         assert isinstance(rec["answers"], list)
 
     with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
+        task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])

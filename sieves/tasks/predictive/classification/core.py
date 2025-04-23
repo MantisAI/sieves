@@ -219,7 +219,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             "label_descriptions": self._label_descriptions,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
             {"text": datasets.Value("string"), "label": datasets.Sequence(datasets.Value("float32"))}

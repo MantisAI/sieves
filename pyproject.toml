@@ -19,6 +19,7 @@ dependencies = [
     "nltk>=3.9.1",
     "outlines<1",
     "pydantic>=2,<3",
+    "setfit>=1.1,<2",
     "scikit-learn>=1.6,<2",
     "unstructured-inference>=0.8,<1",
     "unstructured[all-docs]>=0.16,<1",
@@ -35,6 +36,7 @@ classifiers = [
 
 [project.optional-dependencies]
 all = [
+    # Engines
     "accelerate>1.2,<2",
     "dspy-ai>=2,<3",
     "dspy>=2.6,<3",
@@ -45,7 +47,11 @@ all = [
     "ollama>=0.4,<1",
     "sentencepiece<1",
     "transformers>=4,<5",
-    "vllm>=0.8,<1"
+    "vllm>=0.8,<1",
+    # Distillation
+    "fastfit>=0.1,<0.2",
+    "model2vec>0.4,<0.5",
+    "sentence_transformers>=4,<5"
 ]
 test = [
     "pre-commit>=4.1.0",

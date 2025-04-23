@@ -136,7 +136,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             "aspects": self._aspects,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
             {"text": datasets.Value("string"), "aspect": datasets.Sequence(datasets.Value("float32"))}

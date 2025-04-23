@@ -140,7 +140,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
             "n_words": self._n_words,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         """
         :param docs: Documents to convert.
         :return datasets.Dataset: Converted dataset.

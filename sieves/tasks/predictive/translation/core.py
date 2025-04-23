@@ -121,7 +121,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
             "to": self._to,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         """Converts docs to Hugging Face dataset.
         :param docs: Documents to convert.
         :return datasets.Dataset: Converted dataset.

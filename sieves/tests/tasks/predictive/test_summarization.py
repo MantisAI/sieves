@@ -52,12 +52,12 @@ def test_run(summarization_docs, batch_engine, fewshot) -> None:
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_to_dataset(summarization_docs, batch_engine) -> None:
+def test_to_hf_dataset(summarization_docs, batch_engine) -> None:
     task = summarization.Summarization(n_words=10, engine=batch_engine)
     docs = task(summarization_docs)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_dataset(docs)
+    dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "summary")])
     assert len(dataset) == 2
     records = list(dataset)
@@ -67,7 +67,7 @@ def test_to_dataset(summarization_docs, batch_engine) -> None:
         assert isinstance(record["summary"], str)
 
     with pytest.raises(KeyError):
-        task.to_dataset([Doc(text="This is a dummy text.")])
+        task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])

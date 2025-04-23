@@ -216,7 +216,7 @@ class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, Out
     # This implements the conversion of a set of docs to a Hugging Face datasets.Dataset.
     # You can implement this as `raise NotImplementedError` if you're not interested in generating a Hugging Face 
     # dataset from your result data. 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         # Define metadata.
         info = datasets.DatasetInfo(
             description=f"Sentiment estimation dataset. Generated with sieves"

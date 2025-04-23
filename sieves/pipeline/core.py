@@ -9,7 +9,7 @@ from loguru import logger
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config, Serializable
-from sieves.tasks import Task
+from sieves.tasks import Distillation, Task
 
 
 class Pipeline:
@@ -24,6 +24,7 @@ class Pipeline:
         """
         self._tasks = [tasks] if isinstance(tasks, Task) else list(tasks)
         self._validate_tasks()
+        self._prepare_distillation()
 
     def add_tasks(self, tasks: Iterable[Task]) -> None:
         """Adds tasks to pipeline. Revalidates pipeline.
@@ -42,6 +43,14 @@ class Pipeline:
             if task.id in task_ids:
                 raise ValueError(f"Task with duplicate ID {task.id}. Ensure unique task IDs.")
             task_ids.add(task.id)
+
+    def _prepare_distillation(self) -> None:
+        """Post-initializes distillation tasks, if there are any. This is necessary because distillation tasks have a
+        lazily initialized required attribute.
+        """
+        for task in self._tasks:
+            if isinstance(task, Distillation):
+                task.target_task_type = type(self[task.target_task_id])
 
     def __call__(self, docs: Iterable[Doc], in_place: bool = False) -> Iterable[Doc]:
         """Process a list of documents through all tasks.

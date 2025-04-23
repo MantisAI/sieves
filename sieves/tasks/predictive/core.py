@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, Generic
 
 import datasets
 import pydantic
+from tasks.postprocessing.distillation.types import DistillationFramework
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineInferenceMode, EngineType  # noqa: F401
@@ -171,8 +173,33 @@ class PredictiveTask(
         return cls(**config.to_init_dict(cls, **(kwargs | engine_param)))
 
     @abc.abstractmethod
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
         """Creates Hugging Face datasets.Dataset from docs.
         :param docs: Docs to convert.
         :return datasets.Dataset: Hugging Face dataset.
+        """
+
+    @classmethod
+    @abc.abstractmethod
+    def distill(
+        cls,
+        distillation_framework: DistillationFramework,
+        docs: Iterable[Doc],
+        target_task_id: str,
+        model_path: Path | str,
+        training_kwargs: dict[str, Any],
+        strict: bool = False,
+    ) -> None:
+        """Distills a model for this task. Doc instances must have `.results[task_id]` - otherwise this terminates with
+        an error.
+
+        :param distillation_framework: Which distillation framework to use.
+        :param docs: Docs to extract results from.
+        :param target_task_id: ID for task whose results to distill.
+        :param model_path: Path to store distilled model at.
+        :param training_kwargs: Kwargs to pass on to training process.
+        :param strict: If True, raises an error if any `doc.results[task_id]` has an invalid or None value. If False,
+            ignores such rows.
+        :raises KeyError: If `.results[task_id]` doesn't exist.
+        :raises ValueError: If `strict` is True and any `doc.results[task_id]` has an invalid or None value.
         """
