@@ -18,9 +18,6 @@ jobs:
 
     steps:
 
-    - name: Check disk space
-      run: df -h
-
     - name: Maximize build space
       shell: bash
       run: |
@@ -28,9 +25,6 @@ jobs:
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
-
-    - name: Check disk space
-      run: df -h
 
     - name: Checkout repo
       uses: actions/checkout@v4
