@@ -18,6 +18,9 @@ jobs:
 
     steps:
 
+    - name: Check disk space
+      run: df -h
+
     - name: Maximize build space
       uses: easimon/maximize-build-space@master
       with:
@@ -25,6 +28,9 @@ jobs:
         remove-android: 'true'
         remove-haskell: 'true'
         remove-codeql: 'true'
+
+    - name: Check disk space
+      run: df -h
 
     - name: Checkout repo
       uses: actions/checkout@v4
