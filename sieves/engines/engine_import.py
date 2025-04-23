@@ -1,3 +1,9 @@
+"""
+Imports 3rd-party libraries required for engines. If library can't be found, placeholder engines is imported instead.
+This allows us to import everything downstream without having to worry about optional dependencies. If a user specifies
+an engine/model from a non-installed library, the application will terminate with an error.
+"""
+
 # mypy: disable-error-code="no-redef"
 
 import warnings
