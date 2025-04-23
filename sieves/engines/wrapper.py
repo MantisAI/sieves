@@ -3,11 +3,17 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
-import outlines
 import pydantic
 
-from sieves.engines import (
+from sieves.engines.core import (
+    EngineInferenceMode,
+    EngineModel,
+    EnginePromptSignature,
+    EngineResult,
+    Executable,
     InternalEngine,
+)
+from sieves.engines.engine_import import (
     dspy_,
     glix_,
     huggingface_,
@@ -17,8 +23,8 @@ from sieves.engines import (
     outlines_,
     vllm_,
 )
-from sieves.engines.core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult, Executable
 from sieves.engines.engine_type import EngineType
+from sieves.engines.missing import MissingEngine
 
 PromptSignature: TypeAlias = (
     dspy_.PromptSignature
@@ -65,7 +71,7 @@ InferenceMode: TypeAlias = (
 class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
     def __init__(
         self,
-        model: Model = outlines.models.transformers("HuggingFaceTB/SmolLM-360M-Instruct"),
+        model: Model | None = None,
         init_kwargs: dict[str, Any] | None = None,
         inference_kwargs: dict[str, Any] | None = None,
         config_kwargs: dict[str, Any] | None = None,
@@ -73,7 +79,7 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         batch_size: int = -1,
     ):
         """
-        :param model: Model to run.
+        :param model: Model to run. If None, a default model (HuggingFaceTB/SmolLM-360M-Instruct with Outlines) is used.
         :param init_kwargs: Optional kwargs to supply to engine executable at init time.
         :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
         :param config_kwargs: Used only if supplied model is a DSPy model object, ignored otherwise. Optional kwargs
@@ -82,9 +88,18 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
             support batching.
         """
-        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
+        super().__init__(model or Engine._init_default_model(), init_kwargs, inference_kwargs, strict_mode, batch_size)
         self._config_kwargs = config_kwargs
         self._engine: InternalEngine[PromptSignature, Result, Model, InferenceMode] = self._init_engine()
+
+    @classmethod
+    def _init_default_model(cls) -> Model:
+        """Initializes default model (HuggingFaceTB/SmolLM-360M-Instruct with Outlines).
+        :return: Initialized default model.
+        """
+        import outlines
+
+        return outlines.models.transformers("HuggingFaceTB/SmolLM-360M-Instruct")
 
     def _init_engine(self) -> InternalEngine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:
         """Initializes internal engine object.
@@ -104,6 +119,9 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         }
 
         for module, engine_type in module_engine_map.items():
+            if engine_type == MissingEngine:
+                continue
+
             try:
                 module_model_types = module.Model.__args__
             except AttributeError:
@@ -119,6 +137,7 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                     **{"config_kwargs": self._config_kwargs} if module == dspy_ else {},
                 )
                 assert isinstance(internal_engine, InternalEngine)
+
                 return internal_engine
 
         raise ValueError(
