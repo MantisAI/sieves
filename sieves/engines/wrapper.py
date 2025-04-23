@@ -24,7 +24,6 @@ from sieves.engines.engine_import import (
     vllm_,
 )
 from sieves.engines.engine_type import EngineType
-from sieves.engines.missing import MissingEngine
 
 PromptSignature: TypeAlias = (
     dspy_.PromptSignature
@@ -119,9 +118,6 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         }
 
         for module, engine_type in module_engine_map.items():
-            if engine_type == MissingEngine:
-                continue
-
             try:
                 module_model_types = module.Model.__args__
             except AttributeError:
