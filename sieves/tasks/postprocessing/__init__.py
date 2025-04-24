@@ -1,3 +1,3 @@
-from .distillation import Distillation
+from .distillation import Distillation, DistillationFramework
 
-__all__ = ["Distillation"]
+__all__ = ["Distillation", "DistillationFramework"]

@@ -1,6 +1,6 @@
 from . import predictive, preprocessing
 from .core import Task
-from .postprocessing import Distillation
+from .postprocessing import Distillation, DistillationFramework
 from .predictive import (
     Classification,
     InformationExtraction,
@@ -17,6 +17,7 @@ __all__ = [
     "Chunking",
     "Classification",
     "Distillation",
+    "DistillationFramework",
     "InformationExtraction",
     "OCR",
     "SentimentAnalysis",

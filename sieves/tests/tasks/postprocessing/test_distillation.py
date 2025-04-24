@@ -12,8 +12,7 @@ import setfit
 
 from sieves import Pipeline
 from sieves.engines import EngineType
-from sieves.tasks import Distillation
-from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks import Distillation, DistillationFramework
 from sieves.tasks.predictive import classification
 
 
@@ -43,13 +42,18 @@ def test_run(classification_docs, batch_engine, distillation_framework) -> None:
                     target_task_id="classifier",
                     base_model_id=base_model_id,
                     framework=distillation_framework,
-                    train_kwargs={},
                     output_path=Path(tmp_dir),
                     seed=seed,
                 ),
             ]
         )
-        docs = list(pipe(classification_docs * 4))
+
+        if distillation_framework == DistillationFramework.sentence_transformers:
+            with pytest.raises(NotImplementedError):
+                list(pipe(classification_docs * 4))
+            return
+        else:
+            docs = list(pipe(classification_docs * 4))
 
         # Ensure equality of saved with original dataset.
         hf_dataset = classifier._split_dataset(classifier.to_hf_dataset(docs), (0.7, 0.15, 0.15), seed)
@@ -61,14 +65,12 @@ def test_run(classification_docs, batch_engine, distillation_framework) -> None:
 
         test_sents = ["This is about the galaxy and laws of nature.", "This is about political election and lobbying."]
 
+        # Assert predictions of distilled models look as expected.
         match distillation_framework:
             case DistillationFramework.setfit:
                 model = setfit.SetFitModel.from_pretrained(tmp_dir)
                 preds = model.predict(test_sents, as_numpy=True)
                 assert preds.shape == (2, 2)
-
-            case DistillationFramework.sentence_transformers:
-                raise NotImplementedError
 
             case DistillationFramework.model2vec:
                 model = model2vec.inference.StaticModelPipeline.from_pretrained(tmp_dir)

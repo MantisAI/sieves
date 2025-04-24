@@ -77,7 +77,8 @@ build modern NLP applications. It provides:
   - Named entity recognition
   - Coming soon: entity linking, knowledge graph creation, ...
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
-- :teacher: **Export:** Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for easy distillation
+- :teacher: **Distillation:** Distill local, specialized models using your zero-shot model results automatically. 
+  Export your results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) if you want to run your own training routine.
 
 ---
 
