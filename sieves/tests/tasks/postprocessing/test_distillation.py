@@ -18,14 +18,16 @@ from sieves.tasks.predictive import classification
 
 
 @pytest.mark.parametrize("batch_engine", (EngineType.dspy,), indirect=["batch_engine"])
-# @pytest.mark.parametrize("distillation_framework", DistillationFramework.all(), indirect=["batch_engine"])
-@pytest.mark.parametrize("distillation_framework", (DistillationFramework.model2vec,))
+@pytest.mark.parametrize("distillation_framework", DistillationFramework.all())
 def test_run(classification_docs, batch_engine, distillation_framework) -> None:
     label_descriptions = {
         "science": "Topics related to scientific disciplines and research",
         "politics": "Topics related to government, elections, and political systems",
     }
     seed = 42
+    base_model_id = "sentence-transformers/paraphrase-mpnet-base-v2"
+    if distillation_framework == DistillationFramework.model2vec:
+        base_model_id = "minishlab/potion-base-32M"
 
     with TemporaryDirectory() as tmp_dir:
         classifier = classification.Classification(
@@ -39,9 +41,7 @@ def test_run(classification_docs, batch_engine, distillation_framework) -> None:
                 classifier,
                 Distillation(
                     target_task_id="classifier",
-                    # "minishlab/potion-base-32M"
-                    # base_model_id="sentence-transformers/paraphrase-mpnet-base-v2",
-                    base_model_id="minishlab/potion-base-32M",
+                    base_model_id=base_model_id,
                     framework=distillation_framework,
                     train_kwargs={},
                     output_path=Path(tmp_dir),

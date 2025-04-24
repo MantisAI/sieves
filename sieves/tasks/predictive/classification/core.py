@@ -310,9 +310,6 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 with open(output_path / "metrics.json", "w") as f:
                     json.dump(metrics, f, indent=4)
 
-            case DistillationFramework.sentence_transformers:
-                raise NotImplementedError
-
             case DistillationFramework.model2vec:
 
                 def one_hot_to_label(label_indices: list[int]) -> list[str]:
@@ -340,5 +337,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                     json.dump(metrics, f, indent=4)
 
             case _:
-                # This case should ideally not be reachable if DistillationFramework is used correctly
-                raise NotImplementedError(f"Unsupported distillation framework: {distillation_framework}")
+                raise NotImplementedError(
+                    f"Unsupported distillation framework for this task: {distillation_framework}. "
+                    f"Please choose one of {DistillationFramework.setfit, DistillationFramework.model2vec}"
+                )
