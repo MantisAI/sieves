@@ -6,11 +6,11 @@ from typing import Any, TypeAlias
 
 import datasets
 import pydantic
-from tasks.postprocessing.distillation.types import DistillationFramework
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_, vllm_
 from sieves.serialization import Config
+from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.translation.bridges import (
     DSPyTranslation,
