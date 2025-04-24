@@ -29,21 +29,13 @@ except ModuleNotFoundError:
 
     warnings.warn(_MISSING_WARNING.format(missing_dependency="setfit"))
 
-
-try:
-    import fastfit
-except ModuleNotFoundError:
-    fastfit = None
-
-    warnings.warn(_MISSING_WARNING.format(missing_dependency="fastfit"))
-
-
 try:
     import model2vec
+    import model2vec.train
 except ModuleNotFoundError:
     model2vec = None
 
     warnings.warn(_MISSING_WARNING.format(missing_dependency="model2vec"))
 
 
-__all__ = ["fastfit", "model2vec", "sentence_transformers", "setfit"]
+__all__ = ["model2vec", "sentence_transformers", "setfit"]

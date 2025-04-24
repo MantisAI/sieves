@@ -7,12 +7,12 @@ from typing import Any, Generic
 
 import datasets
 import pydantic
-from tasks.postprocessing.distillation.types import DistillationFramework
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineInferenceMode, EngineType  # noqa: F401
 from sieves.serialization import Config, Serializable
 from sieves.tasks.core import Task
+from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
 
 
@@ -173,33 +173,67 @@ class PredictiveTask(
         return cls(**config.to_init_dict(cls, **(kwargs | engine_param)))
 
     @abc.abstractmethod
-    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         """Creates Hugging Face datasets.Dataset from docs.
         :param docs: Docs to convert.
+        :param threshold: Threshold to apply when converting logits/confidence scores into labels or other structured
+            predictions.
         :return datasets.Dataset: Hugging Face dataset.
         """
 
-    @classmethod
     @abc.abstractmethod
     def distill(
-        cls,
+        self,
+        base_model_id: str,
         distillation_framework: DistillationFramework,
-        docs: Iterable[Doc],
-        target_task_id: str,
-        model_path: Path | str,
-        training_kwargs: dict[str, Any],
-        strict: bool = False,
+        hf_dataset: datasets.Dataset,
+        init_kwargs: dict[str, Any],
+        train_kwargs: dict[str, Any],
+        output_path: Path | str,
+        split_fracs: tuple[float, float, float] = (0.8, 0.1, 0.1),
+        seed: int | None = None,
     ) -> None:
         """Distills a model for this task. Doc instances must have `.results[task_id]` - otherwise this terminates with
         an error.
 
+        This method fine-tunes a base model using distillation techniques based on the provided framework. It splits
+        the input dataset, trains the model, and saves the resulting model and metadata to the specified output path.
+
+        :param base_model_id: ID of Hugging Face model to use as base for distillation. The chosen model will be
+            fine-tuned on the target task's results.
         :param distillation_framework: Which distillation framework to use.
-        :param docs: Docs to extract results from.
-        :param target_task_id: ID for task whose results to distill.
-        :param model_path: Path to store distilled model at.
-        :param training_kwargs: Kwargs to pass on to training process.
-        :param strict: If True, raises an error if any `doc.results[task_id]` has an invalid or None value. If False,
-            ignores such rows.
-        :raises KeyError: If `.results[task_id]` doesn't exist.
-        :raises ValueError: If `strict` is True and any `doc.results[task_id]` has an invalid or None value.
+        :param hf_dataset: Docs to extract results from.
+        :param output_path: Path to store distilled model and training metadata at.
+        :param init_kwargs: Kwargs passed on to model/trainer initialization.
+        :param train_kwargs: Kwargs passed on to training call.
+        :param split_fracs: Fractions for dataset split - for train, validation, test split. Sum must equal 1.
+        :param seed: RNG seed.
+        :raises KeyError: If expected columns don't exist in `hf_dataset`.
         """
+
+    @staticmethod
+    def _split_dataset(
+        hf_dataset: datasets.Dataset, split_fracs: tuple[float, float, float], seed: int | None
+    ) -> datasets.DatasetDict:
+        """Splits dataset.
+
+        :param hf_dataset: Dataset to split.
+        :param split_fracs: Fractions for train, val, test set. Must sum up to 1.
+        :param seed: RNG seed.
+        :return: Train, val, test sets; mapping of rows to sets.
+        :raises ValueError: If fractions don't sum up to 1.
+        """
+        if not abs(sum(split_fracs) - 1.0) < 1e-9:
+            raise ValueError(f"Split fractions must sum to 1.0, but got {split_fracs} (sum: {sum(split_fracs)}).")
+
+        # Get test set.
+        train_val_dataset = hf_dataset.train_test_split(test_size=split_fracs[2], shuffle=True, seed=seed)
+        test_dataset = train_val_dataset["test"]
+        train_val_temp = train_val_dataset["train"]
+        # Get train and val sets.
+        relative_val_frac = split_fracs[1] / (split_fracs[0] + split_fracs[1])
+        train_valid_dataset = train_val_temp.train_test_split(test_size=relative_val_frac, shuffle=True, seed=seed)
+
+        return datasets.DatasetDict(
+            {"train": train_val_dataset["train"], "val": train_valid_dataset["test"], "test": test_dataset}
+        )

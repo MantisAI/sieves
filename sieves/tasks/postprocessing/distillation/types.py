@@ -4,7 +4,6 @@ import enum
 
 
 class DistillationFramework(enum.Enum):
-    fastfit = "fastfit"
     model2vec = "model2vec"
     sentence_transformers = "sentence_transformers"
     setfit = "setfit"

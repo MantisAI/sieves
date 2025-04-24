@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, TypeAlias
 
 import datasets
 import pydantic
+from tasks.postprocessing.distillation.types import DistillationFramework
 
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, ollama_, outlines_, vllm_
@@ -121,7 +123,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
             "to": self._to,
         }
 
-    def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         """Converts docs to Hugging Face dataset.
         :param docs: Documents to convert.
         :return datasets.Dataset: Converted dataset.
@@ -149,3 +151,16 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
 
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
+
+    def distill(
+        self,
+        base_model_id: str,
+        distillation_framework: DistillationFramework,
+        hf_dataset: datasets.Dataset,
+        init_kwargs: dict[str, Any],
+        train_kwargs: dict[str, Any],
+        output_path: Path | str,
+        split_fracs: tuple[float, float, float] = (0.8, 0.1, 0.1),
+        seed: int | None = None,
+    ) -> None:
+        raise NotImplementedError

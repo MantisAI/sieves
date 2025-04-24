@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
+from tasks import PredictiveTask
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config, Serializable
@@ -24,7 +25,7 @@ class Pipeline:
         """
         self._tasks = [tasks] if isinstance(tasks, Task) else list(tasks)
         self._validate_tasks()
-        self._prepare_distillation()
+        self._post_init_distillation()
 
     def add_tasks(self, tasks: Iterable[Task]) -> None:
         """Adds tasks to pipeline. Revalidates pipeline.
@@ -44,13 +45,15 @@ class Pipeline:
                 raise ValueError(f"Task with duplicate ID {task.id}. Ensure unique task IDs.")
             task_ids.add(task.id)
 
-    def _prepare_distillation(self) -> None:
+    def _post_init_distillation(self) -> None:
         """Post-initializes distillation tasks, if there are any. This is necessary because distillation tasks have a
         lazily initialized required attribute.
         """
         for task in self._tasks:
             if isinstance(task, Distillation):
-                task.target_task_type = type(self[task.target_task_id])
+                target_task = self[task.target_task_id]
+                assert isinstance(target_task, PredictiveTask)
+                task.target_task = target_task
 
     def __call__(self, docs: Iterable[Doc], in_place: bool = False) -> Iterable[Doc]:
         """Process a list of documents through all tasks.

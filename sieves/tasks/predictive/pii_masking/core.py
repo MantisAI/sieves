@@ -1,5 +1,6 @@
 """Allows masking of PII (Personally Identifiable Information) in text documents."""
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, TypeAlias
 
 import datasets
@@ -8,6 +9,7 @@ import pydantic
 from sieves.data.doc import Doc
 from sieves.engines import Engine, EngineType, dspy_
 from sieves.serialization import Config
+from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.pii_masking.bridges import (
     DSPyPIIMasking,
@@ -138,7 +140,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
             "mask_placeholder": self._mask_placeholder,
         }
 
-    def to_hf_dataset(self, docs: Iterable[Doc]) -> Any:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         """Converts docs to Hugging Face dataset.
         :param docs: Documents to convert.
         :return datasets.Dataset: Converted dataset.
@@ -165,3 +167,16 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
 
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
+
+    def distill(
+        self,
+        base_model_id: str,
+        distillation_framework: DistillationFramework,
+        hf_dataset: datasets.Dataset,
+        init_kwargs: dict[str, Any],
+        train_kwargs: dict[str, Any],
+        output_path: Path | str,
+        split_fracs: tuple[float, float, float] = (0.8, 0.1, 0.1),
+        seed: int | None = None,
+    ) -> None:
+        raise NotImplementedError
