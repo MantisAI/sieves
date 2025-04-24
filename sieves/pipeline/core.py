@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import copy
+import typing
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 from loguru import logger
-from tasks import PredictiveTask
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config, Serializable
-from sieves.tasks import Distillation, Task
+from sieves.tasks import Distillation, PredictiveTask, Task
 
 
 class Pipeline:
@@ -52,8 +52,8 @@ class Pipeline:
         for task in self._tasks:
             if isinstance(task, Distillation):
                 target_task = self[task.target_task_id]
-                assert isinstance(target_task, PredictiveTask)
-                task.target_task = target_task
+                assert issubclass(type(target_task), PredictiveTask)
+                task.target_task = typing.cast(PredictiveTask, target_task)  # type: ignore[type-arg]
 
     def __call__(self, docs: Iterable[Doc], in_place: bool = False) -> Iterable[Doc]:
         """Process a list of documents through all tasks.

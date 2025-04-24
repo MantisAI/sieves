@@ -277,8 +277,6 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         dataset_splits = self._split_dataset(hf_dataset, split_fracs, seed)
         dataset_splits.save_to_disk(output_path / "data")
 
-        # dataset = dataset_toy
-
         # Framework-specific distillation/fine-tuning logic using match-case
         match distillation_framework:
             case DistillationFramework.setfit:
@@ -306,9 +304,9 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                     metric_kwargs={"average": "macro"},
                 )
                 trainer.train()
+                trainer.model.save_pretrained(output_path)
 
                 metrics = trainer.evaluate()
-                trainer.model.save_pretrained(output_path)
                 with open(output_path / "metrics.json", "w") as f:
                     json.dump(metrics, f, indent=4)
 
@@ -316,12 +314,30 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 raise NotImplementedError
 
             case DistillationFramework.model2vec:
+
+                def one_hot_to_label(label_indices: list[int]) -> list[str]:
+                    """Converts list of label indices into list of labels.
+                    :param label_indices: List of label indices.
+                    :return: List of labels.
+                    """
+                    return [self._labels[i] for i, is_label in enumerate(label_indices) if is_label]
+
                 classifier = model2vec.train.StaticModelForClassification.from_pretrained(
                     model_name=base_model_id, **init_kwargs
                 )
-                classifier.fit(dataset_splits["train"]["text"], dataset_splits["train"]["labels"], **train_kwargs)
+                classifier.fit(
+                    dataset_splits["train"]["text"],
+                    [one_hot_to_label(encoded_labels) for encoded_labels in dataset_splits["train"]["labels"]],
+                    **train_kwargs,
+                )
+                classifier.to_pipeline().save_pretrained(output_path)
 
-                raise NotImplementedError
+                metrics = classifier.evaluate(
+                    dataset_splits["val"]["text"],
+                    [one_hot_to_label(encoded_labels) for encoded_labels in dataset_splits["val"]["labels"]],
+                )
+                with open(output_path / "metrics.json", "w") as f:
+                    json.dump(metrics, f, indent=4)
 
             case _:
                 # This case should ideally not be reachable if DistillationFramework is used correctly
