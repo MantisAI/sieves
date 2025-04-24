@@ -90,13 +90,13 @@ def test_to_hf_dataset(classification_docs, batch_engine) -> None:
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(task(classification_docs))
-    assert all([key in dataset.features for key in ("text", "label")])
+    assert all([key in dataset.features for key in ("text", "labels")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
     for rec in dataset_records:
-        assert isinstance(rec["label"], list)
-        for v in rec["label"]:
-            assert isinstance(v, float)
+        assert isinstance(rec["labels"], list)
+        for v in rec["labels"]:
+            assert isinstance(v, int)
         assert isinstance(rec["text"], str)
 
     with pytest.raises(KeyError):

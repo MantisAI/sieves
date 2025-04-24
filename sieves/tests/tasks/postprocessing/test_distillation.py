@@ -16,7 +16,7 @@ from sieves.tasks import Distillation, DistillationFramework
 from sieves.tasks.predictive import classification
 
 
-@pytest.mark.parametrize("batch_engine", (EngineType.dspy,), indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", (EngineType.huggingface,), indirect=["batch_engine"])
 @pytest.mark.parametrize("distillation_framework", DistillationFramework.all())
 def test_run(classification_docs, batch_engine, distillation_framework) -> None:
     label_descriptions = {
