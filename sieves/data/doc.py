@@ -94,3 +94,6 @@ class Doc:
             docs.append(cls(**{doc_col: row.get(data_col) for doc_col, data_col in column_map.items()}))  # type: ignore[misc]
 
         return docs
+
+    # def __hash__(self):
+    #     return hash(self.text)

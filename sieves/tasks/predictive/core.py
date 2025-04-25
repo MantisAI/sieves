@@ -90,18 +90,21 @@ class PredictiveTask(
         assert sig_desc is None or isinstance(sig_desc, str)
         return sig_desc
 
+    # @make_cacheable
+    # @functools.lru_cache
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Execute the task on a set of documents.
-
-        Note: the mypy ignore directives are because in practice, TaskX can be a superset of the X types of multiple
-        engines, but there is no way in Python's current typing system to model that. E.g.: TaskInferenceMode could be
-        outlines_.InferenceMode | dspy_.InferenceMode, depending on the class of the dynamically provided engine
-        instance. TypeVars don't support unions however, neither do generics on a higher level of abstraction.
-        We hence ignore these mypy errors, as the involved types should nonetheless be consistent.
 
         :param docs: Documents to process.
         :return Iterable[Doc]: Processed documents.
         """
+
+        # Note: the mypy ignore directives are because in practice, TaskX can be a superset of the X types of multiple
+        # engines, but there is no way in Python's current typing system to model that. E.g.: TaskInferenceMode could be
+        # outlines_.InferenceMode | dspy_.InferenceMode, depending on the class of the dynamically provided engine
+        # instance. TypeVars don't support unions however, neither do generics on a higher level of abstraction.
+        # We hence ignore these mypy errors, as the involved types should nonetheless be consistent.
+
         docs = list(docs)
 
         # 1. Compile expected prompt signatures.
@@ -126,8 +129,9 @@ class PredictiveTask(
             doc_chunks_values = [doc_values | {"text": chunk} for chunk in (doc.chunks or [doc.text])]
             docs_chunks_offsets.append((len(docs_chunks_values), len(docs_chunks_values) + len(doc_chunks_values)))
             docs_chunks_values.extend(doc_chunks_values)
+
         # 5. Execute prompts per chunk.
-        results = list(executable(docs_chunks_values))
+        results = list(executable(tuple(docs_chunks_values)))
         assert len(results) == len(docs_chunks_values)
 
         # 6. Consolidate chunk results.

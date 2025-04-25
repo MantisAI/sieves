@@ -76,6 +76,7 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         config_kwargs: dict[str, Any] | None = None,
         strict_mode: bool = False,
         batch_size: int = -1,
+        cache_size: int = 0,
     ):
         """
         :param model: Model to run. If None, a default model (HuggingFaceTB/SmolLM-360M-Instruct with Outlines) is used.
@@ -86,8 +87,12 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
         :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
             support batching.
+        :param cache_size: Number of document results to keep in cache. Results for the last `cache_size` documents will
+             be served from cache instead of rerunning the model requests.
         """
-        super().__init__(model or Engine._init_default_model(), init_kwargs, inference_kwargs, strict_mode, batch_size)
+        super().__init__(
+            model or Engine._init_default_model(), init_kwargs, inference_kwargs, strict_mode, batch_size, cache_size
+        )
         self._config_kwargs = config_kwargs
         self._engine: InternalEngine[PromptSignature, Result, Model, InferenceMode] = self._init_engine()
 

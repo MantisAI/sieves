@@ -1,5 +1,6 @@
 import asyncio
 import enum
+import functools
 import itertools
 import sys
 from collections.abc import Iterable
@@ -9,6 +10,7 @@ import dspy
 import pydantic
 
 from sieves.engines.core import Executable, InternalEngine
+from sieves.utils import make_cacheable
 
 PromptSignature: TypeAlias = dspy.Signature | dspy.Module
 Model: TypeAlias = dspy.LM | dspy.BaseLM
@@ -42,6 +44,7 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         inference_kwargs: dict[str, Any],
         strict_mode: bool,
         batch_size: int,
+        cache_size: int,
     ):
         """
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
@@ -56,8 +59,10 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
         :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
             support batching.
+        :param cache_size: Number of document results to keep in cache. Results for the last `cache_size` documents will
+             be served from cache instead of rerunning the model requests.
         """
-        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
+        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size, cache_size)
         config_kwargs = {"max_tokens": DSPy._MAX_TOKENS} | (config_kwargs or {})
         dspy.configure(lm=model, **config_kwargs)
 
@@ -76,27 +81,30 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result | None]:
+        # Note: prompt_template is ignored here, as DSPy doesn't use it directly (only prompt_signature_description).
         assert isinstance(prompt_signature, type)
 
-        # Note: prompt_template is ignored here, as DSPy doesn't use it directly (only prompt_signature_description).
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
-            # Handled differently than the other supported modules: dspy.Module serves as both the signature as well as
-            # the inference generator.
-            if inference_mode == InferenceMode.module:
-                assert isinstance(prompt_signature, dspy.Module), ValueError(
-                    "In inference mode 'module' the provided prompt signature has to be of type dspy.Module."
-                )
-                generator = inference_mode.value(**self._init_kwargs)
-            else:
-                assert issubclass(prompt_signature, dspy.Signature)
-                generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
+        # Handled differently than the other supported modules: dspy.Module serves as both the signature as well as
+        # the inference generator.
+        if inference_mode == InferenceMode.module:
+            assert isinstance(prompt_signature, dspy.Module), ValueError(
+                "In inference mode 'module' the provided prompt signature has to be of type dspy.Module."
+            )
+            generator = inference_mode.value(**self._init_kwargs)
+        else:
+            assert issubclass(prompt_signature, dspy.Signature)
+            generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
+        @make_cacheable
+        @functools.lru_cache(maxsize=self._cache_size)
+        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             # Compile predictor with few-shot examples.
             fewshot_examples_dicts = DSPy._convert_fewshot_examples(fewshot_examples)
+            generator_fewshot: dspy.Module | None = None
             if len(fewshot_examples_dicts):
                 examples = [dspy.Example(**fs_example) for fs_example in fewshot_examples_dicts]
-                generator = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
-            generator_async = dspy.asyncify(generator)
+                generator_fewshot = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
+            generator_async = dspy.asyncify(generator_fewshot or generator)
 
             batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
             # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use
@@ -120,4 +128,5 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                     else:
                         yield from [None] * len(batch)
 
+        # return functools.partial(execute, generator=inference_generator)
         return execute

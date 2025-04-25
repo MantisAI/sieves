@@ -1,4 +1,5 @@
 import enum
+import functools
 import itertools
 import sys
 from collections.abc import Iterable
@@ -9,6 +10,7 @@ import pydantic
 import transformers
 
 from sieves.engines.core import Executable, InternalEngine
+from sieves.utils import make_cacheable
 
 PromptSignature: TypeAlias = list[str]
 Model: TypeAlias = transformers.Pipeline
@@ -48,6 +50,8 @@ class HuggingFace(InternalEngine[PromptSignature, Result, Model, InferenceMode])
         # Render hypothesis template with everything but text.
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
+        @make_cacheable
+        @functools.lru_cache(maxsize=self._cache_size)
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             """Execute prompts with engine for given values.
             :param values: Values to inject into prompts.

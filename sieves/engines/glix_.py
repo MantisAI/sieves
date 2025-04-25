@@ -1,4 +1,5 @@
 import enum
+import functools
 import itertools
 import sys
 import warnings
@@ -10,6 +11,7 @@ import jinja2
 import pydantic
 
 from sieves.engines.core import Executable, InternalEngine
+from sieves.utils import make_cacheable
 
 PromptSignature: TypeAlias = list[str]
 Model: TypeAlias = gliner.model.GLiNER
@@ -35,8 +37,9 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         inference_kwargs: dict[str, Any] | None,
         strict_mode: bool,
         batch_size: int,
+        cache_size: int,
     ):
-        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
+        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size, cache_size)
         self._model_wrappers: dict[InferenceMode, gliner.multitask.base.GLiNERBasePipeline] = {}
 
     @property
@@ -70,6 +73,8 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         if prompt_template:
             self._model.prompt = jinja2.Template(prompt_template).render()
 
+        @make_cacheable
+        @functools.lru_cache(maxsize=self._cache_size)
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             """Execute prompts with engine for given values.
             :param values: Values to inject into prompts.

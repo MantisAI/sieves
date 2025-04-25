@@ -1,6 +1,7 @@
 # mypy: ignore-errors
 import os
-from functools import lru_cache
+from functools import cache
+from typing import Any
 
 import anthropic
 import dspy
@@ -21,12 +22,11 @@ def tokenizer() -> tokenizers.Tokenizer:
     return tokenizers.Tokenizer.from_pretrained("gpt2")
 
 
-@lru_cache
-def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
-    """Create engine.
-    :param engine_type: Engine type.
-    :param batch_size: Batch size to use in engine.
-    :returns Engine: Enstantiated engine.
+@cache
+def _make_model(engine_type: engines.EngineType) -> Any:
+    """Create model.
+    :param engine_type: Engine type. to create model for.
+    :return Any: Model instance.
     """
     match engine_type:
         case engines.EngineType.dspy:
@@ -66,7 +66,17 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
         case _:
             raise ValueError(f"Unsupported engine type {engine_type}.")
 
-    return Engine(model=model, batch_size=batch_size)
+    return model
+
+
+@cache
+def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
+    """Create engine.
+    :param engine_type: Engine type.
+    :param batch_size: Batch size to use in engine.
+    :return Engine: Enstantiated engine.
+    """
+    return Engine(model=_make_model(engine_type), batch_size=batch_size, cache_size=10)
 
 
 @pytest.fixture(scope="session")

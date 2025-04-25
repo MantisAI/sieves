@@ -90,6 +90,8 @@ def test_serialization(summarization_docs, batch_engine) -> None:
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
+                            "batch_size": {"is_placeholder": False, "value": -1},
+                            "cache_size": {"is_placeholder": False, "value": 0},
                             "version": Config.get_version(),
                         },
                     },
