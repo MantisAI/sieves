@@ -1,6 +1,5 @@
 import asyncio
 import enum
-import functools
 import itertools
 import sys
 from collections.abc import Iterable
@@ -10,7 +9,6 @@ import dspy
 import pydantic
 
 from sieves.engines.core import Executable, InternalEngine
-from sieves.utils import make_cacheable
 
 PromptSignature: TypeAlias = dspy.Signature | dspy.Module
 Model: TypeAlias = dspy.LM | dspy.BaseLM
@@ -44,7 +42,6 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         inference_kwargs: dict[str, Any],
         strict_mode: bool,
         batch_size: int,
-        cache_size: int,
     ):
         """
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
@@ -59,10 +56,8 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
         :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
             support batching.
-        :param cache_size: Number of document results to keep in cache. Results for the last `cache_size` documents will
-             be served from cache instead of rerunning the model requests.
         """
-        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size, cache_size)
+        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
         config_kwargs = {"max_tokens": DSPy._MAX_TOKENS} | (config_kwargs or {})
         dspy.configure(lm=model, **config_kwargs)
 
@@ -95,8 +90,6 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             assert issubclass(prompt_signature, dspy.Signature)
             generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
-        @make_cacheable
-        @functools.lru_cache(maxsize=self._cache_size)
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             # Compile predictor with few-shot examples.
             fewshot_examples_dicts = DSPy._convert_fewshot_examples(fewshot_examples)

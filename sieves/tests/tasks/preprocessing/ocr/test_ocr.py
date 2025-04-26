@@ -23,6 +23,7 @@ def test_serialization() -> None:
     version = Config.get_version()
     assert config.model_dump() == {
         "cls_name": "sieves.pipeline.core.Pipeline",
+        "cache_size": {"is_placeholder": False, "value": 0},
         "tasks": {
             "is_placeholder": False,
             "value": [

@@ -1,6 +1,5 @@
 import asyncio
 import enum
-import functools
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
@@ -8,7 +7,6 @@ import langchain_core.language_models
 import pydantic
 
 from sieves.engines.core import Executable, PydanticEngine
-from sieves.utils import make_cacheable
 
 Model: TypeAlias = langchain_core.language_models.BaseChatModel
 PromptSignature: TypeAlias = pydantic.BaseModel
@@ -38,8 +36,6 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         template = self._create_template(prompt_template)
         model = self._model.with_structured_output(prompt_signature)
 
-        @make_cacheable
-        @functools.lru_cache(maxsize=self._cache_size)
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
             :param values: Values to inject into prompts.

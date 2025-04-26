@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Iterable
+import itertools
+from collections import deque
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -18,11 +20,17 @@ class Pipeline:
     def __init__(
         self,
         tasks: Iterable[Task] | Task,
+        cache_size: int = 0,
     ):
         """Initialize pipeline.
         :param tasks: List of tasks to execute.
+        :param cache_size: Number of document results to keep in cache. Results for the last `cache_size` documents will
+             be served from cache instead of rerunning the model requests.
         """
         self._tasks = [tasks] if isinstance(tasks, Task) else list(tasks)
+        self._cache_size = cache_size
+        self._cache: dict[str, Doc] = {}
+        self._cache_ids: deque[str] = deque()
         self._validate_tasks()
 
     def add_tasks(self, tasks: Iterable[Task]) -> None:
@@ -43,6 +51,22 @@ class Pipeline:
                 raise ValueError(f"Task with duplicate ID {task.id}. Ensure unique task IDs.")
             task_ids.add(task.id)
 
+    def _get_unseen_unique_docs(self, docs: Iterable[Doc]) -> Iterable[Doc]:
+        """Yields unseen, unique docs - i.e. those docs that are not in cache and that are unique within the provided
+        collection.
+        :param docs: Documents to process.
+        """
+        doc_hashes: set[str] = set()
+
+        for doc in docs:
+            if doc.text is None:
+                yield doc
+
+            assert doc.text
+            if doc.text not in self._cache and doc.text not in doc_hashes:
+                doc_hashes.add(doc.text)
+                yield doc
+
     def __call__(self, docs: Iterable[Doc], in_place: bool = False) -> Iterable[Doc]:
         """Process a list of documents through all tasks.
 
@@ -50,13 +74,30 @@ class Pipeline:
         :param in_place: Whether to modify documents in-place or create copies.
         :return Iterable[Doc]: Processed documents.
         """
-        processed_docs = docs if in_place else [copy.deepcopy(doc) for doc in docs]
+        docs_iters = itertools.tee(docs if in_place else (copy.deepcopy(doc) for doc in docs), 2)
+        processed_docs = self._get_unseen_unique_docs(docs_iters[0])
 
         for i, task in enumerate(self._tasks):
             logger.info(f"Running task {task.id} ({i + 1}/{len(self._tasks)} tasks).")
             processed_docs = task(processed_docs)
 
-        return processed_docs
+        # If returned docs are not iterators (e.g. returned as lists), convert them.
+        if not isinstance(processed_docs, Iterator):
+            processed_docs = iter(processed_docs)
+
+        for doc in docs_iters[1]:
+            assert doc.text
+            if doc.text not in self._cache:
+                # Constrain cache size.
+                if len(self._cache_ids) > self._cache_size:
+                    cache_id_to_delete = self._cache_ids.popleft()
+                    del self._cache[cache_id_to_delete]
+
+                # Update cache.
+                self._cache[doc.text] = next(processed_docs)
+                self._cache_ids.append(doc.text)
+
+            yield self._cache[doc.text]
 
     def dump(self, path: Path | str) -> None:
         """Save pipeline config to disk.
@@ -79,7 +120,10 @@ class Pipeline:
         """
         return Config.create(
             self.__class__,
-            {"tasks": Attribute(value=[task.serialize() for task in self._tasks])},
+            {
+                "tasks": Attribute(value=[task.serialize() for task in self._tasks]),
+                "cache_size": Attribute(value=self._cache_size),
+            },
         )
 
     @classmethod

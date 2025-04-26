@@ -17,7 +17,7 @@ def test_double_task(dummy_docs, batch_engine) -> None:
             _docs = list(_docs)
             for _doc in _docs:
                 _doc.results[self._task_id] = "dummy"
-            return _docs
+            yield from _docs
 
     pipe = Pipeline(
         [

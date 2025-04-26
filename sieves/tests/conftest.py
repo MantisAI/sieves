@@ -76,7 +76,7 @@ def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
     :param batch_size: Batch size to use in engine.
     :return Engine: Enstantiated engine.
     """
-    return Engine(model=_make_model(engine_type), batch_size=batch_size, cache_size=10)
+    return Engine(model=_make_model(engine_type), batch_size=batch_size)
 
 
 @pytest.fixture(scope="session")

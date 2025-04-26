@@ -1,4 +1,3 @@
-import functools
 import re
 from collections.abc import Iterable
 from enum import StrEnum
@@ -10,7 +9,6 @@ from vllm import LLM, SamplingParams
 from vllm.sampling_params import GuidedDecodingParams
 
 from sieves.engines.core import Executable, PydanticEngine
-from sieves.utils import make_cacheable
 
 PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
 Model: TypeAlias = LLM
@@ -59,8 +57,6 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             **({"max_tokens": VLLM._MAX_TOKENS, "temperature": 0} | self._init_kwargs),
         )
 
-        @make_cacheable
-        @functools.lru_cache(maxsize=self._cache_size)
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
             :param values: Values to inject into prompts.

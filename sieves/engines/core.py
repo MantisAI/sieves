@@ -35,7 +35,6 @@ class InternalEngine(Generic[EnginePromptSignature, EngineResult, EngineModel, E
         inference_kwargs: dict[str, Any] | None,
         strict_mode: bool,
         batch_size: int,
-        cache_size: int,
     ):
         """
         :param model: Instantiated model instance.
@@ -44,15 +43,12 @@ class InternalEngine(Generic[EnginePromptSignature, EngineResult, EngineModel, E
         :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
         :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
             support batching.
-        :param cache_size: Number of document results to keep in cache. Results for the last `cache_size` documents will
-             be served from cache instead of rerunning the model requests.
         """
         self._model = model
         self._inference_kwargs = inference_kwargs or {}
         self._init_kwargs = init_kwargs or {}
         self._strict_mode = strict_mode
         self._batch_size = batch_size
-        self._cache_size = cache_size
 
     @property
     def model(self) -> EngineModel:
@@ -115,7 +111,6 @@ class InternalEngine(Generic[EnginePromptSignature, EngineResult, EngineModel, E
             "inference_kwargs": Attribute(value=self._inference_kwargs),
             "strict_mode": Attribute(value=self._strict_mode),
             "batch_size": Attribute(value=self._batch_size),
-            "cache_size": Attribute(value=self._cache_size),
         }
 
     def serialize(self) -> Config:

@@ -1,6 +1,5 @@
 import asyncio
 import enum
-import functools
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
@@ -9,7 +8,6 @@ import ollama
 import pydantic
 
 from sieves.engines.core import Executable, PydanticEngine
-from sieves.utils import make_cacheable
 
 
 class Model(pydantic.BaseModel):
@@ -44,7 +42,6 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         inference_kwargs: dict[str, Any] | None = None,
         strict_mode: bool = False,
         batch_size: int = -1,
-        cache_size: int = 0,
     ):
         super().__init__(
             model=model,
@@ -52,7 +49,6 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             inference_kwargs=inference_kwargs,
             strict_mode=strict_mode,
             batch_size=batch_size,
-            cache_size=cache_size,
         )
 
         # Async client will be initialized for every prompt batch to sidestep an asyncio event loop issue.
@@ -73,8 +69,6 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
 
-        @make_cacheable
-        @functools.lru_cache(maxsize=self._cache_size)
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
             :param values: Values to inject into prompts.

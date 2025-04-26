@@ -90,8 +90,6 @@ class PredictiveTask(
         assert sig_desc is None or isinstance(sig_desc, str)
         return sig_desc
 
-    # @make_cacheable
-    # @functools.lru_cache
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Execute the task on a set of documents.
 
@@ -141,7 +139,7 @@ class PredictiveTask(
         # 7. Integrate results into docs.
         docs = self._bridge.integrate(results, docs)
 
-        return docs
+        yield from docs
 
     @property
     def _state(self) -> dict[str, Any]:

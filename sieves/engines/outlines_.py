@@ -1,5 +1,4 @@
 import enum
-import functools
 from collections.abc import Callable, Iterable
 from typing import Any, TypeAlias
 
@@ -8,7 +7,6 @@ import pydantic
 from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformers, TransformersVision
 
 from sieves.engines.core import Executable, PydanticEngine
-from sieves.utils import make_cacheable
 
 PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
 Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
@@ -68,8 +66,6 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             case _:
                 raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-        @make_cacheable
-        @functools.lru_cache(maxsize=self._cache_size)
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
             :param values: Values to inject into prompts.
