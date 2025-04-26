@@ -85,8 +85,10 @@ class Pipeline:
         if not isinstance(processed_docs, Iterator):
             processed_docs = iter(processed_docs)
 
+        # Iterate over all docs. Retrieve doc from cache if available, otherwise add to cache.
         for doc in docs_iters[1]:
             assert doc.text
+
             if doc.text not in self._cache:
                 # Constrain cache size.
                 if len(self._cache_ids) > self._cache_size:
