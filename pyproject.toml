@@ -37,7 +37,7 @@ classifiers = [
 all = [
     "accelerate>1.2,<2",
     "dspy-ai>=2,<3",
-    "dspy>=2.6,<3",
+    "dspy>=2,<3",
     "gliner<1",
     "instructor>=1,<2",
     "langchain-core>=0.3,<0.4",

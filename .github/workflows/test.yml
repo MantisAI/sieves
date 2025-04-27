@@ -83,6 +83,11 @@ jobs:
         sudo swapon /swapfile
         free -h
 
+    - name: Debug
+      run: |
+        uv pip freeze | grep litellm
+        uv pip freeze | grep dspy
+
     - name: Run tests
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
