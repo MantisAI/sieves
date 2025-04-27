@@ -54,6 +54,9 @@ def test_run(sentiment_analysis_docs, batch_engine, fewshot):
         assert doc.results["sentiment_analysis"]
         assert "sentiment_analysis" in doc.results
 
+    with pytest.raises(NotImplementedError):
+        pipe["sentiment_analysis"].distill(None, None, None, None, None, None, None, None)
+
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_to_hf_dataset(dummy_docs, batch_engine) -> None:

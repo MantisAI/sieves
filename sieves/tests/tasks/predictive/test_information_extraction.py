@@ -54,6 +54,9 @@ def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
         assert doc.text
         assert "InformationExtraction" in doc.results
 
+    with pytest.raises(NotImplementedError):
+        pipe["InformationExtraction"].distill(None, None, None, None, None, None, None, None)
+
 
 @pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
 def test_to_hf_dataset(information_extraction_docs, batch_engine) -> None:

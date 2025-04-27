@@ -46,6 +46,9 @@ def test_run(pii_masking_docs, batch_engine, fewshot) -> None:
         assert doc.text
         assert "PIIMasking" in doc.results
 
+    with pytest.raises(NotImplementedError):
+        pipe["PIIMasking"].distill(None, None, None, None, None, None, None, None)
+
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_to_hf_dataset(pii_masking_docs, batch_engine) -> None:

@@ -12,13 +12,13 @@ from sieves.tasks.predictive.ner.core import Entity
 @pytest.mark.parametrize(
     "batch_engine",
     (
-        # EngineType.dspy,
-        # EngineType.instructor,
-        # EngineType.langchain,
-        # EngineType.ollama,
-        # EngineType.outlines,
+        EngineType.dspy,
+        EngineType.instructor,
+        EngineType.langchain,
+        EngineType.ollama,
+        EngineType.outlines,
         EngineType.glix,
-        # EngineType.vllm,
+        EngineType.vllm,
     ),
     indirect=["batch_engine"],
 )
@@ -54,6 +54,9 @@ def test_run(ner_docs, batch_engine, fewshot) -> None:
     assert len(docs) == 2
     for doc in docs:
         assert "NER" in doc.results
+
+    with pytest.raises(NotImplementedError):
+        pipe["NER"].distill(None, None, None, None, None, None, None, None)
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])

@@ -68,6 +68,9 @@ def test_run(qa_docs, batch_engine, fewshot):
         assert doc.text
         assert "qa" in doc.results
 
+    with pytest.raises(NotImplementedError):
+        pipe["qa"].distill(None, None, None, None, None, None, None, None)
+
 
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_to_hf_dataset(qa_docs, batch_engine) -> None:
