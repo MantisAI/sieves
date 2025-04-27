@@ -178,7 +178,8 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         init_kwargs: dict[str, Any],
         train_kwargs: dict[str, Any],
         output_path: Path | str,
-        split_fracs: tuple[float, float, float] = (0.8, 0.1, 0.1),
+        train_frac: float,
+        val_frac: float,
         seed: int | None = None,
     ) -> None:
         raise NotImplementedError

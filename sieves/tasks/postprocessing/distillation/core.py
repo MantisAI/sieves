@@ -1,3 +1,4 @@
+import itertools
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,8 @@ class Distillation(Task):
         output_path: Path | str,
         init_kwargs: dict[str, Any] | None = None,
         train_kwargs: dict[str, Any] | None = None,
-        split_fracs: tuple[float, float, float] = (0.7, 0.15, 0.15),
+        train_frac: float = 0.8,
+        val_frac: float = 0.2,
         threshold: float = 0.5,
         seed: int | None = None,
         task_id: str | None = None,
@@ -35,7 +37,8 @@ class Distillation(Task):
         :param output_path: Path to store distilled model and training metadata at.
         :param init_kwargs: Kwargs passed on to model/trainer initialization.
         :param train_kwargs: Kwargs passed on to training call.
-        :param split_fracs: Fractions for dataset split - for train, validation, test split. Sum must equal 1.
+        :param train_frac: Fractions for training set. `train_frac` + `val_frac` must sum up to 1.
+        :param val_frac: Fractions for validation set. `train_frac` + `val_frac` must sum up to 1.
         :param threshold: Threshold to apply when converting logits/confidence scores into labels or other structured
             predictions.
         :param seed: RNG seed.
@@ -49,7 +52,8 @@ class Distillation(Task):
         self._base_model_id = base_model_id
         self._framework = framework
         self._output_path = Path(output_path)
-        self._split_frac = split_fracs
+        self._train_frac = train_frac
+        self._val_frac = val_frac
         self._init_kwargs = init_kwargs or {}
         self._train_kwargs = train_kwargs or {}
         self._seed = seed
@@ -90,19 +94,21 @@ class Distillation(Task):
         assert isinstance(
             self._target_task, PredictiveTask
         ), "Only results of tasks of type `PredictiveTask` can be distilled."
+        docs_iter = itertools.tee(docs, 2)
 
         self._target_task.distill(
             base_model_id=self._base_model_id,
             distillation_framework=self._framework,
-            hf_dataset=self._target_task.to_hf_dataset(docs, threshold=self._threshold),
+            hf_dataset=self._target_task.to_hf_dataset(docs_iter[0], threshold=self._threshold),
             output_path=self._output_path,
             init_kwargs=self._init_kwargs,
             train_kwargs=self._train_kwargs,
-            split_fracs=self._split_frac,
+            train_frac=self._train_frac,
+            val_frac=self._val_frac,
             seed=self._seed,
         )
 
-        yield from docs
+        yield from docs_iter[1]
 
     @property
     def _state(self) -> dict[str, Any]:

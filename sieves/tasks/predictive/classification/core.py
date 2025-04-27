@@ -264,7 +264,8 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         init_kwargs: dict[str, Any],
         train_kwargs: dict[str, Any],
         output_path: Path | str,
-        split_fracs: tuple[float, float, float] = (0.8, 0.1, 0.1),
+        train_frac: float,
+        val_frac: float,
         seed: int | None = None,
     ) -> None:
         output_path = Path(output_path)
@@ -274,17 +275,19 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         if not required_columns.issubset(hf_dataset.column_names):
             raise ValueError(f"Dataset must contain columns: {required_columns}. Found: {hf_dataset.column_names}")
 
-        dataset_splits = self._split_dataset(hf_dataset, split_fracs, seed)
+        dataset_splits = self._split_dataset(hf_dataset, train_frac, val_frac, seed)
         dataset_splits.save_to_disk(output_path / "data")
 
         # Framework-specific distillation/fine-tuning logic using match-case
         match distillation_framework:
             case DistillationFramework.setfit:
-                model = setfit.SetFitModel.from_pretrained(
-                    base_model_id,
-                    multi_target_strategy="multi-output",
-                    **init_kwargs,
-                )
+                default_init_kwargs: dict[str, Any] = {}
+                metric_kwargs: dict[str, Any] = {}
+                if self._multi_label:
+                    default_init_kwargs["multi_target_strategy"] = "multi-output"
+                    metric_kwargs = {"average": "macro"}
+
+                model = setfit.SetFitModel.from_pretrained(base_model_id, **(default_init_kwargs | init_kwargs))
 
                 args = setfit.TrainingArguments(
                     output_dir=str(output_path),
@@ -297,11 +300,11 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 trainer = setfit.Trainer(
                     model=model,
                     args=args,
-                    train_dataset=hf_dataset,
-                    eval_dataset=hf_dataset,
+                    train_dataset=dataset_splits["train"],
+                    eval_dataset=dataset_splits["val"],
                     metric="f1",
                     column_mapping={"text": "text", "labels": "label"},
-                    metric_kwargs={"average": "macro"},
+                    metric_kwargs=metric_kwargs,
                 )
                 trainer.train()
                 trainer.model.save_pretrained(output_path)

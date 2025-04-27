@@ -192,7 +192,8 @@ class PredictiveTask(
         init_kwargs: dict[str, Any],
         train_kwargs: dict[str, Any],
         output_path: Path | str,
-        split_fracs: tuple[float, float, float] = (0.8, 0.1, 0.1),
+        train_frac: float,
+        val_frac: float,
         seed: int | None = None,
     ) -> None:
         """Distills a model for this task. Doc instances must have `.results[task_id]` - otherwise this terminates with
@@ -208,34 +209,28 @@ class PredictiveTask(
         :param output_path: Path to store distilled model and training metadata at.
         :param init_kwargs: Kwargs passed on to model/trainer initialization.
         :param train_kwargs: Kwargs passed on to training call.
-        :param split_fracs: Fractions for dataset split - for train, validation, test split. Sum must equal 1.
+        :param train_frac: Fractions for training set. `train_frac` + `val_frac` must sum up to 1.
+        :param val_frac: Fractions for validation set. `train_frac` + `val_frac` must sum up to 1.
         :param seed: RNG seed.
         :raises KeyError: If expected columns don't exist in `hf_dataset`.
         """
 
     @staticmethod
     def _split_dataset(
-        hf_dataset: datasets.Dataset, split_fracs: tuple[float, float, float], seed: int | None
+        hf_dataset: datasets.Dataset, train_frac: float, val_frac: float, seed: int | None
     ) -> datasets.DatasetDict:
         """Splits dataset.
 
         :param hf_dataset: Dataset to split.
-        :param split_fracs: Fractions for train, val, test set. Must sum up to 1.
+        :param train_frac: Fractions for training set. `train_frac` + `val_frac` must sum up to 1.
+        :param val_frac: Fractions for validation set. `train_frac` + `val_frac` must sum up to 1.
         :param seed: RNG seed.
-        :return: Train, val, test sets; mapping of rows to sets.
+        :return: Train, val sets; mapping of rows to sets.
         :raises ValueError: If fractions don't sum up to 1.
         """
-        if not abs(sum(split_fracs) - 1.0) < 1e-9:
-            raise ValueError(f"Split fractions must sum to 1.0, but got {split_fracs} (sum: {sum(split_fracs)}).")
+        if not abs(train_frac + val_frac - 1.0) < 1e-9:
+            raise ValueError(f"Split fractions must sum to 1.0, but got {train_frac}, {val_frac}.")
 
-        # Get test set.
-        train_val_dataset = hf_dataset.train_test_split(test_size=split_fracs[2], shuffle=True, seed=seed)
-        test_dataset = train_val_dataset["test"]
-        train_val_temp = train_val_dataset["train"]
-        # Get train and val sets.
-        relative_val_frac = split_fracs[1] / (split_fracs[0] + split_fracs[1])
-        train_valid_dataset = train_val_temp.train_test_split(test_size=relative_val_frac, shuffle=True, seed=seed)
+        train_val_dataset = hf_dataset.train_test_split(test_size=val_frac, shuffle=True, seed=seed)
 
-        return datasets.DatasetDict(
-            {"train": train_val_dataset["train"], "val": train_valid_dataset["test"], "test": test_dataset}
-        )
+        return datasets.DatasetDict({"train": train_val_dataset["train"], "val": train_val_dataset["test"]})

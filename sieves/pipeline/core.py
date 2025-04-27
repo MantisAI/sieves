@@ -33,7 +33,7 @@ class Pipeline:
         self._cache: dict[int, Doc] = {}
         self._cache_stats: dict[str, int] = {"total": 0, "unique": 0, "hits": 0, "misses": 0}
         self._validate_tasks()
-        self._post_init_distillation()
+        self._set_distillation_targets()
 
     def add_tasks(self, tasks: Iterable[Task]) -> None:
         """Adds tasks to pipeline. Revalidates pipeline.
@@ -53,9 +53,9 @@ class Pipeline:
                 raise ValueError(f"Task with duplicate ID {task.id}. Ensure unique task IDs.")
             task_ids.add(task.id)
 
-    def _post_init_distillation(self) -> None:
-        """Post-initializes distillation tasks, if there are any. This is necessary because distillation tasks have a
-        lazily initialized required attribute.
+    def _set_distillation_targets(self) -> None:
+        """Set target task references fpr distillation tasks, if there are any. This is necessary because distillation
+        tasks have a lazily initialized required attribute.
         """
         for task in self._tasks:
             if isinstance(task, Distillation):
@@ -93,7 +93,7 @@ class Pipeline:
             logger.info(f"Running task {task.id} ({i + 1}/{len(self._tasks)} tasks).")
             processed_docs = task(processed_docs)
 
-        # If returned docs are not iterators (e.g. returned as lists), convert them.
+        # If returned docs are not iterators (e.g. returned as lists), get corresponding iterators.
         if not isinstance(processed_docs, Iterator):
             processed_docs = iter(processed_docs)
 
