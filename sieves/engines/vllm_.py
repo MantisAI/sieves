@@ -43,24 +43,25 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
     ) -> Executable[Result | None]:
         template = self._create_template(prompt_template)
 
+        # If Pydantic model: convert into JSON schema.
+        converted_decoding_params: type[PromptSignature] | PromptSignature | dict[str, Any] = prompt_signature
+        if inference_mode == InferenceMode.json:
+            assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
+            assert hasattr(prompt_signature, "model_json_schema")
+            converted_decoding_params = prompt_signature.model_json_schema()
+
+        # Configure decoding params to encourage correct formatting.
+        guided_decoding_params = GuidedDecodingParams(**{inference_mode.value: converted_decoding_params})
+        sampling_params = SamplingParams(
+            guided_decoding=guided_decoding_params,
+            **({"max_tokens": VLLM._MAX_TOKENS, "temperature": 0} | self._init_kwargs),
+        )
+
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
             :param values: Values to inject into prompts.
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
             """
-            # If Pydantic model: convert into JSON schema.
-            converted_decoding_params: type[PromptSignature] | PromptSignature | dict[str, Any] = prompt_signature
-            if inference_mode == InferenceMode.json:
-                assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
-                assert hasattr(prompt_signature, "model_json_schema")
-                converted_decoding_params = prompt_signature.model_json_schema()
-
-            # Configure decoding params to encourage correct formatting.
-            guided_decoding_params = GuidedDecodingParams(**{inference_mode.value: converted_decoding_params})
-            sampling_params = SamplingParams(
-                guided_decoding=guided_decoding_params,
-                **({"max_tokens": VLLM._MAX_TOKENS, "temperature": 0} | self._init_kwargs),
-            )
 
             def generate(prompts: list[str]) -> Iterable[Result]:
                 results = self._model.generate(

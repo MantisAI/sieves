@@ -26,6 +26,7 @@ def test_serialization(tokenizer) -> None:
     config = pipe.serialize()
     assert config.model_dump() == {
         "cls_name": "sieves.pipeline.core.Pipeline",
+        "use_cache": {"is_placeholder": False, "value": True},
         "tasks": {
             "is_placeholder": False,
             "value": [
