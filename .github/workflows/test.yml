@@ -56,6 +56,7 @@ jobs:
         source .venv/bin/activate
         uv pip uninstall vllm
         cd vllm_source
+        git checkout v0.8.4
         echo ":: Install auxiliary tools"
         uv pip install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy
         echo ":: Install torch CPU suite" 
