@@ -17,7 +17,7 @@ from sieves.tasks.predictive import classification
 
 
 @pytest.mark.parametrize("batch_engine", (EngineType.huggingface,), indirect=["batch_engine"])
-@pytest.mark.parametrize("distillation_framework", (DistillationFramework.setfit,))
+@pytest.mark.parametrize("distillation_framework", DistillationFramework.all())
 def test_run(batch_engine, distillation_framework) -> None:
     label_descriptions = {
         "science": "Topics related to scientific disciplines and research",
