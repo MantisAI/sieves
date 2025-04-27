@@ -67,7 +67,7 @@ jobs:
         echo ":: Building wheel"
         export VLLM_TARGET_DEVICE=cpu
         python setup.py bdist_wheel
-        pip install dist/*.whl
+        uv pip install dist/*.whl
         cd ..
         rm -rf vllm_source
 
