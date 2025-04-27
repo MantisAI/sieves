@@ -22,6 +22,9 @@ dependencies = [
     "scikit-learn>=1.6,<2",
     "unstructured-inference>=0.8,<1",
     "unstructured[all-docs]>=0.16,<1",
+    # Pin LiteLLM due to bug in 1.67.4. To be removed once patch is out.
+    # Info: https://github.com/BerriAI/litellm/issues/10349
+    "litellm>=1,<1.67.4"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
