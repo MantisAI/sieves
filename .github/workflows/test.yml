@@ -83,10 +83,10 @@ jobs:
         sudo swapon /swapfile
         free -h
 
-    - name: Debug
+    # Info: https://github.com/kortix-ai/suna/issues/154
+    - name: Downgrade LiteLLM (TODO - to be removed once fix for 1.67.4 is out)
       run: |
-        uv pip freeze | grep litellm
-        uv pip freeze | grep dspy
+        uv pip install --upgrade litellm == 1.67.3
 
     - name: Run tests
       env:
