@@ -72,7 +72,7 @@ def test_serialization(pii_masking_docs, batch_engine) -> None:
     config = pipe.serialize()
     assert config.model_dump() == {
         "cls_name": "sieves.pipeline.core.Pipeline",
-        "cache_size": {"is_placeholder": False, "value": 0},
+        "use_cache": {"is_placeholder": False, "value": True},
         "tasks": {
             "is_placeholder": False,
             "value": [

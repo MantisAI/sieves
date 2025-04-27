@@ -40,7 +40,7 @@ def test_serialization_pipeline(dummy_docs, batch_engine, tokenizer):
     version = Config.get_version()
     assert config_model_dump == {
         "cls_name": "sieves.pipeline.core.Pipeline",
-        "cache_size": {"is_placeholder": False, "value": 0},
+        "use_cache": {"is_placeholder": False, "value": True},
         "tasks": {
             "is_placeholder": False,
             "value": [

@@ -136,7 +136,7 @@ class Pipeline:
             self.__class__,
             {
                 "tasks": Attribute(value=[task.serialize() for task in self._tasks]),
-                "cache_size": Attribute(value=self._use_cache),
+                "use_cache": Attribute(value=self._use_cache),
             },
         )
 
