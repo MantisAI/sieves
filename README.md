@@ -81,6 +81,7 @@ build modern NLP applications. It provides:
   - Coming soon: entity linking, knowledge graph creation, ...
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
 - :teacher: **Export:** Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for easy distillation
+- :recycle: **Caching** to avoid unnecessary model calls
 
 ---
 
