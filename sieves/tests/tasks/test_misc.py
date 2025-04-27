@@ -16,7 +16,7 @@ from sieves import Doc, Engine, Pipeline, engines, tasks
 from sieves.tasks.utils import PydanticToHFDatasets
 
 
-def test_custom_prompt_template():
+def test_custom_prompt_template() -> None:
     prompt_template = "This is a different prompt template."
     engine = Engine(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     task = tasks.predictive.Classification(
@@ -28,7 +28,7 @@ def test_custom_prompt_template():
     assert task.prompt_template == prompt_template
 
 
-def test_custom_prompt_signature_desc():
+def test_custom_prompt_signature_desc() -> None:
     prompt_sig_desc = "This is a different prompt signature description."
     engine = Engine(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     task = tasks.predictive.Classification(
@@ -40,16 +40,14 @@ def test_custom_prompt_signature_desc():
     assert task.prompt_signature_description == prompt_sig_desc
 
 
-def test_run_readme_example_short():
+def test_run_readme_example_short() -> None:
     # Define documents by text or URI.
     docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
     # Create pipeline with tasks.
     pipe = Pipeline(
-        [
-            # Run classification on provided document.
-            tasks.predictive.Classification(labels=["science", "politics"], engine=Engine()),
-        ]
+        # Run classification on provided document.
+        tasks.predictive.Classification(labels=["science", "politics"], engine=Engine())
     )
 
     # Run pipe and output results.
@@ -63,7 +61,7 @@ def test_run_readme_example_short():
     [engines.EngineType.glix],
     indirect=True,
 )
-def test_run_readme_example_long(batch_engine, tokenizer):
+def test_run_readme_example_long(batch_engine, tokenizer) -> None:
     # Define documents by text or URI.
     # Readme example downlodads https://arxiv.org/pdf/2408.09869, but we'll use a local PDF here to speed up the test.
     docs = [Doc(uri=Path(__file__).parent.parent / "assets" / "1204.0162v2.pdf")]

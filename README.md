@@ -23,6 +23,8 @@
 
 `sieves` is a library for zero- and few-shot NLP tasks with structured generation. Build production-ready NLP prototypes quickly, with guaranteed output formats and no training required.
 
+Read our documentation [here](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
+
 ### Why `sieves`?
 
 Even in the era of generative AI, structured outputs and observability remain crucial.
@@ -46,6 +48,7 @@ build modern NLP applications. It provides:
 - Built-in tasks for common NLP operations
 - Easy extendability
 - A document-based pipeline architecture for easy observability and debugging
+- Caching - pipelines cache processed documents to prevent costly redundant model calls
 
 `sieves` draws a lot of inspiration from [`spaCy`](https://spacy.io/) and particularly [`spacy-llm`](https://github.com/explosion/spacy-llm).
 
@@ -79,6 +82,7 @@ build modern NLP applications. It provides:
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
 - :teacher: **Distillation:** Distill local, specialized models using your zero-shot model results automatically. 
   Export your results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) if you want to run your own training routine.
+- :recycle: **Caching** to avoid unnecessary model calls
 
 ---
 
@@ -93,12 +97,10 @@ docs = [Doc(text="Special relativity applies to all physical phenomena in the ab
 
 # 2. Create pipeline with tasks.
 pipe = Pipeline(
-    [
-        # 3. Add classification task to pipeline. 
-        # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you 
-        # might want to consider upgrading to a different model for better results. 
-        tasks.Classification(labels=["science", "politics"], engine=Engine()),
-    ]
+    # 3. Add classification task to pipeline. 
+    # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you 
+    # might want to consider upgrading to a different model for better results. 
+    tasks.Classification(labels=["science", "politics"], engine=Engine())
 )
 
 # 4. Run pipe and output results.

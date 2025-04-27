@@ -34,6 +34,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         assert isinstance(prompt_signature, type)
         cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
+        model = self._model.with_structured_output(prompt_signature)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
@@ -42,7 +43,6 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             """
             match inference_mode:
                 case InferenceMode.structured:
-                    model = self._model.with_structured_output(prompt_signature)
 
                     def generate(prompts: list[str]) -> Iterable[Result]:
                         try:

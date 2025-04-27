@@ -78,6 +78,7 @@ def test_serialization(summarization_docs, batch_engine) -> None:
     config = pipe.serialize()
     assert config.model_dump() == {
         "cls_name": "sieves.pipeline.core.Pipeline",
+        "use_cache": {"is_placeholder": False, "value": True},
         "tasks": {
             "is_placeholder": False,
             "value": [
@@ -90,6 +91,8 @@ def test_serialization(summarization_docs, batch_engine) -> None:
                             "inference_kwargs": {"is_placeholder": False, "value": {}},
                             "init_kwargs": {"is_placeholder": False, "value": {}},
                             "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
+                            "batch_size": {"is_placeholder": False, "value": -1},
+                            "strict_mode": {"is_placeholder": False, "value": False},
                             "version": Config.get_version(),
                         },
                     },

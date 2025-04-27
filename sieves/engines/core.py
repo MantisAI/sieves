@@ -109,6 +109,8 @@ class InternalEngine(Generic[EnginePromptSignature, EngineResult, EngineModel, E
             "model": Attribute(value=self._model),
             "init_kwargs": Attribute(value=self._init_kwargs),
             "inference_kwargs": Attribute(value=self._inference_kwargs),
+            "strict_mode": Attribute(value=self._strict_mode),
+            "batch_size": Attribute(value=self._batch_size),
         }
 
     def serialize(self) -> Config:
