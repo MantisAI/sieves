@@ -5,7 +5,7 @@ from typing import Any
 
 from sieves.data.doc import Doc
 from sieves.tasks.core import Task
-from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.postprocessing.distillation.types import DistillationFramework, DistillationFrameworkLiteral
 from sieves.tasks.predictive.core import PredictiveTask
 
 
@@ -16,7 +16,7 @@ class Distillation(Task):
         self,
         target_task_id: str,
         base_model_id: str,
-        framework: DistillationFramework,
+        framework: DistillationFramework | DistillationFrameworkLiteral,  # type: ignore[valid-type]
         output_path: Path | str,
         init_kwargs: dict[str, Any] | None = None,
         train_kwargs: dict[str, Any] | None = None,
@@ -50,7 +50,7 @@ class Distillation(Task):
 
         self._target_task_id = target_task_id
         self._base_model_id = base_model_id
-        self._framework = framework
+        self._framework = DistillationFramework(framework)
         self._output_path = Path(output_path)
         self._train_frac = train_frac
         self._val_frac = val_frac
@@ -115,7 +115,12 @@ class Distillation(Task):
         return {
             **super()._state,
             "target_task_id": self._target_task_id,
-            "framework": self._framework,
+            "base_model_id": self._base_model_id,
+            "framework": self._framework.value,
+            "output_path": str(self._output_path),
+            "init_kwargs": self._init_kwargs,
             "train_kwargs": self._train_kwargs,
-            "model_path": str(self._output_path),
+            "train_frac": self._train_frac,
+            "val_frac": self._val_frac,
+            "threshold": self._threshold,
         }

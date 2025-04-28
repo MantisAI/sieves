@@ -76,7 +76,6 @@ def test_to_hf_dataset(summarization_docs, batch_engine) -> None:
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_serialization(summarization_docs, batch_engine) -> None:
     pipe = Pipeline([summarization.Summarization(n_words=10, engine=batch_engine)])
-    list(pipe(summarization_docs))
 
     config = pipe.serialize()
     assert config.model_dump() == {

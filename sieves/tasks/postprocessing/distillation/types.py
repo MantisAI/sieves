@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+from typing import Literal
 
 
 class DistillationFramework(enum.Enum):
@@ -14,3 +15,6 @@ class DistillationFramework(enum.Enum):
         :return tuple[EngineType, ...]: All available engine types.
         """
         return tuple(dist_type for dist_type in DistillationFramework)
+
+
+DistillationFrameworkLiteral = Literal[*DistillationFramework.all()]  # type: ignore[valid-type]

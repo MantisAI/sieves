@@ -118,7 +118,6 @@ def test_serialization(classification_docs, batch_engine) -> None:
             label_descriptions=label_descriptions,
         )
     )
-    list(pipe(classification_docs))
 
     config = pipe.serialize()
     assert config.model_dump() == {

@@ -1,4 +1,4 @@
 from .core import Distillation
-from .types import DistillationFramework
+from .types import DistillationFramework, DistillationFrameworkLiteral
 
-__all__ = ["Distillation", "DistillationFramework"]
+__all__ = ["Distillation", "DistillationFramework", "DistillationFrameworkLiteral"]

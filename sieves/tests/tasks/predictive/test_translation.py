@@ -63,7 +63,6 @@ def test_to_hf_dataset(translation_docs, batch_engine) -> None:
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_serialization(translation_docs, batch_engine) -> None:
     pipe = Pipeline([translation.Translation(to="Spanish", engine=batch_engine)])
-    list(pipe(translation_docs))
 
     config = pipe.serialize()
     assert config.model_dump() == {

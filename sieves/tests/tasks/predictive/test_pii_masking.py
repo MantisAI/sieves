@@ -70,7 +70,6 @@ def test_to_hf_dataset(pii_masking_docs, batch_engine) -> None:
 @pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
 def test_serialization(pii_masking_docs, batch_engine) -> None:
     pipe = Pipeline([tasks.predictive.PIIMasking(engine=batch_engine)])
-    list(pipe(pii_masking_docs))
 
     config = pipe.serialize()
     assert config.model_dump() == {

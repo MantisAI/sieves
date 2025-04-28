@@ -82,7 +82,6 @@ def test_to_hf_dataset(information_extraction_docs, batch_engine) -> None:
 @pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
 def test_serialization(information_extraction_docs, batch_engine) -> None:
     pipe = Pipeline([tasks.predictive.InformationExtraction(entity_type=Person, engine=batch_engine)])
-    list(pipe(information_extraction_docs))
 
     config = pipe.serialize()
     assert config.model_dump() == {

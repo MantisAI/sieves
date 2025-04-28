@@ -88,7 +88,6 @@ def test_serialization(dummy_docs, batch_engine) -> None:
             )
         ]
     )
-    list(pipe(dummy_docs))
 
     config = pipe.serialize()
     assert config.model_dump() == {
