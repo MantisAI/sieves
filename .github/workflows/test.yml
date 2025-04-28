@@ -46,7 +46,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install tesseract-ocr
         uv venv
-        uv pip install -e ".[all,test]"
+        uv pip install --upgrade pip setuptools wheel
+        uv pip install -e ".[engines,distill,test]"
 
     - name: Set up vLLM for CPU
       run: |
@@ -61,9 +62,12 @@ jobs:
         echo ":: Install torch CPU suite" 
         uv pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
         echo ":: Install requirements/cpu.txt"
+        uv pip install --upgrade filelock setuptools
         uv pip install -v -r requirements/cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
         echo ":: Building wheel"
-        VLLM_TARGET_DEVICE=cpu python setup.py install
+        export VLLM_TARGET_DEVICE=cpu
+        python setup.py bdist_wheel
+        uv pip install dist/*.whl
         cd ..
         rm -rf vllm_source
 

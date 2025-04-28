@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, TypeAlias
 
 import datasets
@@ -10,6 +11,7 @@ import pydantic
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, ollama_, outlines_, vllm_
 from sieves.serialization import Config
+from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
@@ -126,7 +128,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             "entity_type": self._entity_type,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
             {
@@ -158,3 +160,17 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
+
+    def distill(
+        self,
+        base_model_id: str,
+        distillation_framework: DistillationFramework,
+        hf_dataset: datasets.Dataset,
+        init_kwargs: dict[str, Any],
+        train_kwargs: dict[str, Any],
+        output_path: Path | str,
+        train_frac: float,
+        val_frac: float,
+        seed: int | None = None,
+    ) -> None:
+        raise NotImplementedError

@@ -1,7 +1,7 @@
 """
 Imports 3rd-party libraries required for engines. If library can't be found, placeholder engines is imported instead.
 This allows us to import everything downstream without having to worry about optional dependencies. If a user specifies
-an engine/model from a non-installed library, the application will terminate with an error.
+an engine/model from a non-installed library, we terminate with an error.
 """
 
 # mypy: disable-error-code="no-redef"
@@ -9,8 +9,8 @@ an engine/model from a non-installed library, the application will terminate wit
 import warnings
 
 _MISSING_WARNING = (
-    "Warning: dependency `{missing_dependency}` could not be imported. The corresponding engines won't work unless "
-    "this dependency has been installed."
+    "Warning: engine dependency `{missing_dependency}` could not be imported. The corresponding engines won't work "
+    "unless this dependency has been installed."
 )
 
 

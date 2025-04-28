@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, TypeAlias
 
 import datasets
@@ -9,6 +11,8 @@ import pydantic
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, huggingface_, vllm_
 from sieves.serialization import Config
+from sieves.tasks.postprocessing.distillation.distillation_import import model2vec, setfit
+from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.classification.bridges import (
     DSPyClassification,
@@ -219,10 +223,10 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             "label_descriptions": self._label_descriptions,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
-            {"text": datasets.Value("string"), "label": datasets.Sequence(datasets.Value("float32"))}
+            {"text": datasets.Value("string"), "labels": datasets.Sequence(datasets.ClassLabel(names=self._labels))}
         )
         info = datasets.DatasetInfo(
             description=f"Multi-label classification dataset with labels {self._labels}. Generated with sieves "
@@ -232,6 +236,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
         # Fetch data used for generating dataset.
         labels = self._labels
+
         try:
             data = [(doc.text, doc.results[self._task_id]) for doc in docs]
         except KeyError as err:
@@ -243,7 +248,99 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             """
             for text, result in data:
                 scores = {label_score[0]: label_score[1] for label_score in result}
-                yield {"text": text, "label": [scores[label] for label in labels]}
+                yield {
+                    "text": text,
+                    # One-hot encode labels.
+                    "labels": [int(scores.get(label, 0) >= threshold) for label in labels],
+                }
 
-        # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
+
+    def distill(
+        self,
+        base_model_id: str,
+        distillation_framework: DistillationFramework,
+        hf_dataset: datasets.Dataset,
+        init_kwargs: dict[str, Any],
+        train_kwargs: dict[str, Any],
+        output_path: Path | str,
+        train_frac: float,
+        val_frac: float,
+        seed: int | None = None,
+    ) -> None:
+        output_path = Path(output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        required_columns = {"text", "labels"}
+        if not required_columns.issubset(hf_dataset.column_names):
+            raise ValueError(f"Dataset must contain columns: {required_columns}. Found: {hf_dataset.column_names}")
+
+        dataset_splits = self._split_dataset(hf_dataset, train_frac, val_frac, seed)
+        dataset_splits.save_to_disk(output_path / "data")
+
+        # Framework-specific distillation/fine-tuning logic using match-case
+        match distillation_framework:
+            case DistillationFramework.setfit:
+                default_init_kwargs: dict[str, Any] = {}
+                metric_kwargs: dict[str, Any] = {}
+                if self._multi_label:
+                    default_init_kwargs["multi_target_strategy"] = "multi-output"
+                    metric_kwargs = {"average": "macro"}
+
+                model = setfit.SetFitModel.from_pretrained(base_model_id, **(default_init_kwargs | init_kwargs))
+
+                args = setfit.TrainingArguments(
+                    output_dir=str(output_path),
+                    eval_strategy="epoch",
+                    save_strategy="epoch",
+                    load_best_model_at_end=True,
+                    **train_kwargs,
+                )
+
+                trainer = setfit.Trainer(
+                    model=model,
+                    args=args,
+                    train_dataset=dataset_splits["train"],
+                    eval_dataset=dataset_splits["val"],
+                    metric="f1",
+                    column_mapping={"text": "text", "labels": "label"},
+                    metric_kwargs=metric_kwargs,
+                )
+                trainer.train()
+                trainer.model.save_pretrained(output_path)
+
+                metrics = trainer.evaluate()
+                with open(output_path / "metrics.json", "w") as f:
+                    json.dump(metrics, f, indent=4)
+
+            case DistillationFramework.model2vec:
+
+                def one_hot_to_label(label_indices: list[int]) -> list[str]:
+                    """Converts list of label indices into list of labels.
+                    :param label_indices: List of label indices.
+                    :return: List of labels.
+                    """
+                    return [self._labels[i] for i, is_label in enumerate(label_indices) if is_label]
+
+                classifier = model2vec.train.StaticModelForClassification.from_pretrained(
+                    model_name=base_model_id, **init_kwargs
+                )
+                classifier.fit(
+                    dataset_splits["train"]["text"],
+                    [one_hot_to_label(encoded_labels) for encoded_labels in dataset_splits["train"]["labels"]],
+                    **train_kwargs,
+                )
+                classifier.to_pipeline().save_pretrained(output_path)
+
+                metrics = classifier.evaluate(
+                    dataset_splits["val"]["text"],
+                    [one_hot_to_label(encoded_labels) for encoded_labels in dataset_splits["val"]["labels"]],
+                )
+                with open(output_path / "metrics.json", "w") as f:
+                    json.dump(metrics, f, indent=4)
+
+            case _:
+                raise NotImplementedError(
+                    f"Unsupported distillation framework for this task: {distillation_framework}. "
+                    f"Please choose one of {DistillationFramework.setfit, DistillationFramework.model2vec}"
+                )
