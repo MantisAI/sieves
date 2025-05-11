@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, TypeAlias
 
 import datasets
@@ -9,6 +10,7 @@ import pydantic
 from sieves.data import Doc
 from sieves.engines import Engine, EngineType, dspy_, glix_, vllm_
 from sieves.serialization import Config
+from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.question_answering.bridges import (
@@ -123,7 +125,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             "questions": self._questions,
         }
 
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
             {"text": datasets.Value("string"), "answers": datasets.Sequence(datasets.Value("string"))}
@@ -149,3 +151,17 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
 
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
+
+    def distill(
+        self,
+        base_model_id: str,
+        distillation_framework: DistillationFramework,
+        hf_dataset: datasets.Dataset,
+        init_kwargs: dict[str, Any],
+        train_kwargs: dict[str, Any],
+        output_path: Path | str,
+        train_frac: float,
+        val_frac: float,
+        seed: int | None = None,
+    ) -> None:
+        raise NotImplementedError

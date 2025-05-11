@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, Generic
 
 import datasets
@@ -11,6 +12,7 @@ from sieves.data import Doc
 from sieves.engines import Engine, EngineInferenceMode, EngineType  # noqa: F401
 from sieves.serialization import Config, Serializable
 from sieves.tasks.core import Task
+from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
 
 
@@ -173,8 +175,62 @@ class PredictiveTask(
         return cls(**config.to_init_dict(cls, **(kwargs | engine_param)))
 
     @abc.abstractmethod
-    def to_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         """Creates Hugging Face datasets.Dataset from docs.
         :param docs: Docs to convert.
+        :param threshold: Threshold to apply when converting logits/confidence scores into labels or other structured
+            predictions.
         :return datasets.Dataset: Hugging Face dataset.
         """
+
+    @abc.abstractmethod
+    def distill(
+        self,
+        base_model_id: str,
+        distillation_framework: DistillationFramework,
+        hf_dataset: datasets.Dataset,
+        init_kwargs: dict[str, Any],
+        train_kwargs: dict[str, Any],
+        output_path: Path | str,
+        train_frac: float,
+        val_frac: float,
+        seed: int | None = None,
+    ) -> None:
+        """Distills a model for this task. Doc instances must have `.results[task_id]` - otherwise this terminates with
+        an error.
+
+        This method fine-tunes a base model using distillation techniques based on the provided framework. It splits
+        the input dataset, trains the model, and saves the resulting model and metadata to the specified output path.
+
+        :param base_model_id: ID of Hugging Face model to use as base for distillation. The chosen model will be
+            fine-tuned on the target task's results.
+        :param distillation_framework: Which distillation framework to use.
+        :param hf_dataset: Docs to extract results from.
+        :param output_path: Path to store distilled model and training metadata at.
+        :param init_kwargs: Kwargs passed on to model/trainer initialization.
+        :param train_kwargs: Kwargs passed on to training call.
+        :param train_frac: Fractions for training set. `train_frac` + `val_frac` must sum up to 1.
+        :param val_frac: Fractions for validation set. `train_frac` + `val_frac` must sum up to 1.
+        :param seed: RNG seed.
+        :raises KeyError: If expected columns don't exist in `hf_dataset`.
+        """
+
+    @staticmethod
+    def _split_dataset(
+        hf_dataset: datasets.Dataset, train_frac: float, val_frac: float, seed: int | None
+    ) -> datasets.DatasetDict:
+        """Splits dataset.
+
+        :param hf_dataset: Dataset to split.
+        :param train_frac: Fractions for training set. `train_frac` + `val_frac` must sum up to 1.
+        :param val_frac: Fractions for validation set. `train_frac` + `val_frac` must sum up to 1.
+        :param seed: RNG seed.
+        :return: Train, val sets; mapping of rows to sets.
+        :raises ValueError: If fractions don't sum up to 1.
+        """
+        if not abs(train_frac + val_frac - 1.0) < 1e-9:
+            raise ValueError(f"Split fractions must sum to 1.0, but got {train_frac}, {val_frac}.")
+
+        train_val_dataset = hf_dataset.train_test_split(test_size=val_frac, shuffle=True, seed=seed)
+
+        return datasets.DatasetDict({"train": train_val_dataset["train"], "val": train_val_dataset["test"]})

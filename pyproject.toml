@@ -37,7 +37,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-all = [
+engines = [
     "accelerate>1.2,<2",
     "dspy-ai>=2,<3",
     "dspy>=2,<3",
@@ -48,17 +48,19 @@ all = [
     "ollama>=0.4,<1",
     "sentencepiece<1",
     "transformers>=4,<5",
-    "vllm>=0.8,<1"
+    "vllm>=0.8,<1",
+]
+distill = [
+    "setfit>=1.1,<2",
+    "model2vec[train]>0.4,<0.5",
 ]
 test = [
-    "pre-commit>=4.1.0",
-    "pytest>=7.4.3",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.21.1",
+    "pre-commit>=4,<5",
+    "pytest>=7,<8",
     "mypy>=1",
     "mypy-extensions>=1",
     "pytest-cov>=6",
-    "anthropic>=0.45.2",
+    "anthropic>=0.45,<1",
     "langchain-anthropic>0.3,<0.4",
     "tesseract>=0.1,<1",
     # For generating documentation.

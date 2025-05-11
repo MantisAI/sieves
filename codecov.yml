@@ -11,7 +11,7 @@ coverage:
   status:
     project:
       default:
-        # Fails CI if coverage < 1%
+        # Fails CI if coverage < 90%
         target: 90
     patch:
       default:
@@ -22,6 +22,8 @@ coverage:
     - "sieves/tests"
     - "docs"
     - "**/test_*.py"
+    - "sieves/engines/engine_import.py"
+    - "sieves/tasks/postprocessing/distillation/distillation_import.py"
 
 comment:
   layout: "diff, flags, files"
