@@ -156,7 +156,7 @@ def test_serialization(classification_docs, batch_engine) -> None:
                                 "ZeroShotClassificationPipeline",
                             },
                             "strict_mode": {"is_placeholder": False, "value": False},
-                            "version": "0.10.0",
+                            "version": Config.get_version(),
                         },
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
