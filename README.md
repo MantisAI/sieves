@@ -19,11 +19,13 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
 
-## Zero-shot NLP made easy.
+## Zero-shot document processing made easy.
 
 `sieves` is a library for zero- and few-shot NLP tasks with structured generation. Build production-ready NLP prototypes quickly, with guaranteed output formats and no training required.
 
 Read our documentation [here](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
+
+Install `sieves` with `pip install sieves` (or `pip install sieves[all]` if you want to install all optional dependencies).
 
 ### Why `sieves`?
 
