@@ -8,6 +8,8 @@ an engine/model from a non-installed library, we terminate with an error.
 
 import warnings
 
+from .missing import MissingEngine
+
 _MISSING_WARNING = (
     "Warning: engine dependency `{missing_dependency}` could not be imported. The corresponding engines won't work "
     "unless this dependency has been installed."
@@ -20,7 +22,7 @@ try:
 except ModuleNotFoundError:
     from . import missing as dspy_
 
-    DSPy = None  # type: ignore[assignment,misc]
+    DSPy = MissingEngine  # type: ignore[misc,assignment]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="dspy"))
 
 
@@ -30,7 +32,7 @@ try:
 except ModuleNotFoundError:
     from . import missing as glix_
 
-    GliX = None  # type: ignore[assignment,misc]
+    GliX = MissingEngine  # type: ignore[misc,assignment]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="gliner"))
 
 
@@ -40,7 +42,7 @@ try:
 except ModuleNotFoundError:
     from . import missing as huggingface_
 
-    HuggingFace = None  # type: ignore[assignment,misc]
+    HuggingFace = MissingEngine  # type: ignore[misc,assignment]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="transformers"))
 
 
@@ -50,7 +52,7 @@ try:
 except ModuleNotFoundError:
     from . import missing as instructor_
 
-    Instructor = None  # type: ignore[assignment,misc]
+    Instructor = MissingEngine  # type: ignore[misc,assignment]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="instructor"))
 
 
@@ -60,7 +62,7 @@ try:
 except ModuleNotFoundError:
     from . import missing as langchain_
 
-    LangChain = None  # type: ignore[assignment,misc]
+    LangChain = MissingEngine  # type: ignore[misc,assignment]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="langchain"))
 
 
@@ -70,7 +72,7 @@ try:
 except ModuleNotFoundError:
     from . import missing as ollama_
 
-    Ollama = None  # type: ignore[assignment,misc]
+    Ollama = MissingEngine  # type: ignore[misc,assignment]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="ollama"))
 
 
@@ -80,18 +82,17 @@ try:
 except ModuleNotFoundError:
     from . import missing as outlines_
 
-    Outlines = None  # type: ignore[assignment,misc]
+    Outlines = MissingEngine  # type: ignore[misc,assignment]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="outlines"))
 
 
 try:
-    from vllm_ import VLLM
-
     from . import vllm_
+    from .vllm_ import VLLM
 except ModuleNotFoundError:
     from . import missing as vllm_
 
-    VLLM = None
+    VLLM = MissingEngine  # type: ignore[misc,assignment]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="vllm"))
 
 
