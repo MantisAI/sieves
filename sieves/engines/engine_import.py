@@ -15,79 +15,72 @@ _MISSING_WARNING = (
 
 
 try:
-    from dspy_ import DSPy
-
     from . import dspy_
+    from .dspy_ import DSPy
 except ModuleNotFoundError:
     from . import missing as dspy_
 
-    DSPy = None
+    DSPy = None  # type: ignore[assignment,misc]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="dspy"))
 
 
 try:
-    from glix_ import GliX
-
     from . import glix_
+    from .glix_ import GliX
 except ModuleNotFoundError:
     from . import missing as glix_
 
-    GliX = None
+    GliX = None  # type: ignore[assignment,misc]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="gliner"))
 
 
 try:
-    from huggingface_ import HuggingFace
-
     from . import huggingface_
+    from .huggingface_ import HuggingFace
 except ModuleNotFoundError:
     from . import missing as huggingface_
 
-    HuggingFace = None
+    HuggingFace = None  # type: ignore[assignment,misc]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="transformers"))
 
 
 try:
-    from instructor_ import Instructor
-
     from . import instructor_
+    from .instructor_ import Instructor
 except ModuleNotFoundError:
     from . import missing as instructor_
 
-    Instructor = None
+    Instructor = None  # type: ignore[assignment,misc]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="instructor"))
 
 
 try:
-    from langchain_ import LangChain
-
     from . import langchain_
+    from .langchain_ import LangChain
 except ModuleNotFoundError:
     from . import missing as langchain_
 
-    LangChain = None
+    LangChain = None  # type: ignore[assignment,misc]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="langchain"))
 
 
 try:
-    from ollama_ import Ollama
-
     from . import ollama_
+    from .ollama_ import Ollama
 except ModuleNotFoundError:
     from . import missing as ollama_
 
-    Ollama = None
+    Ollama = None  # type: ignore[assignment,misc]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="ollama"))
 
 
 try:
-    from outlines_ import Outlines
-
     from . import outlines_
+    from .outlines_ import Outlines
 except ModuleNotFoundError:
     from . import missing as outlines_
 
-    Outlines = None
+    Outlines = None  # type: ignore[assignment,misc]
     warnings.warn(_MISSING_WARNING.format(missing_dependency="outlines"))
 
 
