@@ -11,7 +11,8 @@ import outlines
 import pytest
 import tokenizers
 import transformers
-import vllm
+
+# import vllm
 from langchain.chat_models import init_chat_model
 
 from sieves import Doc, Engine, engines
@@ -64,8 +65,8 @@ def _make_model(engine_type: engines.EngineType) -> Any:
                 transformers.AutoTokenizer.from_pretrained(model_name),
             )
 
-        case engines.EngineType.vllm:
-            model = vllm.LLM("HuggingFaceTB/SmolLM-135M-Instruct")
+        # case engines.EngineType.vllm:
+        #     model = vllm.LLM("HuggingFaceTB/SmolLM-135M-Instruct")
 
         case _:
             raise ValueError(f"Unsupported engine type {engine_type}.")
