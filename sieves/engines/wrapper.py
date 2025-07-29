@@ -114,7 +114,7 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             langchain_: langchain_.LangChain,
             ollama_: ollama_.Ollama,
             outlines_: outlines_.Outlines,
-            vllm_: vllm_.VLLM,
+            # vllm_: vllm_.VLLM,
         }
 
         for module, engine_type in module_engine_map.items():
