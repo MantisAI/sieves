@@ -97,8 +97,14 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         :return: Initialized default model.
         """
         import outlines
+        import transformers
 
-        return outlines.models.transformers("HuggingFaceTB/SmolLM-360M-Instruct")
+        model_name = "HuggingFaceTB/SmolLM-360M-Instruct"
+
+        return outlines.models.from_transformers(
+            transformers.AutoModelForCausalLM.from_pretrained(model_name),
+            transformers.AutoTokenizer.from_pretrained(model_name),
+        )
 
     def _init_engine(self) -> InternalEngine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:
         """Initializes internal engine object.
