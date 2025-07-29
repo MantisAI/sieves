@@ -17,10 +17,10 @@ class Person(pydantic.BaseModel, frozen=True):
 @pytest.mark.parametrize(
     "batch_engine",
     (
-        # EngineType.dspy,
-        # EngineType.instructor,
-        # EngineType.langchain,
-        # EngineType.ollama,
+        EngineType.dspy,
+        EngineType.instructor,
+        EngineType.langchain,
+        EngineType.ollama,
         EngineType.outlines,
         # EngineType.vllm,
     ),

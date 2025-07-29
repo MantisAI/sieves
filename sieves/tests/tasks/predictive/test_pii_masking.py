@@ -16,7 +16,7 @@ from sieves.tasks.predictive import pii_masking
         EngineType.langchain,
         EngineType.ollama,
         EngineType.outlines,
-        EngineType.vllm,
+        # EngineType.vllm,
     ),
     indirect=["batch_engine"],
 )

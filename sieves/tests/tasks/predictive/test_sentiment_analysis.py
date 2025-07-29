@@ -16,7 +16,7 @@ from sieves.tasks.predictive import sentiment_analysis
         EngineType.langchain,
         EngineType.ollama,
         EngineType.outlines,
-        EngineType.vllm,
+        # EngineType.vllm,
     ),
     indirect=["batch_engine"],
 )

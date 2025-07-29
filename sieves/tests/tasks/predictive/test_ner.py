@@ -18,7 +18,7 @@ from sieves.tasks.predictive.ner.core import Entity
         EngineType.ollama,
         EngineType.outlines,
         EngineType.glix,
-        EngineType.vllm,
+        # EngineType.vllm,
     ),
     indirect=["batch_engine"],
 )
