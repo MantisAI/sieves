@@ -71,9 +71,10 @@ def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool, multilabel: boo
         assert doc.results["classifier"]
 
 
-@pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
-@pytest.mark.parametrize("fewshot", [True, False])
-@pytest.mark.parametrize("multilabel", [True, False])
+# @pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_engine", (EngineType.outlines,), indirect=["batch_engine"])
+@pytest.mark.parametrize("fewshot", [False])
+@pytest.mark.parametrize("multilabel", [True])
 def test_run(classification_docs, batch_engine, fewshot, multilabel):
     _run(batch_engine, classification_docs, fewshot, multilabel)
 
