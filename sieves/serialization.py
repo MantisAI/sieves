@@ -80,7 +80,7 @@ class Config(pydantic.BaseModel):
         # config.read(setup_cfg)
         # version = config["metadata"]["version"]
 
-        return "0.11.0"
+        return "0.11.1"
 
     version: str = get_version()
     cls_name: str
