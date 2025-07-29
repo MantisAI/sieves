@@ -58,7 +58,7 @@ def _make_model(engine_type: engines.EngineType) -> Any:
             model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
 
         case engines.EngineType.outlines:
-            model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+            model = outlines.models.transformers("HuggingFaceTB/SmolLM-360M-Instruct")
 
         case engines.EngineType.vllm:
             model = vllm.LLM("HuggingFaceTB/SmolLM-135M-Instruct")
