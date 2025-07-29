@@ -70,6 +70,8 @@ jobs:
         uv pip install dist/*.whl
         cd ..
         rm -rf vllm_source
+        uv pip uninstall outlines
+        uv pip install outlines<1
 
     - name: Set up ollama
       run: |
