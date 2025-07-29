@@ -48,7 +48,7 @@ engines = [
     "ollama>=0.4,<1",
     "sentencepiece<1",
     "transformers>=4,<5",
-    "vllm>=0.8,<1",
+    "vllm>=0.10,<1",
 ]
 distill = [
     "setfit>=1.1,<2",
