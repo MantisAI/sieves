@@ -97,8 +97,14 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         :return: Initialized default model.
         """
         import outlines
+        import transformers
 
-        return outlines.models.transformers("HuggingFaceTB/SmolLM-360M-Instruct")
+        model_name = "HuggingFaceTB/SmolLM-360M-Instruct"
+
+        return outlines.models.from_transformers(
+            transformers.AutoModelForCausalLM.from_pretrained(model_name),
+            transformers.AutoTokenizer.from_pretrained(model_name),
+        )
 
     def _init_engine(self) -> InternalEngine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:
         """Initializes internal engine object.
@@ -114,7 +120,7 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             langchain_: langchain_.LangChain,
             ollama_: ollama_.Ollama,
             outlines_: outlines_.Outlines,
-            vllm_: vllm_.VLLM,
+            # vllm_: vllm_.VLLM,
         }
 
         for module, engine_type in module_engine_map.items():

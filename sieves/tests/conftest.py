@@ -11,7 +11,8 @@ import outlines
 import pytest
 import tokenizers
 import transformers
-import vllm
+
+# import vllm
 from langchain.chat_models import init_chat_model
 
 from sieves import Doc, Engine, engines
@@ -58,10 +59,14 @@ def _make_model(engine_type: engines.EngineType) -> Any:
             model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
 
         case engines.EngineType.outlines:
-            model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+            model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+            model = outlines.models.from_transformers(
+                transformers.AutoModelForCausalLM.from_pretrained(model_name),
+                transformers.AutoTokenizer.from_pretrained(model_name),
+            )
 
-        case engines.EngineType.vllm:
-            model = vllm.LLM("HuggingFaceTB/SmolLM-135M-Instruct")
+        # case engines.EngineType.vllm:
+        #     model = vllm.LLM("HuggingFaceTB/SmolLM-135M-Instruct")
 
         case _:
             raise ValueError(f"Unsupported engine type {engine_type}.")

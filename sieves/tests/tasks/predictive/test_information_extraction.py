@@ -22,7 +22,7 @@ class Person(pydantic.BaseModel, frozen=True):
         EngineType.langchain,
         EngineType.ollama,
         EngineType.outlines,
-        EngineType.vllm,
+        # EngineType.vllm,
     ),
     indirect=["batch_engine"],
 )

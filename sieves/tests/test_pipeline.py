@@ -103,3 +103,8 @@ def test_caching(batch_engine) -> None:
     cached_pipe.clear_cache()
     assert len(cached_pipe._cache) == 0
     assert cached_pipe._cache_stats == {"hits": 0, "misses": 0, "total": 0, "unique": 0}
+
+
+def test_engine_imports() -> None:
+    """Tests direct engine imports."""
+    from sieves.engines import VLLM, DSPy, GliX, HuggingFace, Instructor, LangChain, Ollama, Outlines  # noqa: F401

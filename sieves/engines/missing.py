@@ -34,13 +34,3 @@ class MissingEngine(InternalEngine[PromptSignature, Result, Model, InferenceMode
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Callable[[Iterable[dict[str, Any]]], Iterable[Result | None]]:
         raise NotImplementedError
-
-
-DSPy = MissingEngine
-GliX = MissingEngine
-HuggingFace = MissingEngine
-Instructor = MissingEngine
-LangChain = MissingEngine
-Ollama = MissingEngine
-Outlines = MissingEngine
-VLLM = MissingEngine

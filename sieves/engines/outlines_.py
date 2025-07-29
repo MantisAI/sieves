@@ -1,15 +1,17 @@
 import enum
-from collections.abc import Callable, Iterable
-from typing import Any, TypeAlias
+from collections.abc import Iterable
+from typing import Any, Literal, TypeAlias
 
 import outlines
 import pydantic
-from outlines.models import MLXLM, ExLlamaV2Model, LlamaCpp, OpenAI, Transformers, TransformersVision
+from outlines.models import AsyncBlackBoxModel, BlackBoxModel, SteerableModel
 
 from sieves.engines.core import Executable, PydanticEngine
 
-PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
-Model: TypeAlias = ExLlamaV2Model | LlamaCpp | MLXLM | OpenAI | TransformersVision | Transformers
+PromptSignature: TypeAlias = (
+    pydantic.BaseModel | list[str] | str | outlines.types.Choice | outlines.types.Regex | outlines.types.JsonSchema
+)
+Model: TypeAlias = AsyncBlackBoxModel | BlackBoxModel | SteerableModel
 Result: TypeAlias = pydantic.BaseModel | str
 
 
@@ -20,13 +22,13 @@ class InferenceMode(enum.Enum):
     """
 
     # For normal text output, i.e. no structured generation.
-    text = (outlines.generate.text,)
+    text = "text"
     # For limited set of choices, e.g. classification.
-    choice = (outlines.generate.choice,)
+    choice = "choice"
     # Regex-conforming output.
-    regex = (outlines.generate.regex,)
+    regex = "regex"
     # Output conforming to Pydantic models.
-    json = (outlines.generate.json,)
+    json = "json"
 
 
 class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
@@ -41,30 +43,16 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Iterable[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
-        cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
-        generator_factory: Callable[..., Any] = inference_mode.value[0]
 
-        match inference_mode:
-            case InferenceMode.text:
-                seq_generator = generator_factory(self._model, **self._init_kwargs)
-            case InferenceMode.regex:
-                assert isinstance(prompt_signature, str), ValueError(
-                    "PromptSignature has to be supplied as string in outlines regex mode."
-                )
-                seq_generator = generator_factory(self._model, regex_str=prompt_signature, **self._init_kwargs)
-            case InferenceMode.choice:
-                assert isinstance(prompt_signature, list), ValueError(
-                    f"PromptSignature has to be supplied as list of strings or enum values in {cls_name} choice "
-                    f"mode."
-                )
-                seq_generator = generator_factory(self._model, choices=prompt_signature, **self._init_kwargs)
+        # Create Generator instance responsible for generating non-parsed text.
+        if isinstance(prompt_signature, list):
+            prompt_signature = Literal[*prompt_signature]
 
-            case InferenceMode.json:
-                assert isinstance(prompt_signature, type) and issubclass(prompt_signature, pydantic.BaseModel)
-                seq_generator = generator_factory(self._model, schema_object=prompt_signature, **self._init_kwargs)
-            case _:
-                raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
+        if inference_mode == InferenceMode.regex:
+            prompt_signature = outlines.types.Regex(prompt_signature)
+
+        generator = outlines.Generator(self._model, output_type=prompt_signature, **self._init_kwargs)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
@@ -73,7 +61,13 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             """
 
             def generate(prompts: list[str]) -> Iterable[Result]:
-                yield from seq_generator(prompts, **self._inference_kwargs)
+                if inference_mode == InferenceMode.json:
+                    results = generator.batch(prompts, **self._inference_kwargs)
+                    assert len(results) == len(prompts)
+                    assert isinstance(prompt_signature, type) and issubclass(prompt_signature, pydantic.BaseModel)
+                    yield from [prompt_signature.model_validate_json(result) for result in results]
+                else:
+                    yield from generator.batch(prompts, **self._inference_kwargs)
 
             yield from self._infer(
                 generate,
