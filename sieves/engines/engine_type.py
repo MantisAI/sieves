@@ -3,7 +3,8 @@ from __future__ import annotations
 import enum
 
 from .core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult, InternalEngine
-from .engine_import import dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_, vllm_
+from .engine_import import dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_
+from .missing import MissingEngine
 
 
 class EngineType(enum.Enum):
@@ -14,14 +15,15 @@ class EngineType(enum.Enum):
     langchain = langchain_.LangChain
     ollama = ollama_.Ollama
     outlines = outlines_.Outlines
-    vllm = vllm_.VLLM
+    vllm = MissingEngine
+    # vllm = vllm_.VLLM
 
     @classmethod
     def all(cls) -> tuple[EngineType, ...]:
         """Returns all available engine types.
         :return tuple[EngineType, ...]: All available engine types.
         """
-        return tuple(engine_type for engine_type in EngineType if engine_type != EngineType.vllm)
+        return tuple(engine_type for engine_type in EngineType)
 
     @classmethod
     def get_engine_type(
