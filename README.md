@@ -120,6 +120,7 @@ import pickle
 import gliner.multitask
 import chonkie
 import tokenizers
+import docling.document_converter
 
 from sieves import Pipeline, Engine, tasks, Doc
 
@@ -160,7 +161,7 @@ with open("docs.pkl", "wb") as f:
 loaded_pipe = Pipeline.load(
     "pipeline.yml",
     (
-        {},
+        {"converter": docling.document_converter.DocumentConverter(), "export_format": "markdown"},
         {"chunker": chunker},
         {"engine": {"model": engine.model}},
     ),
