@@ -69,11 +69,6 @@ test = [
     "pre-commit>=4,<5"
 ]
 
-[tool.black]
-line-length = 120
-target-version = ['py310']
-include = '\.pyi?$'
-
 [tool.ruff]
 line-length = 120
 target-version = "py310"
