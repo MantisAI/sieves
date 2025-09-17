@@ -24,7 +24,7 @@ able to use any of the pre-built tasks with this setup.
 
 All  dependencies for every feature, including all supported engines and utilities:
 ```bash
-pip install "sieves[all]"
+pip install "sieves[engines,distill]"
 ```
 
 ### Specific Features
@@ -42,7 +42,7 @@ pip install "sieves[engines]"
 ### Development Setup
 
 1. Set up [`uv`](https://github.com/astral-sh/uv).
-2. Install all dependencies for development, testing, documentation generation with: `uv pip install --system .[all,test]`.
+2. Install all dependencies for development, testing, documentation generation with: `uv pip install --system .[engines,distill,test]`.
 
 ## Core Concepts
 
