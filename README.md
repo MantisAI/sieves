@@ -25,7 +25,8 @@
 
 Read our documentation [here](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
 
-Install `sieves` with `pip install sieves` (or `pip install sieves[all]` if you want to install all optional dependencies).
+Install `sieves` with `pip install sieves`. If you want to install all optional dependencies right away, install with 
+`pip install sieves[engines,distill]`. You can also choose to install individual dependencies as you see fit.
 
 ### Why `sieves`?
 
