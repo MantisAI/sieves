@@ -71,7 +71,7 @@ test = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
