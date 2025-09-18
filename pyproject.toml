@@ -97,6 +97,7 @@ exclude = [
     "node_modules",
     "venv",
     ".venv",
+    "sieves/tests/**",
     # Ignore examples.
     "examples/**"
 ]
