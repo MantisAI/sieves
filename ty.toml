@@ -1,0 +1,16 @@
+[rules]
+# Ignoring a bunch of rules until we get around to clean up typing.
+unresolved-attribute = "ignore"
+unresolved-import = "ignore"
+invalid-assignment = "ignore"
+invalid-argument-type = "ignore"
+missing-argument = "ignore"
+not-iterable = "ignore"
+
+[src]
+exclude = [
+    ".venv/**",
+    "build/**",
+    "sieves/tests/**",
+    "examples/**"
+]

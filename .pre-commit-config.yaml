@@ -1,18 +1,47 @@
-repos:
--   repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.1.9
-    hooks:
-    - id: ruff
-      args: [--fix, --exit-non-zero-on-fix]
-    - id: ruff-format
+default_install_hook_types: [pre-push]
+exclude: ^reports/  # skip auto-generated code coverage files
 
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.1
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
     hooks:
-    -   id: mypy
-        additional_dependencies:
-          - "types-docutils"
-          - "types-requests"
-          - "pydantic>=2.5"
-        args: [--config-file=pyproject.toml]
+      - id: check-ast  # Is it valid Python?
+      - id: debug-statements # no debbuging statements used
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-json
+      - id: pretty-format-json
+        args: [ "--autofix", "--no-sort-keys", "--no-ensure-ascii" ]
+        exclude: ^(model/data/testing)/
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-executables-have-shebangs
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.29.1
+    hooks:
+      - id: pyupgrade
+        exclude: ^(TAG)
+        # Remove blocks that are only compatible with Python ≤ 3.11
+        args: [--py311-plus]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version
+    rev: v0.11.13
+    hooks:
+      # Run the linter
+      - id: ruff-check
+        # Fix lint issues, including docstrings, sorting imports and commented code
+        args: ["--extend-select", "D,I,ERA001", "--line-length", "120", "--fix"]
+      # Run the formatter
+      - id: ruff-format
+
+  # Type checking
+  - repo: local
+    hooks:
+      - id: ty-check
+        name: Type checking
+        entry: bash -c 'uvx ty check --config-file ty.toml'
+        language: system

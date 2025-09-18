@@ -19,7 +19,7 @@ class Marker(Task):
 
     def __init__(
         self,
-        converter: PdfConverter | TableConverter = None,
+        converter: PdfConverter | TableConverter | None = None,
         export_format: str = "markdown",
         task_id: str | None = None,
         show_progress: bool = True,
@@ -44,7 +44,7 @@ class Marker(Task):
     def _setup_converter(
         self, converter: PdfConverter | TableConverter | None, export_format: str
     ) -> PdfConverter | TableConverter:
-        """Setup the converter with the specified renderer.
+        """Set up the converter with the specified renderer.
 
         :param converter: Custom converter instance or None.
         :param export_format: Format to export the document in.
