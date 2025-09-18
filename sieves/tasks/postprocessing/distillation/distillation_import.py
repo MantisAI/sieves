@@ -10,7 +10,8 @@ a non-installed distillation framework, we terminate with an error.
 import warnings
 
 _MISSING_WARNING = (
-    "Warning: dependency `{missing_dependency}` could not be imported." "this dependency has been installed."
+    "Warning: engine dependency `{missing_dependency}` could not be imported. The corresponding engines won't work "
+    "unless this dependency has been installed."
 )
 
 

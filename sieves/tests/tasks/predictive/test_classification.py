@@ -1,6 +1,7 @@
 # mypy: ignore-errors
 import enum
 
+import pydantic
 import pytest
 
 from sieves import Doc, Pipeline, engines
@@ -189,3 +190,78 @@ def test_label_descriptions_validation(batch_engine) -> None:
         classification.Classification(
             labels=["science", "politics"], engine=batch_engine, label_descriptions=invalid_descriptions
         )
+
+
+def test_fewshot_example_singlelabel_confidence() -> None:
+    """Test that the confidence of a fewshot example is correctly validated."""
+    classification.FewshotExampleSingleLabel(
+        text="...",
+        reasoning="...",
+        label="science",
+        confidence=1.0,
+    )
+
+    with pytest.raises(ValueError):
+        classification.FewshotExampleSingleLabel(
+            text="...",
+            reasoning="...",
+            label="science",
+            confidence=2.0,
+        )
+
+    with pytest.raises(ValueError):
+        classification.FewshotExampleSingleLabel(
+            text="...",
+            reasoning="...",
+            label="science",
+            confidence=-2.0,
+        )
+
+
+def test_result_to_scores() -> None:
+    """Test that the result to scores method works as expected."""
+    # 1) list of (label, score) pairs
+    res = [("science", 0.9), ("politics", 0.1)]
+    scores = classification.Classification._result_to_scores(res)
+    assert scores == {"science": 0.9, "politics": 0.1}
+
+    # 2) single (label, score) tuple
+    res = ("science", 0.8)
+    scores = classification.Classification._result_to_scores(res)
+    assert scores == {"science": 0.8}
+
+    # 3) plain label string -> assumes score 1.0
+    res = "science"
+    scores = classification.Classification._result_to_scores(res)
+    assert scores == {"science": 1.0}
+
+    # 4) Pydantic model with label and score
+    class PResWithScore(pydantic.BaseModel):  # type: ignore[attr-defined]
+        label: str
+        score: float
+
+    pyd_res = PResWithScore(label="science", score=0.55)
+    scores = classification.Classification._result_to_scores(pyd_res)
+    assert scores == {"science": 0.55}
+
+    # 5) Pydantic model with only label (defaults to 1.0)
+    class PResLabelOnly(pydantic.BaseModel):  # type: ignore[attr-defined]
+        label: str
+
+    pyd_res2 = PResLabelOnly(label="politics")
+    scores = classification.Classification._result_to_scores(pyd_res2)
+    assert scores == {"politics": 1.0}
+
+    # 6) Unsupported types raise TypeError
+    with pytest.raises(TypeError):
+        classification.Classification._result_to_scores({"science": 0.9})
+
+    with pytest.raises(TypeError):
+        classification.Classification._result_to_scores([("science", 0.9, 123)])
+
+    with pytest.raises(TypeError):
+
+        class BadPRes(pydantic.BaseModel):  # type: ignore[attr-defined]
+            not_label: str
+
+        classification.Classification._result_to_scores(BadPRes(not_label="x"))

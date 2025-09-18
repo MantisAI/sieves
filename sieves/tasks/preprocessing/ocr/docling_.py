@@ -1,4 +1,5 @@
 """Wrapper for `Docling` for the conversion of complex files into markdown."""
+
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -18,13 +19,14 @@ class Docling(Task):
 
     def __init__(
         self,
-        converter: docling.document_converter.DocumentConverter = None,
+        converter: docling.document_converter.DocumentConverter | None = None,
         export_format: str = "markdown",
         task_id: str | None = None,
         show_progress: bool = True,
         include_meta: bool = False,
     ):
         """Initialize the docling parser.
+
         :param converter: Docling parser instance.
         :param task_id: Task ID.
         :param show_progress: Whether to show progress bar for processed documents

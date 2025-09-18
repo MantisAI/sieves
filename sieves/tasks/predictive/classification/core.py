@@ -1,9 +1,11 @@
+"""Classification predictive task and few‑shot example schemas."""
+
 from __future__ import annotations
 
 import json
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, override
 
 import datasets
 import pydantic
@@ -42,18 +44,23 @@ _TaskBridge: TypeAlias = (
 
 
 class FewshotExampleMultiLabel(pydantic.BaseModel):
+    """Few‑shot example for multi‑label classification with per‑label confidences."""
+
     text: str
     reasoning: str
     confidence_per_label: dict[str, float]
 
     @pydantic.model_validator(mode="after")
     def check_confidence(self) -> FewshotExampleMultiLabel:
+        """Validate that confidences lie within [0, 1]."""
         if any([conf for conf in self.confidence_per_label.values() if not 0 <= conf <= 1]):
             raise ValueError("Confidence has to be between 0 and 1.")
         return self
 
 
 class FewshotExampleSingleLabel(pydantic.BaseModel):
+    """Few‑shot example for single‑label classification with a global confidence."""
+
     text: str
     reasoning: str
     label: str
@@ -61,6 +68,12 @@ class FewshotExampleSingleLabel(pydantic.BaseModel):
 
     @pydantic.model_validator(mode="after")
     def check_confidence(self) -> FewshotExampleSingleLabel:
+        """Check confidence value.
+
+        Return:
+            FewshotExampleSingleLabel instance.
+
+        """
         if not (0 <= self.confidence <= 1):
             raise ValueError("Confidence has to be between 0 and 1.")
         return self
@@ -70,6 +83,8 @@ FewshotExample = FewshotExampleMultiLabel | FewshotExampleSingleLabel
 
 
 class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+    """Predictive task for text classification across multiple engine backends."""
+
     def __init__(
         self,
         labels: list[str],
@@ -83,8 +98,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         label_descriptions: dict[str, str] | None = None,
         multi_label: bool = True,
     ) -> None:
-        """
-        Initializes new PredictiveTask.
+        """Initialize new PredictiveTask.
 
         :param labels: Labels to predict.
         :param engine: Engine to use for prediction.
@@ -117,8 +131,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         self._fewshot_examples: Iterable[FewshotExample]
 
     def _validate_label_descriptions(self) -> None:
-        """
-        Validates that all label descriptions correspond to valid labels.
+        """Validate that all label descriptions correspond to valid labels.
 
         :raises ValueError: If any label description key is not present in the labels list.
         """
@@ -172,6 +185,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
 
+    @override
     @property
     def supports(self) -> set[EngineType]:
         return {
@@ -223,39 +237,106 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             "label_descriptions": self._label_descriptions,
         }
 
+    @staticmethod
+    def _result_to_scores(result: Any) -> dict[str, float]:
+        """Normalize a single result to a mapping of label → score.
+
+        Supports lists of pairs, a single (label, score) pair, a plain
+        string label (assumes score 1.0), or a Pydantic model with
+        attributes ``label`` and optional ``score``.
+
+        Args:
+            result: One result value from ``doc.results``.
+
+        Returns:
+            Mapping from label to score.
+
+        Raises:
+            TypeError: If the result has an unsupported type or shape.
+
+        """
+        if isinstance(result, list) and all(isinstance(item, list | tuple) and len(item) == 2 for item in result):
+            return {str(label): float(score) for label, score in result}
+
+        if isinstance(result, tuple) and len(result) == 2:
+            label, score = result
+            return {str(label): float(score)}
+
+        if isinstance(result, str):
+            return {result: 1.0}
+
+        if isinstance(result, pydantic.BaseModel) or hasattr(result, "model_dump"):
+            try:
+                label = getattr(result, "label")
+                score = getattr(result, "score", 1.0)
+                return {str(label): float(score)}
+            except Exception as exc:
+                raise TypeError(f"Unsupported pydantic result shape: {type(result)}") from exc
+
+        raise TypeError(f"Unsupported result type in to_hf_dataset: {type(result)}")
+
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
-        # Define metadata.
+        """Convert results to a Hugging Face dataset with multi-hot labels.
+
+        The emitted dataset contains a ``text`` column and a ``labels`` column which is a multi-hot list aligned to
+        ``self._labels``. This method is robust to different result shapes produced by various engines and bridges in
+        both single-label and multi-label configurations:
+        - ``list[tuple[str, float]]`` for multi-label results
+        - ``tuple[str, float]`` for single-label results
+        - ``str`` for single-label results (assumes score ``1.0``)
+        - ``pydantic.BaseModel`` exposing ``label`` and optional ``score``
+
+        Args:
+            docs: Documents whose ``results`` contain outputs for this task id.
+            threshold: Threshold to convert scores into multi-hot indicators.
+
+        Returns:
+            A ``datasets.Dataset`` with ``text`` and multi-hot ``labels``.
+
+        Raises:
+            KeyError: If any document is missing this task's results.
+            TypeError: If a result cannot be interpreted.
+
+        """
+        # Define metadata and features (multi-hot across declared labels).
         features = datasets.Features(
             {"text": datasets.Value("string"), "labels": datasets.Sequence(datasets.ClassLabel(names=self._labels))}
         )
         info = datasets.DatasetInfo(
-            description=f"Multi-label classification dataset with labels {self._labels}. Generated with sieves "
-            f"v{Config.get_version()}.",
+            description=(
+                f"{'Multi-label' if self._multi_label else 'Single-label'} classification dataset with labels "
+                f"{self._labels}. Generated with sieves v{Config.get_version()}."
+            ),
             features=features,
         )
 
-        # Fetch data used for generating dataset.
         labels = self._labels
-
         try:
             data = [(doc.text, doc.results[self._task_id]) for doc in docs]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
         def generate_data() -> Iterable[dict[str, Any]]:
-            """Yields results as dicts.
-            :return: Results as dicts.
+            """Yield rows with text and multi-hot labels for HF datasets.
+
+            Iterates over the prepared ``data`` list, converts result shapes to
+            a label→score mapping, and emits the multi-hot vector using the
+            provided ``threshold``.
+
+            Yields:
+                Dicts with keys ``text`` and ``labels``.
+
             """
             for text, result in data:
-                scores = {label_score[0]: label_score[1] for label_score in result}
+                scores = Classification._result_to_scores(result)
                 yield {
                     "text": text,
-                    # One-hot encode labels.
-                    "labels": [int(scores.get(label, 0) >= threshold) for label in labels],
+                    "labels": [int(scores.get(label, 0.0) >= threshold) for label in labels],
                 }
 
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
 
+    @override
     def distill(
         self,
         base_model_id: str,
@@ -316,7 +397,8 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             case DistillationFramework.model2vec:
 
                 def one_hot_to_label(label_indices: list[int]) -> list[str]:
-                    """Converts list of label indices into list of labels.
+                    """Convert list of label indices into list of labels.
+
                     :param label_indices: List of label indices.
                     :return: List of labels.
                     """

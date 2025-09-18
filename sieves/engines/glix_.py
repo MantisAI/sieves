@@ -1,9 +1,11 @@
+"""GliX engine wrapper built on top of GLiNER multi‑task pipelines."""
+
 import enum
 import itertools
 import sys
 import warnings
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, override
 
 import gliner.multitask.base
 import jinja2
@@ -28,6 +30,8 @@ class InferenceMode(enum.Enum):
 
 
 class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+    """Engine adapter for GLiNER's multitask utilities (NER, CLS, QA, etc.)."""
+
     def __init__(
         self,
         model: Model,
@@ -36,17 +40,21 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         strict_mode: bool,
         batch_size: int,
     ):
+        """Initialize GliX engine wrapper with model and settings."""
         super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
         self._model_wrappers: dict[InferenceMode, gliner.multitask.base.GLiNERBasePipeline] = {}
 
+    @override
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    @override
     @property
     def supports_few_shotting(self) -> bool:
         return False
 
+    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -72,6 +80,7 @@ class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             """Execute prompts with engine for given values.
+
             :param values: Values to inject into prompts.
             :return Iterable[Result]: Results for prompts.
             """

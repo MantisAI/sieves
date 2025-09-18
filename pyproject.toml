@@ -69,22 +69,9 @@ test = [
     "pre-commit>=4,<5"
 ]
 
-[tool.black]
-line-length = 120
-target-version = ['py310']
-include = '\.pyi?$'
-
 [tool.ruff]
 line-length = 120
-target-version = "py310"
-
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)
-select = ["E", "F", "I", "UP"]
-ignore = []
-
-# Allow autofix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-unfixable = ["F401"]
+target-version = "py312"
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
@@ -109,13 +96,29 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
-    ".venv"
+    ".venv",
+    "sieves/tests/**",
+    # Ignore examples.
+    "examples/**"
 ]
 
-[tool.ruff.mccabe]
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)
+select = ["E", "F", "I", "UP"]
+extend-select = ["D"]
+ignore = ["D203", "D212"]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = ["F401"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.mccabe]
 max-complexity = 10
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["sieves"]
 
 [tool.mypy]

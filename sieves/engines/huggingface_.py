@@ -1,8 +1,10 @@
+"""Hugging Face transformers engine wrapper (zero-shot classification)."""
+
 import enum
 import itertools
 import sys
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, override
 
 import jinja2
 import pydantic
@@ -22,14 +24,19 @@ class InferenceMode(enum.Enum):
 
 
 class HuggingFace(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+    """Engine adapter around ``transformers.Pipeline`` for zero‑shot tasks."""
+
+    @override
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    @override
     @property
     def supports_few_shotting(self) -> bool:
         return True
 
+    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -50,6 +57,7 @@ class HuggingFace(InternalEngine[PromptSignature, Result, Model, InferenceMode])
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
             """Execute prompts with engine for given values.
+
             :param values: Values to inject into prompts.
             :return Iterable[Result]: Results for prompts.
             """
