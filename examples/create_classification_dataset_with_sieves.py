@@ -11,12 +11,12 @@
 # ]
 # ///
 
-"""
-Create a zero-shot classification dataset from any Hugging Face dataset using Sieves + Outlines.
+"""Create a zero-shot classification dataset from any Hugging Face dataset using Sieves + Outlines.
 
 It supports both single-label (default) and multi-label classification via a flag.
 
 Examples
+--------
   Single-label classification:
     uv run examples/create_classification_dataset_with_sieves.py \
       --input-dataset stanfordnlp/imdb \
@@ -42,6 +42,7 @@ Examples
       --multi-label \
       --model HuggingFaceTB/SmolLM-360M-Instruct \
       --output-dataset your-username/agnews-multilabel
+
 """
 
 import os
@@ -51,6 +52,7 @@ import typer
 from datasets import Dataset, load_dataset
 from huggingface_hub import HfApi, get_token
 from loguru import logger
+from outlines.models import Transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import sieves
@@ -78,6 +80,7 @@ def _parse_label_descriptions(desc_string: str | None) -> dict[str, str]:
 
     Returns:
         A dictionary mapping each label to its description.
+
     """
     if not desc_string:
         return {}
@@ -119,6 +122,7 @@ def _preprocess_text(text: str) -> str:
     Returns:
         A cleaned string suitable for downstream classification. May be an
         empty string if the input was not a valid string.
+
     """
     if not text or not isinstance(text, str):
         return ""
@@ -137,11 +141,12 @@ def _is_valid_text(text: str) -> bool:
     Returns:
         True if the text meets minimal length requirements (``MIN_TEXT_LENGTH``),
         False otherwise.
+
     """
     return bool(text and len(text) >= MIN_TEXT_LENGTH)
 
 
-def _build_model(model_id: str) -> AutoModelForCausalLM:
+def _build_model(model_id: str) -> Transformers:
     """Build an Outlines model wrapper from a Transformers causal LM.
 
     Loads the specified Hugging Face ``AutoModelForCausalLM`` and tokenizer,
@@ -154,11 +159,13 @@ def _build_model(model_id: str) -> AutoModelForCausalLM:
 
     Returns:
         An Outlines model instance compatible with Sieves' ``Engine``.
+
     """
     if not model_id:
         raise ValueError("model_id must be provided and non-empty")
     tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     mdl = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True)
+
     return outlines.models.from_transformers(mdl, tok)
 
 
@@ -208,9 +215,11 @@ def _load_and_prepare_data(
     Raises:
         typer.Exit: If labels are missing, dataset loading fails, the column is
             absent, or no valid texts remain after preprocessing.
+
     """
-    # Parse labels and optional descriptions
-    labels_list: list[str] = [label.strip() for label in labels.split(",") if label.strip()]
+    # Parse labels and optional descriptions. Strip surrounding quotes if present.
+    labels = labels.strip().strip("'\"")
+    labels_list: list[str] = [label.strip().strip("'\"") for label in labels.split(",") if label.strip().strip("'\"")]
     if not labels_list:
         logger.error("No labels provided. Use --labels 'label1,label2,...'")
         raise typer.Exit(code=2)
@@ -272,43 +281,33 @@ def _load_and_prepare_data(
     return ds, raw_texts, processed_texts, valid_indices, labels_list, desc_map, token
 
 
-def _collect_and_push_results(
+def _log_stats(
     *,
     docs: list[sieves.Doc],
     task: sieves.tasks.Classification,
     labels_list: list[str],
     multi_label: bool,
-    ds: Dataset,
     raw_texts: list[str],
     processed_texts: list[str],
     valid_indices: list[int],
-    output_dataset: str,
-    token: str | None,
 ) -> None:
-    """Compute distributions and push results to the Hugging Face Hub.
+    """Compute and log distributions.
 
-    Logs per-label distributions and success/skip metrics, then pushes the
-    resulting dataset to the Hub. In multi-label mode, a new dataset with
-    multi-hot labels is created via ``Classification.to_hf_dataset``. In
-    single-label mode, a ``classification`` column is added to the original
-    dataset.
+    Logs per-label distributions and success/skip metrics.
 
     Args:
         docs: Classified documents corresponding to processed_texts.
         task: The configured ``Classification`` task instance.
         labels_list: List of label names in canonical order.
         multi_label: Whether classification is multi-label.
-        ds: Original dataset (after any selection/shuffle).
         raw_texts: Original text column values.
         processed_texts: Preprocessed, valid texts used for inference.
         valid_indices: Indices mapping processed_texts back to raw_texts rows.
-        output_dataset: Target Hub repo ID for the output dataset.
-        token: Optional Hub token.
 
     Returns:
         None. Pushes datasets to the Hub and logs summary statistics.
+
     """
-    label_counts: dict[str, int] = {}
     if multi_label:
         # Log distribution across labels at threshold and skipped count
         label_counts = {label: 0 for label in labels_list}
@@ -326,23 +325,11 @@ def _collect_and_push_results(
         for label in labels_list:
             count = label_counts.get(label, 0)
             pct = (count / total_processed * 100.0) if total_processed else 0.0
-            logger.info("  %s: %d (%.1f%%)", label, count, pct)
+            logger.info(f"  {label}: {count} ({pct})")
         if skipped > 0:
             skipped_pct = (skipped / len(raw_texts) * 100.0) if raw_texts else 0.0
-            logger.info("  Skipped/invalid: %d (%.1f%%)", skipped, skipped_pct)
+            logger.info(f"  Skipped/invalid: {skipped} ({skipped_pct})")
 
-        # Convert to HF dataset via Sieves helper (text + multi-hot labels). Note: invalid texts are omitted.
-        out_ds = task.to_hf_dataset(docs, threshold=MULTILABEL_THRESHOLD)
-        out_ds.push_to_hub(
-            output_dataset,
-            token=token,
-            commit_message=(
-                f"Add classifications using Sieves + Outlines (multi-label; threshold={MULTILABEL_THRESHOLD})"
-            ),
-        )
-        logger.info(
-            f"Successfully pushed multi-label dataset with {len(out_ds)} rows to https://huggingface.co/datasets/{output_dataset}"
-        )
     else:
         # Map results back to original indices; invalid texts receive None
         classifications: list[str | None] = [None] * len(raw_texts)
@@ -361,31 +348,18 @@ def _collect_and_push_results(
         for label in labels_list:
             count = label_counts[label]
             pct = (count / total_texts * 100.0) if total_texts else 0.0
-            logger.info("  %s: %d (%.1f%%)", label, count, pct)
+            logger.info(f"  {label}: {count} ({pct})")
 
         if none_count > 0:
             none_pct = (none_count / total_texts * 100.0) if total_texts else 0.0
-            logger.info("  Invalid/Skipped: %d (%.1f%%)", none_count, none_pct)
+            logger.info(f"  Invalid/Skipped: {none_count} ({none_pct})")
 
         success_rate = (len(valid_indices) / total_texts * 100.0) if total_texts else 0.0
-        logger.info("Classification success rate: %.1f%%", success_rate)
-
-        # Add column and push original dataset shape.
-        ds_with_labels = ds.add_column("classification", classifications)
-        ds_with_labels.push_to_hub(
-            output_dataset,
-            token=token,
-            commit_message=(
-                f"Add classifications using Sieves + Outlines ({'multi' if multi_label else 'single'}-label)"
-            ),
-        )
-        logger.info(
-            f"Successfully pushed dataset with {len(ds_with_labels)} rows to https://huggingface.co/datasets/{output_dataset}"
-        )
+        logger.info(f"Classification success rate: {success_rate}")
 
 
 @app.command()  # type: ignore[misc]
-def main(
+def classify(
     input_dataset: str = typer.Option(..., help="Input dataset ID on Hugging Face Hub"),
     column: str = typer.Option(..., help="Name of the text column to classify"),
     labels: str = typer.Option(..., help="Comma-separated list of labels, e.g. 'positive,negative'"),
@@ -397,7 +371,7 @@ def main(
     max_samples: int | None = typer.Option(None, help="Max number of samples to process (for testing)"),
     hf_token: str | None = typer.Option(None, help="HF token; if omitted, uses env or cached token"),
     split: str = typer.Option("train", help="Dataset split (default: train)"),
-    temperature: float = typer.Option(0.1, help="Sampling temperature"),
+    batch_size: int = typer.Option(64, help="Batch size"),
     max_tokens: int = typer.Option(200, help="Max tokens to generate"),
     shuffle: bool = typer.Option(False, help="Shuffle dataset before sampling"),
     shuffle_seed: int = typer.Option(42, help="Shuffle seed"),
@@ -423,7 +397,7 @@ def main(
         max_samples: Optional maximum number of samples to process.
         hf_token: Optional token; if omitted, uses environment or cached login.
         split: Dataset split to load (default: ``"train"``).
-        temperature: Sampling temperature for generation.
+        batch_size: Batch size for inference.
         max_tokens: Maximum tokens for generation per prompt.
         shuffle: Whether to shuffle the dataset before selecting samples.
         shuffle_seed: Seed used for shuffling.
@@ -436,6 +410,7 @@ def main(
     Raises:
         typer.Exit: If dataset loading fails, a required column is missing, or
             no valid texts are available for classification.
+
     """
     logger.info("Loading and preparing data.")
     (
@@ -461,9 +436,9 @@ def main(
     # Build engine.
     engine = sieves.Engine(
         model=_build_model(model),
-        inference_kwargs={"temperature": temperature, "max_tokens": max_tokens},
+        inference_kwargs={"max_new_tokens": max_tokens},
         strict_mode=False,
-        batch_size=-1,
+        batch_size=batch_size,
     )
 
     # Build task and pipeline.
@@ -478,19 +453,23 @@ def main(
     logger.info("Running classification pipeline.")
     docs = list(pipe([sieves.Doc(text=t) for t in processed_texts]))
 
-    # Collect and push results.
-    logger.info("Collecting and pushing results.")
-    _collect_and_push_results(
+    logger.info("Logging stats.")
+    _log_stats(
         docs=docs,
         task=task,
         labels_list=labels_list,
         multi_label=multi_label,
-        ds=ds,
         raw_texts=raw_texts,
         processed_texts=processed_texts,
         valid_indices=valid_indices,
-        output_dataset=output_dataset,
+    )
+
+    logger.info("Collecting and pushing results.")
+    ds = task.to_hf_dataset(docs, threshold=MULTILABEL_THRESHOLD)
+    ds.push_to_hub(
+        output_dataset,
         token=token,
+        commit_message=(f"Add classifications using Sieves + Outlines (multi-label; threshold={MULTILABEL_THRESHOLD})"),
     )
 
 

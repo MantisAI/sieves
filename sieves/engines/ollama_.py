@@ -1,7 +1,9 @@
+"""Ollama engine wrapper for structured generation against a running server."""
+
 import asyncio
 import enum
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, override
 
 import httpx
 import ollama
@@ -11,6 +13,8 @@ from sieves.engines.core import Executable, PydanticEngine
 
 
 class Model(pydantic.BaseModel):
+    """Configuration for connecting to an Ollama server."""
+
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
     name: str
     host: str
@@ -24,11 +28,14 @@ Result: TypeAlias = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):
+    """Available inference modes."""
+
     structured = "structured"
 
 
 class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for Ollama.
+
     Make sure a Ollama server is running.
             In a nutshell:
             > curl -fsSL https://ollama.ai/install.sh | sh
@@ -43,6 +50,7 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         strict_mode: bool = False,
         batch_size: int = -1,
     ):
+        """Initialize Ollama engine with client and retry configuration."""
         super().__init__(
             model=model,
             init_kwargs=init_kwargs,
@@ -54,10 +62,12 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         # Async client will be initialized for every prompt batch to sidestep an asyncio event loop issue.
         self._client = ollama.AsyncClient(host=self._model.host, **({"timeout": 30} | self._model.client_config))
 
+    @override
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -71,6 +81,7 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
+
             :param values: Values to inject into prompts.
             :return: Results for prompts. Results are None if corresponding prompt failed.
             :raises: pydantic.ValidationError is response can't be parsed.

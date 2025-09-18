@@ -1,9 +1,11 @@
+"""DSPy engine integration for Sieves."""
+
 import asyncio
 import enum
 import itertools
 import sys
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, override
 
 import dspy
 import pydantic
@@ -17,6 +19,7 @@ Result: TypeAlias = dspy.Prediction
 
 class InferenceMode(enum.Enum):
     """Available inference modes.
+
     See https://dspy.ai/#__tabbed_2_6 for more information and examples.
     """
 
@@ -43,7 +46,8 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         strict_mode: bool,
         batch_size: int,
     ):
-        """
+        """Initialize engine.
+
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
             onwards, serve it with OLlama - see here: # https://dspy.ai/learn/programming/language_models/?h=models#__tabbed_1_5.
             In a nutshell:
@@ -61,14 +65,17 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         config_kwargs = {"max_tokens": DSPy._MAX_TOKENS} | (config_kwargs or {})
         dspy.configure(lm=model, **config_kwargs)
 
+    @override
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    @override
     @property
     def supports_few_shotting(self) -> bool:
         return True
 
+    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -121,5 +128,4 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
                     else:
                         yield from [None] * len(batch)
 
-        # return functools.partial(execute, generator=inference_generator)
         return execute

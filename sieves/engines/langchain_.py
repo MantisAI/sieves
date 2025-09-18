@@ -1,7 +1,9 @@
+"""LangChain engine wrapper for structured outputs using Pydantic."""
+
 import asyncio
 import enum
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, override
 
 import langchain_core.language_models
 import pydantic
@@ -14,16 +16,21 @@ Result: TypeAlias = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):
+    """Available inference modes."""
+
     structured = "structured"
 
 
 class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for LangChain."""
 
+    @override
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    @override
+    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -38,6 +45,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
+
             :param values: Values to inject into prompts.
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
             """

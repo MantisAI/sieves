@@ -1,7 +1,9 @@
+"""Unified engine wrapper that dispatches to a concrete backend based on model type."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, override
 
 import pydantic
 
@@ -68,6 +70,8 @@ InferenceMode: TypeAlias = (
 
 
 class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+    """Facade over specific engines (Outlines, Instructor, LangChain, etc.)."""
+
     def __init__(
         self,
         model: Model | None = None,
@@ -77,7 +81,8 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         strict_mode: bool = False,
         batch_size: int = -1,
     ):
-        """
+        """Initialize new engine.
+
         :param model: Model to run. If None, a default model (HuggingFaceTB/SmolLM-360M-Instruct with Outlines) is used.
         :param init_kwargs: Optional kwargs to supply to engine executable at init time.
         :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
@@ -92,8 +97,9 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
         self._engine: InternalEngine[PromptSignature, Result, Model, InferenceMode] = self._init_engine()
 
     @classmethod
-    def _init_default_model(cls) -> Model:
-        """Initializes default model (HuggingFaceTB/SmolLM-360M-Instruct with Outlines).
+    def _init_default_model(cls) -> Model:  # noqa: D401
+        """Initialize default model (HuggingFaceTB/SmolLM-360M-Instruct with Outlines).
+
         :return: Initialized default model.
         """
         import outlines
@@ -106,8 +112,9 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             transformers.AutoTokenizer.from_pretrained(model_name),
         )
 
-    def _init_engine(self) -> InternalEngine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:
-        """Initializes internal engine object.
+    def _init_engine(self) -> InternalEngine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:  # noqa: D401
+        """Initialize internal engine object.
+
         :return Engine: Engine.
         :raises: ValueError if model type isn't supported.
         """
@@ -149,12 +156,15 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
 
     @property
     def supports_few_shotting(self) -> bool:
+        """Whether wrapped engine supports few-shotting."""
         return self._engine.supports_few_shotting
 
     @property
     def inference_modes(self) -> type[InferenceMode]:
+        """Supported inference modes of wrapped engine."""
         return self._engine.inference_modes
 
+    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -169,8 +179,9 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             fewshot_examples=fewshot_examples,
         )
 
-    def get_engine_type(self) -> EngineType:
-        """Returns engine type for specified engine.
+    def get_engine_type(self) -> EngineType:  # noqa: D401
+        """Return engine type for specified engine.
+
         :return EngineType: Engine type for self._engine.
         :raises: ValueError if engine class not found in EngineType.
         """

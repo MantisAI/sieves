@@ -1,6 +1,8 @@
+"""Outlines engine wrapper supporting text, choices, regex and JSON schemas."""
+
 import enum
 from collections.abc import Iterable
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal, TypeAlias, override
 
 import outlines
 import pydantic
@@ -17,6 +19,7 @@ Result: TypeAlias = pydantic.BaseModel | str
 
 class InferenceMode(enum.Enum):
     """Available inference modes.
+
     Note: generator functions are wrapped in tuples, as otherwise the Enum instance seems to be replaced by the function
     itself - not sure why that happens. Should take another look at this.
     """
@@ -32,10 +35,14 @@ class InferenceMode(enum.Enum):
 
 
 class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
+    """Engine for Outlines with multiple structured inference modes."""
+
+    @override
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -56,6 +63,7 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
+
             :param values: Values to inject into prompts.
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
             """

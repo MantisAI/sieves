@@ -1,7 +1,9 @@
+"""vLLM engine wrapper enabling guided decoding for structured outputs."""
+
 import re
 from collections.abc import Iterable
 from enum import StrEnum
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, override
 
 import json_repair
 import pydantic
@@ -26,14 +28,17 @@ class InferenceMode(StrEnum):
 
 class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
     """vLLM engine.
+
     Note: if you don't have a GPU, you have to install vLLM from source. Follow the instructions given in
     https://docs.vllm.ai/en/v0.6.1/getting_started/cpu-installation.html.
     """
 
+    @override
     @property
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -59,6 +64,7 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
+
             :param values: Values to inject into prompts.
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
             """
