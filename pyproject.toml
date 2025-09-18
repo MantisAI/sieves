@@ -104,10 +104,15 @@ exclude = [
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)
 select = ["E", "F", "I", "UP"]
-ignore = []
+extend-select = ["D"]
+ignore = ["D203", "D212"]
+
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = ["F401"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
