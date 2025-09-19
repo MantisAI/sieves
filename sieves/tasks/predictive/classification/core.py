@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import datasets
 import pydantic
@@ -27,11 +27,9 @@ from sieves.tasks.predictive.classification.bridges import (
 )
 from sieves.tasks.predictive.core import PredictiveTask
 
-_TaskPromptSignature: TypeAlias = (
-    glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature | vllm_.PromptSignature
-)
-_TaskResult: TypeAlias = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | glix_.Result | vllm_.Result
-_TaskBridge: TypeAlias = (
+_TaskPromptSignature = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature | vllm_.PromptSignature
+_TaskResult = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | glix_.Result | vllm_.Result
+_TaskBridge = (
     DSPyClassification
     | GliXBridge
     | InstructorClassification
@@ -245,14 +243,11 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         string label (assumes score 1.0), or a Pydantic model with
         attributes ``label`` and optional ``score``.
 
-        Args:
-            result: One result value from ``doc.results``.
+        :params result: One result value from ``doc.results``.
 
-        Returns:
-            Mapping from label to score.
+        :return: Mapping from label to score.
 
-        Raises:
-            TypeError: If the result has an unsupported type or shape.
+        :raises TypeError: If the result has an unsupported type or shape.
 
         """
         if isinstance(result, list) and all(isinstance(item, list | tuple) and len(item) == 2 for item in result):
@@ -286,22 +281,25 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         - ``str`` for single-label results (assumes score ``1.0``)
         - ``pydantic.BaseModel`` exposing ``label`` and optional ``score``
 
-        Args:
-            docs: Documents whose ``results`` contain outputs for this task id.
-            threshold: Threshold to convert scores into multi-hot indicators.
+        :param docs: Documents whose ``results`` contain outputs for this task id.
+        :param threshold: Threshold to convert scores into multi-hot indicators.
 
-        Returns:
-            A ``datasets.Dataset`` with ``text`` and multi-hot ``labels``.
+        :return: A ``datasets.Dataset`` with ``text`` and multi-hot ``labels``.
 
-        Raises:
-            KeyError: If any document is missing this task's results.
-            TypeError: If a result cannot be interpreted.
+        :raises KeyError: If any document is missing this task's results.
+        :raises TypeError: If a result cannot be interpreted.
 
         """
-        # Define metadata and features (multi-hot across declared labels).
-        features = datasets.Features(
-            {"text": datasets.Value("string"), "labels": datasets.Sequence(datasets.ClassLabel(names=self._labels))}
-        )
+        # Define metadata and features (multi-hot across declared labels for multi-label).
+        if self._multi_label:
+            features = datasets.Features(
+                {"text": datasets.Value("string"), "labels": datasets.Sequence(datasets.Value("bool"))}
+            )
+        else:
+            features = datasets.Features(
+                {"text": datasets.Value("string"), "labels": datasets.ClassLabel(names=self._labels)}
+            )
+
         info = datasets.DatasetInfo(
             description=(
                 f"{'Multi-label' if self._multi_label else 'Single-label'} classification dataset with labels "
@@ -311,6 +309,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         )
 
         labels = self._labels
+
         try:
             data = [(doc.text, doc.results[self._task_id]) for doc in docs]
         except KeyError as err:
@@ -328,11 +327,19 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
             """
             for text, result in data:
+                # Normalize result types.
                 scores = Classification._result_to_scores(result)
-                yield {
-                    "text": text,
-                    "labels": [int(scores.get(label, 0.0) >= threshold) for label in labels],
-                }
+
+                # If multi-label: store one-hot representation..
+                if self._multi_label:
+                    result_normalized = [int(scores.get(label, 0.0) >= threshold) for label in labels]
+                # If single-label: get single-label result as is
+                else:
+                    keys = list(scores.keys())
+                    assert len(keys) == 1
+                    result_normalized = keys[0]
+
+                yield {"text": text, "labels": result_normalized}
 
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
 

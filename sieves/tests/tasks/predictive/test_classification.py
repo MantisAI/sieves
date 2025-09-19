@@ -86,8 +86,9 @@ def test_run_nonbatched(classification_docs, engine, fewshot):
 
 
 @pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
-def test_to_hf_dataset(classification_docs, batch_engine) -> None:
-    task = classification.Classification(task_id="classifier", labels=["science", "politics"], engine=batch_engine)
+@pytest.mark.parametrize("multi_label", [True, False])
+def test_to_hf_dataset(classification_docs, batch_engine, multi_label) -> None:
+    task = classification.Classification(task_id="classifier", multi_label=multi_label, labels=["science", "politics"], engine=batch_engine)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(task(classification_docs))
@@ -95,9 +96,15 @@ def test_to_hf_dataset(classification_docs, batch_engine) -> None:
     assert len(dataset) == 2
     dataset_records = list(dataset)
     for rec in dataset_records:
-        assert isinstance(rec["labels"], list)
-        for v in rec["labels"]:
-            assert isinstance(v, int)
+        if multi_label:
+            assert isinstance(rec["labels"], list)
+            assert all(
+                [isinstance(v, int) for v in rec["labels"]]
+            ), "Labels should be integers for multi-label classification"
+            for v in rec["labels"]:
+                assert isinstance(v, int)
+        else:
+            assert isinstance(rec["labels"], int)
         assert isinstance(rec["text"], str)
 
     with pytest.raises(KeyError):
