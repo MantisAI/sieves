@@ -46,8 +46,11 @@ Examples
 """
 
 import os
+from typing import Literal, Any
 
 import outlines
+import torch
+import transformers
 import typer
 from datasets import Dataset, load_dataset
 from huggingface_hub import HfApi, get_token
@@ -86,25 +89,12 @@ def _parse_label_descriptions(desc_string: str | None) -> dict[str, str]:
         return {}
 
     descriptions: dict[str, str] = {}
-    parts = desc_string.split(",")
-    current_label: str | None = None
-    current_desc_parts: list[str] = []
 
-    for part in parts:
-        if ":" in part and not current_label:
-            label, desc = part.split(":", 1)
-            current_label = label.strip()
-            current_desc_parts = [desc.strip()]
-        elif ":" in part and current_label:
-            descriptions[current_label] = ",".join(current_desc_parts)
-            label, desc = part.split(":", 1)
-            current_label = label.strip()
-            current_desc_parts = [desc.strip()]
-        else:
-            current_desc_parts.append(part.strip())
-
-    if current_label:
-        descriptions[current_label] = ",".join(current_desc_parts)
+    for label_desc in desc_string.split(","):
+        label_desc_parts = label_desc.split(":")
+        assert len(label_desc_parts) == 2, \
+            f"Invalid label description: must be 'label1:desc1,label2:desc2', got: {label_desc}"
+        descriptions[label_desc_parts[0].strip("'").strip()] = label_desc_parts[1].strip("'").strip()
 
     return descriptions
 
@@ -146,35 +136,11 @@ def _is_valid_text(text: str) -> bool:
     return bool(text and len(text) >= MIN_TEXT_LENGTH)
 
 
-def _build_model(model_id: str) -> Transformers:
-    """Build an Outlines model wrapper from a Transformers causal LM.
-
-    Loads the specified Hugging Face ``AutoModelForCausalLM`` and tokenizer,
-    then wraps them using ``outlines.models.from_transformers``. ``model_id``
-    must be provided and non-empty.
-
-    Args:
-        model_id: Hugging Face model identifier (e.g.,
-            ``"HuggingFaceTB/SmolLM-360M-Instruct"``). Must not be empty.
-
-    Returns:
-        An Outlines model instance compatible with Sieves' ``Engine``.
-
-    """
-    if not model_id:
-        raise ValueError("model_id must be provided and non-empty")
-    tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    mdl = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True)
-
-    return outlines.models.from_transformers(mdl, tok)
-
-
 def _load_and_prepare_data(
-    *,
     input_dataset: str,
     split: str,
     shuffle: bool,
-    shuffle_seed: int,
+    shuffle_seed: int | None,
     max_samples: int | None,
     column: str,
     labels: str,
@@ -282,7 +248,6 @@ def _load_and_prepare_data(
 
 
 def _log_stats(
-    *,
     docs: list[sieves.Doc],
     task: sieves.tasks.Classification,
     labels_list: list[str],
@@ -313,6 +278,7 @@ def _log_stats(
         label_counts = {label: 0 for label in labels_list}
         for doc in docs:
             result = doc.results[task.id]
+            logger.info(result)
             if isinstance(result, list):
                 for label, score in result:
                     if label in label_counts and score >= MULTILABEL_THRESHOLD:
@@ -320,7 +286,7 @@ def _log_stats(
 
         total_processed = len(docs)
         skipped = len(raw_texts) - len(processed_texts)
-        logger.info("Classification distribution (multi-label, threshold=%.2f):", MULTILABEL_THRESHOLD)
+        logger.info(f"Classification distribution (multi-label, threshold={MULTILABEL_THRESHOLD}):")
 
         for label in labels_list:
             count = label_counts.get(label, 0)
@@ -335,7 +301,7 @@ def _log_stats(
         classifications: list[str | None] = [None] * len(raw_texts)
         for idx, doc in zip(valid_indices, docs):
             result = doc.results[task.id]
-            classifications[idx] = result
+            classifications[idx] = result[0]
 
         # Log distribution and success rate.
         total_texts = len(raw_texts)
@@ -374,7 +340,7 @@ def classify(
     batch_size: int = typer.Option(64, help="Batch size"),
     max_tokens: int = typer.Option(200, help="Max tokens to generate"),
     shuffle: bool = typer.Option(False, help="Shuffle dataset before sampling"),
-    shuffle_seed: int = typer.Option(42, help="Shuffle seed"),
+    shuffle_seed: int | None = typer.Option(None, help="Shuffle seed"),
     multi_label: bool = typer.Option(False, help="Enable multi-label classification (adds multi-hot 'labels')"),
 ) -> None:
     """Classify a Hugging Face dataset using Sieves + Outlines and push results.
@@ -433,9 +399,23 @@ def classify(
         hf_token=hf_token,
     )
 
+    # Build model.
+    info = HfApi().model_info(model)
+    device = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+    zeroshot_tag = "zero-shot-classification"
+    # Explicitly designed for zero-shot classification: build directly as pipeline.
+    if info.pipeline_tag == zeroshot_tag or zeroshot_tag in set(info.tags or []):
+        engine_model = transformers.pipeline(zeroshot_tag, model=model, device=device)
+    # Otherwise: build Outlines model around it to enforce structured generation.
+    else:
+        engine_model = outlines.models.from_transformers(
+            AutoModelForCausalLM.from_pretrained(model, device_map="auto"),
+            AutoTokenizer.from_pretrained(model),
+        )
+
     # Build engine.
     engine = sieves.Engine(
-        model=_build_model(model),
+        model=engine_model,
         inference_kwargs={"max_new_tokens": max_tokens},
         strict_mode=False,
         batch_size=batch_size,
@@ -450,8 +430,10 @@ def classify(
     )
     pipe = sieves.Pipeline([task])
 
-    logger.info("Running classification pipeline.")
+    logger.info(f"Running {'multi-label ' if multi_label else ''}classification pipeline with labels {labels_list}.")
     docs = list(pipe([sieves.Doc(text=t) for t in processed_texts]))
+    for doc in docs:
+        print(doc.results['Classification'], '***', doc.text)
 
     logger.info("Logging stats.")
     _log_stats(
@@ -469,7 +451,7 @@ def classify(
     ds.push_to_hub(
         output_dataset,
         token=token,
-        commit_message=(f"Add classifications using Sieves + Outlines (multi-label; threshold={MULTILABEL_THRESHOLD})"),
+        commit_message=f"Add classifications using Sieves + Outlines (multi-label; threshold={MULTILABEL_THRESHOLD})"
     )
 
 
@@ -487,7 +469,7 @@ def show_examples() -> None:
         "  --input-dataset stanfordnlp/imdb \\",
         "  --column text \\",
         "  --labels 'positive,negative' \\",
-        "  --model HuggingFaceTB/SmolLM-360M-Instruct \\",
+        "  --model MoritzLaurer/deberta-v3-large-zeroshot-v2.0 \\",
         "  --output-dataset your-username/imdb-classified",
         "\n# With label descriptions:",
         "uv run examples/create_classification_dataset_with_sieves.py \\",
@@ -496,7 +478,7 @@ def show_examples() -> None:
         "  --labels 'bug,feature,question' \\",
         "  --label-descriptions 'bug:something is broken or not working,feature:request for new functionality,"
         "question:asking for help or clarification' \\",
-        "  --model HuggingFaceTB/SmolLM-360M-Instruct \\",
+        "  --model MoritzLaurer/deberta-v3-large-zeroshot-v2.0 \\",
         "  --output-dataset your-username/tickets-classified",
         "\n# Multi-label classification:",
         "uv run examples/create_classification_dataset_with_sieves.py \\",
@@ -504,7 +486,7 @@ def show_examples() -> None:
         "  --column text \\",
         "  --labels 'world,sports,business,science' \\",
         "  --multi-label \\",
-        "  --model HuggingFaceTB/SmolLM-360M-Instruct \\",
+        "  --model MoritzLaurer/deberta-v3-large-zeroshot-v2.0 \\",
         "  --output-dataset your-username/agnews-multilabel",
     ]
     for line in cmds:
@@ -512,4 +494,11 @@ def show_examples() -> None:
 
 
 if __name__ == "__main__":
+    # TODO
+    #   x. Test with bigger model - getting decent results is crucial. Qwen3-0.6B (-instruct)?
+    #   x. Fix distribution calc
+    #   x. Test multilabel
+    #   1. Test HF jobs run
+    #   2. Add --is_zeroshot_classification flag, create
+    #   2. Create draft PR, share
     app()
