@@ -301,7 +301,7 @@ def _log_stats(
         classifications: list[str | None] = [None] * len(raw_texts)
         for idx, doc in zip(valid_indices, docs):
             result = doc.results[task.id]
-            classifications[idx] = result[0]
+            classifications[idx] = result if isinstance(result, str) else result[0]
 
         # Log distribution and success rate.
         total_texts = len(raw_texts)
@@ -409,7 +409,7 @@ def classify(
     # Otherwise: build Outlines model around it to enforce structured generation.
     else:
         engine_model = outlines.models.from_transformers(
-            AutoModelForCausalLM.from_pretrained(model, device_map="auto"),
+            AutoModelForCausalLM.from_pretrained(model, **({"device": device} if device else {})),
             AutoTokenizer.from_pretrained(model),
         )
 
@@ -432,8 +432,6 @@ def classify(
 
     logger.info(f"Running {'multi-label ' if multi_label else ''}classification pipeline with labels {labels_list}.")
     docs = list(pipe([sieves.Doc(text=t) for t in processed_texts]))
-    for doc in docs:
-        print(doc.results['Classification'], '***', doc.text)
 
     logger.info("Logging stats.")
     _log_stats(
@@ -494,11 +492,4 @@ def show_examples() -> None:
 
 
 if __name__ == "__main__":
-    # TODO
-    #   x. Test with bigger model - getting decent results is crucial. Qwen3-0.6B (-instruct)?
-    #   x. Fix distribution calc
-    #   x. Test multilabel
-    #   1. Test HF jobs run
-    #   2. Add --is_zeroshot_classification flag, create
-    #   2. Create draft PR, share
     app()
