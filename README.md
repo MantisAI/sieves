@@ -25,25 +25,25 @@
 
 Read our documentation [here](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
 
-Install `sieves` with `pip install sieves`. If you want to install all optional dependencies right away, install with 
+Install `sieves` with `pip install sieves`. If you want to install all optional dependencies right away, install with
 `pip install sieves[engines,distill]`. You can also choose to install individual dependencies as you see fit.
 
 ### Why `sieves`?
 
 Even in the era of generative AI, structured outputs and observability remain crucial.
 
-Many real-world scenarios require rapid prototyping with minimal data. Generative language models excel here, but 
-producing clean, structured output can be challenging. Various tools address this need for structured/guided language 
-model output, including [`outlines`](https://github.com/dottxt-ai/outlines), [`dspy`](https://github.com/stanfordnlp/dspy), 
-[`ollama`](https://github.com/ollama/ollama), and others. Each has different design patterns, pros and cons. `sieves` wraps these tools and provides 
+Many real-world scenarios require rapid prototyping with minimal data. Generative language models excel here, but
+producing clean, structured output can be challenging. Various tools address this need for structured/guided language
+model output, including [`outlines`](https://github.com/dottxt-ai/outlines), [`dspy`](https://github.com/stanfordnlp/dspy),
+[`ollama`](https://github.com/ollama/ollama), and others. Each has different design patterns, pros and cons. `sieves` wraps these tools and provides
 a unified interface for input, processing, and output.
 
-Developing NLP prototypes often involves repetitive steps: parsing and chunking documents, exporting results for 
-model fine-tuning, and experimenting with different prompting techniques. All these needs are addressed by existing 
-libraries in the NLP ecosystem address (e.g. [`docling`](https://github.com/DS4SD/docling) for file parsing, or [`datasets`](https://github.com/huggingface/datasets) for transforming 
-data into a unified format for model training). 
+Developing NLP prototypes often involves repetitive steps: parsing and chunking documents, exporting results for
+model fine-tuning, and experimenting with different prompting techniques. All these needs are addressed by existing
+libraries in the NLP ecosystem address (e.g. [`docling`](https://github.com/DS4SD/docling) for file parsing, or [`datasets`](https://github.com/huggingface/datasets) for transforming
+data into a unified format for model training).
 
-`sieves`  **simplifies NLP prototyping** by bundling these capabilities into a single library, allowing you to quickly 
+`sieves`  **simplifies NLP prototyping** by bundling these capabilities into a single library, allowing you to quickly
 build modern NLP applications. It provides:
 - Zero- and few-shot model support for immediate inference
 - A bundle of utilities addressing common requirements in NLP applications
@@ -55,11 +55,11 @@ build modern NLP applications. It provides:
 
 `sieves` draws a lot of inspiration from [`spaCy`](https://spacy.io/) and particularly [`spacy-llm`](https://github.com/explosion/spacy-llm).
 
---- 
+---
 
 ### Features
 
-- :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models 
+- :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models
 - :robot: **Unified Generation Interface:** Seamlessly use multiple libraries
   - [`dspy`](https://github.com/stanfordnlp/dspy)
   - [`gliner`](https://github.com/urchade/GLiNER)
@@ -69,7 +69,7 @@ build modern NLP applications. It provides:
   - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`transformer`](https://github.com/huggingface/transformers)
 - :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
-- :hammer_and_wrench: **Integrated Tools:** 
+- :hammer_and_wrench: **Integrated Tools:**
   - Document parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/), [`marker`](https://github.com/VikParuchuri/marker)
   - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
 - :label: **Ready-to-Use Tasks:**
@@ -83,7 +83,7 @@ build modern NLP applications. It provides:
   - Named entity recognition
   - Coming soon: entity linking, knowledge graph creation, ...
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
-- :teacher: **Distillation:** Distill local, specialized models using your zero-shot model results automatically. 
+- :teacher: **Distillation:** Distill local, specialized models using your zero-shot model results automatically.
   Export your results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) if you want to run your own training routine.
 - :recycle: **Caching** to avoid unnecessary model calls
 
@@ -100,9 +100,9 @@ docs = [Doc(text="Special relativity applies to all physical phenomena in the ab
 
 # 2. Create pipeline with tasks.
 pipe = Pipeline(
-    # 3. Add classification task to pipeline. 
-    # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you 
-    # might want to consider upgrading to a different model for better results. 
+    # 3. Add classification task to pipeline.
+    # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you
+    # might want to consider upgrading to a different model for better results.
     tasks.Classification(labels=["science", "politics"], engine=Engine())
 )
 
@@ -139,7 +139,7 @@ chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
 pipe = Pipeline(
     [
         # 4. Add document parsing task.
-        tasks.OCR(export_format="markdown"),
+        tasks.Ingestion(export_format="markdown"),
         # 5. Add chunking task to ensure we don't exceed our model's context window.
         tasks.Chunking(chunker),
         # 6. Add classification task to pipeline.
@@ -157,7 +157,7 @@ pipe.dump("pipeline.yml")
 with open("docs.pkl", "wb") as f:
     pickle.dump(docs, f)
 
-# 9. Load pipeline and docs from disk. Note: we don't serialize complex third-party objects, so you'll have 
+# 9. Load pipeline and docs from disk. Note: we don't serialize complex third-party objects, so you'll have
 #    to pass those in at load time.
 loaded_pipe = Pipeline.load(
     "pipeline.yml",
@@ -208,7 +208,7 @@ Connects `Task` with `Engine`.
 - Manages output type specifications
 - Ensures compatibility between tasks and engine
 
---- 
+---
 
 ## Frequently Asked Questions
 
@@ -226,7 +226,7 @@ from this angle, there are two ways to explain why we settled on this name (pick
 
 Asked differently: what are the benefits of using `sieves` over directly interacting with an LLM?
 - Validated, structured data output - also for LLMs that don't offer structured outputs natively.  Zero-/few-shot language models can be finicky without guardrails or parsing.
-- A step-by-step pipeline, making it easier to debug and track each stage. 
+- A step-by-step pipeline, making it easier to debug and track each stage.
 - The flexibility to switch between different models and ways to ensure structured and validated output.
 - A bunch of useful utilities for pre- and post-processing you might need.
 - An array of useful tasks you can right of the bat without having to roll your own.
@@ -239,12 +239,12 @@ flexibility to switch between different structured generation libraries). Then a
 in which case we recommend using `outlines` (or any other structured generation libray) directly.
 
 Similarly, maybe you already have an existing tech stack in your project that uses exclusively `ollama`, `langchain`, or
-`dspy`? All of these libraries (and more) are supported by `sieves` - but they are not _just_ structured generation 
-libraries, they come with a plethora of features that are out of scope for `sieves`. If your application deeply 
+`dspy`? All of these libraries (and more) are supported by `sieves` - but they are not _just_ structured generation
+libraries, they come with a plethora of features that are out of scope for `sieves`. If your application deeply
 integrates with a framework like LangChain or DSPy, it may be reasonable to stick to those libraries directly.
 
-As many things in engineering, this is a trade-off. The way we see it: the less tightly coupled your existing 
-application is with a particular language model framework, the more mileage you'll get out of `sieves`. This means that 
+As many things in engineering, this is a trade-off. The way we see it: the less tightly coupled your existing
+application is with a particular language model framework, the more mileage you'll get out of `sieves`. This means that
 it's ideal for prototyping (there's no reason you can't use it in production too, of course).
 
 </details>

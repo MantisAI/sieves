@@ -1,3 +1,5 @@
+"""Pipeline."""
+
 from __future__ import annotations
 
 import copy
@@ -23,6 +25,7 @@ class Pipeline:
         use_cache: bool = True,
     ):
         """Initialize pipeline.
+
         :param tasks: List of tasks to execute.
         :param use_cache: If True, pipeline will build a cache over processed `Doc`s to ensure that no redundant
             requests will be sent to the model. If False, all `Doc`s will be processed from scratch, regardless of
@@ -36,7 +39,8 @@ class Pipeline:
         self._set_distillation_targets()
 
     def add_tasks(self, tasks: Iterable[Task]) -> None:
-        """Adds tasks to pipeline. Revalidates pipeline.
+        """Add tasks to pipeline. Revalidates pipeline.
+
         :param tasks: Tasks to be added.
         """
         self._tasks.extend(tasks)
@@ -44,6 +48,7 @@ class Pipeline:
 
     def _validate_tasks(self) -> None:
         """Validate tasks.
+
         :raises: ValueError on pipeline component signature mismatch.
         """
         task_ids: set[str] = set()
@@ -54,8 +59,9 @@ class Pipeline:
             task_ids.add(task.id)
 
     def _set_distillation_targets(self) -> None:
-        """Set target task references fpr distillation tasks, if there are any. This is necessary because distillation
-        tasks have a lazily initialized required attribute.
+        """Set target task references fpr distillation tasks, if there are any.
+
+        This is necessary because distillation tasks have a lazily initialized required attribute.
         """
         for task in self._tasks:
             if isinstance(task, Distillation):
@@ -64,8 +70,11 @@ class Pipeline:
                 task.target_task = typing.cast(PredictiveTask, target_task)  # type: ignore[type-arg]
 
     def _get_unseen_unique_docs(self, docs: Iterable[Doc]) -> Iterable[Doc]:
-        """Yields unseen, unique docs - i.e. those docs that are not in cache and that are unique within the provided
+        """Yield unseen, unique docs.
+
+        I.e. those docs that are not in cache and that are unique within the provided
         collection.
+
         :param docs: Documents to process.
         """
         doc_hashes: set[int] = set()
@@ -101,9 +110,9 @@ class Pipeline:
         for i, doc in enumerate(docs_iters[1]):
             assert doc.text or doc.uri
             self._cache_stats["total"] += 1
-            # Docs must either all have URIs or texts. Either is a sufficient identifier. If first task is OCR and not
-            # all docs have IDs, pipeline fails. If first task is predictive and not all docs have texts, pipeline
-            # fails.
+            # Docs must either all have URIs or texts. Either is a sufficient identifier. If first task is Ingestion
+            # and not all docs have IDs, pipeline fails. If first task is predictive and not all docs have texts,
+            # pipeline fails.
             doc_cache_id = hash(doc.text or doc.uri)
 
             if doc_cache_id not in self._cache:
@@ -122,18 +131,20 @@ class Pipeline:
 
     def dump(self, path: Path | str) -> None:
         """Save pipeline config to disk.
+
         :param path: Target path.
         """
         self.serialize().dump(path)
 
     def clear_cache(self) -> None:
-        """Clears cache."""
+        """Clear cache."""
         self._cache.clear()
         self._cache_stats = {k: 0 for k in self._cache_stats}
 
     @classmethod
     def load(cls, path: Path | str, task_kwargs: Iterable[dict[str, Any]]) -> Pipeline:
         """Generate pipeline from disk.
+
         :param path: Path to config file.
         :param task_kwargs: Values to inject into loaded config.
         :return: Pipeline instance.
@@ -141,7 +152,8 @@ class Pipeline:
         return cls.deserialize(Config.load(path), task_kwargs)
 
     def serialize(self) -> Config:
-        """Serializes pipeline object.
+        """Serialize pipeline object.
+
         :return: Serialized pipeline representation.
         """
         return Config.create(
@@ -154,7 +166,8 @@ class Pipeline:
 
     @classmethod
     def deserialize(cls, config: Config, tasks_kwargs: Iterable[dict[str, Any]]) -> Pipeline:
-        """Generates pipeline from config.
+        """Generate pipeline from config.
+
         :param config: Config to generate pipeline from.
         :param tasks_kwargs: Values to inject into task configs. One dict per task (dict can be empty).
         :return: Deserialized pipeline instance.
@@ -193,7 +206,8 @@ class Pipeline:
         return cls(tasks=tasks)
 
     def __getitem__(self, task_id: str) -> Task:
-        """Gets task with this ID.
+        """Get task with this ID.
+
         :param task_id: ID of task to fetch.
         :return: Task with specified ID.
         :raises: KeyError if no task with such ID exists.

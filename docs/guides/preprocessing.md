@@ -7,15 +7,15 @@
 
 ## Document Parsing
 
-### Using OCR
+### Using Ingestion
 
-The `OCR` task uses the [docling](https://github.com/DS4SD/docling) or alternatively the [marker](https://github.com/VikParuchuri/marker) libraries to parse various document formats:
+The `Ingestion` task uses the [docling](https://github.com/DS4SD/docling) or alternatively the [marker](https://github.com/VikParuchuri/marker) libraries to parse various document formats:
 
 ```python
 from sieves import Pipeline, tasks, Doc
 
 # Create a document parser
-parser = tasks.preprocessing.OCR()
+parser = tasks.preprocessing.Ingestion()
 
 # Create a pipeline with the parser
 pipeline = Pipeline([parser])
@@ -40,7 +40,7 @@ from sieves import Pipeline, tasks, Doc
 from docling.document_converter import DocumentConverter
 
 # Create a document parser
-parser = tasks.preprocessing.OCR(converter=DocumentConverter(), export_format="html")
+parser = tasks.preprocessing.Ingestion(converter=DocumentConverter(), export_format="html")
 
 # Create a pipeline with the parser
 pipeline = Pipeline([parser])
@@ -129,7 +129,7 @@ for chunk in chunked_docs[0].chunks:
 
 ## Combining Preprocessing Tasks
 
-You can combine multiple preprocessing tasks in a pipeline. Here's an example that parses a PDF using the OCR task (using Docling as default) and then chunks it with Chonkie:
+You can combine multiple preprocessing tasks in a pipeline. Here's an example that parses a PDF using the Ingestion task (using Docling as default) and then chunks it with Chonkie:
 
 ```python
 from sieves import Pipeline, tasks, Doc
@@ -137,7 +137,7 @@ import chonkie
 import tokenizers
 
 # Create the preprocessing tasks
-parser = tasks.preprocessing.OCR()
+parser = tasks.preprocessing.Ingestion()
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
 chunker = tasks.preprocessing.Chonkie(
     chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
@@ -163,7 +163,7 @@ for i, chunk in enumerate(processed_doc.chunks):
 All preprocessing tasks support progress bars. You can enable/disable them:
 
 ```python
-parser = tasks.preprocessing.OCR(show_progress=True)
+parser = tasks.preprocessing.Ingestion(show_progress=True)
 chunker = tasks.preprocessing.Chonkie(
     chunker=chonkie.TokenChunker(tokenizer),
     show_progress=True
@@ -175,13 +175,13 @@ chunker = tasks.preprocessing.Chonkie(
 Tasks can include metadata about their processing. Enable this with `include_meta`:
 
 ```python
-parser = tasks.preprocessing.OCR(include_meta=True)
+parser = tasks.preprocessing.Ingestion(include_meta=True)
 ```
 
 Access the metadata in the document's `meta` field:
 ```python
 doc = processed_docs[0]
-print(doc.meta["OCR"])  # Access parser metadata
+print(doc.meta["Ingestion"])  # Access parser metadata
 print(doc.meta["Chunker"])  # Access chunker metadata
 ```
 

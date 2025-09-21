@@ -70,7 +70,7 @@ def test_run_readme_example_long(batch_engine, tokenizer) -> None:
     pipe = Pipeline(
         [
             # Add document parsing task.
-            tasks.OCR(export_format="markdown"),
+            tasks.Ingestion(export_format="markdown"),
             # Add chunking task to ensure we don't exceed our model's context window.
             tasks.Chunking(chonkie.TokenChunker(tokenizer)),
             # Run classification on provided document.
@@ -120,7 +120,7 @@ def test_pydantic_to_hf() -> None:
         c: str | float
         d: tuple[int, float]
         e: str | None
-        f: typing.Optional[str]  # noqa: UP007
+        f: str | None  # noqa: UP007
 
     features = PydanticToHFDatasets.model_cls_to_features(Simple)
     assert all([key in features for key in ("a", "b")])

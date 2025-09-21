@@ -1,4 +1,5 @@
 """File preprocessing for converting raw files into documents."""
+
 import warnings
 from collections.abc import Callable, Iterable
 from typing import Any
@@ -29,6 +30,7 @@ class Unstructured(Task):
         **kwargs: dict[str, Any],
     ):
         """Initialize the docling parser.
+
         :param partition: Function to use for partitioning.
         :param cleaners: Cleaning functions to apply.
         :param task_id: Task ID.
@@ -56,6 +58,7 @@ class Unstructured(Task):
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Parse resources using docling.
+
         :param docs: Resources to process.
         :return: Parsed documents.
         """
@@ -74,7 +77,6 @@ class Unstructured(Task):
         iterable = tqdm(docs, total=len(docs)) if self._show_progress else docs
         does_chunking = "chunking_strategy" in self._partition_args
 
-        # import unstructured.documents.elements.Te
         for doc in iterable:
             try:
                 # Parse and process document.
