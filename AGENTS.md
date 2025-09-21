@@ -8,7 +8,7 @@ If you are an automated agent, follow the Guardrails and Verifications sections 
 
 `sieves` is a Python library for rapid, production‑minded prototyping of NLP pipelines with zero‑ and few‑shot models and structured outputs. It provides:
 - A document‑centric pipeline (`Pipeline`) with caching and serialization
-- Preprocessing tasks (OCR, chunking)
+- Preprocessing tasks (Ingestion, chunking)
 - Predictive tasks (classification, NER, IE, QA, summarization, translation, sentiment, PII masking)
 - A unified engine interface over structured‑generation frameworks (Outlines, DSPy, Instructor, LangChain, Transformers, Ollama, GLiNER, etc.)
 - Postprocessing and model distillation helpers
@@ -58,14 +58,14 @@ Using pip (editable):
 Common environment variables (set only what you need):
 - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, provider‑specific keys supported by LiteLLM/clients
 - `OLLAMA_HOST` for local models
-- OCR/vision may require system packages (e.g., Tesseract) depending on your chosen path
+- Ingestion/vision may require system packages (e.g., Tesseract) depending on your chosen path
 
 ## Quickstart Workflows
 
 Document to results with caching and serialization:
 1) Build `Doc` objects: URI, text, or HF datasets via `Doc.from_hf_dataset`
 2) Choose an Engine (e.g., Outlines, Instructor, DSPy, GLiNER, Transformers, Ollama)
-3) Compose a `Pipeline` with tasks: OCR → Chunking → Predictive tasks
+3) Compose a `Pipeline` with tasks: Ingestion → Chunking → Predictive tasks
 4) Run `pipe(docs)`; read results on each `Doc`
 5) Persist with `pipe.dump("pipeline.yml")` and pickle/serialize docs
 
@@ -79,7 +79,7 @@ The unified `Engine` wraps different backends; some are optional via extras:
 - Structured generation: Outlines, Instructor, DSPy, LangChain
 - LLM hosting: Transformers, Ollama (vLLM wired but optional/experimental)
 - Specialized: GLiNER for NER
-- OCR & parsing: Docling, Unstructured + Marker PDF
+- Ingestion & parsing: Docling, Unstructured + Marker PDF
 - Chunking: Chonkie
 
 Notes for agents:
@@ -121,7 +121,7 @@ Adding a new engine:
 - Ensure serialization via `serialize()/deserialize()` works with `Config`
 
 Pre/Post‑processing:
-- Add chunkers or OCR connectors under `sieves/tasks/preprocessing/...`
+- Add chunkers or Ingestion connectors under `sieves/tasks/preprocessing/...`
 - Extend distillation frameworks under `sieves/tasks/postprocessing/distillation/...`
 
 ## Prompts & Signatures
@@ -158,7 +158,7 @@ Don’t:
 
 Escalate:
 - Network calls to external services or model downloads
-- Installing system packages for OCR/vision/accelerators
+- Installing system packages for Ingestion/vision/accelerators
 - Large dependency changes (adding/removing major engines)
 
 ## Verification Checklist
@@ -186,7 +186,7 @@ Before opening a PR or proposing a patch, ensure:
 ## Known Constraints
 
 - Some engines do not support batching or few‑shotting uniformly; bridges handle compatibility
-- Optional extras gate heavy deps (transformers, accelerate, OCR stacks, distillation)
+- Optional extras gate heavy deps (transformers, accelerate, Ingestion stacks, distillation)
 - vLLM support exists but may be disabled/commented; verify environment before use
 
 ## Useful References
@@ -203,4 +203,3 @@ Maintainers: please update this file when:
 - Changing installation or extras
 - Updating coding standards or CI
 - Introducing new workflows or guardrails
-

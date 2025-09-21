@@ -2,7 +2,7 @@ from pathlib import Path
 
 from sieves import Doc, Pipeline
 from sieves.serialization import Config
-from sieves.tasks.preprocessing.ocr.docling_ import Docling
+from sieves.tasks.preprocessing.ingestion.docling_ import Docling
 
 
 def test_run() -> None:
@@ -28,7 +28,7 @@ def test_serialization() -> None:
             "is_placeholder": False,
             "value": [
                 {
-                    "cls_name": "sieves.tasks.preprocessing.ocr.docling_.Docling",
+                    "cls_name": "sieves.tasks.preprocessing.ingestion.docling_.Docling",
                     "converter": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
                     "export_format": {"is_placeholder": False, "value": "markdown"},
                     "include_meta": {"is_placeholder": False, "value": False},

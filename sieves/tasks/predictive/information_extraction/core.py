@@ -1,9 +1,11 @@
+"""Information extraction."""
+
 from __future__ import annotations
 
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, override
 
 import datasets
 import pydantic
@@ -23,11 +25,9 @@ from sieves.tasks.predictive.information_extraction.bridges import (
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-_TaskPromptSignature: TypeAlias = (
-    pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature | vllm_.PromptSignature
-)
-_TaskResult: TypeAlias = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
-_TaskBridge: TypeAlias = (
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature | vllm_.PromptSignature
+_TaskResult = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
+_TaskBridge = (
     DSPyInformationExtraction
     | InstructorInformationExtraction
     | LangChainInformationExtraction
@@ -38,12 +38,16 @@ _TaskBridge: TypeAlias = (
 
 
 class FewshotExample(pydantic.BaseModel):
+    """Few-shot example."""
+
     text: str
     reasoning: str
     entities: list[pydantic.BaseModel]
 
 
 class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+    """Information extraction task."""
+
     def __init__(
         self,
         entity_type: type[pydantic.BaseModel],
@@ -55,8 +59,8 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         prompt_signature_desc: str | None = None,
         fewshot_examples: Iterable[FewshotExample] = (),
     ) -> None:
-        """
-        Initializes new PredictiveTask.
+        """Initialize new PredictiveTask.
+
         :param entity_type: Object type to extract.
         :param task_id: Task ID.
         :param show_progress: Whether to show progress bar for processed documents.
@@ -66,11 +70,6 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         :param fewshot_examples: Few-shot examples.
         """
         self._entity_type = entity_type
-        if not self._entity_type.model_config.get("frozen", False):
-            warnings.warn(
-                f"Entity type provided to task {self._task_id} isn't frozen, which means that entities can't "
-                f"be deduplicated. Modify entity_type to be frozen=True."
-            )
 
         super().__init__(
             engine=engine,
@@ -83,8 +82,16 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             fewshot_examples=fewshot_examples,
         )
 
+        if not self._entity_type.model_config.get("frozen", False):
+            warnings.warn(
+                f"Entity type provided to task {self._task_id} isn't frozen, which means that entities can't "
+                f"be deduplicated. Modify entity_type to be frozen=True."
+            )
+
+    @override
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         """Initialize bridge.
+
         :param engine_type: Type of engine to initialize bridge for.
         :return _TaskBridge: Engine task bridge.
         :raises ValueError: If engine type is not supported.
@@ -110,6 +117,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
         return bridge
 
+    @override
     @property
     def supports(self) -> set[EngineType]:
         return {
@@ -121,6 +129,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             EngineType.vllm,
         }
 
+    @override
     @property
     def _state(self) -> dict[str, Any]:
         return {
@@ -128,6 +137,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             "entity_type": self._entity_type,
         }
 
+    @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
@@ -152,7 +162,8 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
         def generate_data() -> Iterable[dict[str, Any]]:
-            """Yields results as dicts.
+            """Yield results as dicts.
+
             :return: Results as dicts.
             """
             for text, entities in data:
@@ -161,6 +172,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
 
+    @override
     def distill(
         self,
         base_model_id: str,

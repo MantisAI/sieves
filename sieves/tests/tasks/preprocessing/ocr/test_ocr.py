@@ -9,7 +9,7 @@ from sieves.serialization import Config
 
 def test_run() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.OCR()])
+    pipe = Pipeline(tasks=[tasks.preprocessing.Ingestion()])
     docs = list(pipe(resources))
 
     assert len(docs) == 1
@@ -18,7 +18,7 @@ def test_run() -> None:
 
 def test_serialization() -> None:
     resources = [Doc(uri=Path(__file__).parent.parent.parent.parent / "assets" / "1204.0162v2.pdf")]
-    pipe = Pipeline(tasks=[tasks.preprocessing.OCR()])
+    pipe = Pipeline(tasks=[tasks.preprocessing.Ingestion()])
     config = pipe.serialize()
     version = Config.get_version()
     assert config.model_dump() == {
@@ -28,12 +28,12 @@ def test_serialization() -> None:
             "is_placeholder": False,
             "value": [
                 {
-                    "cls_name": "sieves.tasks.preprocessing.ocr.core.OCR",
+                    "cls_name": "sieves.tasks.preprocessing.ingestion.core.Ingestion",
                     "converter": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
                     "export_format": {"is_placeholder": False, "value": "markdown"},
                     "show_progress": {"is_placeholder": False, "value": True},
                     "include_meta": {"is_placeholder": False, "value": False},
-                    "task_id": {"is_placeholder": False, "value": "OCR"},
+                    "task_id": {"is_placeholder": False, "value": "Ingestion"},
                     "version": version,
                 }
             ],

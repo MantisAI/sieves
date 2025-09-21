@@ -1,4 +1,6 @@
-from .chunking import Chunking
-from .ocr import OCR
+"""Preprocessing tasks."""
 
-__all__ = ["Chunking", "OCR"]
+from .chunking import Chunking
+from .ingestion import Ingestion
+
+__all__ = ["Chunking", "Ingestion"]

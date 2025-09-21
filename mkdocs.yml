@@ -50,11 +50,11 @@ nav:
     - Tasks:
       - tasks/task.md
       - Preprocessing:
-        - OCR:
-          - tasks/preprocessing/ocr/ocr.md
-          - tasks/preprocessing/ocr/docling.md
-          - tasks/preprocessing/ocr/unstructured.md
-          - tasks/preprocessing/ocr/marker.md
+        - Ingestion:
+          - tasks/preprocessing/ingestion/ingestion.md
+          - tasks/preprocessing/ingestion/docling.md
+          - tasks/preprocessing/ingestion/unstructured.md
+          - tasks/preprocessing/ingestion/marker.md
         - Chunking:
           - tasks/preprocessing/chunking/chunking.md
           - tasks/preprocessing/chunking/chonkie.md

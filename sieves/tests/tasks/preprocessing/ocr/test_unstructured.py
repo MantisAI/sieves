@@ -7,7 +7,7 @@ import unstructured.partition.auto
 
 from sieves import Doc, Pipeline
 from sieves.serialization import Config
-from sieves.tasks.preprocessing.ocr.unstructured_ import Unstructured
+from sieves.tasks.preprocessing.ingestion.unstructured_ import Unstructured
 
 
 @pytest.mark.parametrize("to_chunk", [True, False])
@@ -57,7 +57,7 @@ def test_serialization() -> None:
             "value": [
                 {
                     "cleaners": {"is_placeholder": True, "value": "builtins.tuple"},
-                    "cls_name": "sieves.tasks.preprocessing.ocr.unstructured_.Unstructured",
+                    "cls_name": "sieves.tasks.preprocessing.ingestion.unstructured_.Unstructured",
                     "include_meta": {"is_placeholder": False, "value": True},
                     "partition": {"is_placeholder": True, "value": "builtins.function"},
                     "show_progress": {"is_placeholder": False, "value": True},

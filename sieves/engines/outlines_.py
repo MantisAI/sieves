@@ -2,7 +2,7 @@
 
 import enum
 from collections.abc import Iterable
-from typing import Any, Literal, TypeAlias, override
+from typing import Any, Literal, override
 
 import outlines
 import pydantic
@@ -10,11 +10,11 @@ from outlines.models import AsyncBlackBoxModel, BlackBoxModel, SteerableModel
 
 from sieves.engines.core import Executable, PydanticEngine
 
-PromptSignature: TypeAlias = (
+PromptSignature = (
     pydantic.BaseModel | list[str] | str | outlines.types.Choice | outlines.types.Regex | outlines.types.JsonSchema
 )
-Model: TypeAlias = AsyncBlackBoxModel | BlackBoxModel | SteerableModel
-Result: TypeAlias = pydantic.BaseModel | str
+Model = AsyncBlackBoxModel | BlackBoxModel | SteerableModel
+Result = pydantic.BaseModel | str
 
 
 class InferenceMode(enum.Enum):
@@ -69,13 +69,18 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             """
 
             def generate(prompts: list[str]) -> Iterable[Result]:
-                if inference_mode == InferenceMode.json:
+                try:
                     results = generator.batch(prompts, **self._inference_kwargs)
+                # Batch mode is not implemented for all Outlines wrappers. Fall back to single-prompt mode in that case.
+                except NotImplementedError:
+                    results = [generator(prompt, **self._inference_kwargs) for prompt in prompts]
+
+                if inference_mode == InferenceMode.json:
                     assert len(results) == len(prompts)
                     assert isinstance(prompt_signature, type) and issubclass(prompt_signature, pydantic.BaseModel)
                     yield from [prompt_signature.model_validate_json(result) for result in results]
                 else:
-                    yield from generator.batch(prompts, **self._inference_kwargs)
+                    yield from results
 
             yield from self._infer(
                 generate,
