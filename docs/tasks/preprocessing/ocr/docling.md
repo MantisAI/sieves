@@ -1,3 +1,3 @@
 # Docling
 
-::: sieves.tasks.preprocessing.ocr.docling_
+::: sieves.tasks.preprocessing.ingestion.docling_

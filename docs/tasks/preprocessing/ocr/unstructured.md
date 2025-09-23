@@ -1,3 +1,3 @@
 # unstructured
 
-::: sieves.tasks.preprocessing.ocr.unstructured_
+::: sieves.tasks.preprocessing.ingestion.unstructured_

@@ -46,20 +46,20 @@ class Ingestion(Task):
         self._export_format = export_format
         self._converter = converter
         self._kwargs = kwargs
-        self._task = self._init_ocr_task()
+        self._task = self._init_ingestion_task()
 
-    def _init_ocr_task(self) -> Task:
+    def _init_ingestion_task(self) -> Task:
         """Initialize the bridge for the specific Ingestion implementation.
 
         :return: Ingestion bridge implementation.
         """
         converter_type = type(self._converter)
-        ocr_task: Task
+        ingestion_task: Task
         match converter_type:
             case converter if issubclass(
                 converter, (marker.converters.pdf.PdfConverter | marker.converters.table.TableConverter)
             ):
-                ocr_task = marker_.Marker(
+                ingestion_task = marker_.Marker(
                     converter=self._converter,
                     export_format=self._export_format,
                     task_id=self.id,
@@ -68,7 +68,7 @@ class Ingestion(Task):
                     **self._kwargs,
                 )
             case docling.document_converter.DocumentConverter:
-                ocr_task = docling_.Docling(
+                ingestion_task = docling_.Docling(
                     converter=self._converter,
                     export_format=self._export_format,
                     task_id=self.id,
@@ -80,8 +80,8 @@ class Ingestion(Task):
                     f"converter type {self._converter} is not supported. Please check the documentation "
                     f"and ensure you're providing a supported converter type."
                 )
-        assert isinstance(ocr_task, Task)
-        return ocr_task
+        assert isinstance(ingestion_task, Task)
+        return ingestion_task
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Process documents with Ingestion to extract text.
