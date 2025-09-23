@@ -1,3 +1,3 @@
 # Marker
 
-::: sieves.tasks.preprocessing.ocr.core
+::: sieves.tasks.preprocessing.ingestion.core
