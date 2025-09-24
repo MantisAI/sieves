@@ -32,7 +32,6 @@ def test_serialization(tokenizer) -> None:
                     "chunker": {"is_placeholder": True, "value": "chonkie.chunker.token.TokenChunker"},
                     "cls_name": "sieves.tasks.preprocessing.chunking.chonkie_.Chonkie",
                     "include_meta": {"is_placeholder": False, "value": False},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Chonkie"},
                     "version": Config.get_version(),
                 }

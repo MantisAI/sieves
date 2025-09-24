@@ -95,7 +95,6 @@ def test_serialization(translation_docs, batch_engine) -> None:
                     "include_meta": {"is_placeholder": False, "value": True},
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Translation"},
                     "to": {"is_placeholder": False, "value": "Spanish"},
                     "version": Config.get_version(),

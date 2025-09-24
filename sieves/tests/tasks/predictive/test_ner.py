@@ -89,7 +89,6 @@ def test_serialization(ner_docs, batch_engine) -> None:
                     "include_meta": {"is_placeholder": False, "value": True},
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "NER"},
                     "version": Config.get_version(),
                 },

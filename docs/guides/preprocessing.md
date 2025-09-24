@@ -158,17 +158,9 @@ for i, chunk in enumerate(processed_doc.chunks):
 
 ## Customizing Preprocessing
 
-### Progress Bars
+### Progress
 
-All preprocessing tasks support progress bars. You can enable/disable them:
-
-```python
-parser = tasks.preprocessing.Ingestion(show_progress=True)
-chunker = tasks.preprocessing.Chonkie(
-    chunker=chonkie.TokenChunker(tokenizer),
-    show_progress=True
-)
-```
+Progress bars are shown at the pipeline level. Tasks do not expose progress options.
 
 ### Metadata
 

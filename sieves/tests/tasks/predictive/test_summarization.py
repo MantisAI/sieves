@@ -103,7 +103,6 @@ def test_serialization(summarization_docs, batch_engine) -> None:
                     "n_words": {"is_placeholder": False, "value": 10},
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Summarization"},
                     "version": Config.get_version(),
                 }

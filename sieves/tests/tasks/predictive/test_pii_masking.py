@@ -98,7 +98,6 @@ def test_serialization(pii_masking_docs, batch_engine) -> None:
                     "pii_types": {"is_placeholder": False, "value": None},
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "PIIMasking"},
                     "version": Config.get_version(),
                 }

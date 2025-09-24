@@ -112,7 +112,6 @@ def test_serialization(information_extraction_docs, batch_engine) -> None:
                     "include_meta": {"is_placeholder": False, "value": True},
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "InformationExtraction"},
                     "version": Config.get_version(),
                 }

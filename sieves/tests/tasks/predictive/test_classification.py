@@ -157,7 +157,6 @@ def test_serialization(classification_docs, batch_engine) -> None:
                     "labels": {"is_placeholder": False, "value": ["science", "politics"]},
                     "prompt_signature_desc": {"is_placeholder": False, "value": None},
                     "prompt_template": {"is_placeholder": False, "value": None},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "classifier"},
                     "version": Config.get_version(),
                     "label_descriptions": {"is_placeholder": False, "value": label_descriptions},

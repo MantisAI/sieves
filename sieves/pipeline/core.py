@@ -5,10 +5,11 @@ from __future__ import annotations
 import copy
 import itertools
 import typing
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sized
 from pathlib import Path
 from typing import Any
 
+import tqdm
 from loguru import logger
 
 from sieves.data import Doc
@@ -112,11 +113,11 @@ class Pipeline:
         :param in_place: Whether to modify documents in-place or create copies.
         :return Iterable[Doc]: Processed documents.
         """
+        n_docs: int | None = len(docs) if isinstance(docs, Sized) else None
         docs_iters = itertools.tee(docs if in_place else (copy.deepcopy(doc) for doc in docs), 2)
         processed_docs = self._get_unseen_unique_docs(docs_iters[0]) if self._use_cache else docs_iters[0]
 
         for i, task in enumerate(self._tasks):
-            logger.info(f"Running task {task.id} ({i + 1}/{len(self._tasks)} tasks).")
             processed_docs = task(processed_docs)
 
         # If returned docs are not iterators (e.g. returned as lists), get corresponding iterators.
@@ -124,7 +125,7 @@ class Pipeline:
             processed_docs = iter(processed_docs)
 
         # Iterate over all docs. Retrieve doc from cache if available, otherwise add to cache.
-        for i, doc in enumerate(docs_iters[1]):
+        for i, doc in tqdm.tqdm(enumerate(docs_iters[1]), desc="Running pipeline", total=n_docs):
             assert doc.text or doc.uri
             self._cache_stats["total"] += 1
             # Docs must either all have URIs or texts. Either is a sufficient identifier. If first task is Ingestion

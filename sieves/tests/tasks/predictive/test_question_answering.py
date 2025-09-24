@@ -26,8 +26,8 @@ def test_run(qa_docs, batch_engine, fewshot):
     fewshot_examples = [
         question_answering.FewshotExample(
             text="""
-            Physics is the scientific study of matter, its fundamental constituents, its motion and behavior through 
-            space and time, and the related entities of energy and force. Physics is one of the most fundamental 
+            Physics is the scientific study of matter, its fundamental constituents, its motion and behavior through
+            space and time, and the related entities of energy and force. Physics is one of the most fundamental
             scientific disciplines. A scientist who specializes in the field of physics is called a physicist.
             """,
             reasoning="The text states ad verbatim what a scientist specializing in physics is called.",
@@ -36,9 +36,9 @@ def test_run(qa_docs, batch_engine, fewshot):
         ),
         question_answering.FewshotExample(
             text="""
-            A biologist is a scientist who conducts research in biology. Biologists are interested in studying life on 
-            Earth, whether it is an individual cell, a multicellular organism, or a community of interacting 
-            populations. They usually specialize in a particular branch (e.g., molecular biology, zoology, and 
+            A biologist is a scientist who conducts research in biology. Biologists are interested in studying life on
+            Earth, whether it is an individual cell, a multicellular organism, or a community of interacting
+            populations. They usually specialize in a particular branch (e.g., molecular biology, zoology, and
             evolutionary biology) of biology and have a specific research focus (e.g., studying malaria or cancer).
             """,
             reasoning="The states ad verbatim that biologists are interested in studying life on earth.",
@@ -143,7 +143,6 @@ def test_serialization(qa_docs, batch_engine) -> None:
                             "What the goal of the science as " "described in the text?",
                         ],
                     },
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "qa"},
                     "version": Config.get_version(),
                 }
