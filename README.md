@@ -98,7 +98,7 @@ from sieves import Pipeline, Engine, tasks, Doc
 # 1. Define documents by text or URI.
 docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
-# 2. Create pipeline with tasks.
+# 2. Create pipeline with tasks (verbose init).
 pipe = Pipeline(
     # 3. Add classification task to pipeline.
     # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you
@@ -109,6 +109,12 @@ pipe = Pipeline(
 # 4. Run pipe and output results.
 for doc in pipe(docs):
   print(doc.results)
+
+# Tip: Pipelines can also be composed succinctly via chaining (>>).
+# For multi-step pipelines, you can write:
+#   pipe = tasks.Ingestion(export_format="markdown") >> tasks.Chunking(chunker) >> tasks.Classification(labels=[...], engine=Engine())
+# Note: additional Pipeline parameters (e.g., use_cache=False) are only available via the verbose init,
+# e.g., Pipeline([t1, t2], use_cache=False).
 ```
 
 <details>
