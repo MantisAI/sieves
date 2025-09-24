@@ -108,3 +108,120 @@ def test_caching(batch_engine) -> None:
 def test_engine_imports() -> None:
     """Tests direct engine imports."""
     from sieves.engines import VLLM, DSPy, GliX, HuggingFace, Instructor, LangChain, Ollama, Outlines  # noqa: F401
+
+
+def test_rshift_task_task(dummy_docs) -> None:
+    """Chaining two tasks with ``>>`` yields a working Pipeline with both results."""
+
+    class DummyTask(tasks.Task):
+        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+            _docs = list(_docs)
+            for _doc in _docs:
+                _doc.results[self._task_id] = "ok"
+            yield from _docs
+
+    pipe = (
+        DummyTask(task_id="t1", show_progress=False, include_meta=False)
+        >> DummyTask(task_id="t2", show_progress=False, include_meta=False)
+    )
+
+    assert isinstance(pipe, Pipeline)
+    docs = list(pipe(dummy_docs))
+    assert len(docs) == 2
+    for d in docs:
+        assert d.results["t1"] == "ok"
+        assert d.results["t2"] == "ok"
+
+
+def test_rshift_pipeline_task_and_task_pipeline(dummy_docs) -> None:
+    """Chaining Pipeline>>Task and Task>>Pipeline produces identical outputs order-wise."""
+
+    class DummyTask(tasks.Task):
+        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+            _docs = list(_docs)
+            for _doc in _docs:
+                _doc.results[self._task_id] = "ok"
+            yield from _docs
+
+    t1 = DummyTask(task_id="t1", show_progress=False, include_meta=False)
+    t2 = DummyTask(task_id="t2", show_progress=False, include_meta=False)
+
+    p1 = Pipeline([t1])
+    p2 = p1 >> t2
+    p3 = t1 >> Pipeline([t2])
+
+    for p in (p2, p3):
+        docs = list(p(dummy_docs))
+        assert len(docs) == 2
+        for d in docs:
+            assert d.results["t1"] == "ok"
+            assert d.results["t2"] == "ok"
+
+
+def test_rshift_pipeline_pipeline(dummy_docs) -> None:
+    """Chaining Pipeline>>Pipeline concatenates tasks and preserves left cache semantics."""
+
+    class DummyTask(tasks.Task):
+        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+            _docs = list(_docs)
+            for _doc in _docs:
+                _doc.results[self._task_id] = "ok"
+            yield from _docs
+
+    p_left = Pipeline([DummyTask(task_id="left", show_progress=False, include_meta=False)])
+    p_right = Pipeline([DummyTask(task_id="right", show_progress=False, include_meta=False)])
+
+    p = p_left >> p_right
+    docs = list(p(dummy_docs))
+    for d in docs:
+        assert d.results["left"] == "ok"
+        assert d.results["right"] == "ok"
+
+
+def test_rshift_does_not_mutate_originals() -> None:
+    """Chaining should not mutate the original Task or Pipeline instances."""
+
+    class DummyTask(tasks.Task):
+        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+            yield from _docs
+
+    t1 = DummyTask(task_id="t1", show_progress=False, include_meta=False)
+    t2 = DummyTask(task_id="t2", show_progress=False, include_meta=False)
+
+    p1 = Pipeline([t1])
+    p2 = Pipeline([t2])
+    p3 = p1 >> p2
+
+    assert len(p1._tasks) == 1
+    assert len(p2._tasks) == 1
+    assert len(p3._tasks) == 2
+    assert p3._tasks[0] is t1 and p3._tasks[1] is t2
+
+
+def test_rshift_cache_semantics(dummy_docs) -> None:
+    """Verify cache propagation rules for all supported chaining combinations."""
+
+    class DummyTask(tasks.Task):
+        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+            yield from _docs
+
+    t1 = DummyTask(task_id="t1", show_progress=False, include_meta=False)
+    t2 = DummyTask(task_id="t2", show_progress=False, include_meta=False)
+
+    p_uncached = Pipeline([t1], use_cache=False)
+    p_cached = Pipeline([t2], use_cache=True)
+
+    # Left pipeline wins
+    p = p_uncached >> p_cached
+    assert p._use_cache is False
+
+    p = p_uncached >> t2
+    assert p._use_cache is False
+
+    # Task >> Pipeline adopts right pipeline cache
+    p = t1 >> p_cached
+    assert p._use_cache is True
+
+    # Task >> Task defaults to True
+    p = t1 >> t2
+    assert p._use_cache is True

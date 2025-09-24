@@ -25,12 +25,18 @@ doc = Doc(text="Special relativity applies to all physical phenomena in the abse
 # Initialize the engine (using a small but capable model)
 engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
 
-# Create and run the pipeline
+# Create and run the pipeline (verbose init)
 pipeline = Pipeline([tasks.predictive.Classification(labels=["science", "politics"], engine=engine)])
 
 # Print the classification result
 for doc in pipeline([doc]):
     print(doc.results)
+
+# Alternatively: succinct chaining with >>
+# (useful when you have multiple tasks)
+# classifier = tasks.predictive.Classification(labels=["science", "politics"], engine=engine)
+# pipeline = classifier  # single-task pipeline
+# Note: set additional Pipeline params (e.g., use_cache=False) only via verbose init.
 ```
 
 ## Working with Documents
@@ -91,11 +97,13 @@ extractor = tasks.predictive.InformationExtraction(
     engine=engine
 )
 
-# Create the pipeline
-pipeline = Pipeline([
-    chunker,
-    extractor
-])
+# Create the pipeline (verbose init)
+pipeline = Pipeline([chunker, extractor])
+
+# Alternatively: succinct chaining (>>)
+# pipeline = chunker >> extractor
+# Note: to change Pipeline parameters (e.g., use_cache), use the verbose form
+#   Pipeline([chunker, extractor], use_cache=False)
 
 # Process a PDF document
 doc = Doc(text="Marie Curie died at the age of 66 years.")
@@ -118,4 +126,4 @@ for result in results:
 - [`transformers`](https://github.com/huggingface/transformers)
 - [`ollama`](https://github.com/ollama/ollama)
 
-You can pass in models from either of these structured generation libraries into `Engine`.   
+You can pass in models from either of these structured generation libraries into `Engine`.

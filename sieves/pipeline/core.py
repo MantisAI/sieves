@@ -46,6 +46,22 @@ class Pipeline:
         self._tasks.extend(tasks)
         self._validate_tasks()
 
+    @property
+    def tasks(self) -> list[Task]:
+        """Return tasks.
+
+        :return: List of tasks.
+        """
+        return self._tasks
+
+    @property
+    def use_cache(self) -> bool:
+        """Return whether pipeline uses cache.
+
+        :return: Whether pipeline uses cache.
+        """
+        return self._use_cache
+
     def _validate_tasks(self) -> None:
         """Validate tasks.
 
@@ -217,3 +233,26 @@ class Pipeline:
                 return task
 
         raise KeyError(f"No task with ID {task_id} exists in this pipeline.")
+
+    def __rshift__(self, other: Task | Pipeline) -> Pipeline:
+        """Chain this pipeline with another task or pipeline using ``>>``.
+
+        This returns a new pipeline that executes all tasks of this pipeline first,
+        followed by the task(s) provided via ``other``. The original pipeline(s)
+        and task(s) are not mutated.
+
+        Cache semantics:
+        - The resulting pipeline preserves this pipeline's ``use_cache`` setting
+          regardless of whether ``other`` is a task or pipeline.
+
+        :param other: A ``Task`` or another ``Pipeline`` to execute after this pipeline.
+        :return: A new ``Pipeline`` representing the chained execution.
+        :raises TypeError: If ``other`` is not a ``Task`` or ``Pipeline``.
+        """
+        if isinstance(other, Pipeline):
+            return Pipeline(tasks=[*self._tasks, *other._tasks], use_cache=self._use_cache)
+
+        if isinstance(other, Task):
+            return Pipeline(tasks=[*self._tasks, other], use_cache=self._use_cache)
+
+        raise TypeError(f"Cannot chain Pipeline with {type(other).__name__}")

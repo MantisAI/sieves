@@ -1,12 +1,12 @@
 # `sieves`
 
-`sieves` is a Python library designed for zero-shot and few-shot NLP tasks that focuses on structured generation, 
-allowing developers to build production-ready NLP prototypes without requiring training data. It provides a unified 
-interface that wraps popular NLP tools (like `outlines`, `dspy`, `langchain`, and others) while ensuring structured 
+`sieves` is a Python library designed for zero-shot and few-shot NLP tasks that focuses on structured generation,
+allowing developers to build production-ready NLP prototypes without requiring training data. It provides a unified
+interface that wraps popular NLP tools (like `outlines`, `dspy`, `langchain`, and others) while ensuring structured
 outputs and observability.
 
-It bundles common NLP utilities, document parsing, and text chunking capabilities together with ready-to-use tasks like 
-classification and information extraction, all organized in an observable pipeline architecture. It's particularly 
+It bundles common NLP utilities, document parsing, and text chunking capabilities together with ready-to-use tasks like
+classification and information extraction, all organized in an observable pipeline architecture. It's particularly
 valuable for rapid prototyping scenarios where structured output is needed but training data is scarce.
 
 
@@ -48,7 +48,7 @@ pip install "sieves[engines]"
 
 `sieves` is built around five key components:
 
-1. **`Pipeline`**: The main orchestrator that runs your NLP tasks sequentially
+1. **`Pipeline`**: The main orchestrator that runs your NLP tasks sequentially (define with `Pipeline([...])` or chain with `>>`)
 2. **`Task`**: Pre-built or custom NLP operations (classification, extraction, etc.)
 3. **`Engine`**: Backend implementations that power the tasks (outlines, dspy, langchain, etc.)
 4. **`Bridge`**: Connectors between Tasks and Engines
@@ -82,5 +82,5 @@ We've prepared several guides to help you get up to speed quickly:
 - Learn about custom task creation
 - Understand different engine configurations
 
-Consult the API reference for each component you're working with if you have specific question. They contain detailed 
+Consult the API reference for each component you're working with if you have specific question. They contain detailed
 information about parameters, configurations, and best practices.
