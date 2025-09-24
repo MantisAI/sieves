@@ -152,6 +152,8 @@ pipe = Pipeline(
         tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
     ]
 )
+# Alternatively you can also construct a pipeline by using the >> operators:
+# pipe = tasks.Ingestion(export_format="markdown") >> tasks.Chunking(chunker) >> tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)
 
 # 7. Run pipe and output results.
 docs = list(pipe(docs))
