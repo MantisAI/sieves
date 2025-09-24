@@ -41,7 +41,7 @@ if __name__ == '__main__':
     )
 
     pipe = (
-        tasks.Ingestion(export_format="markdown") >>
+        tasks.Ingestion(export_format="markdown") +
         tasks.InformationExtraction(entity_type=Country, engine=engine)
     )
 

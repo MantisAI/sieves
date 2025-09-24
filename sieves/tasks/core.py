@@ -47,17 +47,16 @@ class Task(abc.ABC):
         :return: Processed docs.
         """
 
-    def __rshift__(self, other: Task | Pipeline) -> Pipeline:
-        """Chain this task with another task or pipeline using the ``>>`` operator.
+    def __add__(self, other: Task | Pipeline) -> Pipeline:
+        """Chain this task with another task or pipeline using the ``+`` operator.
 
-        This returns a new ``Pipeline`` that executes this task first, followed by the task(s) in ``other``. The
-        original task(s)/pipeline are not mutated.
+        This returns a new ``Pipeline`` that executes this task first, followed by the
+        task(s) in ``other``. The original task(s)/pipeline are not mutated.
 
         Cache semantics:
         - If ``other`` is a ``Pipeline``, the resulting pipeline adopts ``other``'s
           ``use_cache`` setting (because the left-hand side is a single task).
-        - If ``other`` is a ``Task``, the resulting pipeline defaults to
-          ``use_cache=True``.
+        - If ``other`` is a ``Task``, the resulting pipeline defaults to ``use_cache=True``.
 
         :param other: A ``Task`` or ``Pipeline`` to execute after this task.
         :return: A new ``Pipeline`` representing the chained execution.

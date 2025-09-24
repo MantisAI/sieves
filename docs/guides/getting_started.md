@@ -32,7 +32,7 @@ pipeline = Pipeline([tasks.predictive.Classification(labels=["science", "politic
 for doc in pipeline([doc]):
     print(doc.results)
 
-# Alternatively: succinct chaining with >>
+# Alternatively: succinct chaining with +
 # (useful when you have multiple tasks)
 # classifier = tasks.predictive.Classification(labels=["science", "politics"], engine=engine)
 # pipeline = classifier  # single-task pipeline
@@ -100,8 +100,8 @@ extractor = tasks.predictive.InformationExtraction(
 # Create the pipeline (verbose init)
 pipeline = Pipeline([chunker, extractor])
 
-# Alternatively: succinct chaining (>>)
-# pipeline = chunker >> extractor
+# Alternatively: succinct chaining (+)
+# pipeline = chunker + extractor
 # Note: to change Pipeline parameters (e.g., use_cache), use the verbose form
 #   Pipeline([chunker, extractor], use_cache=False)
 

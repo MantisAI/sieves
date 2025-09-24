@@ -48,7 +48,7 @@ pip install "sieves[engines]"
 
 `sieves` is built around five key components:
 
-1. **`Pipeline`**: The main orchestrator that runs your NLP tasks sequentially (define with `Pipeline([...])` or chain with `>>`)
+1. **`Pipeline`**: The main orchestrator that runs your NLP tasks sequentially (define with `Pipeline([...])` or chain with `+`)
 2. **`Task`**: Pre-built or custom NLP operations (classification, extraction, etc.)
 3. **`Engine`**: Backend implementations that power the tasks (outlines, dspy, langchain, etc.)
 4. **`Bridge`**: Connectors between Tasks and Engines
