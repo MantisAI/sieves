@@ -40,11 +40,9 @@ if __name__ == '__main__':
         )
     )
 
-    pipe = Pipeline(
-        [
-            tasks.Ingestion(export_format="markdown"),
-            tasks.InformationExtraction(entity_type=Country, engine=engine),
-        ]
+    pipe = (
+        tasks.Ingestion(export_format="markdown") >>
+        tasks.InformationExtraction(entity_type=Country, engine=engine)
     )
 
     for doc in pipe(docs):
