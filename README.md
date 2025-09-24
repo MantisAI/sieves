@@ -110,9 +110,9 @@ pipe = Pipeline(
 for doc in pipe(docs):
   print(doc.results)
 
-# Tip: Pipelines can also be composed succinctly via chaining (>>).
+# Tip: Pipelines can also be composed succinctly via chaining (+).
 # For multi-step pipelines, you can write:
-#   pipe = tasks.Ingestion(export_format="markdown") >> tasks.Chunking(chunker) >> tasks.Classification(labels=[...], engine=Engine())
+#   pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(labels=[...], engine=Engine())
 # Note: additional Pipeline parameters (e.g., use_cache=False) are only available via the verbose init,
 # e.g., Pipeline([t1, t2], use_cache=False).
 ```
@@ -152,8 +152,8 @@ pipe = Pipeline(
         tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
     ]
 )
-# Alternatively you can also construct a pipeline by using the >> operators:
-# pipe = tasks.Ingestion(export_format="markdown") >> tasks.Chunking(chunker) >> tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)
+# Alternatively you can also construct a pipeline by using the + operators:
+# pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)
 
 # 7. Run pipe and output results.
 docs = list(pipe(docs))

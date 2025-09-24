@@ -45,6 +45,7 @@ class Pipeline:
         """
         self._tasks.extend(tasks)
         self._validate_tasks()
+        self._set_distillation_targets()
 
     @property
     def tasks(self) -> list[Task]:
@@ -234,10 +235,10 @@ class Pipeline:
 
         raise KeyError(f"No task with ID {task_id} exists in this pipeline.")
 
-    def __rshift__(self, other: Task | Pipeline) -> Pipeline:
-        """Chain this pipeline with another task or pipeline using ``>>``.
+    def __add__(self, other: Task | Pipeline) -> Pipeline:
+        """Chain this pipeline with another task or pipeline using ``+``.
 
-        This returns a new pipeline that executes all tasks of this pipeline first,
+        Returns a new pipeline that executes all tasks of this pipeline first,
         followed by the task(s) provided via ``other``. The original pipeline(s)
         and task(s) are not mutated.
 
@@ -256,3 +257,25 @@ class Pipeline:
             return Pipeline(tasks=[*self._tasks, other], use_cache=self._use_cache)
 
         raise TypeError(f"Cannot chain Pipeline with {type(other).__name__}")
+
+    def __iadd__(self, other: Task | Pipeline) -> Pipeline:
+        """Append a task or pipeline to this pipeline in-place using ``+=``.
+
+        Extending with a pipeline appends all tasks from ``other``. Cache setting
+        remains unchanged and follows this (left) pipeline.
+
+        Revalidates the pipeline and updates distillation targets.
+
+        :param other: Task or Pipeline to append.
+        :return: This pipeline instance (mutated).
+        :raises TypeError: If ``other`` is not a ``Task`` or ``Pipeline``.
+        """
+        if isinstance(other, Task):
+            self._tasks.append(other)
+        elif isinstance(other, Pipeline):
+            self._tasks.extend(other._tasks)
+        else:
+            raise TypeError(f"Can only add Task or Pipeline to Pipeline with +=, got {type(other).__name__}")
+        self._validate_tasks()
+        self._set_distillation_targets()
+        return self
