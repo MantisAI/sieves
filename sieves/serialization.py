@@ -79,13 +79,7 @@ class Config(pydantic.BaseModel):
 
         :return str: Version string from setup.cfg metadata.
         """
-        # TODO This doesn't work in PyPi package. Alternative way to fetch version dynamically?
-        # config = configparser.ConfigParser()
-        # setup_cfg = Path(__file__).parent.parent / "setup.cfg"
-        # config.read(setup_cfg)
-        # version = config["metadata"]["version"]
-
-        return "0.12.0"
+        return "0.13.0"
 
     version: str = get_version()
     cls_name: str

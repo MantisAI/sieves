@@ -14,7 +14,7 @@ import openai
 import outlines
 import pydantic
 
-from sieves import Doc, Engine, Pipeline, tasks
+from sieves import Doc, Engine, tasks
 
 
 class Country(pydantic.BaseModel, frozen=True):
