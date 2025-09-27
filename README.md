@@ -258,9 +258,100 @@ from this angle, there are two ways to explain why we settled on this name (pick
 Asked differently: what are the benefits of using `sieves` over directly interacting with an LLM?
 - Validated, structured data output - also for LLMs that don't offer structured outputs natively.  Zero-/few-shot language models can be finicky without guardrails or parsing.
 - A step-by-step pipeline, making it easier to debug and track each stage.
-- The flexibility to switch between different models and ways to ensure structured and validated output.
+    - The flexibility to switch between different models and ways to ensure structured and validated output.
+
+---
+
+### How to create models
+
+Below are minimal examples for creating model objects for each supported structured‑generation tool. Pass these `model` objects directly to tasks, optionally with `GenerationSettings`.
+
+- DSPy
+
+  ```python
+  import os
+  import dspy
+
+  # Anthropic example (set ANTHROPIC_API_KEY in your environment)
+  model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
+
+  # Tip: For local via Ollama, configure api_base and blank api_key:
+  # model = dspy.LM("smollm:135m-instruct-v0.2-q8_0", api_base="http://localhost:11434", api_key="")
+  ```
+
+- GLiNER
+
+  ```python
+  import gliner
+  model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
+  ```
+
+- LangChain
+
+  ```python
+  from langchain.chat_models import init_chat_model
+  import os
+
+  model = init_chat_model(
+      model="claude-3-haiku-20240307",
+      api_key=os.environ["ANTHROPIC_API_KEY"],
+      model_provider="anthropic",
+  )
+  ```
+
+- Instructor
+
+  ```python
+  import anthropic
+  import instructor
+  from sieves.engines.instructor_ import Model
+  import os
+
+  client = instructor.from_anthropic(anthropic.AsyncClient(api_key=os.environ["ANTHROPIC_API_KEY"]))
+  model = Model(name="claude-3-haiku-20240307", client=client)
+  ```
+
+- Hugging Face Transformers (zero‑shot classification)
+
+  ```python
+  from transformers import pipeline
+
+  model = pipeline(
+      "zero-shot-classification",
+      model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33",
+  )
+  ```
+
+- Ollama (local server)
+
+  ```python
+  from sieves.engines.ollama_ import Model
+
+  # Ensure `ollama serve` is running and the model is pulled (e.g., `ollama run smollm:135m-instruct-v0.2-q8_0`).
+  model = Model(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
+  ```
+
+- Outlines
+
+  ```python
+  import outlines
+  from transformers import AutoModelForCausalLM, AutoTokenizer
+
+  model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+  # Outlines supports different backends, also remote ones. We use a local `transformers` model here.
+  model = outlines.models.from_transformers(
+      AutoModelForCausalLM.from_pretrained(model_name),
+      AutoTokenizer.from_pretrained(model_name),
+  )
+  ```
+
+**Notes**
+- Provide provider API keys via environment variables (e.g., `ANTHROPIC_API_KEY`).
+- Some backends (e.g., DSPy) can be pointed to a local Ollama server via `api_base`.
+- After you have a `model`, use it in tasks like: `tasks.predictive.Classification(labels=[...], model=model)`.
 - A bunch of useful utilities for pre- and post-processing you might need.
 - An array of useful tasks you can right of the bat without having to roll your own.
+- Look up the respective tool's documentation for more information.
 
 ### Why use `sieves` and not a structured generation library, like `outlines`, directly?
 
