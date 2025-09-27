@@ -198,7 +198,7 @@ with open("docs.pkl", "rb") as f:
 
 ### Core Concepts
 
-`sieves` is built on five key abstractions.
+`sieves` is built on six key abstractions.
 
 #### **`Pipeline`**
 Orchestrates task execution with features for.
@@ -218,7 +218,7 @@ Encapsulates a single processing step in a pipeline.
 - Wraps and initializes `Bridge` instances handling task-engine-specific logic
 - Implements task-specific dataset export
 
-#### GenerationSettings
+#### `GenerationSettings`
 Controls behavior of structured generation across tasks.
 - Batch size
 - Strict mode (whether errors in parsing individual documents should terminate execution)
