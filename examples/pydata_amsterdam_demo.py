@@ -33,14 +33,12 @@ if __name__ == '__main__':
         )
     ]
 
-    engine = Engine(
-        model=outlines.from_openai(
-            openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"]),
-            model_name="gpt-5-mini"
-        )
+    model = outlines.from_openai(
+        openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"]),
+        model_name="gpt-5-mini"
     )
 
-    pipe = tasks.Ingestion() + tasks.InformationExtraction(entity_type=Country, model=engine)
+    pipe = tasks.Ingestion() + tasks.InformationExtraction(entity_type=Country, model=model)
 
     for doc in pipe(docs):
         countries = defaultdict(list)

@@ -94,17 +94,19 @@ build modern NLP applications. It provides:
 Here's a simple classification example using [`outlines`](https://github.com/dottxt-ai/outlines):
 
 ```python
-from sieves import Pipeline, Engine, tasks, Doc
+from sieves import Pipeline, tasks, Doc
+import outlines
 
 # 1. Define documents by text or URI.
 docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
-# 2. Create pipeline with tasks (verbose init).
+# 2. Choose a model (Outlines in this example).
+model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+
+# 3. Create pipeline with tasks (verbose init).
 pipe = Pipeline(
-  # 3. Add classification task to pipeline.
-  # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you
-  # might want to consider upgrading to a different model for better results.
-  tasks.Classification(labels=["science", "politics"], model=Engine())
+  # Add classification task to pipeline.
+  tasks.Classification(labels=["science", "politics"], model=model)
 )
 
 # 4. Run pipe and output results.
@@ -113,7 +115,7 @@ for doc in pipe(docs):
 
 # Tip: Pipelines can also be composed succinctly via chaining (+).
 # For multi-step pipelines, you can write:
-#   pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(labels=[...], engine=Engine())
+#   pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(labels=[...], model=model)
 # Note: additional Pipeline parameters (e.g., use_cache=False) are only available via the verbose init,
 # e.g., Pipeline([t1, t2], use_cache=False).
 ```
@@ -131,14 +133,14 @@ import chonkie
 import tokenizers
 import docling.document_converter
 
-from sieves import Pipeline, Engine, tasks, Doc
+from sieves import Pipeline, tasks, Doc
 
 # 1. Define documents by text or URI.
 docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
-# 2. Create engine responsible for generating structured output.
+# 2. Choose a model for structured generation.
 model_name = 'knowledgator/gliner-multitask-v1.0'
-engine = Engine(model=gliner.GLiNER.from_pretrained(model_name))
+model = gliner.GLiNER.from_pretrained(model_name)
 
 # 3. Create chunker object.
 chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
@@ -151,11 +153,17 @@ pipe = Pipeline(
     # 5. Add chunking task to ensure we don't exceed our model's context window.
     tasks.Chunking(chunker),
     # 6. Add classification task to pipeline.
-    tasks.Classification(task_id="classifier", labels=["science", "politics"], model=engine),
+    tasks.Classification(
+        task_id="classifier",
+        labels=["science", "politics"],
+        model=model,
+    ),
   ]
 )
 # Alternatively you can also construct a pipeline by using the + operators:
-# pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)
+# pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(
+#     task_id="classifier", labels=["science", "politics"], model=model
+# )
 
 # 7. Run pipe and output results.
 docs = list(pipe(docs))
@@ -174,7 +182,7 @@ loaded_pipe = Pipeline.load(
   (
     {"converter": docling.document_converter.DocumentConverter(), "export_format": "markdown"},
     {"chunker": chunker},
-    {"engine": {"model": engine.model}},
+    {"model": model},
   ),
 )
 with open("docs.pkl", "rb") as f:
@@ -207,10 +215,19 @@ Encapsulates a single processing step in a pipeline.
 - Implements task-specific dataset export
 
 #### **`Engine`**
-Provides a unified interface to structured generation libraries.
+Provides a unified interface to structured generation libraries (internal). You pass a backend model into tasks; the
+Engine is used under the hood.
 - Manages model interactions
 - Handles prompt execution
 - Standardizes output formats
+
+#### GenerationSettings (optional)
+Controls execution behavior across engines. You usually don't need to pass this — defaults are sensible:
+- batch_size: -1 (batch all inputs together)
+- strict_mode: False (on parse issues, return None instead of raising)
+- init_kwargs/inference_kwargs: None (use engine defaults)
+- config_kwargs: None (used by some backends like DSPy)
+Pass it only when you need non-defaults, e.g. small batches: `GenerationSettings(batch_size=8)` or `strict_mode=True`.
 
 #### **`Bridge`**
 Connects `Task` with `Engine`.

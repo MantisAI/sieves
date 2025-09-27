@@ -12,16 +12,13 @@ Here's a simple example of saving and loading a classification pipeline:
 
 ```python
 import outlines
-from sieves import Pipeline, Engine, tasks, Doc
+from sieves import Pipeline, tasks, Doc
 from pathlib import Path
 
 # Create a basic classification pipeline
 model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-engine = Engine(model=outlines.models.transformers(model_name))
-classifier = tasks.predictive.Classification(
-    labels=["science", "politics"],
-    model=engine
-)
+model = outlines.models.transformers(model_name)
+classifier = tasks.predictive.Classification(labels=["science", "politics"], model=model)
 pipeline = Pipeline([classifier])
 
 # Save the pipeline configuration
@@ -29,10 +26,7 @@ config_path = Path("classification_pipeline.yml")
 pipeline.dump(config_path)
 
 # Load the pipeline configuration
-loaded_pipeline = Pipeline.load(
-    config_path,
-    [{"engine": {"model": outlines.models.transformers(model_name)}}]
-)
+loaded_pipeline = Pipeline.load(config_path, [{"model": outlines.models.transformers(model_name)}])
 
 # Use the loaded pipeline
 doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
@@ -49,7 +43,7 @@ import chonkie
 import tokenizers
 import outlines
 import pydantic
-from sieves import Pipeline, Engine, tasks
+from sieves import Pipeline, tasks
 
 # Create a tokenizer for chunking
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
@@ -57,8 +51,7 @@ chunker = tasks.preprocessing.Chonkie(
     chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
 )
 
-# Create an information extraction task
-engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
+model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
 
 
 class PersonInfo(pydantic.BaseModel):
@@ -67,10 +60,7 @@ class PersonInfo(pydantic.BaseModel):
     occupation: str | None = None
 
 
-extractor = tasks.predictive.InformationExtraction(
-    entity_type=PersonInfo,
-    model=engine
-)
+extractor = tasks.predictive.InformationExtraction(entity_type=PersonInfo, model=model)
 
 # Create and save the pipeline
 pipeline = Pipeline([chunker, extractor])
@@ -80,10 +70,8 @@ pipeline.dump("extraction_pipeline.yml")
 loaded_pipeline = Pipeline.load(
     "extraction_pipeline.yml",
     [
-        # Parameters for the chunker
-        {"tokenizer": tokenizers.Tokenizer.from_pretrained("bert-base-uncased"), },
-        # Parameters for the extractor
-        {"engine": {"model": outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")}}
+        {"tokenizer": tokenizers.Tokenizer.from_pretrained("bert-base-uncased")},
+        {"model": outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")},
     ]
 )
 ```
@@ -130,7 +118,7 @@ The configuration file contains:
 
 !!! info Parameter management
 
-      When loading pipelines, provide all required initialization parameters and ensure you're loading a pipeline with a compatible `sieves` version.
+      When loading pipelines, provide all required initialization parameters (e.g. models) and ensure you're loading a pipeline with a compatible `sieves` version. `GenerationSettings` is optional unless you want to override defaults.
 
 !!! warning Limitations
 
