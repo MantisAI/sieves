@@ -30,7 +30,7 @@ Install `sieves` with `pip install sieves`. If you want to install all optional 
 
 > [!WARNING]
 > `sieves` is in active development and currently in beta. Be advised that the API might change in between minor version
-> changes.
+> updates.
 
 ### Why `sieves`?
 
