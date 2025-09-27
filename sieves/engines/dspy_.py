@@ -10,8 +10,8 @@ from typing import Any, override
 import dspy
 import pydantic
 
-from sieves.engines.core import Executable, InternalEngine
-from sieves.engines.utils import GenerationSettings
+from sieves.engines.core import Engine, Executable
+from sieves.engines.types import GenerationSettings
 
 PromptSignature = dspy.Signature | dspy.Module
 Model = dspy.LM | dspy.BaseLM
@@ -35,7 +35,7 @@ class InferenceMode(enum.Enum):
     module = dspy.Module
 
 
-class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for DSPy."""
 
     def __init__(self, model: Model, generation_settings: GenerationSettings):

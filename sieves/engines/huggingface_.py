@@ -10,7 +10,7 @@ import jinja2
 import pydantic
 import transformers
 
-from sieves.engines.core import Executable, InternalEngine
+from sieves.engines.core import Engine, Executable
 
 PromptSignature = list[str]
 Model = transformers.Pipeline
@@ -23,7 +23,7 @@ class InferenceMode(enum.Enum):
     zeroshot_cls = 0
 
 
-class HuggingFace(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
     """Engine adapter around ``transformers.Pipeline`` for zero‑shot tasks."""
 
     @override

@@ -11,13 +11,14 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineInferenceMode, EngineType  # noqa: F401
-from sieves.engines.utils import GenerationSettings
-from sieves.engines.wrapper import Model
+from sieves.engines import EngineInferenceMode, EngineType  # noqa: F401
+from sieves.engines.types import GenerationSettings
+from sieves.engines.utils import init_engine
 from sieves.serialization import Config
 from sieves.tasks.core import Task
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
+from sieves.tasks.types import Model
 
 
 class PredictiveTask(
@@ -52,11 +53,12 @@ class PredictiveTask(
         :param generation_settings: Settings for structured generation.
         """
         super().__init__(task_id=task_id, include_meta=include_meta)
-        self._engine = Engine(model, generation_settings)
+
+        self._engine = init_engine(model, generation_settings)
         self._overwrite = overwrite
         self._custom_prompt_template = prompt_template
         self._custom_prompt_signature_desc = prompt_signature_desc
-        self._bridge = self._init_bridge(self._engine.get_engine_type())
+        self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
         self._fewshot_examples = fewshot_examples
 
         self._validate_fewshot_examples()

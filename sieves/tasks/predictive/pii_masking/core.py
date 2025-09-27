@@ -9,7 +9,7 @@ import pydantic
 
 from sieves.data.doc import Doc
 from sieves.engines import EngineType, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
-from sieves.engines.utils import GenerationSettings
+from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask

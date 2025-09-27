@@ -10,7 +10,7 @@ from sieves.tasks.predictive.ner.core import Entity
 
 
 @pytest.mark.parametrize(
-    "batch_engine",
+    "batch_runtime",
     (
         EngineType.dspy,
         EngineType.instructor,
@@ -20,10 +20,10 @@ from sieves.tasks.predictive.ner.core import Entity
         EngineType.glix,
         # EngineType.vllm,
     ),
-    indirect=["batch_engine"],
+    indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run(ner_docs, batch_engine, fewshot) -> None:
+def test_run(ner_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         ner.TaskFewshotExample(
             text="John studied data science in Barcelona and lives with Jaume",
@@ -47,8 +47,8 @@ def test_run(ner_docs, batch_engine, fewshot) -> None:
     pipe = Pipeline(
         ner.NER(
             entities=["PERSON", "LOCATION", "COMPANY"],
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
             **fewshot_args
         )
     )
@@ -62,13 +62,13 @@ def test_run(ner_docs, batch_engine, fewshot) -> None:
         pipe["NER"].distill(None, None, None, None, None, None, None, None)
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_serialization(ner_docs, batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
+def test_serialization(ner_docs, batch_runtime) -> None:
     pipe = Pipeline(
         ner.NER(
             entities=["PERSON", "LOCATION", "COMPANY"],
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
         )
     )
 
@@ -99,16 +99,16 @@ def test_serialization(ner_docs, batch_engine) -> None:
  'version': Config.get_version()}
     Pipeline.deserialize(
         config=config,
-        tasks_kwargs=[{"model": batch_engine.model}],
+        tasks_kwargs=[{"model": batch_runtime.model}],
     )
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.glix], indirect=["batch_engine"])
-def test_to_hf_dataset(ner_docs, batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.glix], indirect=["batch_runtime"])
+def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
     task = ner.NER(
         entities=["PERSON", "LOCATION", "COMPANY"],
-        model=batch_engine.model,
-        generation_settings=batch_engine.generation_settings,
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
     )
 
     assert isinstance(task, PredictiveTask)

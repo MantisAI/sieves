@@ -16,11 +16,11 @@ from sieves.tasks.predictive import classification
 
 
 @pytest.mark.parametrize(
-    "batch_engine",
+    "batch_runtime",
     [EngineType.dspy],
-    indirect=["batch_engine"],
+    indirect=["batch_runtime"],
 )
-def test_serialization_pipeline(dummy_docs, batch_engine, tokenizer):
+def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
     """Tests serialization and deserialization of pipeline to files and config objects."""
     pipe = Pipeline(
         [
@@ -29,8 +29,8 @@ def test_serialization_pipeline(dummy_docs, batch_engine, tokenizer):
                 task_id="classifier",
                 labels=["science", "politics"],
                 label_descriptions={"science": "Everything about science.", "politics": "Everything about politics."},
-                model=batch_engine.model,
-                generation_settings=batch_engine.generation_settings,
+                model=batch_runtime.model,
+                generation_settings=batch_runtime.generation_settings,
             ),
         ]
     )

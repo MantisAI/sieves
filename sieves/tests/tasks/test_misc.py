@@ -13,7 +13,8 @@ import pydantic
 import pytest
 import transformers
 
-from sieves import Doc, Engine, Pipeline, engines, tasks
+from sieves import Doc, Pipeline, engines, tasks
+from sieves.engines.utils import init_default_model
 from sieves.tasks.utils import PydanticToHFDatasets
 
 
@@ -48,11 +49,11 @@ def test_run_readme_example_short() -> None:
     docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
     # Create pipeline with tasks.
-    eng = Engine()
+    model = init_default_model()
     pipe = Pipeline(
         # Run classification on provided document.
         tasks.predictive.Classification(
-            labels=["science", "politics"], model=eng.model, generation_settings=eng.generation_settings
+            labels=["science", "politics"], model=model
         )
     )
 
@@ -63,11 +64,11 @@ def test_run_readme_example_short() -> None:
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "batch_engine",
+    "batch_runtime",
     [engines.EngineType.glix],
     indirect=True,
 )
-def test_run_readme_example_long(batch_engine, tokenizer) -> None:
+def test_run_readme_example_long(batch_runtime, tokenizer) -> None:
     # Define documents by text or URI.
     # Readme example downlodads https://arxiv.org/pdf/2408.09869, but we'll use a local PDF here to speed up the test.
     docs = [Doc(uri=Path(__file__).parent.parent / "assets" / "1204.0162v2.pdf")]
@@ -80,7 +81,7 @@ def test_run_readme_example_long(batch_engine, tokenizer) -> None:
         tasks.Chunking(chonkie.TokenChunker(tokenizer)) +
         # Run classification on provided document.
         tasks.predictive.Classification(
-            labels=["science", "politics"], model=batch_engine.model, generation_settings=batch_engine.generation_settings
+            labels=["science", "politics"], model=batch_runtime.model, generation_settings=batch_runtime.generation_settings
         )
     )
 
@@ -100,7 +101,7 @@ def test_run_readme_example_long(batch_engine, tokenizer) -> None:
                 (
                     {"converter": docling.document_converter.DocumentConverter()},
                     {"chunker": chonkie.TokenChunker(tokenizer)},
-                    {"model": batch_engine.model},
+                    {"model": batch_runtime.model},
                 ),
             )
 

@@ -10,7 +10,7 @@ import ollama
 import pydantic
 
 from sieves.engines.core import Executable, PydanticEngine
-from sieves.engines.utils import GenerationSettings
+from sieves.engines.types import GenerationSettings
 
 
 class Model(pydantic.BaseModel):

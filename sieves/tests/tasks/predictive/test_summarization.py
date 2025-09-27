@@ -9,7 +9,7 @@ from sieves.tasks.predictive import summarization
 
 
 @pytest.mark.parametrize(
-    "batch_engine",
+    "batch_runtime",
     (
         EngineType.dspy,
         EngineType.glix,
@@ -19,10 +19,10 @@ from sieves.tasks.predictive import summarization
         EngineType.outlines,
         # EngineType.vllm,
     ),
-    indirect=["batch_engine"],
+    indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run(summarization_docs, batch_engine, fewshot) -> None:
+def test_run(summarization_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         summarization.FewshotExample(
             text="They counted: one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, "
@@ -45,8 +45,8 @@ def test_run(summarization_docs, batch_engine, fewshot) -> None:
     pipe = Pipeline([
         summarization.Summarization(
             n_words=10,
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
             **fewshot_args,
         )
     ])
@@ -61,12 +61,12 @@ def test_run(summarization_docs, batch_engine, fewshot) -> None:
         pipe["Summarization"].distill(None, None, None, None, None, None, None, None)
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_to_hf_dataset(summarization_docs, batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
+def test_to_hf_dataset(summarization_docs, batch_runtime) -> None:
     task = summarization.Summarization(
         n_words=10,
-        model=batch_engine.model,
-        generation_settings=batch_engine.generation_settings,
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
     )
     docs = task(summarization_docs)
 
@@ -84,13 +84,13 @@ def test_to_hf_dataset(summarization_docs, batch_engine) -> None:
         task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_serialization(summarization_docs, batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
+def test_serialization(summarization_docs, batch_runtime) -> None:
     pipe = Pipeline([
         summarization.Summarization(
             n_words=10,
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
         )
     ])
 
@@ -120,4 +120,4 @@ def test_serialization(summarization_docs, batch_engine) -> None:
  'use_cache': {'is_placeholder': False, 'value': True},
  'version': Config.get_version()}
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_engine.model}])
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}])

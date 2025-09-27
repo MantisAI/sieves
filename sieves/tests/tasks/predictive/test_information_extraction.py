@@ -15,7 +15,7 @@ class Person(pydantic.BaseModel, frozen=True):
 
 
 @pytest.mark.parametrize(
-    "batch_engine",
+    "batch_runtime",
     (
         EngineType.dspy,
         EngineType.instructor,
@@ -24,10 +24,10 @@ class Person(pydantic.BaseModel, frozen=True):
         EngineType.outlines,
         # EngineType.vllm,
     ),
-    indirect=["batch_engine"],
+    indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
+def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         information_extraction.FewshotExample(
             text="Ada Lovelace lived to 47 years old. Zeno of Citium died with 72 years.",
@@ -46,8 +46,8 @@ def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
         [
             tasks.predictive.InformationExtraction(
                 entity_type=Person,
-                model=batch_engine.model,
-                generation_settings=batch_engine.generation_settings,
+                model=batch_runtime.model,
+                generation_settings=batch_runtime.generation_settings,
                 **fewshot_args),
         ]
     )
@@ -62,10 +62,10 @@ def test_run(information_extraction_docs, batch_engine, fewshot) -> None:
         pipe["InformationExtraction"].distill(None, None, None, None, None, None, None, None)
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.ollama], indirect=["batch_engine"])
-def test_to_hf_dataset(information_extraction_docs, batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.ollama], indirect=["batch_runtime"])
+def test_to_hf_dataset(information_extraction_docs, batch_runtime) -> None:
     task = tasks.predictive.InformationExtraction(
-        entity_type=Person, model=batch_engine.model, generation_settings=batch_engine.generation_settings
+        entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings
     )
     docs = task(information_extraction_docs)
 
@@ -85,11 +85,11 @@ def test_to_hf_dataset(information_extraction_docs, batch_engine) -> None:
         task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.outlines], indirect=["batch_engine"])
-def test_serialization(information_extraction_docs, batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.outlines], indirect=["batch_runtime"])
+def test_serialization(information_extraction_docs, batch_runtime) -> None:
     pipe = Pipeline(
         tasks.predictive.InformationExtraction(
-            entity_type=Person, model=batch_engine.model, generation_settings=batch_engine.generation_settings,
+            entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings,
         )
     )
 
@@ -120,4 +120,4 @@ def test_serialization(information_extraction_docs, batch_engine) -> None:
  'use_cache': {'is_placeholder': False, 'value': True},
  'version': Config.get_version()}
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_engine.model, "entity_type": Person}])
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model, "entity_type": Person}])

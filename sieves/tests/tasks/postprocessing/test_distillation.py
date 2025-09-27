@@ -33,9 +33,9 @@ def _get_docs() -> list[Doc]:
     ]
 
 
-@pytest.mark.parametrize("batch_engine", (EngineType.huggingface,), indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_runtime", (EngineType.huggingface,), indirect=["batch_runtime"])
 @pytest.mark.parametrize("distillation_framework", DistillationFramework.all())
-def test_distillation_classification(batch_engine, distillation_framework) -> None:
+def test_distillation_classification(batch_runtime, distillation_framework) -> None:
     seed = 42
     base_model_id = "sentence-transformers/paraphrase-mpnet-base-v2"
     if distillation_framework == DistillationFramework.model2vec:
@@ -47,8 +47,8 @@ def test_distillation_classification(batch_engine, distillation_framework) -> No
         classifier = classification.Classification(
             task_id="classifier",
             labels=["science", "politics"],
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
@@ -105,8 +105,8 @@ def test_distillation_classification(batch_engine, distillation_framework) -> No
                 assert preds.shape[1] in (1, 2)
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
-def test_serialization(classification_docs, batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
+def test_serialization(classification_docs, batch_runtime) -> None:
     seed = 42
     dir_path: str | None
 
@@ -115,8 +115,8 @@ def test_serialization(classification_docs, batch_engine) -> None:
         classifier = classification.Classification(
             task_id="classifier",
             labels=["science", "politics"],
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
@@ -196,4 +196,4 @@ def test_serialization(classification_docs, batch_engine) -> None:
 
 
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_engine.model}, {}])
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}, {}])

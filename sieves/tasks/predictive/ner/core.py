@@ -21,7 +21,7 @@ from sieves.engines import (
     outlines_,
     vllm_,
 )
-from sieves.engines.utils import GenerationSettings
+from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask

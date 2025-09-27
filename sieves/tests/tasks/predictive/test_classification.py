@@ -9,10 +9,10 @@ from sieves.engines import EngineType
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
+from sieves.tests.conftest import Runtime
 
 
-def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool, multilabel: bool = True) -> None:
-    assert issubclass(engine.inference_modes, enum.Enum)
+def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = True) -> None:
     if multilabel:
         fewshot_examples = [
             classification.FewshotExampleMultiLabel(
@@ -57,8 +57,8 @@ def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool, multilabel: boo
             classification.Classification(
                 task_id="classifier",
                 labels=["science", "politics"],
-                model=engine.model,
-                generation_settings=engine.generation_settings,
+                model=runtime.model,
+                generation_settings=runtime.generation_settings,
                 label_descriptions=label_descriptions,
                 multi_label=multilabel,
                 **fewshot_args,
@@ -73,28 +73,28 @@ def _run(engine: engines.Engine, docs: list[Doc], fewshot: bool, multilabel: boo
         assert doc.results["classifier"]
 
 
-@pytest.mark.parametrize("batch_engine", EngineType.all(), indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
 @pytest.mark.parametrize("fewshot", [False])
 @pytest.mark.parametrize("multilabel", [True])
-def test_run(classification_docs, batch_engine, fewshot, multilabel):
-    _run(batch_engine, classification_docs, fewshot, multilabel)
+def test_run(classification_docs, batch_runtime, fewshot, multilabel):
+    _run(batch_runtime, classification_docs, fewshot, multilabel)
 
 
-@pytest.mark.parametrize("engine", EngineType.all(), indirect=["engine"])
+@pytest.mark.parametrize("runtime", EngineType.all(), indirect=["runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run_nonbatched(classification_docs, engine, fewshot):
-    _run(engine, classification_docs, fewshot)
+def test_run_nonbatched(classification_docs, runtime, fewshot):
+    _run(runtime, classification_docs, fewshot)
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
+@pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
 @pytest.mark.parametrize("multi_label", [True, False])
-def test_to_hf_dataset(classification_docs, batch_engine, multi_label) -> None:
+def test_to_hf_dataset(classification_docs, batch_runtime, multi_label) -> None:
     task = classification.Classification(
         task_id="classifier",
         multi_label=multi_label,
         labels=["science", "politics"],
-        model=batch_engine.model,
-        generation_settings=batch_engine.generation_settings,
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
     )
 
     assert isinstance(task, PredictiveTask)
@@ -118,8 +118,8 @@ def test_to_hf_dataset(classification_docs, batch_engine, multi_label) -> None:
         task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
-def test_serialization(classification_docs, batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
+def test_serialization(classification_docs, batch_runtime) -> None:
     label_descriptions = {
         "science": "Topics related to scientific disciplines and research",
         "politics": "Topics related to government, elections, and political systems",
@@ -129,8 +129,8 @@ def test_serialization(classification_docs, batch_engine) -> None:
         classification.Classification(
             task_id="classifier",
             labels=["science", "politics"],
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
             label_descriptions=label_descriptions,
         )
     )
@@ -176,25 +176,25 @@ def test_serialization(classification_docs, batch_engine) -> None:
  'use_cache': {'is_placeholder': False, 'value': True},
  'version': Config.get_version()}
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_engine.model}])
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}])
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.huggingface], indirect=["batch_engine"])
-def test_label_descriptions_validation(batch_engine) -> None:
+@pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
+def test_label_descriptions_validation(batch_runtime) -> None:
     """Test that invalid label descriptions raise a ValueError."""
     # Valid case - no label descriptions
     classification.Classification(
         labels=["science", "politics"],
-        model=batch_engine.model,
-        generation_settings=batch_engine.generation_settings,
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
     )
 
     # Valid case - all labels have descriptions
     valid_descriptions = {"science": "Science related", "politics": "Politics related"}
     classification.Classification(
         labels=["science", "politics"],
-        model=batch_engine.model,
-        generation_settings=batch_engine.generation_settings,
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
         label_descriptions=valid_descriptions
     )
 
@@ -202,8 +202,8 @@ def test_label_descriptions_validation(batch_engine) -> None:
     partial_descriptions = {"science": "Science related"}
     classification.Classification(
         labels=["science", "politics"],
-        model=batch_engine.model,
-        generation_settings=batch_engine.generation_settings,
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
         label_descriptions=partial_descriptions
     )
 
@@ -212,8 +212,8 @@ def test_label_descriptions_validation(batch_engine) -> None:
     with pytest.raises(ValueError, match="Label descriptions contain invalid labels"):
         classification.Classification(
             labels=["science", "politics"],
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
             label_descriptions=invalid_descriptions
         )
 

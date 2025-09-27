@@ -8,11 +8,11 @@ from sieves.tasks.predictive import information_extraction
 
 
 @pytest.mark.parametrize(
-    "batch_engine", (EngineType.dspy, EngineType.langchain, EngineType.ollama), indirect=["batch_engine"]
+    "batch_runtime", (EngineType.dspy, EngineType.langchain, EngineType.ollama), indirect=["batch_runtime"]
 )
 @pytest.mark.parametrize("strict_mode", [True, False])
-def test_strict_mode(batch_engine, strict_mode):
-    batch_engine.generation_settings.strict_mode = strict_mode
+def test_strict_mode(batch_runtime, strict_mode):
+    batch_runtime.generation_settings.strict_mode = strict_mode
 
     class Person(pydantic.BaseModel, frozen=True):
         name: str
@@ -21,8 +21,8 @@ def test_strict_mode(batch_engine, strict_mode):
     pipe = Pipeline([
         information_extraction.InformationExtraction(
             entity_type=Person,
-            model=batch_engine.model,
-            generation_settings=batch_engine.generation_settings,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
         )
     ])
 

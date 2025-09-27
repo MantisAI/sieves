@@ -11,8 +11,8 @@ import gliner.multitask.base
 import jinja2
 import pydantic
 
-from sieves.engines.core import Executable, InternalEngine
-from sieves.engines.utils import GenerationSettings
+from sieves.engines.core import Engine, Executable
+from sieves.engines.types import GenerationSettings
 
 PromptSignature = list[str]
 Model = gliner.model.GLiNER
@@ -30,7 +30,7 @@ class InferenceMode(enum.Enum):
     relation_extraction = gliner.multitask.GLiNERRelationExtractor
 
 
-class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
     """Engine adapter for GLiNER's multitask utilities (NER, CLS, QA, etc.)."""
 
     def __init__(self, model: Model, generation_settings: GenerationSettings):

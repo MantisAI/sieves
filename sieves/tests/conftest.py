@@ -1,7 +1,7 @@
 # mypy: ignore-errors
 import os
 from functools import cache
-from typing import Any
+from typing import Any, NamedTuple
 
 import anthropic
 import dspy
@@ -15,8 +15,17 @@ import transformers
 # import vllm
 from langchain.chat_models import init_chat_model
 
-from sieves import Doc, Engine, engines
+from sieves import Doc
+from sieves.engines.engine_type import EngineType
 from sieves.engines.utils import GenerationSettings
+from sieves.engines.instructor_ import Model as InstructorModel
+from sieves.engines.ollama_ import Model as OllamaModel
+from sieves.tasks.types import Model
+
+
+class Runtime(NamedTuple):
+    model: Model
+    generation_settings: GenerationSettings
 
 
 @pytest.fixture(scope="session")
@@ -25,19 +34,19 @@ def tokenizer() -> tokenizers.Tokenizer:
 
 
 @cache
-def _make_model(engine_type: engines.EngineType) -> Any:
+def _make_model(engine_type: EngineType) -> Model:
     """Create model.
     :param engine_type: Engine type. to create model for.
     :return Any: Model instance.
     """
     match engine_type:
-        case engines.EngineType.dspy:
+        case EngineType.dspy:
             model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
 
-        case engines.EngineType.glix:
+        case EngineType.glix:
             model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
 
-        case engines.EngineType.langchain:
+        case EngineType.langchain:
             model = init_chat_model(
                 model="claude-3-haiku-20240307",
                 api_key=os.environ["ANTHROPIC_API_KEY"],
@@ -45,58 +54,59 @@ def _make_model(engine_type: engines.EngineType) -> Any:
                 temperature=0,
             )
 
-        case engines.EngineType.instructor:
-            model = engines.instructor_.Model(
+        case EngineType.instructor:
+            model = InstructorModel(
                 name="claude-3-haiku-20240307",
                 client=instructor.from_anthropic(anthropic.AsyncClient()),
             )
 
-        case engines.EngineType.huggingface:
+        case EngineType.huggingface:
             model = transformers.pipeline(
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
             )
 
-        case engines.EngineType.ollama:
-            model = engines.ollama_.Model(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
+        case EngineType.ollama:
+            model = OllamaModel(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
 
-        case engines.EngineType.outlines:
+        case EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
             model = outlines.models.from_transformers(
                 transformers.AutoModelForCausalLM.from_pretrained(model_name),
                 transformers.AutoTokenizer.from_pretrained(model_name),
             )
 
-        # case engines.EngineType.vllm:
+        # case EngineType.vllm:
         #     model = vllm.LLM("HuggingFaceTB/SmolLM-135M-Instruct")
 
         case _:
-            raise ValueError(f"Unsupported engine type {engine_type}.")
+            raise ValueError(f"Unsupported runtime type {engine_type}.")
 
     return model
 
 
 @cache
-def _make_engine(engine_type: engines.EngineType, batch_size: int) -> Engine:
-    """Create engine.
+def _make_runtime(engine_type: EngineType, batch_size: int) -> Runtime:
+    """Create runtime tuple (model, generation_settings) for tests.
+
     :param engine_type: Engine type.
-    :param batch_size: Batch size to use in engine.
-    :return Engine: Enstantiated engine.
+    :param batch_size: Batch size to use in runtime.
+    :return: Runtime tuple.
     """
-    return Engine(model=_make_model(engine_type), generation_settings=GenerationSettings(batch_size=batch_size))
+    return Runtime(_make_model(engine_type), GenerationSettings(batch_size=batch_size))
 
 
-@pytest.fixture(scope="session")
-def batch_engine(request) -> engines.Engine:
-    """Initializes engine with batching."""
-    assert isinstance(request.param, engines.EngineType)
-    return _make_engine(engine_type=request.param, batch_size=-1)
+@pytest.fixture(scope="function")
+def batch_runtime(request) -> Runtime:
+    """Initialize runtime with batching enabled (batch_size = -1)."""
+    assert isinstance(request.param, EngineType)
+    return _make_runtime(engine_type=request.param, batch_size=-1)
 
 
-@pytest.fixture(scope="session")
-def engine(request) -> engines.Engine:
-    """Initializes engine without batching."""
-    assert isinstance(request.param, engines.EngineType)
-    return _make_engine(engine_type=request.param, batch_size=1)
+@pytest.fixture(scope="function")
+def runtime(request) -> Runtime:
+    """Initialize runtime without batching (batch_size = 1)."""
+    assert isinstance(request.param, EngineType)
+    return _make_runtime(engine_type=request.param, batch_size=1)
 
 
 @pytest.fixture(scope="session")
