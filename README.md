@@ -28,6 +28,10 @@ Read our documentation [here](https://sieves.ai). An automatically generated ver
 Install `sieves` with `pip install sieves`. If you want to install all optional dependencies right away, install with
 `pip install sieves[engines,distill]`. You can also choose to install individual dependencies as you see fit.
 
+> [!WARNING]
+> `sieves` is in active development and currently in beta. Be advised that the API might change in between minor version
+> changes.
+
 ### Why `sieves`?
 
 Even in the era of generative AI, structured outputs and observability remain crucial.
