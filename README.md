@@ -218,22 +218,20 @@ Encapsulates a single processing step in a pipeline.
 - Wraps and initializes `Bridge` instances handling task-engine-specific logic
 - Implements task-specific dataset export
 
-#### **`Engine`**
-Provides a unified interface to structured generation libraries (internal). You pass a backend model into tasks; the
-Engine is used under the hood.
+#### GenerationSettings
+Controls behavior of structured generation across tasks.
+- Batch size
+- Strict mode (whether errors in parsing individual documents should terminate execution)
+- Arbitrary arguments passed on to structured generation tool (which one that is depends on the model you specified - Outlines, DSPy, LangChain, ...).
+
+#### **`Engine`** (internals only)
+Provides a unified interface to structured generation libraries (internal). You pass a backend model into tasks;
+`Engine` is used under the hood.
 - Manages model interactions
 - Handles prompt execution
 - Standardizes output formats
 
-#### GenerationSettings (optional)
-Controls execution behavior across engines. You usually don't need to pass this — defaults are sensible:
-- batch_size: -1 (batch all inputs together)
-- strict_mode: False (on parse issues, return None instead of raising)
-- init_kwargs/inference_kwargs: None (use engine defaults)
-- config_kwargs: None (used by some backends like DSPy)
-Pass it only when you need non-defaults, e.g. small batches: `GenerationSettings(batch_size=8)` or `strict_mode=True`.
-
-#### **`Bridge`**
+#### **`Bridge`** (internals only)
 Connects `Task` with `Engine`.
 - Implements engine-specific prompt templates
 - Manages output type specifications
