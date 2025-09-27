@@ -3,7 +3,7 @@
 import asyncio
 import enum
 from collections.abc import Iterable
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import instructor
 import pydantic
@@ -19,8 +19,8 @@ class Model(pydantic.BaseModel):
     client: instructor.AsyncInstructor
 
 
-PromptSignature: TypeAlias = pydantic.BaseModel
-Result: TypeAlias = pydantic.BaseModel
+PromptSignature = pydantic.BaseModel
+Result = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):

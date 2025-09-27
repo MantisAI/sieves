@@ -3,16 +3,16 @@
 import asyncio
 import enum
 from collections.abc import Iterable
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import langchain_core.language_models
 import pydantic
 
 from sieves.engines.core import Executable, PydanticEngine
 
-Model: TypeAlias = langchain_core.language_models.BaseChatModel
-PromptSignature: TypeAlias = pydantic.BaseModel
-Result: TypeAlias = pydantic.BaseModel
+Model = langchain_core.language_models.BaseChatModel
+PromptSignature = pydantic.BaseModel
+Result = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):

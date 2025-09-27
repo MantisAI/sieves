@@ -5,16 +5,17 @@ import enum
 import itertools
 import sys
 from collections.abc import Iterable
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import dspy
 import pydantic
 
-from sieves.engines.core import Executable, InternalEngine
+from sieves.engines.core import Engine, Executable
+from sieves.engines.types import GenerationSettings
 
-PromptSignature: TypeAlias = dspy.Signature | dspy.Module
-Model: TypeAlias = dspy.LM | dspy.BaseLM
-Result: TypeAlias = dspy.Prediction
+PromptSignature = dspy.Signature | dspy.Module
+Model = dspy.LM | dspy.BaseLM
+Result = dspy.Prediction
 
 
 class InferenceMode(enum.Enum):
@@ -34,18 +35,10 @@ class InferenceMode(enum.Enum):
     module = dspy.Module
 
 
-class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
     """Engine for DSPy."""
 
-    def __init__(
-        self,
-        model: Model,
-        config_kwargs: dict[str, Any],
-        init_kwargs: dict[str, Any],
-        inference_kwargs: dict[str, Any],
-        strict_mode: bool,
-        batch_size: int,
-    ):
+    def __init__(self, model: Model, generation_settings: GenerationSettings):
         """Initialize engine.
 
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
@@ -54,16 +47,11 @@ class DSPy(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             > curl -fsSL https://ollama.ai/install.sh | sh
             > ollama run MODEL_ID
             > `model = dspy.LM(MODEL_ID, api_base='http://localhost:11434', api_key='')`
-        :param config_kwargs: Optional kwargs supplied to dspy.configure().
-        :param init_kwargs: Optional kwargs to supply to engine executable at init time.
-        :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
-        :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
-        :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
-            support batching.
+        :param generation_settings: Settings including DSPy configuration in `config_kwargs`.
         """
-        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
-        config_kwargs = {"max_tokens": DSPy._MAX_TOKENS} | (config_kwargs or {})
-        dspy.configure(lm=model, **config_kwargs)
+        super().__init__(model, generation_settings)
+        cfg = {"max_tokens": DSPy._MAX_TOKENS} | (generation_settings.config_kwargs or {})
+        dspy.configure(lm=model, **cfg)
 
     @override
     @property

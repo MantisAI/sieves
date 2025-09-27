@@ -4,17 +4,17 @@ import enum
 import itertools
 import sys
 from collections.abc import Iterable
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import jinja2
 import pydantic
 import transformers
 
-from sieves.engines.core import Executable, InternalEngine
+from sieves.engines.core import Engine, Executable
 
-PromptSignature: TypeAlias = list[str]
-Model: TypeAlias = transformers.Pipeline
-Result: TypeAlias = dict[str, list[str] | list[float]]
+PromptSignature = list[str]
+Model = transformers.Pipeline
+Result = dict[str, list[str] | list[float]]
 
 
 class InferenceMode(enum.Enum):
@@ -23,7 +23,7 @@ class InferenceMode(enum.Enum):
     zeroshot_cls = 0
 
 
-class HuggingFace(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
     """Engine adapter around ``transformers.Pipeline`` for zero‑shot tasks."""
 
     @override

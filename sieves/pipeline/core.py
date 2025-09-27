@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 import tqdm
-from loguru import logger
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config, Serializable
@@ -202,9 +201,6 @@ class Pipeline:
         # Deserialize tasks.
         tasks: list[Task] = []
         for task_attr, task_kwargs in zip(config.tasks.value, tasks_kwargs):
-            # Restore engine config for PredictiveTask config.
-            if "engine" in task_attr:
-                task_attr["engine"]["value"], engine_cls = Config.from_dict(task_attr["engine"]["value"])
             # Restore task config, if provided as dict.
             match task_attr:
                 case dict():

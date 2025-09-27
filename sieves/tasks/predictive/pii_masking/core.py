@@ -2,13 +2,14 @@
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, override
 
 import datasets
 import pydantic
 
 from sieves.data.doc import Doc
-from sieves.engines import Engine, EngineType, dspy_
+from sieves.engines import EngineType, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
@@ -21,9 +22,10 @@ from sieves.tasks.predictive.pii_masking.bridges import (
     VLLMPIIMasking,
 )
 
-_TaskPromptSignature: TypeAlias = pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult: TypeAlias = pydantic.BaseModel | dspy_.Result
-_TaskBridge: TypeAlias = (
+_TaskModel = dspy_.Model | instructor_.Model | langchain_.Model | ollama_.Model | outlines_.Model | vllm_.Model
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult = pydantic.BaseModel | dspy_.Result
+_TaskBridge = (
     DSPyPIIMasking | InstructorPIIMasking | LangChainPIIMasking | OutlinesPIIMasking | OllamaPIIMasking | VLLMPIIMasking
 )
 
@@ -49,7 +51,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
 
     def __init__(
         self,
-        engine: Engine,
+        model: _TaskModel,
         pii_types: list[str] | None = None,
         mask_placeholder: str = "[MASKED]",
         task_id: str | None = None,
@@ -58,11 +60,12 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
         fewshot_examples: Iterable[FewshotExample] = (),
+        generation_settings: GenerationSettings = GenerationSettings(),
     ) -> None:
         """
         Initialize PIIMasking task.
 
-        :param engine: Engine to use for PII detection and masking.
+        :param model: Model to use.
         :param pii_types: Types of PII to mask. If None, all common PII types will be masked.
                          E.g., ["NAME", "EMAIL", "PHONE", "ADDRESS", "SSN", "CREDIT_CARD", "DATE_OF_BIRTH"]
         :param mask_placeholder: String to replace PII with.
@@ -72,26 +75,24 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         :param prompt_template: Custom prompt template. If None, task's default template is used.
         :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
         :param fewshot_examples: Few-shot examples.
+        :param generation_settings: Settings for structured generation.
         """
         self._pii_types = pii_types
         self._mask_placeholder = mask_placeholder
 
         super().__init__(
-            engine=engine,
+            model=model,
             task_id=task_id,
             include_meta=include_meta,
             overwrite=overwrite,
             prompt_template=prompt_template,
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,
+            generation_settings=generation_settings,
         )
 
+    @override
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
-        """Initialize bridge.
-        :param engine_type: Type of engine to initialize bridge for.
-        :return PIIBridge: Engine task bridge.
-        :raises ValueError: If engine type is not supported.
-        """
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyPIIMasking,
             EngineType.instructor: InstructorPIIMasking,
@@ -114,10 +115,8 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
 
     @property
+    @override
     def supports(self) -> set[EngineType]:
-        """
-        :return set[EngineType]: Supported engine types.
-        """
         return {
             EngineType.dspy,
             EngineType.instructor,
@@ -128,21 +127,16 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         }
 
     @property
+    @override
     def _state(self) -> dict[str, Any]:
-        """
-        :return dict[str, Any]: Task state.
-        """
         return {
             **super()._state,
             "pii_types": self._pii_types,
             "mask_placeholder": self._mask_placeholder,
         }
 
+    @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
-        """Converts docs to Hugging Face dataset.
-        :param docs: Documents to convert.
-        :return datasets.Dataset: Converted dataset.
-        """
         # Define metadata.
         features = datasets.Features({"text": datasets.Value("string"), "masked_text": datasets.Value("string")})
         info = datasets.DatasetInfo(
@@ -157,7 +151,8 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
         def generate_data() -> Iterable[dict[str, Any]]:
-            """Yields results as dicts.
+            """Yield results as dicts.
+
             :return: Results as dicts.
             """
             for text, masked_text in data:
@@ -166,6 +161,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
 
+    @override
     def distill(
         self,
         base_model_id: str,
