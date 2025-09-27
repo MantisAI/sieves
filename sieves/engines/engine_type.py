@@ -38,7 +38,7 @@ class EngineType(enum.Enum):
 
         :param engine: Engine to get type for.
         :return EngineType: Engine type for self._engine.
-        :raises: ValueError if engine class not found in EngineType.
+        :raises ValueError: if engine class not found in EngineType.
         """
         for et in EngineType:
             if isinstance(engine, et.value):

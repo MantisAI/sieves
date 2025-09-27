@@ -71,7 +71,6 @@ nav:
         - tasks/predictive/translation.md
 
     - Engines:
-        - engines/engine.md
         - engines/base_engine.md
         - All Engines:
             - engines/dspy.md
@@ -84,5 +83,6 @@ nav:
             - engines/vllm.md
   - Guides:
       - guides/getting_started.md
+      - guides/preprocessing.md
       - guides/serialization.md
       - guides/custom_tasks.md

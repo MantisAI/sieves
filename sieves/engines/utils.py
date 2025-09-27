@@ -49,7 +49,7 @@ def init_engine(
     :param model: Model to use.
     :param generation_settings: Settings for structured generation.
     :return Engine: Engine.
-    :raises: ValueError if model type isn't supported.
+    :raises ValueError: If model type isn't supported.
     """
     model_type = type(model)
     module_engine_map = {

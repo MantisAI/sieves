@@ -66,7 +66,7 @@ class PredictiveTask(
     def _validate_fewshot_examples(self) -> None:
         """Validate few‑shot examples.
 
-        :raises: ValueError if fewshot examples don't pass validation.
+        :raises ValueError: if fewshot examples don't pass validation.
         """
         pass
 

@@ -72,8 +72,8 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
             :param values: Values to inject into prompts.
             :return: Results for prompts. Results are None if corresponding prompt failed.
-            :raises: pydantic.ValidationError is response can't be parsed.
-            :raises: httpx.ReadTimeout if request times out.
+            :raises pydantic.ValidationError: If response can't be parsed.
+            :raises httpx.ReadTimeout: If request times out.
             """
             match inference_mode:
                 case InferenceMode.structured:

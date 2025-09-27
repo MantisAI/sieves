@@ -66,7 +66,7 @@ class Pipeline:
     def _validate_tasks(self) -> None:
         """Validate tasks.
 
-        :raises: ValueError on pipeline component signature mismatch.
+        :raises ValueError: On pipeline component signature mismatch.
         """
         task_ids: set[str] = set()
 
@@ -224,7 +224,7 @@ class Pipeline:
 
         :param task_id: ID of task to fetch.
         :return: Task with specified ID.
-        :raises: KeyError if no task with such ID exists.
+        :raises KeyError: If no task with such ID exists.
         """
         for task in self._tasks:
             if task.id == task_id:
