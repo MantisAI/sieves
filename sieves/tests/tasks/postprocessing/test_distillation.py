@@ -47,7 +47,8 @@ def test_distillation_classification(batch_engine, distillation_framework) -> No
         classifier = classification.Classification(
             task_id="classifier",
             labels=["science", "politics"],
-            engine=batch_engine,
+            model=batch_engine.model,
+            generation_settings=batch_engine.generation_settings,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
@@ -114,7 +115,8 @@ def test_serialization(classification_docs, batch_engine) -> None:
         classifier = classification.Classification(
             task_id="classifier",
             labels=["science", "politics"],
-            engine=batch_engine,
+            model=batch_engine.model,
+            generation_settings=batch_engine.generation_settings,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
@@ -136,60 +138,62 @@ def test_serialization(classification_docs, batch_engine) -> None:
         )
 
     config = pipe.serialize()
-    assert config.model_dump() == {
-        "cls_name": "sieves.pipeline.core.Pipeline",
-        "tasks": {
-            "is_placeholder": False,
-            "value": [
-                {
-                    "cls_name": "sieves.tasks.predictive.classification.core.Classification",
-                    "engine": {
-                        "is_placeholder": False,
-                        "value": {
-                            "batch_size": {"is_placeholder": False, "value": -1},
-                            "cls_name": "sieves.engines.wrapper.Engine",
-                            "inference_kwargs": {"is_placeholder": False, "value": {}},
-                            "init_kwargs": {"is_placeholder": False, "value": {}},
-                            "model": {
-                                "is_placeholder": True,
-                                "value": "transformers.pipelines.zero_shot_classification."
-                                "ZeroShotClassificationPipeline",
-                            },
-                            "strict_mode": {"is_placeholder": False, "value": False},
-                            "version": Config.get_version(),
-                        },
-                    },
-                    "fewshot_examples": {"is_placeholder": False, "value": ()},
-                    "include_meta": {"is_placeholder": False, "value": True},
-                    "label_descriptions": {"is_placeholder": False, "value": classifier._label_descriptions},
-                    "labels": {"is_placeholder": False, "value": ["science", "politics"]},
-                    "prompt_signature_desc": {"is_placeholder": False, "value": None},
-                    "prompt_template": {"is_placeholder": False, "value": None},
-                    "task_id": {"is_placeholder": False, "value": "classifier"},
-                    "version": Config.get_version(),
-                },
-                {
-                    "base_model_id": {
-                        "is_placeholder": False,
-                        "value": "sentence-transformers/paraphrase-mpnet-base-v2",
-                    },
-                    "cls_name": "sieves.tasks.postprocessing.distillation.core.Distillation",
-                    "framework": {"is_placeholder": False, "value": "setfit"},
-                    "include_meta": {"is_placeholder": False, "value": False},
-                    "init_kwargs": {"is_placeholder": False, "value": {}},
-                    "output_path": {"is_placeholder": False, "value": dir_path},
-                    "target_task_id": {"is_placeholder": False, "value": "classifier"},
-                    "task_id": {"is_placeholder": False, "value": "Distillation"},
-                    "threshold": {"is_placeholder": False, "value": 0.5},
-                    "train_frac": {"is_placeholder": False, "value": 0.5},
-                    "train_kwargs": {"is_placeholder": False, "value": {}},
-                    "val_frac": {"is_placeholder": False, "value": 0.5},
-                    "version": Config.get_version(),
-                },
-            ],
-        },
-        "use_cache": {"is_placeholder": False, "value": True},
-        "version": Config.get_version(),
-    }
+    assert config.model_dump() == {'cls_name': 'sieves.pipeline.core.Pipeline',
+ 'tasks': {'is_placeholder': False,
+           'value': [{'cls_name': 'sieves.tasks.predictive.classification.core.Classification',
+                      'fewshot_examples': {'is_placeholder': False,
+                                           'value': ()},
+                      'generation_settings': {'is_placeholder': False,
+                                              'value': {'batch_size': -1,
+                                                        'config_kwargs': None,
+                                                        'inference_kwargs': None,
+                                                        'init_kwargs': None,
+                                                        'strict_mode': False}},
+                      'include_meta': {'is_placeholder': False, 'value': True},
+                      'label_descriptions': {'is_placeholder': False,
+                                             'value': {'politics': 'Topics '
+                                                                   'related to '
+                                                                   'government, '
+                                                                   'elections, '
+                                                                   'and '
+                                                                   'political '
+                                                                   'systems',
+                                                       'science': 'Topics '
+                                                                  'related to '
+                                                                  'scientific '
+                                                                  'disciplines '
+                                                                  'and '
+                                                                  'research'}},
+                      'labels': {'is_placeholder': False,
+                                 'value': ['science', 'politics']},
+                      'model': {'is_placeholder': True,
+                                'value': 'transformers.pipelines.zero_shot_classification.ZeroShotClassificationPipeline'},
+                      'prompt_signature_desc': {'is_placeholder': False,
+                                                'value': None},
+                      'prompt_template': {'is_placeholder': False,
+                                          'value': None},
+                      'task_id': {'is_placeholder': False,
+                                  'value': 'classifier'},
+                      'version': Config.get_version()},
+                     {'base_model_id': {'is_placeholder': False,
+                                        'value': 'sentence-transformers/paraphrase-mpnet-base-v2'},
+                      'cls_name': 'sieves.tasks.postprocessing.distillation.core.Distillation',
+                      'framework': {'is_placeholder': False, 'value': 'setfit'},
+                      'include_meta': {'is_placeholder': False, 'value': False},
+                      'init_kwargs': {'is_placeholder': False, 'value': {}},
+                      'output_path': {'is_placeholder': False, 'value': str(dir_path)},
+                      'target_task_id': {'is_placeholder': False,
+                                         'value': 'classifier'},
+                      'task_id': {'is_placeholder': False,
+                                  'value': 'Distillation'},
+                      'threshold': {'is_placeholder': False, 'value': 0.5},
+                      'train_frac': {'is_placeholder': False, 'value': 0.5},
+                      'train_kwargs': {'is_placeholder': False, 'value': {}},
+                      'val_frac': {'is_placeholder': False, 'value': 0.5},
+                      'version': Config.get_version()}]},
+ 'use_cache': {'is_placeholder': False, 'value': True},
+ 'version': Config.get_version()}
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}, {}])
+
+
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_engine.model}, {}])

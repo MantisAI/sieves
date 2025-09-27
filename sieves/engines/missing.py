@@ -2,15 +2,15 @@
 
 import enum
 from collections.abc import Callable, Iterable
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import pydantic
 
 from sieves.engines.core import InternalEngine
 
-PromptSignature: TypeAlias = Any
-Model: TypeAlias = Any
-Result: TypeAlias = Any
+PromptSignature = Any
+Model = Any
+Result = Any
 
 
 class InferenceMode(enum.Enum):

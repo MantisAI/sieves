@@ -56,7 +56,8 @@ def test_run(qa_docs, batch_engine, fewshot):
                     "What branch of science is this text describing?",
                     "What the goal of the science as described in the text?",
                 ],
-                engine=batch_engine,
+                model=batch_engine.model,
+                generation_settings=batch_engine.generation_settings,
                 **fewshot_args,
             ),
         ]
@@ -80,7 +81,8 @@ def test_to_hf_dataset(qa_docs, batch_engine) -> None:
             "What branch of science is this text describing?",
             "What the goal of the science as described in the text?",
         ],
-        engine=batch_engine,
+        model=batch_engine.model,
+        generation_settings=batch_engine.generation_settings,
     )
 
     assert isinstance(task, PredictiveTask)
@@ -106,49 +108,39 @@ def test_serialization(qa_docs, batch_engine) -> None:
                     "What branch of science is this text describing?",
                     "What the goal of the science as described in the text?",
                 ],
-                engine=batch_engine,
+                model=batch_engine.model,
+                generation_settings=batch_engine.generation_settings,
             )
         ]
     )
 
     config = pipe.serialize()
-    assert config.model_dump() == {
-        "cls_name": "sieves.pipeline.core.Pipeline",
-        "use_cache": {"is_placeholder": False, "value": True},
-        "tasks": {
-            "is_placeholder": False,
-            "value": [
-                {
-                    "cls_name": "sieves.tasks.predictive.question_answering.core.QuestionAnswering",
-                    "engine": {
-                        "is_placeholder": False,
-                        "value": {
-                            "batch_size": {"is_placeholder": False, "value": -1},
-                            "cls_name": "sieves.engines.wrapper.Engine",
-                            "inference_kwargs": {"is_placeholder": False, "value": {}},
-                            "init_kwargs": {"is_placeholder": False, "value": {}},
-                            "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
-                            "strict_mode": {"is_placeholder": False, "value": False},
-                            "version": Config.get_version(),
-                        },
-                    },
-                    "fewshot_examples": {"is_placeholder": False, "value": ()},
-                    "include_meta": {"is_placeholder": False, "value": True},
-                    "prompt_signature_desc": {"is_placeholder": False, "value": None},
-                    "prompt_template": {"is_placeholder": False, "value": None},
-                    "questions": {
-                        "is_placeholder": False,
-                        "value": [
-                            "What branch of science is this " "text describing?",
-                            "What the goal of the science as " "described in the text?",
-                        ],
-                    },
-                    "task_id": {"is_placeholder": False, "value": "qa"},
-                    "version": Config.get_version(),
-                }
-            ],
-        },
-        "version": Config.get_version(),
-    }
+    assert config.model_dump() == {'cls_name': 'sieves.pipeline.core.Pipeline',
+ 'tasks': {'is_placeholder': False,
+           'value': [{'cls_name': 'sieves.tasks.predictive.question_answering.core.QuestionAnswering',
+                      'fewshot_examples': {'is_placeholder': False,
+                                           'value': ()},
+                      'generation_settings': {'is_placeholder': False,
+                                              'value': {'batch_size': -1,
+                                                        'config_kwargs': None,
+                                                        'inference_kwargs': None,
+                                                        'init_kwargs': None,
+                                                        'strict_mode': False}},
+                      'include_meta': {'is_placeholder': False, 'value': True},
+                      'model': {'is_placeholder': True,
+                                'value': 'dspy.clients.lm.LM'},
+                      'prompt_signature_desc': {'is_placeholder': False,
+                                                'value': None},
+                      'prompt_template': {'is_placeholder': False,
+                                          'value': None},
+                      'questions': {'is_placeholder': False,
+                                    'value': ['What branch of science is this '
+                                              'text describing?',
+                                              'What the goal of the science as '
+                                              'described in the text?']},
+                      'task_id': {'is_placeholder': False, 'value': 'qa'},
+                      'version': Config.get_version()}]},
+ 'use_cache': {'is_placeholder': False, 'value': True},
+ 'version': Config.get_version()}
 
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"engine": {"model": batch_engine.model}}])
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_engine.model}])

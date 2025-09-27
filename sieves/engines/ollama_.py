@@ -3,13 +3,14 @@
 import asyncio
 import enum
 from collections.abc import Iterable
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import httpx
 import ollama
 import pydantic
 
 from sieves.engines.core import Executable, PydanticEngine
+from sieves.engines.utils import GenerationSettings
 
 
 class Model(pydantic.BaseModel):
@@ -23,8 +24,8 @@ class Model(pydantic.BaseModel):
     client_config: dict[str, Any] = pydantic.Field(default_factory=dict)
 
 
-PromptSignature: TypeAlias = pydantic.BaseModel
-Result: TypeAlias = pydantic.BaseModel
+PromptSignature = pydantic.BaseModel
+Result = pydantic.BaseModel
 
 
 class InferenceMode(enum.Enum):
@@ -42,22 +43,9 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             > ollama serve (or ollama run MODEL_ID)
     """
 
-    def __init__(
-        self,
-        model: Model,
-        init_kwargs: dict[str, Any] | None = None,
-        inference_kwargs: dict[str, Any] | None = None,
-        strict_mode: bool = False,
-        batch_size: int = -1,
-    ):
+    def __init__(self, model: Model, generation_settings: GenerationSettings):
         """Initialize Ollama engine with client and retry configuration."""
-        super().__init__(
-            model=model,
-            init_kwargs=init_kwargs,
-            inference_kwargs=inference_kwargs,
-            strict_mode=strict_mode,
-            batch_size=batch_size,
-        )
+        super().__init__(model=model, generation_settings=generation_settings)
 
         # Async client will be initialized for every prompt batch to sidestep an asyncio event loop issue.
         self._client = ollama.AsyncClient(host=self._model.host, **({"timeout": 30} | self._model.client_config))

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, TypeAlias, override
+from typing import override
 
 import pydantic
 
@@ -26,8 +26,9 @@ from sieves.engines.engine_import import (
     vllm_,
 )
 from sieves.engines.engine_type import EngineType
+from sieves.engines.utils import GenerationSettings
 
-PromptSignature: TypeAlias = (
+PromptSignature = (
     dspy_.PromptSignature
     | glix_.PromptSignature
     | huggingface_.PromptSignature
@@ -37,7 +38,7 @@ PromptSignature: TypeAlias = (
     | outlines_.PromptSignature
     | vllm_.PromptSignature
 )
-Model: TypeAlias = (
+Model = (
     dspy_.Model
     | glix_.Model
     | huggingface_.Model
@@ -47,7 +48,7 @@ Model: TypeAlias = (
     | outlines_.Model
     | vllm_.Model
 )
-Result: TypeAlias = (
+Result = (
     dspy_.Result
     | glix_.Result
     | huggingface_.Result
@@ -57,7 +58,7 @@ Result: TypeAlias = (
     | outlines_.Result
     | vllm_.Result
 )
-InferenceMode: TypeAlias = (
+InferenceMode = (
     dspy_.InferenceMode
     | glix_.InferenceMode
     | huggingface_.InferenceMode
@@ -75,25 +76,15 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
     def __init__(
         self,
         model: Model | None = None,
-        init_kwargs: dict[str, Any] | None = None,
-        inference_kwargs: dict[str, Any] | None = None,
-        config_kwargs: dict[str, Any] | None = None,
-        strict_mode: bool = False,
-        batch_size: int = -1,
+        generation_settings: GenerationSettings | None = None,
     ):
         """Initialize new engine.
 
         :param model: Model to run. If None, a default model (HuggingFaceTB/SmolLM-360M-Instruct with Outlines) is used.
-        :param init_kwargs: Optional kwargs to supply to engine executable at init time.
-        :param inference_kwargs: Optional kwargs to supply to engine executable at inference time.
-        :param config_kwargs: Used only if supplied model is a DSPy model object, ignored otherwise. Optional kwargs
-            supplied to dspy.configure().
-        :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
-        :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
-            support batching.
+        :param generation_settings: Settings for structured generation.
         """
-        super().__init__(model or Engine._init_default_model(), init_kwargs, inference_kwargs, strict_mode, batch_size)
-        self._config_kwargs = config_kwargs
+        gen_settings = generation_settings or GenerationSettings()
+        super().__init__(model or Engine._init_default_model(), gen_settings)
         self._engine: InternalEngine[PromptSignature, Result, Model, InferenceMode] = self._init_engine()
 
     @classmethod
@@ -139,11 +130,7 @@ class Engine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
             if any(issubclass(model_type, module_model_type) for module_model_type in module_model_types):
                 internal_engine = engine_type(
                     model=self._model,
-                    init_kwargs=self._init_kwargs,
-                    inference_kwargs=self._inference_kwargs,
-                    strict_mode=self._strict_mode,
-                    batch_size=self._batch_size,
-                    **{"config_kwargs": self._config_kwargs} if module == dspy_ else {},
+                    generation_settings=self._generation_settings,
                 )
                 assert isinstance(internal_engine, InternalEngine)
 

@@ -13,7 +13,7 @@ from sieves import Pipeline, tasks
 # Verbose initialization (allows non-default configuration).
 t_ingest = tasks.preprocessing.Ingestion(export_format="markdown")
 t_chunk = tasks.preprocessing.Chunking(chunker)
-t_cls = tasks.predictive.Classification(labels=["science", "politics"], engine=engine)
+t_cls = tasks.predictive.Classification(labels=["science", "politics"], model=engine)
 pipe = Pipeline([t_ingest, t_chunk, t_cls], use_cache=True)
 
 # Succinct chaining (equivalent task order).

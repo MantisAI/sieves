@@ -26,7 +26,7 @@ doc = Doc(text="Special relativity applies to all physical phenomena in the abse
 engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
 
 # Create and run the pipeline (verbose init)
-pipeline = Pipeline([tasks.predictive.Classification(labels=["science", "politics"], engine=engine)])
+pipeline = Pipeline([tasks.predictive.Classification(labels=["science", "politics"], model=engine)])
 
 # Print the classification result
 for doc in pipeline([doc]):
@@ -85,16 +85,18 @@ chunker = tasks.preprocessing.Chonkie(
 # Initialize an engine for information extraction
 engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
 
+
 # Define the structure of information you want to extract
 class PersonInfo(pydantic.BaseModel):
     name: str
     age: int | None = None
     occupation: str | None = None
 
+
 # Create an information extraction task
 extractor = tasks.predictive.InformationExtraction(
     entity_type=PersonInfo,
-    engine=engine
+    model=engine
 )
 
 # Create the pipeline (verbose init)

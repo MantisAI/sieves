@@ -5,17 +5,18 @@ import itertools
 import sys
 import warnings
 from collections.abc import Iterable
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import gliner.multitask.base
 import jinja2
 import pydantic
 
 from sieves.engines.core import Executable, InternalEngine
+from sieves.engines.utils import GenerationSettings
 
-PromptSignature: TypeAlias = list[str]
-Model: TypeAlias = gliner.model.GLiNER
-Result: TypeAlias = list[dict[str, str | float]] | str
+PromptSignature = list[str]
+Model = gliner.model.GLiNER
+Result = list[dict[str, str | float]] | str
 
 
 class InferenceMode(enum.Enum):
@@ -32,16 +33,9 @@ class InferenceMode(enum.Enum):
 class GliX(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
     """Engine adapter for GLiNER's multitask utilities (NER, CLS, QA, etc.)."""
 
-    def __init__(
-        self,
-        model: Model,
-        init_kwargs: dict[str, Any] | None,
-        inference_kwargs: dict[str, Any] | None,
-        strict_mode: bool,
-        batch_size: int,
-    ):
+    def __init__(self, model: Model, generation_settings: GenerationSettings):
         """Initialize GliX engine wrapper with model and settings."""
-        super().__init__(model, init_kwargs, inference_kwargs, strict_mode, batch_size)
+        super().__init__(model, generation_settings)
         self._model_wrappers: dict[InferenceMode, gliner.multitask.base.GLiNERBasePipeline] = {}
 
     @override

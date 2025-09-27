@@ -18,7 +18,7 @@ from sieves import Doc, Engine, tasks
 
 
 class Country(pydantic.BaseModel, frozen=True):
-    """Information to look for in document."""
+    """Describes a country and it's stance on the chat control proposal."""
 
     name: str
     in_eu: bool
@@ -40,10 +40,7 @@ if __name__ == '__main__':
         )
     )
 
-    pipe = (
-        tasks.Ingestion(export_format="markdown") +
-        tasks.InformationExtraction(entity_type=Country, engine=engine)
-    )
+    pipe = tasks.Ingestion() + tasks.InformationExtraction(entity_type=Country, model=engine)
 
     for doc in pipe(docs):
         countries = defaultdict(list)

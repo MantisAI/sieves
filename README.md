@@ -92,6 +92,7 @@ build modern NLP applications. It provides:
 ### Getting Started
 
 Here's a simple classification example using [`outlines`](https://github.com/dottxt-ai/outlines):
+
 ```python
 from sieves import Pipeline, Engine, tasks, Doc
 
@@ -100,10 +101,10 @@ docs = [Doc(text="Special relativity applies to all physical phenomena in the ab
 
 # 2. Create pipeline with tasks (verbose init).
 pipe = Pipeline(
-    # 3. Add classification task to pipeline.
-    # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you
-    # might want to consider upgrading to a different model for better results.
-    tasks.Classification(labels=["science", "politics"], engine=Engine())
+  # 3. Add classification task to pipeline.
+  # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you
+  # might want to consider upgrading to a different model for better results.
+  tasks.Classification(labels=["science", "politics"], model=Engine())
 )
 
 # 4. Run pipe and output results.
@@ -121,6 +122,7 @@ for doc in pipe(docs):
   <summary><b>Advanced Example</b></summary>
 
 This example demonstrates PDF parsing, text chunking, and classification:
+
 ```python
 import pickle
 
@@ -143,14 +145,14 @@ chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
 
 # 3. Create pipeline with tasks.
 pipe = Pipeline(
-    [
-        # 4. Add document parsing task.
-        tasks.Ingestion(export_format="markdown"),
-        # 5. Add chunking task to ensure we don't exceed our model's context window.
-        tasks.Chunking(chunker),
-        # 6. Add classification task to pipeline.
-        tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
-    ]
+  [
+    # 4. Add document parsing task.
+    tasks.Ingestion(export_format="markdown"),
+    # 5. Add chunking task to ensure we don't exceed our model's context window.
+    tasks.Chunking(chunker),
+    # 6. Add classification task to pipeline.
+    tasks.Classification(task_id="classifier", labels=["science", "politics"], model=engine),
+  ]
 )
 # Alternatively you can also construct a pipeline by using the + operators:
 # pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine)
@@ -158,25 +160,25 @@ pipe = Pipeline(
 # 7. Run pipe and output results.
 docs = list(pipe(docs))
 for doc in docs:
-    print(doc.results["classifier"])
+  print(doc.results["classifier"])
 
 # 8. Serialize pipeline and docs.
 pipe.dump("pipeline.yml")
 with open("docs.pkl", "wb") as f:
-    pickle.dump(docs, f)
+  pickle.dump(docs, f)
 
 # 9. Load pipeline and docs from disk. Note: we don't serialize complex third-party objects, so you'll have
 #    to pass those in at load time.
 loaded_pipe = Pipeline.load(
-    "pipeline.yml",
-    (
-        {"converter": docling.document_converter.DocumentConverter(), "export_format": "markdown"},
-        {"chunker": chunker},
-        {"engine": {"model": engine.model}},
-    ),
+  "pipeline.yml",
+  (
+    {"converter": docling.document_converter.DocumentConverter(), "export_format": "markdown"},
+    {"chunker": chunker},
+    {"engine": {"model": engine.model}},
+  ),
 )
 with open("docs.pkl", "rb") as f:
-    loaded_docs = pickle.load(f)
+  loaded_docs = pickle.load(f)
 ```
 </details>
 

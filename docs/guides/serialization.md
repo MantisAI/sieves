@@ -19,8 +19,8 @@ from pathlib import Path
 model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
 engine = Engine(model=outlines.models.transformers(model_name))
 classifier = tasks.predictive.Classification(
-    labels=["science", "politics"], 
-    engine=engine
+    labels=["science", "politics"],
+    model=engine
 )
 pipeline = Pipeline([classifier])
 
@@ -59,14 +59,17 @@ chunker = tasks.preprocessing.Chonkie(
 
 # Create an information extraction task
 engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
+
+
 class PersonInfo(pydantic.BaseModel):
     name: str
     age: int | None = None
     occupation: str | None = None
 
+
 extractor = tasks.predictive.InformationExtraction(
     entity_type=PersonInfo,
-    engine=engine
+    model=engine
 )
 
 # Create and save the pipeline
@@ -78,7 +81,7 @@ loaded_pipeline = Pipeline.load(
     "extraction_pipeline.yml",
     [
         # Parameters for the chunker
-        {"tokenizer": tokenizers.Tokenizer.from_pretrained("bert-base-uncased"),},
+        {"tokenizer": tokenizers.Tokenizer.from_pretrained("bert-base-uncased"), },
         # Parameters for the extractor
         {"engine": {"model": outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")}}
     ]
