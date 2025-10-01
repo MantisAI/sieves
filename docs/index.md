@@ -18,20 +18,24 @@ Core package with minimal dependencies:
 ```bash
 pip install sieves
 ```
-Note that `sieves` relies on the functionality of a lot of other libraries to work properly. The minimal setup allows
-you to manually install only the dependencies you need to keep the disk footprint small, but keep in mind you won't be
-able to use any of the pre-built tasks with this setup.
+Note: Ingestion libraries (document parsing such as `docling`, `unstructured`, `marker`) are not installed by default. Install them manually or use the ingestion extra:
 
-All  dependencies for every feature, including all supported engines and utilities:
 ```bash
-pip install "sieves[engines,distill]"
+pip install "sieves[ingestion]"
+```
+
+The minimal setup lets you add only what you need to keep the footprint small.
+
+All optional dependencies for every feature, including engines, distillation, and ingestion:
+```bash
+pip install "sieves[engines,distill,ingestion]"
 ```
 
 ### Specific Features
 
-All document processing utilities (PDF parsing, chunking, etc.):
+Document ingestion/parsing libraries (PDF/DOCX parsing, etc.):
 ```bash
-pip install "sieves[utils]"
+pip install "sieves[ingestion]"
 ```
 
 All supported engines:
@@ -42,7 +46,7 @@ pip install "sieves[engines]"
 ### Development Setup
 
 1. Set up [`uv`](https://github.com/astral-sh/uv).
-2. Install all dependencies for development, testing, documentation generation with: `uv pip install --system .[engines,distill,test]`.
+2. Install all dependencies for development, testing, documentation generation with: `uv pip install --system .[engines,distill,ingestion,test]`.
 
 ## Core Concepts
 

@@ -64,6 +64,12 @@ doc = Doc(
 )
 ```
 
+Note: File-based ingestion (Docling/Unstructured/Marker) is optional and not installed by default. To enable it, install the ingestion extra or the specific libraries you need:
+
+```bash
+pip install "sieves[ingestion]"
+```
+
 ## Advanced Example: PDF Processing Pipeline
 
 Here's a more involved example that:

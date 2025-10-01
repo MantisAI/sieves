@@ -45,9 +45,8 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install tesseract-ocr
-        uv venv
-        uv pip install --upgrade pip setuptools wheel
-        uv pip install -e ".[engines,distill,test]"
+        uv venv .venv --python 3.12
+        uv sync --all-extras
 
 #    - name: Set up vLLM for CPU
 #      run: |

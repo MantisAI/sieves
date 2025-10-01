@@ -7,6 +7,14 @@
 
 ## Document Parsing
 
+Note: Ingestion libraries are optional and not installed by default. To use document parsing (Docling, Unstructured, Marker), install them manually or install the `ingestion` extra:
+
+```bash
+pip install "sieves[ingestion]"
+```
+
+You can also install individual libraries directly (e.g., `pip install docling`, `pip install unstructured`).
+
 ### Using Ingestion
 
 The `Ingestion` task uses the [docling](https://github.com/DS4SD/docling) or alternatively the [marker](https://github.com/VikParuchuri/marker) libraries to parse various document formats:
