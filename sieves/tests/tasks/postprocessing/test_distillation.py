@@ -201,7 +201,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}, {}])
 
 
-@pytest.skip("No OpenAI API key available in GitHub CI yet")
+@pytest.mark.skip("No OpenAI API key available in GitHub CI yet")
 def test_distillation_with_openai_model() -> None:
     """Test distillation with an OpenAI model.
 
