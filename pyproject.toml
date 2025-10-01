@@ -5,26 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sieves"
 readme = "README.md"
-description = "Rapid prototyping and robust baselines for information extraction with zero- and few-shot models."
+description = "Plug-and-play, zero-shot document processing pipelines."
 license = { text = "MIT" }
 dynamic = ["version", "authors"]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "chonkie>=0.3,<1",
     "datasets>=3,<4",
-    "docling>=2,<3",
     "jinja2>=3,<4",
     "loguru>=0.7,<1",
-    "marker-pdf[full]>=1.6.1",
-    "nltk>=3.9.1",
     "outlines>=1,<2",
     "pydantic>=2,<3",
     "scikit-learn>=1.6,<2",
-    "unstructured-inference>=0.8,<1",
-    "unstructured[all-docs]>=0.16,<1",
-    # Pin LiteLLM due to bug in 1.67.4. To be removed once patch is out.
-    # Info: https://github.com/BerriAI/litellm/issues/10349
-    "litellm>=1,<=1.67.2"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -37,6 +29,13 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+ingestion = [
+    "docling>=2,<3",
+    "marker-pdf[full]>=1.6.1,<2",
+    "nltk>=3.9.1",
+    "unstructured-inference>=0.8,<1",
+    "unstructured[all-docs]>=0.16,<1",
+]
 engines = [
     "accelerate>1.2,<2",
     "dspy-ai>=2,<3",

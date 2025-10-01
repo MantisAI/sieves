@@ -25,8 +25,20 @@
 
 Read our documentation [here](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
 
-Install `sieves` with `pip install sieves`. If you want to install all optional dependencies right away, install with
-`pip install sieves[engines,distill]`. You can also choose to install individual dependencies as you see fit.
+Install `sieves` with `pip install sieves`.
+
+Important: Ingestion libraries (e.g., `docling`, `unstructured`, `marker`) are not installed by default. Install them manually or use the ingestion extra:
+
+```
+pip install "sieves[ingestion]"
+```
+
+If you want to install all optional dependencies, install with:
+
+```
+pip install "sieves[engines,distill,ingestion]"
+```
+You can also choose to install individual dependencies as you see fit.
 
 > [!WARNING]
 > `sieves` is in active development and currently in beta. Be advised that the API might change in between minor version
@@ -74,7 +86,7 @@ build modern NLP applications. It provides:
   - [`transformer`](https://github.com/huggingface/transformers)
 - :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
 - :hammer_and_wrench: **Integrated Tools:**
-  - Document parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/), [`marker`](https://github.com/VikParuchuri/marker)
+  - Document parsing (optional via `ingestion` extra): [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/), [`marker`](https://github.com/VikParuchuri/marker)
   - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
 - :label: **Ready-to-Use Tasks:**
   - Multi-label classification
@@ -120,6 +132,8 @@ for doc in pipe(docs):
 # Tip: Pipelines can also be composed succinctly via chaining (+).
 # For multi-step pipelines, you can write:
 #   pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(labels=[...], model=model)
+# Note: Ingestion libraries are optional and not installed by default.
+#       Install with: pip install "sieves[ingestion]" or install the specific libraries directly (e.g., docling, unstructured).
 # Note: additional Pipeline parameters (e.g., use_cache=False) are only available via the verbose init,
 # e.g., Pipeline([t1, t2], use_cache=False).
 ```
@@ -127,7 +141,13 @@ for doc in pipe(docs):
 <details>
   <summary><b>Advanced Example</b></summary>
 
-This example demonstrates PDF parsing, text chunking, and classification:
+This example demonstrates PDF parsing, text chunking, and classification.
+
+Note: Ingestion libraries are optional and not installed by default. To run the ingestion step, install with the extra or install the libraries directly:
+
+```
+pip install "sieves[ingestion]"   # or install docling/unstructured directly
+```
 
 ```python
 import pickle
