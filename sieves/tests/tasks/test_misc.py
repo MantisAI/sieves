@@ -11,18 +11,21 @@ import docling.document_converter
 import dspy
 import pydantic
 import pytest
+import transformers
 
-from sieves import Doc, Engine, Pipeline, engines, tasks
+from sieves import Doc, Pipeline, engines, tasks
+from sieves.engines.utils import init_default_model
 from sieves.tasks.utils import PydanticToHFDatasets
 
 
 def test_custom_prompt_template() -> None:
     prompt_template = "This is a different prompt template."
-    engine = Engine(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     task = tasks.predictive.Classification(
         task_id="classifier",
         labels=["science", "politics"],
-        engine=engine,
+        model=transformers.pipeline(
+            "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
+        ),
         prompt_template=prompt_template,
     )
     assert task.prompt_template == prompt_template
@@ -30,11 +33,12 @@ def test_custom_prompt_template() -> None:
 
 def test_custom_prompt_signature_desc() -> None:
     prompt_sig_desc = "This is a different prompt signature description."
-    engine = Engine(model=dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"]))
     task = tasks.predictive.Classification(
         task_id="classifier",
         labels=["science", "politics"],
-        engine=engine,
+        model=transformers.pipeline(
+            "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
+        ),
         prompt_signature_desc=prompt_sig_desc,
     )
     assert task.prompt_signature_description == prompt_sig_desc
@@ -45,9 +49,12 @@ def test_run_readme_example_short() -> None:
     docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
     # Create pipeline with tasks.
+    model = init_default_model()
     pipe = Pipeline(
         # Run classification on provided document.
-        tasks.predictive.Classification(labels=["science", "politics"], engine=Engine())
+        tasks.predictive.Classification(
+            labels=["science", "politics"], model=model
+        )
     )
 
     # Run pipe and output results.
@@ -57,25 +64,25 @@ def test_run_readme_example_short() -> None:
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "batch_engine",
+    "batch_runtime",
     [engines.EngineType.glix],
     indirect=True,
 )
-def test_run_readme_example_long(batch_engine, tokenizer) -> None:
+def test_run_readme_example_long(batch_runtime, tokenizer) -> None:
     # Define documents by text or URI.
     # Readme example downlodads https://arxiv.org/pdf/2408.09869, but we'll use a local PDF here to speed up the test.
     docs = [Doc(uri=Path(__file__).parent.parent / "assets" / "1204.0162v2.pdf")]
 
     # Create pipeline with tasks.
-    pipe = Pipeline(
-        [
-            # Add document parsing task.
-            tasks.Ingestion(export_format="markdown"),
-            # Add chunking task to ensure we don't exceed our model's context window.
-            tasks.Chunking(chonkie.TokenChunker(tokenizer)),
-            # Run classification on provided document.
-            tasks.predictive.Classification(labels=["science", "politics"], engine=batch_engine),
-        ]
+    pipe = (
+        # Add document parsing task.
+        tasks.Ingestion(export_format="markdown") +
+        # Add chunking task to ensure we don't exceed our model's context window.
+        tasks.Chunking(chonkie.TokenChunker(tokenizer)) +
+        # Run classification on provided document.
+        tasks.predictive.Classification(
+            labels=["science", "politics"], model=batch_runtime.model, generation_settings=batch_runtime.generation_settings
+        )
     )
 
     # Run pipe and output results.
@@ -94,7 +101,7 @@ def test_run_readme_example_long(batch_engine, tokenizer) -> None:
                 (
                     {"converter": docling.document_converter.DocumentConverter()},
                     {"chunker": chonkie.TokenChunker(tokenizer)},
-                    {"engine": {"model": batch_engine.model}},
+                    {"model": batch_runtime.model},
                 ),
             )
 

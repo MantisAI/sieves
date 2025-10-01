@@ -25,8 +25,24 @@
 
 Read our documentation [here](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
 
-Install `sieves` with `pip install sieves`. If you want to install all optional dependencies right away, install with
-`pip install sieves[engines,distill]`. You can also choose to install individual dependencies as you see fit.
+Install `sieves` with `pip install sieves`.
+
+Important: Ingestion libraries (e.g., `docling`, `unstructured`, `marker`) are not installed by default. Install them manually or use the ingestion extra:
+
+```
+pip install "sieves[ingestion]"
+```
+
+If you want to install all optional dependencies, install with:
+
+```
+pip install "sieves[engines,distill,ingestion]"
+```
+You can also choose to install individual dependencies as you see fit.
+
+> [!WARNING]
+> `sieves` is in active development and currently in beta. Be advised that the API might change in between minor version
+> updates.
 
 ### Why `sieves`?
 
@@ -70,7 +86,7 @@ build modern NLP applications. It provides:
   - [`transformer`](https://github.com/huggingface/transformers)
 - :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
 - :hammer_and_wrench: **Integrated Tools:**
-  - Document parsing: [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/), [`marker`](https://github.com/VikParuchuri/marker)
+  - Document parsing (optional via `ingestion` extra): [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/), [`marker`](https://github.com/VikParuchuri/marker)
   - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
 - :label: **Ready-to-Use Tasks:**
   - Multi-label classification
@@ -92,29 +108,47 @@ build modern NLP applications. It provides:
 ### Getting Started
 
 Here's a simple classification example using [`outlines`](https://github.com/dottxt-ai/outlines):
+
 ```python
-from sieves import Pipeline, Engine, tasks, Doc
+from sieves import Pipeline, tasks, Doc
+import outlines
 
 # 1. Define documents by text or URI.
 docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
-# 2. Create pipeline with tasks.
+# 2. Choose a model (Outlines in this example).
+model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+
+# 3. Create pipeline with tasks (verbose init).
 pipe = Pipeline(
-    # 3. Add classification task to pipeline.
-    # By default Engine uses Outlines with HuggingFaceTB/SmolLM-360M-Instruct. This is a pretty small model, you
-    # might want to consider upgrading to a different model for better results.
-    tasks.Classification(labels=["science", "politics"], engine=Engine())
+  # Add classification task to pipeline.
+  tasks.Classification(labels=["science", "politics"], model=model)
 )
 
 # 4. Run pipe and output results.
 for doc in pipe(docs):
   print(doc.results)
+
+# Tip: Pipelines can also be composed succinctly via chaining (+).
+# For multi-step pipelines, you can write:
+#   pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(labels=[...], model=model)
+# Note: Ingestion libraries are optional and not installed by default.
+#       Install with: pip install "sieves[ingestion]" or install the specific libraries directly (e.g., docling, unstructured).
+# Note: additional Pipeline parameters (e.g., use_cache=False) are only available via the verbose init,
+# e.g., Pipeline([t1, t2], use_cache=False).
 ```
 
 <details>
   <summary><b>Advanced Example</b></summary>
 
-This example demonstrates PDF parsing, text chunking, and classification:
+This example demonstrates PDF parsing, text chunking, and classification.
+
+Note: Ingestion libraries are optional and not installed by default. To run the ingestion step, install with the extra or install the libraries directly:
+
+```
+pip install "sieves[ingestion]"   # or install docling/unstructured directly
+```
+
 ```python
 import pickle
 
@@ -123,52 +157,60 @@ import chonkie
 import tokenizers
 import docling.document_converter
 
-from sieves import Pipeline, Engine, tasks, Doc
+from sieves import Pipeline, tasks, Doc
 
 # 1. Define documents by text or URI.
 docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
-# 2. Create engine responsible for generating structured output.
+# 2. Choose a model for structured generation.
 model_name = 'knowledgator/gliner-multitask-v1.0'
-engine = Engine(model=gliner.GLiNER.from_pretrained(model_name))
+model = gliner.GLiNER.from_pretrained(model_name)
 
 # 3. Create chunker object.
 chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
 
 # 3. Create pipeline with tasks.
 pipe = Pipeline(
-    [
-        # 4. Add document parsing task.
-        tasks.Ingestion(export_format="markdown"),
-        # 5. Add chunking task to ensure we don't exceed our model's context window.
-        tasks.Chunking(chunker),
-        # 6. Add classification task to pipeline.
-        tasks.Classification(task_id="classifier", labels=["science", "politics"], engine=engine),
-    ]
+  [
+    # 4. Add document parsing task.
+    tasks.Ingestion(export_format="markdown"),
+    # 5. Add chunking task to ensure we don't exceed our model's context window.
+    tasks.Chunking(chunker),
+    # 6. Add classification task to pipeline.
+    tasks.Classification(
+        task_id="classifier",
+        labels=["science", "politics"],
+        model=model,
+    ),
+  ]
 )
+# Alternatively you can also construct a pipeline by using the + operators:
+# pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(
+#     task_id="classifier", labels=["science", "politics"], model=model
+# )
 
 # 7. Run pipe and output results.
 docs = list(pipe(docs))
 for doc in docs:
-    print(doc.results["classifier"])
+  print(doc.results["classifier"])
 
 # 8. Serialize pipeline and docs.
 pipe.dump("pipeline.yml")
 with open("docs.pkl", "wb") as f:
-    pickle.dump(docs, f)
+  pickle.dump(docs, f)
 
 # 9. Load pipeline and docs from disk. Note: we don't serialize complex third-party objects, so you'll have
 #    to pass those in at load time.
 loaded_pipe = Pipeline.load(
-    "pipeline.yml",
-    (
-        {"converter": docling.document_converter.DocumentConverter(), "export_format": "markdown"},
-        {"chunker": chunker},
-        {"engine": {"model": engine.model}},
-    ),
+  "pipeline.yml",
+  (
+    {"converter": docling.document_converter.DocumentConverter(), "export_format": "markdown"},
+    {"chunker": chunker},
+    {"model": model},
+  ),
 )
 with open("docs.pkl", "rb") as f:
-    loaded_docs = pickle.load(f)
+  loaded_docs = pickle.load(f)
 ```
 </details>
 
@@ -176,7 +218,7 @@ with open("docs.pkl", "rb") as f:
 
 ### Core Concepts
 
-`sieves` is built on five key abstractions.
+`sieves` is built on six key abstractions.
 
 #### **`Pipeline`**
 Orchestrates task execution with features for.
@@ -196,13 +238,20 @@ Encapsulates a single processing step in a pipeline.
 - Wraps and initializes `Bridge` instances handling task-engine-specific logic
 - Implements task-specific dataset export
 
-#### **`Engine`**
-Provides a unified interface to structured generation libraries.
+#### `GenerationSettings`
+Controls behavior of structured generation across tasks.
+- Batch size
+- Strict mode (whether errors in parsing individual documents should terminate execution)
+- Arbitrary arguments passed on to structured generation tool (which one that is depends on the model you specified - Outlines, DSPy, LangChain, ...).
+
+#### **`Engine`** (internals only)
+Provides a unified interface to structured generation libraries (internal). You pass a backend model into tasks;
+`Engine` is used under the hood.
 - Manages model interactions
 - Handles prompt execution
 - Standardizes output formats
 
-#### **`Bridge`**
+#### **`Bridge`** (internals only)
 Connects `Task` with `Engine`.
 - Implements engine-specific prompt templates
 - Manages output type specifications
@@ -228,8 +277,97 @@ Asked differently: what are the benefits of using `sieves` over directly interac
 - Validated, structured data output - also for LLMs that don't offer structured outputs natively.  Zero-/few-shot language models can be finicky without guardrails or parsing.
 - A step-by-step pipeline, making it easier to debug and track each stage.
 - The flexibility to switch between different models and ways to ensure structured and validated output.
+
+### How do I create models?
+
+Below are minimal examples for creating model objects for each supported structured‑generation tool. Pass these `model` objects directly to tasks, optionally with `GenerationSettings`.
+
+- DSPy
+
+  ```python
+  import os
+  import dspy
+
+  # Anthropic example (set ANTHROPIC_API_KEY in your environment)
+  model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
+
+  # Tip: For local via Ollama, configure api_base and blank api_key:
+  # model = dspy.LM("smollm:135m-instruct-v0.2-q8_0", api_base="http://localhost:11434", api_key="")
+  ```
+
+- GLiNER
+
+  ```python
+  import gliner
+  model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
+  ```
+
+- LangChain
+
+  ```python
+  from langchain.chat_models import init_chat_model
+  import os
+
+  model = init_chat_model(
+      model="claude-3-haiku-20240307",
+      api_key=os.environ["ANTHROPIC_API_KEY"],
+      model_provider="anthropic",
+  )
+  ```
+
+- Instructor
+
+  ```python
+  import anthropic
+  import instructor
+  from sieves.engines.instructor_ import Model
+  import os
+
+  client = instructor.from_anthropic(anthropic.AsyncClient(api_key=os.environ["ANTHROPIC_API_KEY"]))
+  model = Model(name="claude-3-haiku-20240307", client=client)
+  ```
+
+- Hugging Face Transformers (zero‑shot classification)
+
+  ```python
+  from transformers import pipeline
+
+  model = pipeline(
+      "zero-shot-classification",
+      model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33",
+  )
+  ```
+
+- Ollama (local server)
+
+  ```python
+  from sieves.engines.ollama_ import Model
+
+  # Ensure `ollama serve` is running and the model is pulled (e.g., `ollama run smollm:135m-instruct-v0.2-q8_0`).
+  model = Model(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
+  ```
+
+- Outlines
+
+  ```python
+  import outlines
+  from transformers import AutoModelForCausalLM, AutoTokenizer
+
+  model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+  # Outlines supports different backends, also remote ones. We use a local `transformers` model here.
+  model = outlines.models.from_transformers(
+      AutoModelForCausalLM.from_pretrained(model_name),
+      AutoTokenizer.from_pretrained(model_name),
+  )
+  ```
+
+**Notes**
+- Provide provider API keys via environment variables (e.g., `ANTHROPIC_API_KEY`).
+- Some backends (e.g., DSPy) can be pointed to a local Ollama server via `api_base`.
+- After you have a `model`, use it in tasks like: `tasks.predictive.Classification(labels=[...], model=model)`.
 - A bunch of useful utilities for pre- and post-processing you might need.
 - An array of useful tasks you can right of the bat without having to roll your own.
+- Look up the respective tool's documentation for more information.
 
 ### Why use `sieves` and not a structured generation library, like `outlines`, directly?
 

@@ -51,7 +51,6 @@ def test_marker():
                         "export_format": {"is_placeholder": False, "value": "markdown"},
                         "extract_images": {"is_placeholder": False, "value": False},
                         "include_meta": {"is_placeholder": False, "value": True},
-                        "show_progress": {"is_placeholder": False, "value": True},
                         "task_id": {"is_placeholder": False, "value": "Marker"},
                         "version": version,
                     }

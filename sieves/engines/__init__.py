@@ -1,6 +1,8 @@
+"""Engines."""
+
 from __future__ import annotations
 
-from .core import EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult, InternalEngine
+from .core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from .engine_import import (
     VLLM,
     DSPy,
@@ -20,19 +22,18 @@ from .engine_import import (
     vllm_,
 )
 from .engine_type import EngineType
-from .wrapper import Engine
+from .types import GenerationSettings
 
 __all__ = [
     "dspy_",
     "DSPy",
-    "wrapper",
-    "Engine",
     "EngineInferenceMode",
     "EngineModel",
     "EnginePromptSignature",
     "EngineType",
     "EngineResult",
-    "InternalEngine",
+    "Engine",
+    "GenerationSettings",
     "glix_",
     "GliX",
     "langchain_",

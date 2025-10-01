@@ -14,11 +14,11 @@ import openai
 import outlines
 import pydantic
 
-from sieves import Doc, Engine, Pipeline, tasks
+from sieves import Doc, Engine, tasks
 
 
 class Country(pydantic.BaseModel, frozen=True):
-    """Information to look for in document."""
+    """Describes a country and it's stance on the chat control proposal."""
 
     name: str
     in_eu: bool
@@ -33,19 +33,12 @@ if __name__ == '__main__':
         )
     ]
 
-    engine = Engine(
-        model=outlines.from_openai(
-            openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"]),
-            model_name="gpt-5-mini"
-        )
+    model = outlines.from_openai(
+        openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"]),
+        model_name="gpt-5-mini"
     )
 
-    pipe = Pipeline(
-        [
-            tasks.Ingestion(export_format="markdown"),
-            tasks.InformationExtraction(entity_type=Country, engine=engine),
-        ]
-    )
+    pipe = tasks.Ingestion() + tasks.InformationExtraction(entity_type=Country, model=model)
 
     for doc in pipe(docs):
         countries = defaultdict(list)

@@ -1,12 +1,12 @@
 # `sieves`
 
-`sieves` is a Python library designed for zero-shot and few-shot NLP tasks that focuses on structured generation, 
-allowing developers to build production-ready NLP prototypes without requiring training data. It provides a unified 
-interface that wraps popular NLP tools (like `outlines`, `dspy`, `langchain`, and others) while ensuring structured 
+`sieves` is a Python library designed for zero-shot and few-shot NLP tasks that focuses on structured generation,
+allowing developers to build production-ready NLP prototypes without requiring training data. It provides a unified
+interface that wraps popular NLP tools (like `outlines`, `dspy`, `langchain`, and others) while ensuring structured
 outputs and observability.
 
-It bundles common NLP utilities, document parsing, and text chunking capabilities together with ready-to-use tasks like 
-classification and information extraction, all organized in an observable pipeline architecture. It's particularly 
+It bundles common NLP utilities, document parsing, and text chunking capabilities together with ready-to-use tasks like
+classification and information extraction, all organized in an observable pipeline architecture. It's particularly
 valuable for rapid prototyping scenarios where structured output is needed but training data is scarce.
 
 
@@ -18,20 +18,24 @@ Core package with minimal dependencies:
 ```bash
 pip install sieves
 ```
-Note that `sieves` relies on the functionality of a lot of other libraries to work properly. The minimal setup allows
-you to manually install only the dependencies you need to keep the disk footprint small, but keep in mind you won't be
-able to use any of the pre-built tasks with this setup.
+Note: Ingestion libraries (document parsing such as `docling`, `unstructured`, `marker`) are not installed by default. Install them manually or use the ingestion extra:
 
-All  dependencies for every feature, including all supported engines and utilities:
 ```bash
-pip install "sieves[engines,distill]"
+pip install "sieves[ingestion]"
+```
+
+The minimal setup lets you add only what you need to keep the footprint small.
+
+All optional dependencies for every feature, including engines, distillation, and ingestion:
+```bash
+pip install "sieves[engines,distill,ingestion]"
 ```
 
 ### Specific Features
 
-All document processing utilities (PDF parsing, chunking, etc.):
+Document ingestion/parsing libraries (PDF/DOCX parsing, etc.):
 ```bash
-pip install "sieves[utils]"
+pip install "sieves[ingestion]"
 ```
 
 All supported engines:
@@ -42,13 +46,13 @@ pip install "sieves[engines]"
 ### Development Setup
 
 1. Set up [`uv`](https://github.com/astral-sh/uv).
-2. Install all dependencies for development, testing, documentation generation with: `uv pip install --system .[engines,distill,test]`.
+2. Install all dependencies for development, testing, documentation generation with: `uv pip install --system .[engines,distill,ingestion,test]`.
 
 ## Core Concepts
 
 `sieves` is built around five key components:
 
-1. **`Pipeline`**: The main orchestrator that runs your NLP tasks sequentially
+1. **`Pipeline`**: The main orchestrator that runs your NLP tasks sequentially (define with `Pipeline([...])` or chain with `+`)
 2. **`Task`**: Pre-built or custom NLP operations (classification, extraction, etc.)
 3. **`Engine`**: Backend implementations that power the tasks (outlines, dspy, langchain, etc.)
 4. **`Bridge`**: Connectors between Tasks and Engines
@@ -82,5 +86,5 @@ We've prepared several guides to help you get up to speed quickly:
 - Learn about custom task creation
 - Understand different engine configurations
 
-Consult the API reference for each component you're working with if you have specific question. They contain detailed 
+Consult the API reference for each component you're working with if you have specific question. They contain detailed
 information about parameters, configurations, and best practices.

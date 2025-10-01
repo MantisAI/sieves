@@ -2,15 +2,15 @@
 
 import enum
 from collections.abc import Callable, Iterable
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import pydantic
 
-from sieves.engines.core import InternalEngine
+from sieves.engines.core import Engine
 
-PromptSignature: TypeAlias = Any
-Model: TypeAlias = Any
-Result: TypeAlias = Any
+PromptSignature = Any
+Model = Any
+Result = Any
 
 
 class InferenceMode(enum.Enum):
@@ -19,7 +19,7 @@ class InferenceMode(enum.Enum):
     any = Any
 
 
-class MissingEngine(InternalEngine[PromptSignature, Result, Model, InferenceMode]):
+class MissingEngine(Engine[PromptSignature, Result, Model, InferenceMode]):
     """Placeholder for engine that couldn't be imported due to missing dependencies."""
 
     @override

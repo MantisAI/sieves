@@ -1,3 +1,5 @@
+"""Serialization."""
+
 from __future__ import annotations
 
 import importlib
@@ -18,7 +20,8 @@ class Attribute(pydantic.BaseModel):
 
     @staticmethod
     def _is_primitive_type(value: Any) -> bool:
-        """Determines whether value is primitive type.
+        """Determine whether value is primitive type.
+
         :param value: Value to check.
         :return bool: Whether value is primitive type.
         """
@@ -26,12 +29,12 @@ class Attribute(pydantic.BaseModel):
 
     @classmethod
     def _determine_is_placeholder(cls, value: Any) -> bool:
-        """Determines whether Attribute value is a non-supported complex type and hence a placeholder.
+        """Determine whether Attribute value is a non-supported complex type and hence a placeholder.
+
         If value is a collection type, we inspect recursively. If all children elements are primitive types, values is
         determined not be a placeholder.
         :return bool: Determined value for is_placeholder.
         """
-
         # If value is None or a primitive type or a Config object: not a placeholder.
         if value is None or cls._is_primitive_type(value):
             return False
@@ -48,7 +51,8 @@ class Attribute(pydantic.BaseModel):
 
     @pydantic.model_validator(mode="after")
     def check_value(self) -> Attribute:
-        """Validates value and returns validated object.
+        """Validate value and returns validated object.
+
         :return Attribute: Validated object.
         """
         # Set is_placeholder w.r.t. of value type.
@@ -71,23 +75,19 @@ class Config(pydantic.BaseModel):
 
     @staticmethod
     def get_version() -> str:
-        """Returns version string from setup.cfg metadata.
+        """Return version string from setup.cfg metadata.
+
         :return str: Version string from setup.cfg metadata.
         """
-        # TODO This doesn't work in PyPi package. Alternative way to fetch version dynamically?
-        # config = configparser.ConfigParser()
-        # setup_cfg = Path(__file__).parent.parent / "setup.cfg"
-        # config.read(setup_cfg)
-        # version = config["metadata"]["version"]
-
-        return "0.11.1"
+        return "0.15.0"
 
     version: str = get_version()
     cls_name: str
 
     @classmethod
     def create(cls, cls_obj: type, attributes: dict[str, Attribute]) -> Config:
-        """Creates instance of dynamic config class.
+        """Create instance of dynamic config class.
+
         :param cls_obj: Class to create config for.
         :param attributes: Attributes to include in config.
         :return Config: Instance of dynamic config class.
@@ -104,6 +104,7 @@ class Config(pydantic.BaseModel):
 
     @property
     def config_cls(self) -> type:
+        """Return config class."""
         module_name, class_name = self.cls_name.rsplit(".", 1)
         module = importlib.import_module(module_name)
         config_cls = getattr(module, class_name)
@@ -113,7 +114,8 @@ class Config(pydantic.BaseModel):
 
     @classmethod
     def from_dict(cls, config: dict[str, Any]) -> tuple[Config, type]:
-        """Generates Config instance from dict representation.
+        """Generate Config instance from dict representation.
+
         :param config: Dict representation of config.
         :return tuple[Config, type]: Config instance generate from dict representation. Config class.
         """
@@ -133,7 +135,8 @@ class Config(pydantic.BaseModel):
         return Config.create(config_cls, attributes), config_cls
 
     def to_init_dict(self, cls_obj: type, **kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Returns fully qualified dict representation of init params for class.
+        """Return fully qualified dict representation of init params for class.
+
         :param cls_obj: Class to get init params for.
         :param kwargs: Values to inject into loaded config.
         :return dict[str, Any]: Fully qualified dict representation of init params for class.
@@ -148,7 +151,8 @@ class Config(pydantic.BaseModel):
         return init_params
 
     def validate_init_params(self, cls_obj: type, **kwargs: dict[str, Any]) -> None:
-        """Validates config against class type and kwargs to inject.
+        """Validate config against class type and kwargs to inject.
+
         :param cls_obj: Type of object to instantiate.
         :param kwargs: kwargs to inject into init dict (to replace placeholder values).
         """
@@ -165,7 +169,8 @@ class Config(pydantic.BaseModel):
                 assert attr_name in kwargs, f"Attribute {attr_name} has to be provided at load time."
 
     def dump(self, path: Path | str) -> None:
-        """Saves to disk as .yml file.
+        """Save to disk as .yml file.
+
         :param path: Path to save at.
         """
         with open(path, "w") as file:
@@ -173,7 +178,8 @@ class Config(pydantic.BaseModel):
 
     @classmethod
     def load(cls, path: Path | str) -> Config:
-        """Loads config from specified yml path.
+        """Load config from specified yml path.
+
         :param path: Path to load config from.
         :return Config: Config as stored at specified path.
         """
@@ -195,14 +201,18 @@ class Config(pydantic.BaseModel):
 
 @runtime_checkable
 class Serializable(Protocol):
+    """Protocol for serializable objects."""
+
     def serialize(self) -> Config:
-        """Returns serialized representation.
+        """Return serialized representation.
+
         :return Config: Representation instance.
         """
 
     @classmethod
     def deserialize(cls, config: Config, **kwargs: dict[str, Any]) -> Serializable:
-        """Returns deserialized instance.
+        """Return deserialized instance.
+
         :param config: Config to deserialize.
         :param kwargs: Values to inject into loaded config.
         :return Serializable: Deserialized instance.

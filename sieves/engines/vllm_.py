@@ -3,7 +3,7 @@
 import re
 from collections.abc import Iterable
 from enum import StrEnum
-from typing import Any, TypeAlias, override
+from typing import Any, override
 
 import json_repair
 import pydantic
@@ -12,9 +12,9 @@ from vllm.sampling_params import GuidedDecodingParams
 
 from sieves.engines.core import Executable, PydanticEngine
 
-PromptSignature: TypeAlias = pydantic.BaseModel | list[str] | str
-Model: TypeAlias = LLM
-Result: TypeAlias = pydantic.BaseModel | str
+PromptSignature = pydantic.BaseModel | list[str] | str
+Model = LLM
+Result = pydantic.BaseModel | str
 
 
 class InferenceMode(StrEnum):

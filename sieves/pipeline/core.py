@@ -5,11 +5,11 @@ from __future__ import annotations
 import copy
 import itertools
 import typing
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sized
 from pathlib import Path
 from typing import Any
 
-from loguru import logger
+import tqdm
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config, Serializable
@@ -45,11 +45,28 @@ class Pipeline:
         """
         self._tasks.extend(tasks)
         self._validate_tasks()
+        self._set_distillation_targets()
+
+    @property
+    def tasks(self) -> list[Task]:
+        """Return tasks.
+
+        :return: List of tasks.
+        """
+        return self._tasks
+
+    @property
+    def use_cache(self) -> bool:
+        """Return whether pipeline uses cache.
+
+        :return: Whether pipeline uses cache.
+        """
+        return self._use_cache
 
     def _validate_tasks(self) -> None:
         """Validate tasks.
 
-        :raises: ValueError on pipeline component signature mismatch.
+        :raises ValueError: On pipeline component signature mismatch.
         """
         task_ids: set[str] = set()
 
@@ -95,11 +112,11 @@ class Pipeline:
         :param in_place: Whether to modify documents in-place or create copies.
         :return Iterable[Doc]: Processed documents.
         """
+        n_docs: int | None = len(docs) if isinstance(docs, Sized) else None
         docs_iters = itertools.tee(docs if in_place else (copy.deepcopy(doc) for doc in docs), 2)
         processed_docs = self._get_unseen_unique_docs(docs_iters[0]) if self._use_cache else docs_iters[0]
 
         for i, task in enumerate(self._tasks):
-            logger.info(f"Running task {task.id} ({i + 1}/{len(self._tasks)} tasks).")
             processed_docs = task(processed_docs)
 
         # If returned docs are not iterators (e.g. returned as lists), get corresponding iterators.
@@ -107,7 +124,7 @@ class Pipeline:
             processed_docs = iter(processed_docs)
 
         # Iterate over all docs. Retrieve doc from cache if available, otherwise add to cache.
-        for i, doc in enumerate(docs_iters[1]):
+        for i, doc in tqdm.tqdm(enumerate(docs_iters[1]), desc="Running pipeline", total=n_docs):
             assert doc.text or doc.uri
             self._cache_stats["total"] += 1
             # Docs must either all have URIs or texts. Either is a sufficient identifier. If first task is Ingestion
@@ -184,9 +201,6 @@ class Pipeline:
         # Deserialize tasks.
         tasks: list[Task] = []
         for task_attr, task_kwargs in zip(config.tasks.value, tasks_kwargs):
-            # Restore engine config for PredictiveTask config.
-            if "engine" in task_attr:
-                task_attr["engine"]["value"], engine_cls = Config.from_dict(task_attr["engine"]["value"])
             # Restore task config, if provided as dict.
             match task_attr:
                 case dict():
@@ -210,10 +224,55 @@ class Pipeline:
 
         :param task_id: ID of task to fetch.
         :return: Task with specified ID.
-        :raises: KeyError if no task with such ID exists.
+        :raises KeyError: If no task with such ID exists.
         """
         for task in self._tasks:
             if task.id == task_id:
                 return task
 
         raise KeyError(f"No task with ID {task_id} exists in this pipeline.")
+
+    def __add__(self, other: Task | Pipeline) -> Pipeline:
+        """Chain this pipeline with another task or pipeline using ``+``.
+
+        Returns a new pipeline that executes all tasks of this pipeline first,
+        followed by the task(s) provided via ``other``. The original pipeline(s)
+        and task(s) are not mutated.
+
+        Cache semantics:
+        - The resulting pipeline preserves this pipeline's ``use_cache`` setting
+          regardless of whether ``other`` is a task or pipeline.
+
+        :param other: A ``Task`` or another ``Pipeline`` to execute after this pipeline.
+        :return: A new ``Pipeline`` representing the chained execution.
+        :raises TypeError: If ``other`` is not a ``Task`` or ``Pipeline``.
+        """
+        if isinstance(other, Pipeline):
+            return Pipeline(tasks=[*self._tasks, *other._tasks], use_cache=self._use_cache)
+
+        if isinstance(other, Task):
+            return Pipeline(tasks=[*self._tasks, other], use_cache=self._use_cache)
+
+        raise TypeError(f"Cannot chain Pipeline with {type(other).__name__}")
+
+    def __iadd__(self, other: Task | Pipeline) -> Pipeline:
+        """Append a task or pipeline to this pipeline in-place using ``+=``.
+
+        Extending with a pipeline appends all tasks from ``other``. Cache setting
+        remains unchanged and follows this (left) pipeline.
+
+        Revalidates the pipeline and updates distillation targets.
+
+        :param other: Task or Pipeline to append.
+        :return: This pipeline instance (mutated).
+        :raises TypeError: If ``other`` is not a ``Task`` or ``Pipeline``.
+        """
+        if isinstance(other, Task):
+            self._tasks.append(other)
+        elif isinstance(other, Pipeline):
+            self._tasks.extend(other._tasks)
+        else:
+            raise TypeError(f"Can only add Task or Pipeline to Pipeline with +=, got {type(other).__name__}")
+        self._validate_tasks()
+        self._set_distillation_targets()
+        return self

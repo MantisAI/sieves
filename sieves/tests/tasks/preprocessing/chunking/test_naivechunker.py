@@ -8,11 +8,11 @@ from sieves.tasks.preprocessing.chunking.naive import NaiveChunker
 
 
 @pytest.mark.parametrize(
-    "batch_engine",
+    "batch_runtime",
     [EngineType.huggingface],
-    indirect=["batch_engine"],
+    indirect=["batch_runtime"],
 )
-def test_run(dummy_docs, batch_engine) -> None:
+def test_run(dummy_docs, batch_runtime) -> None:
     """Tests whether chunking mechanism in PredictiveTask works as expected."""
     chunk_interval = 5
     pipe = Pipeline([NaiveChunker(interval=chunk_interval)])
@@ -40,7 +40,6 @@ def test_serialization(dummy_docs) -> None:
                     "cls_name": "sieves.tasks.preprocessing.chunking.naive.NaiveChunker",
                     "include_meta": {"is_placeholder": False, "value": False},
                     "interval": {"is_placeholder": False, "value": 5},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "NaiveChunker"},
                     "version": Config.get_version(),
                 }

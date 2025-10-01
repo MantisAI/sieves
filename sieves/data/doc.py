@@ -1,3 +1,5 @@
+"""Doc implementation, types and utilities."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -23,12 +25,14 @@ class Doc:
     images: list[Image.Image] | None = None
 
     def __post_init__(self) -> None:
+        """Initialize chunks."""
         if self.chunks is None and self.text is not None:
             self.chunks = [self.text]
 
     @staticmethod
     def _are_images_equal(im1: Image.Image | None, im2: Image.Image | None) -> bool:
         """Check if two images are equal using PIL Image Channel operations.
+
         :param im1: First PIL image to compare.
         :param im2: Second PIL image to compare.
         :return bool: True if images are equal, False otherwise.
@@ -42,9 +46,10 @@ class Doc:
         return ImageChops.difference(im1, im2).getbbox() is None
 
     def __eq__(self, other: object) -> bool:
-        """Compares two `Doc` instances.
+        """Compare two `Doc` instances.
+
         :return: True if `self` is equal to `other`.
-        :raises: NotImplementedError if `other` isn't of type `Doc`.
+        :raises NotImplementedError: if `other` isn't of type `Doc`.
         """
         if not isinstance(other, Doc):
             raise NotImplementedError
@@ -94,6 +99,3 @@ class Doc:
             docs.append(cls(**{doc_col: row.get(data_col) for doc_col, data_col in column_map.items()}))  # type: ignore[misc]
 
         return docs
-
-    # def __hash__(self):
-    #     return hash(self.text)

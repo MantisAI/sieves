@@ -7,6 +7,14 @@
 
 ## Document Parsing
 
+Note: Ingestion libraries are optional and not installed by default. To use document parsing (Docling, Unstructured, Marker), install them manually or install the `ingestion` extra:
+
+```bash
+pip install "sieves[ingestion]"
+```
+
+You can also install individual libraries directly (e.g., `pip install docling`, `pip install unstructured`).
+
 ### Using Ingestion
 
 The `Ingestion` task uses the [docling](https://github.com/DS4SD/docling) or alternatively the [marker](https://github.com/VikParuchuri/marker) libraries to parse various document formats:
@@ -158,17 +166,9 @@ for i, chunk in enumerate(processed_doc.chunks):
 
 ## Customizing Preprocessing
 
-### Progress Bars
+### Progress
 
-All preprocessing tasks support progress bars. You can enable/disable them:
-
-```python
-parser = tasks.preprocessing.Ingestion(show_progress=True)
-chunker = tasks.preprocessing.Chonkie(
-    chunker=chonkie.TokenChunker(tokenizer),
-    show_progress=True
-)
-```
+Progress bars are shown at the pipeline level. Tasks do not expose progress options.
 
 ### Metadata
 

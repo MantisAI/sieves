@@ -10,7 +10,7 @@ from sieves.tasks.predictive.ner.core import Entity
 
 
 @pytest.mark.parametrize(
-    "batch_engine",
+    "batch_runtime",
     (
         EngineType.dspy,
         EngineType.instructor,
@@ -20,10 +20,10 @@ from sieves.tasks.predictive.ner.core import Entity
         EngineType.glix,
         # EngineType.vllm,
     ),
-    indirect=["batch_engine"],
+    indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
-def test_run(ner_docs, batch_engine, fewshot) -> None:
+def test_run(ner_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         ner.TaskFewshotExample(
             text="John studied data science in Barcelona and lives with Jaume",
@@ -45,9 +45,12 @@ def test_run(ner_docs, batch_engine, fewshot) -> None:
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline(
-        [
-            ner.NER(entities=["PERSON", "LOCATION", "COMPANY"], engine=batch_engine, **fewshot_args),
-        ]
+        ner.NER(
+            entities=["PERSON", "LOCATION", "COMPANY"],
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
+            **fewshot_args
+        )
     )
     docs = list(pipe(ner_docs))
 
@@ -59,53 +62,54 @@ def test_run(ner_docs, batch_engine, fewshot) -> None:
         pipe["NER"].distill(None, None, None, None, None, None, None, None)
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.dspy], indirect=["batch_engine"])
-def test_serialization(ner_docs, batch_engine) -> None:
-    pipe = Pipeline([ner.NER(entities=["PERSON", "LOCATION", "COMPANY"], engine=batch_engine)])
+@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
+def test_serialization(ner_docs, batch_runtime) -> None:
+    pipe = Pipeline(
+        ner.NER(
+            entities=["PERSON", "LOCATION", "COMPANY"],
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
+        )
+    )
 
     config = pipe.serialize()
-    assert config.model_dump() == {
-        "cls_name": "sieves.pipeline.core.Pipeline",
-        "use_cache": {"is_placeholder": False, "value": True},
-        "tasks": {
-            "is_placeholder": False,
-            "value": [
-                {
-                    "cls_name": "sieves.tasks.predictive.ner.core.NER",
-                    "engine": {
-                        "is_placeholder": False,
-                        "value": {
-                            "batch_size": {"is_placeholder": False, "value": -1},
-                            "cls_name": "sieves.engines.wrapper.Engine",
-                            "inference_kwargs": {"is_placeholder": False, "value": {}},
-                            "init_kwargs": {"is_placeholder": False, "value": {}},
-                            "model": {"is_placeholder": True, "value": "dspy.clients.lm.LM"},
-                            "strict_mode": {"is_placeholder": False, "value": False},
-                            "version": Config.get_version(),
-                        },
-                    },
-                    "entities": {"is_placeholder": False, "value": ["PERSON", "LOCATION", "COMPANY"]},
-                    "fewshot_examples": {"is_placeholder": False, "value": ()},
-                    "include_meta": {"is_placeholder": False, "value": True},
-                    "prompt_signature_desc": {"is_placeholder": False, "value": None},
-                    "prompt_template": {"is_placeholder": False, "value": None},
-                    "show_progress": {"is_placeholder": False, "value": True},
-                    "task_id": {"is_placeholder": False, "value": "NER"},
-                    "version": Config.get_version(),
-                },
-            ],
-        },
-        "version": Config.get_version(),
-    }
+    assert config.model_dump() == {'cls_name': 'sieves.pipeline.core.Pipeline',
+ 'tasks': {'is_placeholder': False,
+           'value': [{'cls_name': 'sieves.tasks.predictive.ner.core.NER',
+                      'entities': {'is_placeholder': False,
+                                   'value': ['PERSON', 'LOCATION', 'COMPANY']},
+                      'fewshot_examples': {'is_placeholder': False,
+                                           'value': ()},
+                      'generation_settings': {'is_placeholder': False,
+                                              'value': {'batch_size': -1,
+                                                        'config_kwargs': None,
+                                                        'inference_kwargs': None,
+                                                        'init_kwargs': None,
+                                                        'strict_mode': False}},
+                      'include_meta': {'is_placeholder': False, 'value': True},
+                      'model': {'is_placeholder': True,
+                                'value': 'dspy.clients.lm.LM'},
+                      'prompt_signature_desc': {'is_placeholder': False,
+                                                'value': None},
+                      'prompt_template': {'is_placeholder': False,
+                                          'value': None},
+                      'task_id': {'is_placeholder': False, 'value': 'NER'},
+                      'version': Config.get_version()}]},
+ 'use_cache': {'is_placeholder': False, 'value': True},
+ 'version': Config.get_version()}
     Pipeline.deserialize(
         config=config,
-        tasks_kwargs=[{"engine": {"model": batch_engine.model}, "entities": ["PERSON", "LOCATION", "COMPANY"]}],
+        tasks_kwargs=[{"model": batch_runtime.model}],
     )
 
 
-@pytest.mark.parametrize("batch_engine", [EngineType.glix], indirect=["batch_engine"])
-def test_to_hf_dataset(ner_docs, batch_engine) -> None:
-    task = ner.NER(entities=["PERSON", "LOCATION", "COMPANY"], engine=batch_engine)
+@pytest.mark.parametrize("batch_runtime", [EngineType.glix], indirect=["batch_runtime"])
+def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
+    task = ner.NER(
+        entities=["PERSON", "LOCATION", "COMPANY"],
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+    )
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(task(ner_docs))

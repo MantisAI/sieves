@@ -7,7 +7,7 @@ This guide will help you get started with using `sieves` for zero-shot and few-s
 `sieves` is built around four main concepts:
 
 1. **Documents (`Doc`)**: The basic unit of text that you want to process. A document can be created from text or a URI.
-2. **Engines**: Components responsible for generating structured output using various LLM backends (outlines, DSPy, LangChain, etc.)
+2. **Models + GenerationSettings**: You pass a model from your chosen backend (Outlines, DSPy, LangChain, etc.) and optional `GenerationSettings` (e.g., batch size)
 3. **Tasks**: NLP operations you want to perform on your documents (classification, information extraction, etc.)
 4. **Pipeline**: A sequence of tasks that process your documents
 
@@ -17,20 +17,31 @@ Here's a simple example that performs text classification:
 
 ```python
 import outlines
-from sieves import Pipeline, Engine, tasks, Doc
+from sieves import Pipeline, tasks, Doc
 
 # Create a document
 doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
 
-# Initialize the engine (using a small but capable model)
-engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
+# Choose a model (using a small but capable model)
+model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
 
-# Create and run the pipeline
-pipeline = Pipeline([tasks.predictive.Classification(labels=["science", "politics"], engine=engine)])
+# Create and run the pipeline (verbose init)
+pipeline = Pipeline([
+    tasks.predictive.Classification(
+        labels=["science", "politics"],
+        model=model,
+    )
+])
 
 # Print the classification result
 for doc in pipeline([doc]):
     print(doc.results)
+
+# Alternatively: succinct chaining with +
+# (useful when you have multiple tasks)
+# classifier = tasks.predictive.Classification(labels=["science", "politics"], model=model)
+# pipeline = classifier  # single-task pipeline
+# Note: set additional Pipeline params (e.g., use_cache=False) only via verbose init.
 ```
 
 ## Working with Documents
@@ -53,6 +64,12 @@ doc = Doc(
 )
 ```
 
+Note: File-based ingestion (Docling/Unstructured/Marker) is optional and not installed by default. To enable it, install the ingestion extra or the specific libraries you need:
+
+```bash
+pip install "sieves[ingestion]"
+```
+
 ## Advanced Example: PDF Processing Pipeline
 
 Here's a more involved example that:
@@ -66,7 +83,7 @@ import outlines
 import chonkie
 import tokenizers
 import pydantic
-from sieves import Pipeline, Engine, tasks, Doc
+from sieves import Pipeline, tasks, Doc
 
 # Create a tokenizer for chunking
 tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
@@ -76,8 +93,9 @@ chunker = tasks.preprocessing.Chonkie(
     chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
 )
 
-# Initialize an engine for information extraction
-engine = Engine(model=outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct"))
+# Choose a model for information extraction
+model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+
 
 # Define the structure of information you want to extract
 class PersonInfo(pydantic.BaseModel):
@@ -85,17 +103,20 @@ class PersonInfo(pydantic.BaseModel):
     age: int | None = None
     occupation: str | None = None
 
+
 # Create an information extraction task
 extractor = tasks.predictive.InformationExtraction(
     entity_type=PersonInfo,
-    engine=engine
+    model=model,
 )
 
-# Create the pipeline
-pipeline = Pipeline([
-    chunker,
-    extractor
-])
+# Create the pipeline (verbose init)
+pipeline = Pipeline([chunker, extractor])
+
+# Alternatively: succinct chaining (+)
+# pipeline = chunker + extractor
+# Note: to change Pipeline parameters (e.g., use_cache), use the verbose form
+#   Pipeline([chunker, extractor], use_cache=False)
 
 # Process a PDF document
 doc = Doc(text="Marie Curie died at the age of 66 years.")
@@ -118,4 +139,23 @@ for result in results:
 - [`transformers`](https://github.com/huggingface/transformers)
 - [`ollama`](https://github.com/ollama/ollama)
 
-You can pass in models from either of these structured generation libraries into `Engine`.   
+You pass models from these libraries directly to `PredictiveTask`. Optionally, you can include `GenerationSettings` to
+override defaults.
+
+### GenerationSettings (optional)
+`GenerationSettings` controls execution behavior across engines and is optional. Defaults:
+- batch_size: -1 (batch all inputs together)
+- strict_mode: False (on parse issues, return None instead of raising)
+- init_kwargs/inference_kwargs: None (use engine defaults)
+- config_kwargs: None (used by some backends like DSPy)
+
+Only pass it if you need non-defaults, for example:
+
+```python
+from sieves.engines.utils import GenerationSettings
+classifier = tasks.predictive.Classification(
+    labels=["science", "politics"],
+    model=model,
+    generation_settings=GenerationSettings(batch_size=8, strict_mode=True),
+)
+```

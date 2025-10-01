@@ -60,7 +60,6 @@ def test_serialization() -> None:
                     "cls_name": "sieves.tasks.preprocessing.ingestion.unstructured_.Unstructured",
                     "include_meta": {"is_placeholder": False, "value": True},
                     "partition": {"is_placeholder": True, "value": "builtins.function"},
-                    "show_progress": {"is_placeholder": False, "value": True},
                     "task_id": {"is_placeholder": False, "value": "Unstructured"},
                     "version": Config.get_version(),
                 }
