@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -7,13 +8,15 @@ import model2vec
 import model2vec.inference
 import model2vec.train
 import numpy as np
+import openai
+import outlines
 import pytest
 import setfit
 
-from sieves import Doc, Pipeline
+from sieves import Doc, Pipeline, GenerationSettings
 from sieves.engines import EngineType
 from sieves.serialization import Config
-from sieves.tasks import Distillation, DistillationFramework
+from sieves.tasks import Distillation, DistillationFramework, Classification
 from sieves.tasks.predictive import classification
 
 
@@ -197,3 +200,31 @@ def test_serialization(classification_docs, batch_runtime) -> None:
 
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}, {}])
+
+
+def test_distillation_with_openai_model() -> None:
+    """Test distillation with an OpenAI model.
+
+    See https://github.com/MantisAI/sieves/issues/162.
+    """
+    client = openai.OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+    model = outlines.from_openai(client=client, model_name='gpt-5-nano')
+
+    classifier = Classification(
+        task_id='classifier',
+        labels=['A', 'B', 'C'],
+        model=model,
+        generation_settings=GenerationSettings(batch_size=32, strict_mode=False),
+    )
+
+    # Add distillation
+    distiller = Distillation(
+        target_task_id='classifier',
+        base_model_id='sentence-transformers/paraphrase-mpnet-base-v2',
+        framework=DistillationFramework.setfit,
+        output_path='./model',
+    )
+
+    # This fails with pickle error
+    pipe = classifier + distiller
+    list(pipe([Doc(text='test')]))
