@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "sieves[engines]",
+#     "sieves[engines]>=0.15",
 #     "typer>=0.12,<1",
 #     "datasets",
 #     "transformers>=4.53.0,<5",
@@ -405,26 +405,23 @@ def classify(
     zeroshot_tag = "zero-shot-classification"
     # Explicitly designed for zero-shot classification: build directly as pipeline.
     if info.pipeline_tag == zeroshot_tag or zeroshot_tag in set(info.tags or []):
-        engine_model = transformers.pipeline(zeroshot_tag, model=model, device=device)
+        model = transformers.pipeline(zeroshot_tag, model=model, device=device)
     # Otherwise: build Outlines model around it to enforce structured generation.
     else:
-        engine_model = outlines.models.from_transformers(
+        model = outlines.models.from_transformers(
             AutoModelForCausalLM.from_pretrained(model, **({"device": device} if device else {})),
             AutoTokenizer.from_pretrained(model),
         )
 
-    # Build engine.
-    engine = sieves.Engine(
-        model=engine_model,
-        inference_kwargs={"max_new_tokens": max_tokens},
-        strict_mode=False,
-        batch_size=batch_size,
-    )
-
     # Build task and pipeline.
     task = sieves.tasks.Classification(
         labels=labels_list,
-        engine=engine,
+        model=model,
+        generation_settings=sieves.GenerationSettings(
+            inference_kwargs={"max_new_tokens": max_tokens},
+            strict_mode=False,
+            batch_size=batch_size,
+        ),
         label_descriptions=desc_map or None,
         multi_label=multi_label,
     )
