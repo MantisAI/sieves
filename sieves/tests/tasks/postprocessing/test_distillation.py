@@ -91,7 +91,6 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
             assert hf_dataset_loaded[split]["labels"] == hf_dataset[split]["labels"]
 
         # Assert predictions of distilled models look as expected.
-
         test_sents = ["This is about the galaxy and laws of nature.", "This is about political election and lobbying."]
 
         match distillation_framework:
@@ -202,6 +201,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}, {}])
 
 
+@pytest.skip("No OpenAI API key available in GitHub CI yet")
 def test_distillation_with_openai_model() -> None:
     """Test distillation with an OpenAI model.
 
@@ -212,19 +212,19 @@ def test_distillation_with_openai_model() -> None:
 
     classifier = Classification(
         task_id='classifier',
-        labels=['A', 'B', 'C'],
+        labels=['Fruit', 'Vegetable'],
         model=model,
         generation_settings=GenerationSettings(batch_size=32, strict_mode=False),
     )
 
-    # Add distillation
     distiller = Distillation(
         target_task_id='classifier',
         base_model_id='sentence-transformers/paraphrase-mpnet-base-v2',
         framework=DistillationFramework.setfit,
         output_path='./model',
+        train_frac=.5,
+        val_frac=.5,
     )
 
-    # This fails with pickle error
     pipe = classifier + distiller
-    list(pipe([Doc(text='test')]))
+    list(pipe([Doc(text='Apple'), Doc(text='Cucumber'), Doc(text="Broccoli"), Doc(text='Pomegranate')]))

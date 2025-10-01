@@ -307,6 +307,8 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         :raises TypeError: If a result cannot be interpreted.
 
         """
+        data: list[dict[str, str | list[bool]]] = []
+
         # Define metadata and features (multi-hot across declared labels for multi-label).
         if self._multi_label:
             features = datasets.Features(
@@ -325,40 +327,25 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             features=features,
         )
 
-        labels = self._labels
-
         try:
-            data = [(doc.text, doc.results[self._task_id]) for doc in docs]
-        except KeyError as err:
-            raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
+            for doc in docs:
+                scores = Classification._result_to_scores(doc.results[self._task_id])
 
-        def generate_data() -> Iterable[dict[str, Any]]:
-            """Yield rows with text and multi-hot labels for HF datasets.
-
-            Iterates over the prepared ``data`` list, converts result shapes to
-            a label→score mapping, and emits the multi-hot vector using the
-            provided ``threshold``.
-
-            Yields:
-                Dicts with keys ``text`` and ``labels``.
-
-            """
-            for text, result in data:
-                # Normalize result types.
-                scores = Classification._result_to_scores(result)
-
-                # If multi-label: store one-hot representation..
+                # If multi-label: store one-hot representation.
                 if self._multi_label:
-                    result_normalized = [int(scores.get(label, 0.0) >= threshold) for label in labels]
+                    result_normalized = [int(scores.get(label, 0.0) >= threshold) for label in self._labels]
                 # If single-label: get single-label result as is
                 else:
                     keys = list(scores.keys())
                     assert len(keys) == 1
                     result_normalized = keys[0]
 
-                yield {"text": text, "labels": result_normalized}
+                data.append({"text": doc.text, "labels": result_normalized})
 
-        return datasets.Dataset.from_generator(generate_data, features=features, info=info)
+        except KeyError as err:
+            raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
+
+        return datasets.Dataset.from_list(data, features=features, info=info)
 
     @override
     def distill(
