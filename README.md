@@ -27,6 +27,7 @@ Read our documentation [here](https://sieves.ai). An automatically generated ver
 
 <details>
   <summary><b>Installation</b></summary>
+
 Install `sieves` with `pip install sieves` (or `uv add sieves`).
 
 The following extra groups exist:
