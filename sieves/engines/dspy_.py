@@ -50,7 +50,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         :param generation_settings: Settings including DSPy configuration in `config_kwargs`.
         """
         super().__init__(model, generation_settings)
-        cfg = {"max_tokens": DSPy._MAX_TOKENS} | (generation_settings.config_kwargs or {})
+        cfg = generation_settings.config_kwargs or {}
         dspy.configure(lm=model, **cfg)
 
     @override
