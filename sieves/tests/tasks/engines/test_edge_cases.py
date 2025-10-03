@@ -4,20 +4,17 @@ import os
 import openai
 import outlines
 
-from sieves import tasks, GenerationSettings
+from sieves import tasks, GenerationSettings, Pipeline, Doc
 
 
 def test_openai_outlines_batching() -> None:
     """Test Outlines batching fallback uses async batching."""
-    MODEL = "gpt-5-nano"
-    print("🔌 Setting up OpenRouter client...")
+    model = "gpt-5-nano"
     client = openai.OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=os.environ["OPENROUTER_API_KEY"],
     )
-    model = outlines.from_openai(client, model_name=MODEL)
-    print(f"   ✓ Model created: {MODEL}\n")
-
+    model = outlines.from_openai(client, model_name=model)
 
     classifier = tasks.Classification(
         task_id="procedures_classifier",
@@ -30,3 +27,6 @@ def test_openai_outlines_batching() -> None:
         ),
         multi_label=True,
     )
+
+    docs = [Doc(text="Apple"), Doc(text="Carrot"), Doc(text="Watermelon")]
+    list(Pipeline(classifier)(docs))

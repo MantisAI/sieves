@@ -73,7 +73,17 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                     results = generator.batch(prompts, **self._inference_kwargs)
                 # Batch mode is not implemented for all Outlines wrappers. Fall back to single-prompt mode in that case.
                 except NotImplementedError:
-                    results = [generator(prompt, **self._inference_kwargs) for prompt in prompts]
+
+                    async def generate_async(prompt: str) -> Result | None:
+                        """Generate result async.
+
+                        :param prompt: Prompt to generate result for.
+                        :return: Result for prompt. Results are None if corresponding prompt failed.
+                        """
+                        return generator(prompt, **self._inference_kwargs)
+
+                    calls = [generate_async(prompt) for prompt in prompts]
+                    results = self._execute_async_calls(calls)
 
                 if inference_mode == InferenceMode.json:
                     assert len(results) == len(prompts)
