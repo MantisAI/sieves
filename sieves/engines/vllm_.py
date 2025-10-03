@@ -57,10 +57,7 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
         # Configure decoding params to encourage correct formatting.
         guided_decoding_params = GuidedDecodingParams(**{inference_mode.value: converted_decoding_params})
-        sampling_params = SamplingParams(
-            guided_decoding=guided_decoding_params,
-            **({"max_tokens": VLLM._MAX_TOKENS, "temperature": 0} | self._init_kwargs),
-        )
+        sampling_params = SamplingParams(guided_decoding=guided_decoding_params, **self._init_kwargs)
 
         def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.

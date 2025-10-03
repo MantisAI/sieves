@@ -64,7 +64,7 @@ class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                                 messages=[{"role": "user", "content": prompt}],
                                 model=self._model.name,
                                 response_model=prompt_signature,
-                                **({"max_tokens": Instructor._MAX_TOKENS} | self._inference_kwargs),
+                                **self._inference_kwargs,
                             )
                             for prompt in prompts
                         ]
