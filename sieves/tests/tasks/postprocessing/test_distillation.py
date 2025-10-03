@@ -201,13 +201,15 @@ def test_serialization(classification_docs, batch_runtime) -> None:
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}, {}])
 
 
-@pytest.mark.skip(reason="No OpenAI API key available in GitHub CI yet")
 def test_distillation_with_openai_model() -> None:
     """Test distillation with an OpenAI model.
 
     See https://github.com/MantisAI/sieves/issues/162.
     """
-    client = openai.OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+    client = openai.OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ["OPENROUTER_API_KEY"],
+    )
     model = outlines.from_openai(client=client, model_name='gpt-5-nano')
 
     classifier = Classification(
