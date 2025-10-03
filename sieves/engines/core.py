@@ -37,8 +37,6 @@ class Executable(Protocol[EngineResult]):
 class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
     """Base class for engines wrapping model invocation and batching."""
 
-    _MAX_TOKENS = 2**12
-
     def __init__(self, model: EngineModel, generation_settings: GenerationSettings):
         """Initialize engine with model and generation settings.
 
