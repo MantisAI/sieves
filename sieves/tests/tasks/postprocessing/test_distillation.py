@@ -12,6 +12,8 @@ import openai
 import outlines
 import pytest
 import setfit
+import transformers
+from loguru import logger
 
 from sieves import Doc, Pipeline, GenerationSettings
 from sieves.engines import EngineType
@@ -199,3 +201,74 @@ def test_serialization(classification_docs, batch_runtime) -> None:
 
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}, {}])
+
+
+def test_distillation_with_openai_model() -> None:
+    """Test distillation with an OpenAI model.
+
+    See https://github.com/MantisAI/sieves/issues/162.
+    """
+    client = openai.OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ["OPENROUTER_API_KEY"],
+    )
+    model = outlines.from_openai(client=client, model_name='gpt-5-nano')
+
+    classifier = Classification(
+        task_id='classifier',
+        labels=['Fruit', 'Vegetable'],
+        model=model,
+        generation_settings=GenerationSettings(batch_size=32, strict_mode=False),
+    )
+
+    distiller = Distillation(
+        target_task_id='classifier',
+        base_model_id='sentence-transformers/paraphrase-mpnet-base-v2',
+        framework=DistillationFramework.setfit,
+        output_path='./model',
+        train_frac=.5,
+        val_frac=.5,
+    )
+
+    pipe = classifier + distiller
+    # list(pipe([Doc(text='Apple'), Doc(text='Cucumber'), Doc(text="Broccoli"), Doc(text='Pomegranate')]))
+    list(
+        pipe(
+            [
+                *[Doc(text=f'Apple {i}') for i in range(100)],
+                *[Doc(text=f'Broccoli {i}') for i in range(100)]
+            ]
+        )
+    )
+
+if __name__ == '__main__':
+    model = transformers.pipeline(
+        "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
+    )
+    classifier = Classification(
+        task_id='classifier',
+        labels=['Fruit', 'Vegetable'],
+        model=model,
+        generation_settings=GenerationSettings(batch_size=50, strict_mode=False),
+    )
+
+    # distiller = Distillation(
+    #     target_task_id='classifier',
+    #     base_model_id='sentence-transformers/paraphrase-mpnet-base-v2',
+    #     framework=DistillationFramework.setfit,
+    #     output_path='./model',
+    #     train_frac=.5,
+    #     val_frac=.5,
+    # )
+
+    pipe = Pipeline(classifier)  #  + distiller
+    # list(pipe([Doc(text='Apple'), Doc(text='Cucumber'), Doc(text="Broccoli"), Doc(text='Pomegranate')]))
+    for i, res in enumerate(
+        pipe(
+            [
+                *[Doc(text=f'Apple {i}') for i in range(5000)],
+                *[Doc(text=f'Broccoli {i}') for i in range(5000)]
+            ]
+        )
+    ):
+        logger.info(i)

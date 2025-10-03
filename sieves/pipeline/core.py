@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import tqdm
+from loguru import logger
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config, Serializable
@@ -125,6 +126,7 @@ class Pipeline:
 
         # Iterate over all docs. Retrieve doc from cache if available, otherwise add to cache.
         for i, doc in tqdm.tqdm(enumerate(docs_iters[1]), desc="Running pipeline", total=n_docs):
+            logger.critical(i)
             assert doc.text or doc.uri
             self._cache_stats["total"] += 1
             # Docs must either all have URIs or texts. Either is a sufficient identifier. If first task is Ingestion

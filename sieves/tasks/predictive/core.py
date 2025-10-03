@@ -112,12 +112,6 @@ class PredictiveTask(
         :param docs: Documents to process.
         :return Iterable[Doc]: Processed documents.
         """
-        # Note: the mypy ignore directives are because in practice, TaskX can be a superset of the X types of multiple
-        # engines, but there is no way in Python's current typing system to model that. E.g.: TaskInferenceMode could be
-        # outlines_.InferenceMode | dspy_.InferenceMode, depending on the class of the dynamically provided engine
-        # instance. TypeVars don't support unions however, neither do generics on a higher level of abstraction.
-        # We hence ignore these mypy errors, as the involved types should nonetheless be consistent.
-
         docs = list(docs)
 
         # 1. Compile expected prompt signatures.
@@ -144,12 +138,12 @@ class PredictiveTask(
             docs_chunks_values.extend(doc_chunks_values)
 
         # 5. Execute prompts per chunk.
-        results = list(executable(tuple(docs_chunks_values)))
-        assert len(results) == len(docs_chunks_values)
+        results = executable(docs_chunks_values)
+        # assert len(results) == len(docs_chunks_values)
 
         # 6. Consolidate chunk results.
-        results = list(self._bridge.consolidate(results, docs_chunks_offsets))
-        assert len(results) == len(docs)
+        results = self._bridge.consolidate(results, docs_chunks_offsets)
+        # assert len(results) == len(docs)
 
         # 7. Integrate results into docs.
         docs = self._bridge.integrate(results, docs)
