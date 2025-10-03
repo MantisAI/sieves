@@ -97,6 +97,7 @@ jobs:
     - name: Run tests
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       run: |
         source .venv/bin/activate
         pytest -x --cov --cov-report=xml -m "not slow"
