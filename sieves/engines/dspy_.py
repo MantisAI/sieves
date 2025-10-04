@@ -2,7 +2,7 @@
 
 import asyncio
 import enum
-from collections.abc import Iterable, Sized
+from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import dspy
@@ -48,7 +48,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         :param generation_settings: Settings including DSPy configuration in `config_kwargs`.
         """
         super().__init__(model, generation_settings)
-        cfg = {"max_tokens": DSPy._MAX_TOKENS} | (generation_settings.config_kwargs or {})
+        cfg = generation_settings.config_kwargs or {}
         dspy.configure(lm=model, **cfg)
 
     @override
@@ -83,7 +83,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
             assert issubclass(prompt_signature, dspy.Signature)
             generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
-        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
             # Compile predictor with few-shot examples.
             fewshot_examples_dicts = DSPy._convert_fewshot_examples(fewshot_examples)
             generator_fewshot: dspy.Module | None = None

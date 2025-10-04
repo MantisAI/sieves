@@ -231,15 +231,7 @@ def test_distillation_with_openai_model() -> None:
     )
 
     pipe = classifier + distiller
-    # list(pipe([Doc(text='Apple'), Doc(text='Cucumber'), Doc(text="Broccoli"), Doc(text='Pomegranate')]))
-    list(
-        pipe(
-            [
-                *[Doc(text=f'Apple {i}') for i in range(100)],
-                *[Doc(text=f'Broccoli {i}') for i in range(100)]
-            ]
-        )
-    )
+    list(pipe([Doc(text='Apple'), Doc(text='Cucumber'), Doc(text="Broccoli"), Doc(text='Pomegranate')]))
 
 if __name__ == '__main__':
     model = transformers.pipeline(

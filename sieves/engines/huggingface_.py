@@ -1,7 +1,7 @@
 """Hugging Face transformers engine wrapper (zero-shot classification)."""
 
 import enum
-from collections.abc import Iterable, Sized
+from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import jinja2
@@ -53,7 +53,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         # Render hypothesis template with everything but text.
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
-        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.

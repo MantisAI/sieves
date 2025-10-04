@@ -2,7 +2,7 @@
 
 import asyncio
 import enum
-from collections.abc import Iterable, Sized
+from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import instructor
@@ -49,7 +49,7 @@ class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
 
-        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.
@@ -64,7 +64,7 @@ class Instructor(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                                 messages=[{"role": "user", "content": prompt}],
                                 model=self._model.name,
                                 response_model=prompt_signature,
-                                **({"max_tokens": Instructor._MAX_TOKENS} | self._inference_kwargs),
+                                **self._inference_kwargs,
                             )
                             for prompt in prompts
                         ]

@@ -2,7 +2,7 @@
 
 import enum
 import warnings
-from collections.abc import Iterable, Sized
+from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import gliner.multitask.base
@@ -70,7 +70,7 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
         if prompt_template:
             self._model.prompt = jinja2.Template(prompt_template).render()
 
-        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.

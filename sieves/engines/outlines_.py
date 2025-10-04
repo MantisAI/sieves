@@ -1,7 +1,7 @@
 """Outlines engine wrapper supporting text, choices, regex and JSON schemas."""
 
 import enum
-from collections.abc import Iterable, Sized
+from collections.abc import Iterable, Sequence
 from typing import Any, Literal, override
 
 import outlines
@@ -61,7 +61,7 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
         generator = outlines.Generator(self._model, output_type=prompt_signature, **self._init_kwargs)
 
-        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.

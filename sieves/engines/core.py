@@ -5,7 +5,7 @@ from __future__ import annotations
 import abc
 import asyncio
 import enum
-from collections.abc import Awaitable, Callable, Coroutine, Iterable, Sized
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Sequence
 from typing import Any, Generic, Protocol, TypeVar, override
 
 import instructor.exceptions
@@ -23,7 +23,7 @@ EngineInferenceMode = TypeVar("EngineInferenceMode", bound=enum.Enum)
 class Executable(Protocol[EngineResult]):
     """Callable protocol representing a compiled prompt executable."""
 
-    def __call__(self, values: Sized[dict[str, Any]]) -> Iterable[EngineResult | None]:
+    def __call__(self, values: Sequence[dict[str, Any]]) -> Iterable[EngineResult | None]:
         """Execute prompt executable for given values.
 
         :param values: Values to inject into prompts.
@@ -34,8 +34,6 @@ class Executable(Protocol[EngineResult]):
 
 class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
     """Base class for engines wrapping model invocation and batching."""
-
-    _MAX_TOKENS = 2**12
 
     def __init__(self, model: EngineModel, generation_settings: GenerationSettings):
         """Initialize engine with model and generation settings.
@@ -150,7 +148,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         self,
         generator: Callable[[list[str]], Iterable[EngineResult]],
         template: jinja2.Template,
-        values: Sized[dict[str, Any]],
+        values: Sequence[dict[str, Any]],
         fewshot_examples: Iterable[pydantic.BaseModel],
     ) -> Iterable[EngineResult | None]:
         """Run inference in batches with exception handling.
