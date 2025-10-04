@@ -26,6 +26,7 @@ from sieves.tasks.types import Model
 class Runtime(NamedTuple):
     model: Model
     generation_settings: GenerationSettings
+    batch_size: int
 
 
 @pytest.fixture(scope="session")
@@ -92,7 +93,7 @@ def _make_runtime(engine_type: EngineType, batch_size: int) -> Runtime:
     :param batch_size: Batch size to use in runtime.
     :return: Runtime tuple.
     """
-    return Runtime(_make_model(engine_type), GenerationSettings(batch_size=batch_size))
+    return Runtime(_make_model(engine_type), GenerationSettings(), batch_size)
 
 
 @pytest.fixture(scope="function")

@@ -23,8 +23,8 @@ def test_double_task(dummy_docs, batch_runtime) -> None:
 
     pipe = Pipeline(
         [
-            DummyTask(task_id="task_1", include_meta=False),
-            DummyTask(task_id="task_2", include_meta=False),
+            DummyTask(task_id="task_1", include_meta=False, batch_size=1),
+            DummyTask(task_id="task_2", include_meta=False, batch_size=1),
         ]
     )
     docs = list(pipe(dummy_docs))
@@ -64,7 +64,7 @@ def test_caching(batch_runtime) -> None:
 
     n_docs = 10
     docs = [Doc(text=text_science) for _ in range(n_docs)]
-    pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings))
+    pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size))
     docs = list(pipe(docs))
     assert pipe._cache_stats == {"hits": 9, "misses": 1, "total": 10, "unique": 1}
     assert len(docs) == n_docs
@@ -72,7 +72,7 @@ def test_caching(batch_runtime) -> None:
     # Test that uniqueness filtering works while preserving sequence of Docs.
 
     docs = [Doc(text=text_science), Doc(text=text_politics), Doc(text=text_science)]
-    pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings))
+    pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size))
     docs = list(pipe(docs))
     assert docs[0].text == docs[2].text == text_science
     assert docs[1].text == text_politics
@@ -82,8 +82,8 @@ def test_caching(batch_runtime) -> None:
 
     n_docs = 10
     docs = [Doc(text=text_science) for _ in range(n_docs)]
-    uncached_pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings), use_cache=False)
-    cached_pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings))
+    uncached_pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size), use_cache=False)
+    cached_pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size))
 
     start = time.time()
     uncached_docs = list(uncached_pipe(docs))
@@ -121,8 +121,8 @@ def test_add_task_task(dummy_docs) -> None:
             yield from _docs
 
     pipe = (
-        DummyTask(task_id="t1", include_meta=False)
-        + DummyTask(task_id="t2", include_meta=False)
+        DummyTask(task_id="t1", include_meta=False, batch_size=-1)
+        + DummyTask(task_id="t2", include_meta=False, batch_size=-1)
     )
 
     assert isinstance(pipe, Pipeline)
@@ -143,8 +143,8 @@ def test_add_pipeline_task_and_task_pipeline(dummy_docs) -> None:
                 _doc.results[self._task_id] = "ok"
             yield from _docs
 
-    t1 = DummyTask(task_id="t1", include_meta=False)
-    t2 = DummyTask(task_id="t2", include_meta=False)
+    t1 = DummyTask(task_id="t1", include_meta=False, batch_size=-1)
+    t2 = DummyTask(task_id="t2", include_meta=False, batch_size=-1)
 
     p1 = Pipeline([t1])
     p2 = p1 + t2
@@ -168,8 +168,8 @@ def test_add_pipeline_pipeline(dummy_docs) -> None:
                 _doc.results[self._task_id] = "ok"
             yield from _docs
 
-    p_left = Pipeline([DummyTask(task_id="left", include_meta=False)])
-    p_right = Pipeline([DummyTask(task_id="right", include_meta=False)])
+    p_left = Pipeline([DummyTask(task_id="left", include_meta=False, batch_size=-1)])
+    p_right = Pipeline([DummyTask(task_id="right", include_meta=False, batch_size=-1)])
 
     p = p_left + p_right
     docs = list(p(dummy_docs))
@@ -185,8 +185,8 @@ def test_add_does_not_mutate_originals() -> None:
         def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             yield from _docs
 
-    t1 = DummyTask(task_id="t1", include_meta=False)
-    t2 = DummyTask(task_id="t2", include_meta=False)
+    t1 = DummyTask(task_id="t1", include_meta=False, batch_size=-1)
+    t2 = DummyTask(task_id="t2", include_meta=False, batch_size=-1)
 
     p1 = Pipeline([t1])
     p2 = Pipeline([t2])
@@ -205,8 +205,8 @@ def test_add_cache_semantics(dummy_docs) -> None:
         def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             yield from _docs
 
-    t1 = DummyTask(task_id="t1", include_meta=False)
-    t2 = DummyTask(task_id="t2", include_meta=False)
+    t1 = DummyTask(task_id="t1", include_meta=False, batch_size=-1)
+    t2 = DummyTask(task_id="t2", include_meta=False, batch_size=-1)
 
     p_uncached = Pipeline([t1], use_cache=False)
     p_cached = Pipeline([t2], use_cache=True)
@@ -237,8 +237,8 @@ def test_iadd_pipeline_task(dummy_docs) -> None:
                 _doc.results[self._task_id] = "ok"
             yield from _docs
 
-    t1 = DummyTask(task_id="t1", include_meta=False)
-    t2 = DummyTask(task_id="t2", include_meta=False)
+    t1 = DummyTask(task_id="t1", include_meta=False, batch_size=-1)
+    t2 = DummyTask(task_id="t2", include_meta=False, batch_size=-1)
 
     p = Pipeline([t1], use_cache=False)
     p += t2
@@ -265,8 +265,8 @@ def test_iadd_pipeline_pipeline(dummy_docs) -> None:
                 _doc.results[self._task_id] = "ok"
             yield from _docs
 
-    left = Pipeline([DummyTask(task_id="left", include_meta=False)], use_cache=False)
-    right = Pipeline([DummyTask(task_id="right", include_meta=False)], use_cache=True)
+    left = Pipeline([DummyTask(task_id="left", include_meta=False, batch_size=-1)], use_cache=False)
+    right = Pipeline([DummyTask(task_id="right", include_meta=False, batch_size=-1)], use_cache=True)
 
     left += right
     assert len(left.tasks) == 2

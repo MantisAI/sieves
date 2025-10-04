@@ -48,6 +48,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
                 entity_type=Person,
                 model=batch_runtime.model,
                 generation_settings=batch_runtime.generation_settings,
+                batch_size=batch_runtime.batch_size,
                 **fewshot_args),
         ]
     )
@@ -65,7 +66,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
 @pytest.mark.parametrize("batch_runtime", [EngineType.ollama], indirect=["batch_runtime"])
 def test_to_hf_dataset(information_extraction_docs, batch_runtime) -> None:
     task = tasks.predictive.InformationExtraction(
-        entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings
+        entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size
     )
     docs = task(information_extraction_docs)
 
@@ -89,7 +90,7 @@ def test_to_hf_dataset(information_extraction_docs, batch_runtime) -> None:
 def test_serialization(information_extraction_docs, batch_runtime) -> None:
     pipe = Pipeline(
         tasks.predictive.InformationExtraction(
-            entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings,
+            entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size,
         )
     )
 
@@ -101,8 +102,9 @@ def test_serialization(information_extraction_docs, batch_runtime) -> None:
                                       'value': 'pydantic._internal._model_construction.ModelMetaclass'},
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,

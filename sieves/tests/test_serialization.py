@@ -31,6 +31,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                 label_descriptions={"science": "Everything about science.", "politics": "Everything about politics."},
                 model=batch_runtime.model,
                 generation_settings=batch_runtime.generation_settings,
+                batch_size=batch_runtime.batch_size,
             ),
         ]
     )

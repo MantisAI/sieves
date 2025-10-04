@@ -54,6 +54,7 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
             labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
@@ -121,6 +122,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
             labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
@@ -147,8 +149,9 @@ def test_serialization(classification_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.classification.core.Classification',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,

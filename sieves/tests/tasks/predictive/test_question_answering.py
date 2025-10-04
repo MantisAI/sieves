@@ -58,6 +58,7 @@ def test_run(qa_docs, batch_runtime, fewshot):
                 ],
                 model=batch_runtime.model,
                 generation_settings=batch_runtime.generation_settings,
+                batch_size=batch_runtime.batch_size,
                 **fewshot_args,
             ),
         ]
@@ -83,6 +84,7 @@ def test_to_hf_dataset(qa_docs, batch_runtime) -> None:
         ],
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
     )
 
     assert isinstance(task, PredictiveTask)
@@ -110,6 +112,7 @@ def test_serialization(qa_docs, batch_runtime) -> None:
                 ],
                 model=batch_runtime.model,
                 generation_settings=batch_runtime.generation_settings,
+                batch_size=batch_runtime.batch_size,
             )
         ]
     )
@@ -120,8 +123,9 @@ def test_serialization(qa_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.question_answering.core.QuestionAnswering',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,

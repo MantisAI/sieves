@@ -46,7 +46,6 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         self._inference_kwargs = generation_settings.inference_kwargs or {}
         self._init_kwargs = generation_settings.init_kwargs or {}
         self._strict_mode = generation_settings.strict_mode
-        self._batch_size = generation_settings.batch_size
 
     @property
     def generation_settings(self) -> GenerationSettings:

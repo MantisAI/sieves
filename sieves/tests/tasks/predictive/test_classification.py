@@ -59,6 +59,7 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
                 labels=["science", "politics"],
                 model=runtime.model,
                 generation_settings=runtime.generation_settings,
+                batch_size=runtime.batch_size,
                 label_descriptions=label_descriptions,
                 multi_label=multilabel,
                 **fewshot_args,
@@ -95,6 +96,7 @@ def test_to_hf_dataset(classification_docs, batch_runtime, multi_label) -> None:
         labels=["science", "politics"],
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
     )
 
     assert isinstance(task, PredictiveTask)
@@ -131,6 +133,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
             labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             label_descriptions=label_descriptions,
         )
     )
@@ -141,8 +144,9 @@ def test_serialization(classification_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.classification.core.Classification',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
@@ -187,6 +191,7 @@ def test_label_descriptions_validation(batch_runtime) -> None:
         labels=["science", "politics"],
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
     )
 
     # Valid case - all labels have descriptions
@@ -195,6 +200,7 @@ def test_label_descriptions_validation(batch_runtime) -> None:
         labels=["science", "politics"],
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
         label_descriptions=valid_descriptions
     )
 
@@ -204,6 +210,7 @@ def test_label_descriptions_validation(batch_runtime) -> None:
         labels=["science", "politics"],
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
         label_descriptions=partial_descriptions
     )
 
@@ -214,6 +221,7 @@ def test_label_descriptions_validation(batch_runtime) -> None:
             labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             label_descriptions=invalid_descriptions
         )
 
