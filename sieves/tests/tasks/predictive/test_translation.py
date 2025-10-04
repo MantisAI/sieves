@@ -97,7 +97,7 @@ def test_serialization(translation_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.translation.core.Translation',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
-                      'batch_size': {'is_placeholder': -1},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,

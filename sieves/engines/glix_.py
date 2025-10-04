@@ -87,10 +87,11 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
             except KeyError:
                 raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
+            texts = [val["text"] for val in values]
             if inference_mode == InferenceMode.ner:
-                yield from self._model.batch_predict_entities(texts=values, labels=selected_params["entity_types"])
+                yield from self._model.batch_predict_entities(texts=texts, labels=selected_params["entity_types"])
             else:
                 assert isinstance(selected_params, dict)
-                yield from model(values, **(selected_params | self._inference_kwargs))
+                yield from model(texts, **(selected_params | self._inference_kwargs))
 
         return execute

@@ -82,7 +82,7 @@ def test_serialization(ner_docs, batch_runtime) -> None:
                                    'value': ['PERSON', 'LOCATION', 'COMPANY']},
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
-                      'batch_size': {'is_placeholder': -1},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,

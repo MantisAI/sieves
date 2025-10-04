@@ -103,7 +103,7 @@ def test_serialization(information_extraction_docs, batch_runtime) -> None:
                                       'value': 'pydantic._internal._model_construction.ModelMetaclass'},
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
-                      'batch_size': {'is_placeholder': -1},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,

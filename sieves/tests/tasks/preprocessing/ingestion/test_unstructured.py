@@ -57,6 +57,7 @@ def test_serialization() -> None:
             "value": [
                 {
                     "cleaners": {"is_placeholder": True, "value": "builtins.tuple"},
+                    'batch_size': {'is_placeholder': False, "value": -1},
                     "cls_name": "sieves.tasks.preprocessing.ingestion.unstructured_.Unstructured",
                     "include_meta": {"is_placeholder": False, "value": True},
                     "partition": {"is_placeholder": True, "value": "builtins.function"},

@@ -30,6 +30,7 @@ def test_serialization(tokenizer) -> None:
             "value": [
                 {
                     "chunker": {"is_placeholder": True, "value": "chonkie.chunker.token.TokenChunker"},
+                    'batch_size': {'is_placeholder': False, "value": -1},
                     "cls_name": "sieves.tasks.preprocessing.chunking.chonkie_.Chonkie",
                     "include_meta": {"is_placeholder": False, "value": False},
                     "task_id": {"is_placeholder": False, "value": "Chonkie"},

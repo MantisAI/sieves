@@ -111,7 +111,7 @@ def test_serialization(dummy_docs, batch_runtime) -> None:
                       'cls_name': 'sieves.tasks.predictive.sentiment_analysis.core.SentimentAnalysis',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
-                      'batch_size': {'is_placeholder': -1},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,
