@@ -1,5 +1,7 @@
 """Allows chunking of documents into segments."""
 
+import itertools
+import sys
 from collections.abc import Iterable
 from typing import Any
 
@@ -34,17 +36,20 @@ class Chonkie(Task):
         :param docs: Documents to split.
         :return: Split documents.
         """
-        docs = list(docs)
+        batch_size = self._batch_size if self._batch_size > 0 else sys.maxsize
+        while docs_batch := [doc for doc in itertools.islice(docs, batch_size)]:
+            if len(docs_batch) == 0:
+                break
 
-        chunks = self._chunker.chunk_batch([doc.text for doc in docs])
-        assert len(chunks) == len(docs)
+            chunks = self._chunker.chunk_batch([doc.text for doc in docs_batch])
+            assert len(chunks) == len(docs_batch)
 
-        for doc, doc_chunks in zip(docs, chunks):
-            if self._include_meta:
-                doc.meta |= {self.id: {doc_chunks}}
-            doc.chunks = [chunk.text for chunk in doc_chunks]
+            for doc, doc_chunks in zip(docs_batch, chunks):
+                if self._include_meta:
+                    doc.meta |= {self.id: {doc_chunks}}
+                doc.chunks = [chunk.text for chunk in doc_chunks]
 
-        return docs
+                yield doc
 
     @property
     def _state(self) -> dict[str, Any]:

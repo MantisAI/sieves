@@ -1,6 +1,8 @@
 """Allows chunking of documents into segments."""
 
+import itertools
 import re
+import sys
 from collections.abc import Iterable
 from typing import Any
 
@@ -34,14 +36,19 @@ class NaiveChunker(Task):
         :param docs: Documents to split.
         :return: Split documents.
         """
-        docs = list(docs)
+        batch_size = self._batch_size if self._batch_size > 0 else sys.maxsize
+        while docs_batch := [doc for doc in itertools.islice(docs, batch_size)]:
+            if len(docs_batch) == 0:
+                break
 
-        for doc in docs:
-            assert doc.text
-            sentences = [sent for sent in re.split("[?!.]", doc.text) if len(sent.strip())]
-            doc.chunks = [".".join(sentences[i : i + self._interval]) for i in range(0, len(sentences), self._interval)]
+            for doc in docs_batch:
+                assert doc.text
+                sentences = [sent for sent in re.split("[?!.]", doc.text) if len(sent.strip())]
+                doc.chunks = [
+                    ".".join(sentences[i : i + self._interval]) for i in range(0, len(sentences), self._interval)
+                ]
 
-        return docs
+                yield doc
 
     @property
     def _state(self) -> dict[str, Any]:
