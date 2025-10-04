@@ -5,7 +5,7 @@ from __future__ import annotations
 import abc
 import itertools
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any, Generic
 
@@ -199,13 +199,12 @@ class PredictiveTask(
     def distill(
         self,
         base_model_id: str,
-        distillation_framework: DistillationFramework,
-        hf_dataset: datasets.Dataset,
-        init_kwargs: dict[str, Any],
-        train_kwargs: dict[str, Any],
+        framework: DistillationFramework,
+        data: datasets.Dataset | Sequence[Doc],
         output_path: Path | str,
-        train_frac: float,
         val_frac: float,
+        init_kwargs: dict[str, Any] | None = None,
+        train_kwargs: dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
         """Distill a model for this task.
@@ -217,14 +216,13 @@ class PredictiveTask(
 
         :param base_model_id: ID of Hugging Face model to use as base for distillation. The chosen model will be
             fine-tuned on the target task's results.
-        :param distillation_framework: Which distillation framework to use.
-        :param hf_dataset: Docs to extract results from.
+        :param framework: Which distillation framework to use.
+        :param data: Docs to extract results from.
         :param output_path: Path to store distilled model and training metadata at.
+        :param val_frac: Fraction of data to use for validation set.
+        :param seed: RNG seed.
         :param init_kwargs: Kwargs passed on to model/trainer initialization.
         :param train_kwargs: Kwargs passed on to training call.
-        :param train_frac: Fractions for training set. `train_frac` + `val_frac` must sum up to 1.
-        :param val_frac: Fractions for validation set. `train_frac` + `val_frac` must sum up to 1.
-        :param seed: RNG seed.
         :raises KeyError: If expected columns don't exist in `hf_dataset`.
         """
 
@@ -241,9 +239,13 @@ class PredictiveTask(
         :return: Train, val sets; mapping of rows to sets.
         :raises ValueError: If fractions don't sum up to 1.
         """
+        if not 0 < val_frac < 1:
+            raise ValueError(f"`val_frac` must be greater than 0 and less than 1, but got {val_frac}.")
         if not abs(train_frac + val_frac - 1.0) < 1e-9:
             raise ValueError(f"Split fractions must sum to 1.0, but got {train_frac}, {val_frac}.")
 
-        train_val_dataset = hf_dataset.train_test_split(test_size=val_frac, shuffle=True, seed=seed)
+        if val_frac > 0:
+            train_val_dataset = hf_dataset.train_test_split(test_size=val_frac, shuffle=True, seed=seed)
+            return datasets.DatasetDict({"train": train_val_dataset["train"], "val": train_val_dataset["test"]})
 
-        return datasets.DatasetDict({"train": train_val_dataset["train"], "val": train_val_dataset["test"]})
+        return datasets.DatasetDict({"train": hf_dataset})

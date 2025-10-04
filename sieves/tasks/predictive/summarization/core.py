@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any, override
 
@@ -178,13 +178,12 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
     def distill(
         self,
         base_model_id: str,
-        distillation_framework: DistillationFramework,
-        hf_dataset: datasets.Dataset,
-        init_kwargs: dict[str, Any],
-        train_kwargs: dict[str, Any],
+        framework: DistillationFramework,
+        data: datasets.Dataset | Sequence[Doc],
         output_path: Path | str,
-        train_frac: float,
         val_frac: float,
+        init_kwargs: dict[str, Any] | None = None,
+        train_kwargs: dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
         raise NotImplementedError

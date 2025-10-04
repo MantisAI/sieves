@@ -42,7 +42,7 @@ Key packages and concepts: `sieves.data.Doc`, `sieves.pipeline.Pipeline`, `sieve
 
 ## Environments & Installation
 
-Supported Python: `>=3.10` (tests and typing target 3.11).
+Supported Python: `>=3.12`.
 
 Using `uv` (preferred):
 - Base: `uv sync`
@@ -92,7 +92,7 @@ Notes for agents:
 - Type checking: mypy strict (`[tool.mypy]` in `pyproject.toml`)
 - Linting: ruff (E, F, I, UP), isort via ruff
 - Formatting: black (line length 120)
-- Python target version: 3.10 for style/format; 3.11 for mypy config
+- Python target version: 3.12
 - Avoid one‑letter variable names; keep changes minimal and focused
 
 ## Development Commands

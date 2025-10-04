@@ -1,5 +1,7 @@
-"""
-Imports 3rd-party libraries required for engines. If library can't be found, placeholder engines is imported instead.
+"""Import 3rd-party libraries required for engines.
+
+If library can't be found, placeholder engines is imported instead.
+
 This allows us to import everything downstream without having to worry about optional dependencies. If a user specifies
 an engine/model from a non-installed library, we terminate with an error.
 """
@@ -93,8 +95,8 @@ except ModuleNotFoundError:
     _missing_dependencies.append("vllm")
 
 warnings.warn(
-    "Warning: engine dependencies [{deps}] could not be imported. The corresponding engines won't work "
-    "unless this dependency has been installed.".format(deps=", ".join(_missing_dependencies))
+    "Warning: structured generation dependencies [{deps}] could not be imported. Generating with them requires them to"
+    " be installed.".format(deps=", ".join(_missing_dependencies))
 )
 
 

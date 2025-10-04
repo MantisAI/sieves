@@ -59,7 +59,6 @@ def test_run_readme_example_short() -> None:
 
     # Run pipe and output results.
     docs = list(pipe(docs))
-    print(docs[0].results["Classification"])
 
 
 @pytest.mark.slow

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any, override
 
@@ -290,96 +290,37 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
         raise TypeError(f"Unsupported result type in to_hf_dataset: {type(result)}")
 
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
-        """Convert results to a Hugging Face dataset with multi-hot labels.
-
-        The emitted dataset contains a ``text`` column and a ``labels`` column which is a multi-hot list aligned to
-        ``self._labels``. This method is robust to different result shapes produced by various engines and bridges in
-        both single-label and multi-label configurations:
-        - ``list[tuple[str, float]]`` for multi-label results
-        - ``tuple[str, float]`` for single-label results
-        - ``str`` for single-label results (assumes score ``1.0``)
-        - ``pydantic.BaseModel`` exposing ``label`` and optional ``score``
-
-        :param docs: Documents whose ``results`` contain outputs for this task id.
-        :param threshold: Threshold to convert scores into multi-hot indicators.
-
-        :return: A ``datasets.Dataset`` with ``text`` and multi-hot ``labels``.
-
-        :raises KeyError: If any document is missing this task's results.
-        :raises TypeError: If a result cannot be interpreted.
-
-        """
-        data: list[dict[str, str | list[bool]]] = []
-
-        # Define metadata and features (multi-hot across declared labels for multi-label).
-        if self._multi_label:
-            features = datasets.Features(
-                {"text": datasets.Value("string"), "labels": datasets.Sequence(datasets.Value("bool"))}
-            )
-        else:
-            features = datasets.Features(
-                {"text": datasets.Value("string"), "labels": datasets.ClassLabel(names=self._labels)}
-            )
-
-        info = datasets.DatasetInfo(
-            description=(
-                f"{'Multi-label' if self._multi_label else 'Single-label'} classification dataset with labels "
-                f"{self._labels}. Generated with sieves v{Config.get_version()}."
-            ),
-            features=features,
-        )
-
-        print("start")
-        try:
-            for doc in docs:
-                print(doc)
-                scores = Classification._result_to_scores(doc.results[self._task_id])
-
-                # If multi-label: store one-hot representation.
-                if self._multi_label:
-                    result_normalized = [int(scores.get(label, 0.0) >= threshold) for label in self._labels]
-                # If single-label: get single-label result as is
-                else:
-                    keys = list(scores.keys())
-                    assert len(keys) == 1
-                    result_normalized = keys[0]
-
-                data.append({"text": doc.text, "labels": result_normalized})
-
-        except KeyError as err:
-            raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
-
-        return datasets.Dataset.from_list(data, features=features, info=info)
-
     @override
     def distill(
         self,
         base_model_id: str,
-        distillation_framework: DistillationFramework,
-        hf_dataset: datasets.Dataset,
-        init_kwargs: dict[str, Any],
-        train_kwargs: dict[str, Any],
+        framework: DistillationFramework,
+        data: datasets.Dataset | Sequence[Doc],
         output_path: Path | str,
-        train_frac: float,
         val_frac: float,
+        init_kwargs: dict[str, Any] | None = None,
+        train_kwargs: dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
+        init_kwargs = init_kwargs or {}
+        train_kwargs = train_kwargs or {}
         output_path = Path(output_path)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        required_columns = {"text", "labels"}
-        if not required_columns.issubset(hf_dataset.column_names):
-            raise ValueError(f"Dataset must contain columns: {required_columns}. Found: {hf_dataset.column_names}")
+        data = self.to_hf_dataset(data) if isinstance(data, Sequence) else data
 
-        dataset_splits = self._split_dataset(hf_dataset, train_frac, val_frac, seed)
+        required_columns = {"text", "labels"}
+        if not required_columns.issubset(data.column_names):
+            raise ValueError(f"Dataset must contain columns: {required_columns}. Found: {data.column_names}")
+
+        dataset_splits = self._split_dataset(data, 1 - val_frac, val_frac, seed)
         dataset_splits.save_to_disk(output_path / "data")
 
-        # Framework-specific distillation/fine-tuning logic using match-case
-        match distillation_framework:
+        match framework:
             case DistillationFramework.setfit:
                 default_init_kwargs: dict[str, Any] = {}
                 metric_kwargs: dict[str, Any] = {}
+
                 if self._multi_label:
                     default_init_kwargs["multi_target_strategy"] = "multi-output"
                     metric_kwargs = {"average": "macro"}
@@ -398,7 +339,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                     model=model,
                     args=args,
                     train_dataset=dataset_splits["train"],
-                    eval_dataset=dataset_splits["val"],
+                    eval_dataset=dataset_splits.get("val"),
                     metric="f1",
                     column_mapping={"text": "text", "labels": "label"},
                     metric_kwargs=metric_kwargs,
@@ -439,6 +380,66 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
             case _:
                 raise NotImplementedError(
-                    f"Unsupported distillation framework for this task: {distillation_framework}. "
+                    f"Unsupported distillation framework for this task: {framework}. "
                     f"Please choose one of {DistillationFramework.setfit, DistillationFramework.model2vec}"
                 )
+
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+        """Convert results to a Hugging Face dataset with multi-hot labels.
+
+        The emitted dataset contains a ``text`` column and a ``labels`` column which is a multi-hot list aligned to
+        ``self._labels``. This method is robust to different result shapes produced by various engines and bridges in
+        both single-label and multi-label configurations:
+        - ``list[tuple[str, float]]`` for multi-label results
+        - ``tuple[str, float]`` for single-label results
+        - ``str`` for single-label results (assumes score ``1.0``)
+        - ``pydantic.BaseModel`` exposing ``label`` and optional ``score``
+
+        :param docs: Documents whose ``results`` contain outputs for this task id.
+        :param threshold: Threshold to convert scores into multi-hot indicators.
+
+        :return: A ``datasets.Dataset`` with ``text`` and multi-hot ``labels``.
+
+        :raises KeyError: If any document is missing this task's results.
+        :raises TypeError: If a result cannot be interpreted.
+
+        """
+        data: list[dict[str, str | list[bool]]] = []
+
+        # Define metadata and features (multi-hot across declared labels for multi-label).
+        if self._multi_label:
+            features = datasets.Features(
+                {"text": datasets.Value("string"), "labels": datasets.Sequence(datasets.Value("bool"))}
+            )
+        else:
+            features = datasets.Features(
+                {"text": datasets.Value("string"), "labels": datasets.ClassLabel(names=self._labels)}
+            )
+
+        info = datasets.DatasetInfo(
+            description=(
+                f"{'Multi-label' if self._multi_label else 'Single-label'} classification dataset with labels "
+                f"{self._labels}. Generated with sieves v{Config.get_version()}."
+            ),
+            features=features,
+        )
+
+        try:
+            for doc in docs:
+                scores = Classification._result_to_scores(doc.results[self._task_id])
+
+                # If multi-label: store one-hot representation.
+                if self._multi_label:
+                    result_normalized = [int(scores.get(label, 0.0) >= threshold) for label in self._labels]
+                # If single-label: get single-label result as is
+                else:
+                    keys = list(scores.keys())
+                    assert len(keys) == 1
+                    result_normalized = keys[0]
+
+                data.append({"text": doc.text, "labels": result_normalized})
+
+        except KeyError as err:
+            raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
+
+        return datasets.Dataset.from_list(data, features=features, info=info)

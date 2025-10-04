@@ -2,7 +2,7 @@
 
 from . import predictive, preprocessing
 from .core import Task
-from .postprocessing import Distillation, DistillationFramework
+from .postprocessing import DistillationFramework
 from .predictive import (
     NER,
     Classification,
@@ -19,7 +19,6 @@ from .preprocessing import Chunking, Ingestion
 __all__ = [
     "Chunking",
     "Classification",
-    "Distillation",
     "DistillationFramework",
     "NER",
     "InformationExtraction",
