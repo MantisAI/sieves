@@ -1,6 +1,6 @@
 """Allows masking of PII (Personally Identifiable Information) in text documents."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any, override
 
@@ -168,8 +168,8 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
     def distill(
         self,
         base_model_id: str,
-        distillation_framework: DistillationFramework,
-        hf_dataset: datasets.Dataset,
+        framework: DistillationFramework,
+        data: datasets.Dataset | Sequence[Doc],
         init_kwargs: dict[str, Any],
         train_kwargs: dict[str, Any],
         output_path: Path | str,
