@@ -64,7 +64,6 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
                     base_model_id=base_model_id,
                     framework=distillation_framework,
                     output_path=Path(tmp_dir),
-                    train_frac=0.5,
                     val_frac=0.5,
                     seed=seed,
                     data=docs
@@ -74,7 +73,6 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
                 base_model_id=base_model_id,
                 framework=distillation_framework,
                 output_path=Path(tmp_dir),
-                train_frac=0.5,
                 val_frac=0.5,
                 seed=seed,
                 data=docs
@@ -132,7 +130,6 @@ def test_serialization(batch_runtime) -> None:
             base_model_id="sentence-transformers/paraphrase-mpnet-base-v2",
             framework=DistillationFramework.setfit,
             output_path=Path(tmp_dir),
-            train_frac=.5,
             val_frac=.5,
             seed=seed,
             data=docs
