@@ -266,9 +266,10 @@ if __name__ == '__main__':
     for i, res in enumerate(
         pipe(
             [
-                *[Doc(text=f'Apple {i}') for i in range(5000)],
-                *[Doc(text=f'Broccoli {i}') for i in range(5000)]
+                *[Doc(text=f'Apple {i}') for i in range(10000)],
+                *[Doc(text=f'Broccoli {i}') for i in range(10000)]
             ]
         )
     ):
-        logger.info(i)
+        pass
+        # logger.info(i)

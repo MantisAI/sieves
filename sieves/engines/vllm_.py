@@ -1,7 +1,7 @@
 """vLLM engine wrapper enabling guided decoding for structured outputs."""
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sized
 from enum import StrEnum
 from typing import Any, override
 
@@ -62,7 +62,7 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
             **({"max_tokens": VLLM._MAX_TOKENS, "temperature": 0} | self._init_kwargs),
         )
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.

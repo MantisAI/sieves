@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import abc
+import itertools
+import sys
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Generic
@@ -112,8 +114,6 @@ class PredictiveTask(
         :param docs: Documents to process.
         :return Iterable[Doc]: Processed documents.
         """
-        docs = list(docs)
-
         # 1. Compile expected prompt signatures.
         signature = self._bridge.prompt_signature
 
@@ -125,30 +125,39 @@ class PredictiveTask(
             fewshot_examples=self._fewshot_examples,
         )
 
-        # 3. Extract values from docs to inject/render those into prompt templates.
-        docs_values = self._bridge.extract(docs)
+        # Compute batch-wise results.
+        batch_size = self._engine.generation_settings.batch_size
+        batch_size = batch_size if batch_size > 0 else sys.maxsize
 
-        # 4. Map extracted docs values onto chunks.
-        docs_chunks_offsets: list[tuple[int, int]] = []
-        docs_chunks_values: list[dict[str, Any]] = []
-        for doc, doc_values in zip(docs, docs_values):
-            assert doc.text
-            doc_chunks_values = [doc_values | {"text": chunk} for chunk in (doc.chunks or [doc.text])]
-            docs_chunks_offsets.append((len(docs_chunks_values), len(docs_chunks_values) + len(doc_chunks_values)))
-            docs_chunks_values.extend(doc_chunks_values)
+        while docs_batch := [doc for doc in itertools.islice(docs, batch_size)]:
+            if len(docs_batch) == 0:
+                break
 
-        # 5. Execute prompts per chunk.
-        results = executable(docs_chunks_values)
-        # assert len(results) == len(docs_chunks_values)
+            # 3. Extract values from docs to inject/render those into prompt templates.
+            docs_values = list(self._bridge.extract(docs_batch))
+            assert len(docs_values) == len(docs_batch)
 
-        # 6. Consolidate chunk results.
-        results = self._bridge.consolidate(results, docs_chunks_offsets)
-        # assert len(results) == len(docs)
+            # 4. Map extracted docs values onto chunks.
+            docs_chunks_offsets: list[tuple[int, int]] = []
+            docs_chunks: list[dict[str, Any]] = []
+            for doc, doc_values in zip(docs_batch, docs_values):
+                assert doc.text
+                doc_chunks_values = [doc_values | {"text": chunk} for chunk in (doc.chunks or [doc.text])]
+                docs_chunks_offsets.append((len(docs_chunks), len(docs_chunks) + len(doc_chunks_values)))
+                docs_chunks.extend(doc_chunks_values)
 
-        # 7. Integrate results into docs.
-        docs = self._bridge.integrate(results, docs)
+            # 5. Execute prompts per chunk.
+            results = list(executable(docs_chunks))
+            assert len(results) == len(docs_chunks)
 
-        yield from docs
+            # 6. Consolidate chunk results.
+            results = list(self._bridge.consolidate(results, docs_chunks_offsets))
+            assert len(results) == len(docs_batch)
+
+            # 7. Integrate results into docs.
+            docs_batch = self._bridge.integrate(results, docs_batch)
+
+            yield from docs_batch
 
     @property
     def _state(self) -> dict[str, Any]:

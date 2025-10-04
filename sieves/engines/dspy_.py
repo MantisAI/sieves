@@ -2,9 +2,7 @@
 
 import asyncio
 import enum
-import itertools
-import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Sized
 from typing import Any, override
 
 import dspy
@@ -85,7 +83,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
             assert issubclass(prompt_signature, dspy.Signature)
             generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result | None]:
             # Compile predictor with few-shot examples.
             fewshot_examples_dicts = DSPy._convert_fewshot_examples(fewshot_examples)
             generator_fewshot: dspy.Module | None = None
@@ -94,26 +92,17 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                 generator_fewshot = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
             generator_async = dspy.asyncify(generator_fewshot or generator)
 
-            batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
-            # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use
-            # different batch handling depending on whether lists/tuples or generators are used).
-            values = (v for v in values)
+            try:
+                calls = [generator_async(**doc_values, **self._inference_kwargs) for doc_values in values]
+                yield from asyncio.run(self._execute_async_calls(calls))
 
-            while batch := [vals for vals in itertools.islice(values, batch_size)]:
-                if len(batch) == 0:
-                    break
-
-                try:
-                    calls = [generator_async(**doc_values, **self._inference_kwargs) for doc_values in batch]
-                    yield from asyncio.run(self._execute_async_calls(calls))
-
-                except ValueError as err:
-                    if self._strict_mode:
-                        raise ValueError(
-                            "Encountered problem when executing prompt. Ensure your few-shot examples and document "
-                            "chunks contain sensible information."
-                        ) from err
-                    else:
-                        yield from [None] * len(batch)
+            except ValueError as err:
+                if self._strict_mode:
+                    raise ValueError(
+                        "Encountered problem when executing prompt. Ensure your few-shot examples and document "
+                        "chunks contain sensible information."
+                    ) from err
+                else:
+                    yield from [None] * len(values)
 
         return execute

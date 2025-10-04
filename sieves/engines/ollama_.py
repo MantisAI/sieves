@@ -2,7 +2,7 @@
 
 import asyncio
 import enum
-from collections.abc import Iterable
+from collections.abc import Iterable, Sized
 from typing import Any, override
 
 import httpx
@@ -67,7 +67,7 @@ class Ollama(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.

@@ -1,10 +1,8 @@
 """GliX engine wrapper built on top of GLiNER multi‑task pipelines."""
 
 import enum
-import itertools
-import sys
 import warnings
-from collections.abc import Iterable
+from collections.abc import Iterable, Sized
 from typing import Any, override
 
 import gliner.multitask.base
@@ -72,7 +70,7 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
         if prompt_template:
             self._model.prompt = jinja2.Template(prompt_template).render()
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result]:
+        def execute(values: Sized[dict[str, Any]]) -> Iterable[Result]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.
@@ -89,18 +87,10 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
             except KeyError:
                 raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
 
-            batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
-            # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use
-            # different batch handling depending on whether lists/tuples or generators are used).
-            values = (v for v in values)
-
-            while batch := [vals["text"] for vals in itertools.islice(values, batch_size)]:
-                if len(batch) == 0:
-                    break
-                if inference_mode == InferenceMode.ner:
-                    yield from self._model.batch_predict_entities(texts=batch, labels=selected_params["entity_types"])
-                else:
-                    assert isinstance(selected_params, dict)
-                    yield from model(batch, **(selected_params | self._inference_kwargs))
+            if inference_mode == InferenceMode.ner:
+                yield from self._model.batch_predict_entities(texts=values, labels=selected_params["entity_types"])
+            else:
+                assert isinstance(selected_params, dict)
+                yield from model(values, **(selected_params | self._inference_kwargs))
 
         return execute
