@@ -202,7 +202,6 @@ class PredictiveTask(
         framework: DistillationFramework,
         data: datasets.Dataset | Sequence[Doc],
         output_path: Path | str,
-        train_frac: float,
         val_frac: float,
         init_kwargs: dict[str, Any] | None = None,
         train_kwargs: dict[str, Any] | None = None,
@@ -220,8 +219,7 @@ class PredictiveTask(
         :param framework: Which distillation framework to use.
         :param data: Docs to extract results from.
         :param output_path: Path to store distilled model and training metadata at.
-        :param train_frac: Fractions for training set. `train_frac` + `val_frac` must sum up to 1.
-        :param val_frac: Fractions for validation set. `train_frac` + `val_frac` must sum up to 1.
+        :param val_frac: Fraction of data to use for validation set.
         :param seed: RNG seed.
         :param init_kwargs: Kwargs passed on to model/trainer initialization.
         :param train_kwargs: Kwargs passed on to training call.
@@ -241,6 +239,8 @@ class PredictiveTask(
         :return: Train, val sets; mapping of rows to sets.
         :raises ValueError: If fractions don't sum up to 1.
         """
+        if not 0 < val_frac < 1:
+            raise ValueError(f"`val_frac` must be greater than 0 and less than 1, but got {val_frac}.")
         if not abs(train_frac + val_frac - 1.0) < 1e-9:
             raise ValueError(f"Split fractions must sum to 1.0, but got {train_frac}, {val_frac}.")
 

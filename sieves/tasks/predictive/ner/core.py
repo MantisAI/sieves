@@ -237,11 +237,10 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         base_model_id: str,
         framework: DistillationFramework,
         data: datasets.Dataset | Sequence[Doc],
-        init_kwargs: dict[str, Any],
-        train_kwargs: dict[str, Any],
         output_path: Path | str,
-        train_frac: float,
         val_frac: float,
+        init_kwargs: dict[str, Any] | None = None,
+        train_kwargs: dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
         raise NotImplementedError

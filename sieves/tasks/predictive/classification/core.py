@@ -297,7 +297,6 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         framework: DistillationFramework,
         data: datasets.Dataset | Sequence[Doc],
         output_path: Path | str,
-        train_frac: float,
         val_frac: float,
         init_kwargs: dict[str, Any] | None = None,
         train_kwargs: dict[str, Any] | None = None,
@@ -314,7 +313,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         if not required_columns.issubset(data.column_names):
             raise ValueError(f"Dataset must contain columns: {required_columns}. Found: {data.column_names}")
 
-        dataset_splits = self._split_dataset(data, train_frac, val_frac, seed)
+        dataset_splits = self._split_dataset(data, 1 - val_frac, val_frac, seed)
         dataset_splits.save_to_disk(output_path / "data")
 
         match framework:
