@@ -2,7 +2,7 @@
 
 import asyncio
 import enum
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import langchain_core.language_models
@@ -43,7 +43,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         template = self._create_template(prompt_template)
         model = self._model.with_structured_output(prompt_signature)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.

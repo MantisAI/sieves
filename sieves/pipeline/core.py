@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import itertools
-import typing
 from collections.abc import Iterable, Iterator, Sized
 from pathlib import Path
 from typing import Any
@@ -13,7 +12,7 @@ import tqdm
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config, Serializable
-from sieves.tasks import Distillation, PredictiveTask, Task
+from sieves.tasks import Task
 
 
 class Pipeline:
@@ -36,7 +35,6 @@ class Pipeline:
         self._cache: dict[int, Doc] = {}
         self._cache_stats: dict[str, int] = {"total": 0, "unique": 0, "hits": 0, "misses": 0}
         self._validate_tasks()
-        self._set_distillation_targets()
 
     def add_tasks(self, tasks: Iterable[Task]) -> None:
         """Add tasks to pipeline. Revalidates pipeline.
@@ -45,7 +43,6 @@ class Pipeline:
         """
         self._tasks.extend(tasks)
         self._validate_tasks()
-        self._set_distillation_targets()
 
     @property
     def tasks(self) -> list[Task]:
@@ -74,17 +71,6 @@ class Pipeline:
             if task.id in task_ids:
                 raise ValueError(f"Task with duplicate ID {task.id}. Ensure unique task IDs.")
             task_ids.add(task.id)
-
-    def _set_distillation_targets(self) -> None:
-        """Set target task references fpr distillation tasks, if there are any.
-
-        This is necessary because distillation tasks have a lazily initialized required attribute.
-        """
-        for task in self._tasks:
-            if isinstance(task, Distillation):
-                target_task = self[task.target_task_id]
-                assert issubclass(type(target_task), PredictiveTask)
-                task.target_task = typing.cast(PredictiveTask, target_task)  # type: ignore[type-arg]
 
     def _get_unseen_unique_docs(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Yield unseen, unique docs.
@@ -139,7 +125,6 @@ class Pipeline:
 
                 if self._use_cache:
                     self._cache[doc_cache_id] = processed_doc
-
             else:
                 self._cache_stats["hits"] += 1
                 processed_doc = self._cache[doc_cache_id]
@@ -274,5 +259,5 @@ class Pipeline:
         else:
             raise TypeError(f"Can only add Task or Pipeline to Pipeline with +=, got {type(other).__name__}")
         self._validate_tasks()
-        self._set_distillation_targets()
+
         return self

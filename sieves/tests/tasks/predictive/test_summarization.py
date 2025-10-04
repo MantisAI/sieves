@@ -47,6 +47,7 @@ def test_run(summarization_docs, batch_runtime, fewshot) -> None:
             n_words=10,
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             **fewshot_args,
         )
     ])
@@ -67,8 +68,10 @@ def test_to_hf_dataset(summarization_docs, batch_runtime) -> None:
         n_words=10,
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
     )
-    docs = task(summarization_docs)
+    pipe = Pipeline(task)
+    docs = pipe(summarization_docs)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(docs)
@@ -91,6 +94,7 @@ def test_serialization(summarization_docs, batch_runtime) -> None:
             n_words=10,
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
         )
     ])
 
@@ -100,8 +104,9 @@ def test_serialization(summarization_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.summarization.core.Summarization',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,

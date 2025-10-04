@@ -23,6 +23,7 @@ def test_strict_mode(batch_runtime, strict_mode):
             entity_type=Person,
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
         )
     ])
 

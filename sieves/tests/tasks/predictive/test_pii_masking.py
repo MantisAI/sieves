@@ -42,6 +42,7 @@ def test_run(pii_masking_docs, batch_runtime, fewshot) -> None:
         tasks.predictive.PIIMasking(
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             **fewshot_args,
         )
     ])
@@ -61,8 +62,10 @@ def test_to_hf_dataset(pii_masking_docs, batch_runtime) -> None:
     task = tasks.predictive.PIIMasking(
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
     )
-    docs = task(pii_masking_docs)
+    pipe = Pipeline(task)
+    docs = pipe(pii_masking_docs)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(docs)
@@ -82,6 +85,7 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
         tasks.predictive.PIIMasking(
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
         )
     ])
 
@@ -91,8 +95,9 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.pii_masking.core.PIIMasking',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,

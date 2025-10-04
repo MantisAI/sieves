@@ -59,7 +59,6 @@ def test_run_readme_example_short() -> None:
 
     # Run pipe and output results.
     docs = list(pipe(docs))
-    print(docs[0].results["Classification"])
 
 
 @pytest.mark.slow
@@ -81,7 +80,7 @@ def test_run_readme_example_long(batch_runtime, tokenizer) -> None:
         tasks.Chunking(chonkie.TokenChunker(tokenizer)) +
         # Run classification on provided document.
         tasks.predictive.Classification(
-            labels=["science", "politics"], model=batch_runtime.model, generation_settings=batch_runtime.generation_settings
+            labels=["science", "politics"], model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size
         )
     )
 

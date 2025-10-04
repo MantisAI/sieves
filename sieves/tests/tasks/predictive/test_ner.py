@@ -49,6 +49,7 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
             entities=["PERSON", "LOCATION", "COMPANY"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             **fewshot_args
         )
     )
@@ -69,6 +70,7 @@ def test_serialization(ner_docs, batch_runtime) -> None:
             entities=["PERSON", "LOCATION", "COMPANY"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
         )
     )
 
@@ -80,8 +82,9 @@ def test_serialization(ner_docs, batch_runtime) -> None:
                                    'value': ['PERSON', 'LOCATION', 'COMPANY']},
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
@@ -109,10 +112,12 @@ def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
         entities=["PERSON", "LOCATION", "COMPANY"],
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
     )
+    pipe = Pipeline(task)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_hf_dataset(task(ner_docs))
+    dataset = task.to_hf_dataset(pipe(ner_docs))
     assert all([key in dataset.features for key in ("text", "entities")])
     assert len(dataset) == 2
     dataset_records = list(dataset)

@@ -1,7 +1,7 @@
 """Outlines engine wrapper supporting text, choices, regex and JSON schemas."""
 
 import enum
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any, Literal, override
 
 import outlines
@@ -61,7 +61,7 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
         generator = outlines.Generator(self._model, output_type=prompt_signature, **self._init_kwargs)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.
@@ -73,7 +73,17 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                     results = generator.batch(prompts, **self._inference_kwargs)
                 # Batch mode is not implemented for all Outlines wrappers. Fall back to single-prompt mode in that case.
                 except NotImplementedError:
-                    results = [generator(prompt, **self._inference_kwargs) for prompt in prompts]
+
+                    async def generate_async(prompt: str) -> Result | None:
+                        """Generate result async.
+
+                        :param prompt: Prompt to generate result for.
+                        :return: Result for prompt. Results are None if corresponding prompt failed.
+                        """
+                        return generator(prompt, **self._inference_kwargs)
+
+                    calls = [generate_async(prompt) for prompt in prompts]
+                    results = self._execute_async_calls(calls)
 
                 if inference_mode == InferenceMode.json:
                     assert len(results) == len(prompts)

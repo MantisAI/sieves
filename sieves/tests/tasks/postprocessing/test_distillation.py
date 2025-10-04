@@ -1,5 +1,4 @@
 # mypy: ignore-errors
-import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -8,15 +7,13 @@ import model2vec
 import model2vec.inference
 import model2vec.train
 import numpy as np
-import openai
-import outlines
 import pytest
 import setfit
 
-from sieves import Doc, Pipeline, GenerationSettings
+from sieves import Doc, Pipeline
 from sieves.engines import EngineType
 from sieves.serialization import Config
-from sieves.tasks import Distillation, DistillationFramework, Classification
+from sieves.tasks import DistillationFramework
 from sieves.tasks.predictive import classification
 
 
@@ -52,34 +49,35 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
             labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
             },
         )
-        pipe = Pipeline(
-            [
-                classifier,
-                Distillation(
-                    target_task_id="classifier",
-                    base_model_id=base_model_id,
-                    framework=distillation_framework,
-                    output_path=Path(tmp_dir),
-                    train_frac=0.5,
-                    val_frac=0.5,
-                    seed=seed,
-                ),
-            ],
-        )
+        pipe = Pipeline([classifier])
+        docs = list(pipe(docs))
 
         if distillation_framework == DistillationFramework.sentence_transformers:
             with pytest.raises(NotImplementedError):
-                list(pipe(docs))
-            return
+                classifier.distill(
+                    base_model_id=base_model_id,
+                    framework=distillation_framework,
+                    output_path=Path(tmp_dir),
+                    val_frac=0.5,
+                    seed=seed,
+                    data=docs
+                )
         else:
-            docs = list(pipe(docs))
+            classifier.distill(
+                base_model_id=base_model_id,
+                framework=distillation_framework,
+                output_path=Path(tmp_dir),
+                val_frac=0.5,
+                seed=seed,
+                data=docs
+            )
 
-        assert pipe["Distillation"].target_task == classifier
 
         # Ensure equality of saved with original dataset.
         hf_dataset = classifier.to_hf_dataset(docs)
@@ -108,35 +106,33 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
 
 
 @pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
-def test_serialization(classification_docs, batch_runtime) -> None:
+def test_serialization(batch_runtime) -> None:
     seed = 42
     dir_path: str | None
+    docs = _get_docs()
 
     with TemporaryDirectory() as tmp_dir:
-        dir_path = tmp_dir
         classifier = classification.Classification(
             task_id="classifier",
             labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
             },
         )
-        pipe = Pipeline(
-            [
-                classifier,
-                Distillation(
-                    target_task_id="classifier",
-                    base_model_id="sentence-transformers/paraphrase-mpnet-base-v2",
-                    framework=DistillationFramework.setfit,
-                    output_path=Path(tmp_dir),
-                    train_frac=0.5,
-                    val_frac=0.5,
-                    seed=seed,
-                ),
-            ],
+        pipe = Pipeline(classifier)
+        docs = list(pipe(docs))
+
+        classifier.distill(
+            base_model_id="sentence-transformers/paraphrase-mpnet-base-v2",
+            framework=DistillationFramework.setfit,
+            output_path=Path(tmp_dir),
+            val_frac=.5,
+            seed=seed,
+            data=docs
         )
 
     config = pipe.serialize()
@@ -145,8 +141,9 @@ def test_serialization(classification_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.classification.core.Classification',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': False, 'value': -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
@@ -177,54 +174,8 @@ def test_serialization(classification_docs, batch_runtime) -> None:
                       'task_id': {'is_placeholder': False,
                                   'value': 'classifier'},
                       'version': Config.get_version()},
-                     {'base_model_id': {'is_placeholder': False,
-                                        'value': 'sentence-transformers/paraphrase-mpnet-base-v2'},
-                      'cls_name': 'sieves.tasks.postprocessing.distillation.core.Distillation',
-                      'framework': {'is_placeholder': False, 'value': 'setfit'},
-                      'include_meta': {'is_placeholder': False, 'value': False},
-                      'init_kwargs': {'is_placeholder': False, 'value': {}},
-                      'output_path': {'is_placeholder': False, 'value': str(dir_path)},
-                      'target_task_id': {'is_placeholder': False,
-                                         'value': 'classifier'},
-                      'task_id': {'is_placeholder': False,
-                                  'value': 'Distillation'},
-                      'threshold': {'is_placeholder': False, 'value': 0.5},
-                      'train_frac': {'is_placeholder': False, 'value': 0.5},
-                      'train_kwargs': {'is_placeholder': False, 'value': {}},
-                      'val_frac': {'is_placeholder': False, 'value': 0.5},
-                      'version': Config.get_version()}]},
+                     ]},
  'use_cache': {'is_placeholder': False, 'value': True},
  'version': Config.get_version()}
 
-
-
-    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}, {}])
-
-
-@pytest.mark.skip(reason="No OpenAI API key available in GitHub CI yet")
-def test_distillation_with_openai_model() -> None:
-    """Test distillation with an OpenAI model.
-
-    See https://github.com/MantisAI/sieves/issues/162.
-    """
-    client = openai.OpenAI(api_key=os.environ['OPENAI_API_KEY'])
-    model = outlines.from_openai(client=client, model_name='gpt-5-nano')
-
-    classifier = Classification(
-        task_id='classifier',
-        labels=['Fruit', 'Vegetable'],
-        model=model,
-        generation_settings=GenerationSettings(batch_size=32, strict_mode=False),
-    )
-
-    distiller = Distillation(
-        target_task_id='classifier',
-        base_model_id='sentence-transformers/paraphrase-mpnet-base-v2',
-        framework=DistillationFramework.setfit,
-        output_path='./model',
-        train_frac=.5,
-        val_frac=.5,
-    )
-
-    pipe = classifier + distiller
-    list(pipe([Doc(text='Apple'), Doc(text='Cucumber'), Doc(text="Broccoli"), Doc(text='Pomegranate')]))
+    Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}])

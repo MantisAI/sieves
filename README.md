@@ -25,20 +25,23 @@
 
 Read our documentation [here](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
 
-Install `sieves` with `pip install sieves`.
+<details>
+  <summary><b>Installation</b></summary>
 
-Important: Ingestion libraries (e.g., `docling`, `unstructured`, `marker`) are not installed by default. Install them manually or use the ingestion extra:
+Install `sieves` with `pip install sieves` (or `uv add sieves`).
 
-```
-pip install "sieves[ingestion]"
-```
+The following extra groups exist:
+- `ingestion` for ingestion libraries (for converting documents into text/markdown), e.g. `docling`
+- `distill` for distillation utilities, e.g. training frameworks like `setfit`
+- `engines` for structured generation utilities beyond the default `outlines`
 
-If you want to install all optional dependencies, install with:
-
+If you want to install all dependencies by default
 ```
 pip install "sieves[engines,distill,ingestion]"
 ```
 You can also choose to install individual dependencies as you see fit.
+</details>
+
 
 > [!WARNING]
 > `sieves` is in active development and currently in beta. Be advised that the API might change in between minor version

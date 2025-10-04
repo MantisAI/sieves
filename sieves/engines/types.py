@@ -14,12 +14,9 @@ class GenerationSettings(pydantic.BaseModel):
     :param config_kwargs: Used only if supplied model is a DSPy model object, ignored otherwise. Optional kwargs
         supplied to dspy.configure().
     :param strict_mode: If True, exception is raised if prompt response can't be parsed correctly.
-    :param batch_size: Batch size in processing prompts. -1 will batch all documents in one go. Not all engines
-        support batching.
     """
 
     init_kwargs: dict[str, Any] | None = None
     inference_kwargs: dict[str, Any] | None = None
     config_kwargs: dict[str, Any] | None = None
     strict_mode: bool = False
-    batch_size: int = -1
