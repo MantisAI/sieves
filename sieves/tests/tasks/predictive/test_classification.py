@@ -9,7 +9,7 @@ from sieves.engines import EngineType
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
-from sieves.tests.conftest import Runtime
+from sieves.tests.conftest import Runtime, _make_runtime
 
 
 def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = True) -> None:
@@ -98,9 +98,10 @@ def test_to_hf_dataset(classification_docs, batch_runtime, multi_label) -> None:
         generation_settings=batch_runtime.generation_settings,
         batch_size=batch_runtime.batch_size,
     )
+    pipe = Pipeline(task)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_hf_dataset(task(classification_docs))
+    dataset = task.to_hf_dataset(pipe(classification_docs))
     assert all([key in dataset.features for key in ("text", "labels")])
     assert len(dataset) == 2
     dataset_records = list(dataset)

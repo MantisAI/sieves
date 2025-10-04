@@ -114,9 +114,10 @@ def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
         generation_settings=batch_runtime.generation_settings,
         batch_size=batch_runtime.batch_size,
     )
+    pipe = Pipeline(task)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_hf_dataset(task(ner_docs))
+    dataset = task.to_hf_dataset(pipe(ner_docs))
     assert all([key in dataset.features for key in ("text", "entities")])
     assert len(dataset) == 2
     dataset_records = list(dataset)

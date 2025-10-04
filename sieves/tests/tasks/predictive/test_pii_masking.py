@@ -64,7 +64,8 @@ def test_to_hf_dataset(pii_masking_docs, batch_runtime) -> None:
         generation_settings=batch_runtime.generation_settings,
         batch_size=batch_runtime.batch_size,
     )
-    docs = task(pii_masking_docs)
+    pipe = Pipeline(task)
+    docs = pipe(pii_masking_docs)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(docs)

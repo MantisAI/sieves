@@ -63,7 +63,8 @@ def test_to_hf_dataset(translation_docs, batch_runtime) -> None:
         generation_settings=batch_runtime.generation_settings,
         batch_size=batch_runtime.batch_size,
     )
-    docs = task(translation_docs)
+    pipe = Pipeline(task)
+    docs = pipe(translation_docs)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(docs)

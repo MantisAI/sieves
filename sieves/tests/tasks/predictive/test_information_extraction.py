@@ -68,7 +68,8 @@ def test_to_hf_dataset(information_extraction_docs, batch_runtime) -> None:
     task = tasks.predictive.InformationExtraction(
         entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size
     )
-    docs = task(information_extraction_docs)
+    pipe = Pipeline(task)
+    docs = pipe(information_extraction_docs)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(docs)

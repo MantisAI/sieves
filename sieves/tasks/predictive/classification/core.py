@@ -330,8 +330,10 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             features=features,
         )
 
+        print("start")
         try:
             for doc in docs:
+                print(doc)
                 scores = Classification._result_to_scores(doc.results[self._task_id])
 
                 # If multi-label: store one-hot representation.
