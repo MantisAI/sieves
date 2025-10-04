@@ -46,6 +46,7 @@ def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
                 aspects=("food", "service"),
                 model=batch_runtime.model,
                 generation_settings=batch_runtime.generation_settings,
+                batch_size=batch_runtime.batch_size,
                 **fewshot_args,
             ),
         ]
@@ -69,10 +70,12 @@ def test_to_hf_dataset(dummy_docs, batch_runtime) -> None:
         aspects=("food", "service"),
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
     )
+    pipe = Pipeline(task)
 
     assert isinstance(task, PredictiveTask)
-    dataset = task.to_hf_dataset(task(dummy_docs))
+    dataset = task.to_hf_dataset(pipe(dummy_docs))
     assert all([key in dataset.features for key in ("text", "aspect")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -95,6 +98,7 @@ def test_serialization(dummy_docs, batch_runtime) -> None:
                 aspects=("food", "service"),
                 model=batch_runtime.model,
                 generation_settings=batch_runtime.generation_settings,
+                batch_size=batch_runtime.batch_size,
             )
         ]
     )
@@ -107,8 +111,9 @@ def test_serialization(dummy_docs, batch_runtime) -> None:
                       'cls_name': 'sieves.tasks.predictive.sentiment_analysis.core.SentimentAnalysis',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,

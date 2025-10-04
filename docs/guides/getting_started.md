@@ -140,22 +140,26 @@ for result in results:
 - [`ollama`](https://github.com/ollama/ollama)
 
 You pass models from these libraries directly to `PredictiveTask`. Optionally, you can include `GenerationSettings` to
-override defaults.
+override defaults. Batching is controlled per task via the `batch_size` argument (see below).
 
 ### GenerationSettings (optional)
-`GenerationSettings` controls execution behavior across engines and is optional. Defaults:
-- batch_size: -1 (batch all inputs together)
+`GenerationSettings` controls engine behavior and is optional. Defaults:
 - strict_mode: False (on parse issues, return None instead of raising)
 - init_kwargs/inference_kwargs: None (use engine defaults)
 - config_kwargs: None (used by some backends like DSPy)
 
-Only pass it if you need non-defaults, for example:
+Batching is configured on each task via `batch_size`:
+- `batch_size = -1` processes all inputs at once (default)
+- `batch_size = N` processes N docs per batch
+
+Example:
 
 ```python
 from sieves.engines.utils import GenerationSettings
 classifier = tasks.predictive.Classification(
     labels=["science", "politics"],
     model=model,
-    generation_settings=GenerationSettings(batch_size=8, strict_mode=True),
+    generation_settings=GenerationSettings(strict_mode=True),
+    batch_size=8,
 )
 ```

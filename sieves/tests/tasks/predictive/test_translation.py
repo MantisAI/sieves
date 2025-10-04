@@ -40,6 +40,7 @@ def test_run(translation_docs, batch_runtime, fewshot) -> None:
             to="Spanish",
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             **fewshot_args,
         )
     ])
@@ -60,8 +61,10 @@ def test_to_hf_dataset(translation_docs, batch_runtime) -> None:
         to="Spanish",
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
     )
-    docs = task(translation_docs)
+    pipe = Pipeline(task)
+    docs = pipe(translation_docs)
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(docs)
@@ -84,6 +87,7 @@ def test_serialization(translation_docs, batch_runtime) -> None:
             to="Spanish",
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
         )
     ])
 
@@ -93,8 +97,9 @@ def test_serialization(translation_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.translation.core.Translation',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': False, "value": -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,

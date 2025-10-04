@@ -1,7 +1,7 @@
 """vLLM engine wrapper enabling guided decoding for structured outputs."""
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from enum import StrEnum
 from typing import Any, override
 
@@ -59,7 +59,7 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         guided_decoding_params = GuidedDecodingParams(**{inference_mode.value: converted_decoding_params})
         sampling_params = SamplingParams(guided_decoding=guided_decoding_params, **self._init_kwargs)
 
-        def execute(values: Iterable[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
             """Execute prompts with engine for given values.
 
             :param values: Values to inject into prompts.

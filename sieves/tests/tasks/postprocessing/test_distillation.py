@@ -12,6 +12,8 @@ import openai
 import outlines
 import pytest
 import setfit
+import transformers
+from loguru import logger
 
 from sieves import Doc, Pipeline, GenerationSettings
 from sieves.engines import EngineType
@@ -52,6 +54,7 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
             labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
@@ -119,6 +122,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
             labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
             label_descriptions={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
@@ -145,8 +149,9 @@ def test_serialization(classification_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.classification.core.Classification',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
+                      'batch_size': {'is_placeholder': False, 'value': -1},
                       'generation_settings': {'is_placeholder': False,
-                                              'value': {'batch_size': -1,
+                                              'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
@@ -179,6 +184,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
                       'version': Config.get_version()},
                      {'base_model_id': {'is_placeholder': False,
                                         'value': 'sentence-transformers/paraphrase-mpnet-base-v2'},
+                      'batch_size': {'is_placeholder': False, 'value': -1},
                       'cls_name': 'sieves.tasks.postprocessing.distillation.core.Distillation',
                       'framework': {'is_placeholder': False, 'value': 'setfit'},
                       'include_meta': {'is_placeholder': False, 'value': False},
@@ -195,7 +201,5 @@ def test_serialization(classification_docs, batch_runtime) -> None:
                       'version': Config.get_version()}]},
  'use_cache': {'is_placeholder': False, 'value': True},
  'version': Config.get_version()}
-
-
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}, {}])

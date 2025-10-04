@@ -38,6 +38,7 @@ def test_serialization(dummy_docs) -> None:
             "value": [
                 {
                     "cls_name": "sieves.tasks.preprocessing.chunking.naive.NaiveChunker",
+                    'batch_size': {'is_placeholder': False, "value": -1},
                     "include_meta": {"is_placeholder": False, "value": False},
                     "interval": {"is_placeholder": False, "value": 5},
                     "task_id": {"is_placeholder": False, "value": "NaiveChunker"},

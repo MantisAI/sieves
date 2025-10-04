@@ -5,9 +5,7 @@ from __future__ import annotations
 import abc
 import asyncio
 import enum
-import itertools
-import sys
-from collections.abc import Awaitable, Callable, Coroutine, Iterable
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Sequence
 from typing import Any, Generic, Protocol, TypeVar, override
 
 import instructor.exceptions
@@ -25,7 +23,7 @@ EngineInferenceMode = TypeVar("EngineInferenceMode", bound=enum.Enum)
 class Executable(Protocol[EngineResult]):
     """Callable protocol representing a compiled prompt executable."""
 
-    def __call__(self, values: Iterable[dict[str, Any]]) -> Iterable[EngineResult | None]:
+    def __call__(self, values: Sequence[dict[str, Any]]) -> Iterable[EngineResult | None]:
         """Execute prompt executable for given values.
 
         :param values: Values to inject into prompts.
@@ -48,7 +46,6 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         self._inference_kwargs = generation_settings.inference_kwargs or {}
         self._init_kwargs = generation_settings.init_kwargs or {}
         self._strict_mode = generation_settings.strict_mode
-        self._batch_size = generation_settings.batch_size
 
     @property
     def generation_settings(self) -> GenerationSettings:
@@ -150,7 +147,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         self,
         generator: Callable[[list[str]], Iterable[EngineResult]],
         template: jinja2.Template,
-        values: Iterable[dict[str, Any]],
+        values: Sequence[dict[str, Any]],
         fewshot_examples: Iterable[pydantic.BaseModel],
     ) -> Iterable[EngineResult | None]:
         """Run inference in batches with exception handling.
@@ -163,28 +160,20 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         """
         fewshot_examples_dict = Engine._convert_fewshot_examples(fewshot_examples)
         examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
-        batch_size = self._batch_size if self._batch_size != -1 else sys.maxsize
-        # Ensure values are read as generator for standardized batch handling (otherwise we'd have to use different
-        # batch handling depending on whether lists/tuples or generators are used).
-        values = (v for v in values)
 
-        while batch := [vals for vals in itertools.islice(values, batch_size)]:
-            if len(batch) == 0:
-                break
+        try:
+            yield from generator([template.render(**doc_values, **examples) for doc_values in values])
 
-            try:
-                yield from generator([template.render(**doc_values, **examples) for doc_values in batch])
-
-            except (
-                TypeError,
-                pydantic.ValidationError,
-                instructor.exceptions.InstructorRetryException,
-                instructor.exceptions.IncompleteOutputException,
-            ) as err:
-                if self._strict_mode:
-                    raise ValueError(
-                        "Encountered problem when executing prompt. Ensure your few-shot examples and document "
-                        "chunks contain sensible information."
-                    ) from err
-                else:
-                    yield from (None for _ in range(len(batch)))
+        except (
+            TypeError,
+            pydantic.ValidationError,
+            instructor.exceptions.InstructorRetryException,
+            instructor.exceptions.IncompleteOutputException,
+        ) as err:
+            if self._strict_mode:
+                raise ValueError(
+                    "Encountered problem when executing prompt. Ensure your few-shot examples and document "
+                    "chunks contain sensible information."
+                ) from err
+            else:
+                yield from (None for _ in range(len(values)))

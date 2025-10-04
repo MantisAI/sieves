@@ -139,7 +139,6 @@ class Pipeline:
 
                 if self._use_cache:
                     self._cache[doc_cache_id] = processed_doc
-
             else:
                 self._cache_stats["hits"] += 1
                 processed_doc = self._cache[doc_cache_id]
