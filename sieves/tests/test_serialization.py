@@ -48,6 +48,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
             "value": [
                 {
                     "chunker": {"is_placeholder": True, "value": "chonkie.chunker.token.TokenChunker"},
+                    'batch_size': {'is_placeholder': False, 'value': -1},
                     "cls_name": "sieves.tasks.preprocessing.chunking.core.Chunking",
                     "include_meta": {"is_placeholder": False, "value": False},
                     "task_id": {"is_placeholder": False, "value": "Chunking"},
@@ -58,7 +59,6 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                     'generation_settings': {
                         'is_placeholder': False,
                         'value': {
-                            'batch_size': -1,
                             'config_kwargs': None,
                             'inference_kwargs': None,
                             'init_kwargs': None,
@@ -67,6 +67,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
                     "include_meta": {"is_placeholder": False, "value": True},
+                    'batch_size': {'is_placeholder': False, 'value': -1},
                     "labels": {"is_placeholder": False, "value": ["science", "politics"]},
                     "label_descriptions": {
                         "is_placeholder": False,

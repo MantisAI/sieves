@@ -149,7 +149,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
            'value': [{'cls_name': 'sieves.tasks.predictive.classification.core.Classification',
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
-                      'batch_size': {'is_placeholder': -1},
+                      'batch_size': {'is_placeholder': False, 'value': -1},
                       'generation_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,
@@ -184,6 +184,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
                       'version': Config.get_version()},
                      {'base_model_id': {'is_placeholder': False,
                                         'value': 'sentence-transformers/paraphrase-mpnet-base-v2'},
+                      'batch_size': {'is_placeholder': False, 'value': -1},
                       'cls_name': 'sieves.tasks.postprocessing.distillation.core.Distillation',
                       'framework': {'is_placeholder': False, 'value': 'setfit'},
                       'include_meta': {'is_placeholder': False, 'value': False},
