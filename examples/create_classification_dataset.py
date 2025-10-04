@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "sieves[engines]>=0.15",
+#     "sieves[engines]>=0.16",
 #     "typer>=0.12,<1",
 #     "datasets",
 #     "transformers>=4.53.0,<5",
@@ -420,8 +420,8 @@ def classify(
         generation_settings=sieves.GenerationSettings(
             inference_kwargs={"max_new_tokens": max_tokens},
             strict_mode=False,
-            batch_size=batch_size,
         ),
+        batch_size=batch_size,
         label_descriptions=desc_map or None,
         multi_label=multi_label,
     )
