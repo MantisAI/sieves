@@ -62,7 +62,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         overwrite: bool = False,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[FewshotExample] = (),
+        fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
     ) -> None:
         """Initialize new Summarization task.

@@ -58,7 +58,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         overwrite: bool = False,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[FewshotExample] = (),
+        fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
     ) -> None:
         """

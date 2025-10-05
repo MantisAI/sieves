@@ -82,7 +82,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         batch_size: int = -1,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[TaskFewshotExample] = (),
+        fewshot_examples: Sequence[TaskFewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
     ) -> None:
         """
@@ -110,7 +110,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
         )
-        self._fewshot_examples: Iterable[TaskFewshotExample]
+        self._fewshot_examples: Sequence[TaskFewshotExample]
 
     @override
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:

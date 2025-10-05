@@ -7,9 +7,10 @@ import itertools
 import sys
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Generic
+from typing import Any, Generic, TypeVar
 
 import datasets
+import dspy
 import pydantic
 
 from sieves.data import Doc
@@ -17,10 +18,13 @@ from sieves.engines import EngineInferenceMode, EngineType  # noqa: F401
 from sieves.engines.types import GenerationSettings
 from sieves.engines.utils import init_engine
 from sieves.serialization import Config
+from sieves.tasks import optimization
 from sieves.tasks.core import Task
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
 from sieves.tasks.types import Model
+
+FewshotExample = TypeVar("FewshotExample", bound=pydantic.BaseModel)
 
 
 class PredictiveTask(
@@ -39,7 +43,7 @@ class PredictiveTask(
         overwrite: bool,
         prompt_template: str | None,
         prompt_signature_desc: str | None,
-        fewshot_examples: Iterable[pydantic.BaseModel],
+        fewshot_examples: Sequence[FewshotExample],
         generation_settings: GenerationSettings,
     ):
         """Initialize PredictiveTask.
@@ -160,6 +164,14 @@ class PredictiveTask(
             yield from docs_batch
 
     @property
+    def fewshot_examples(self) -> Sequence[FewshotExample]:
+        """Return few-shot examples.
+
+        :return: Few-shot examples.
+        """
+        return self._fewshot_examples
+
+    @property
     def _state(self) -> dict[str, Any]:
         return {
             **super()._state,
@@ -249,3 +261,66 @@ class PredictiveTask(
             return datasets.DatasetDict({"train": train_val_dataset["train"], "val": train_val_dataset["test"]})
 
         return datasets.DatasetDict({"train": hf_dataset})
+
+    @abc.abstractmethod
+    def _fewshot_to_dspy_examples(self, examples: Sequence[FewshotExample]) -> list[dspy.Example]:
+        """Convert task-specific fewshot examples to DSPy format.
+
+        :param examples: Task-specific fewshot examples to convert.
+        :return: Few-shot examples in DSPy format.
+        """
+
+    @abc.abstractmethod
+    def _dspy_to_fewshot_examples(self, examples: Sequence[dspy.Example]) -> list[FewshotExample]:
+        """Convert DSPy fewshot examples to task-specific format.
+
+        :param examples: DSpy fewshot examples to convert.
+        :return: Few-shot examples in task-specific format.
+        """
+
+    def _get_task_signature(self) -> type[dspy.Signature] | type[dspy.Module]:
+        """Get DSPy signature for this task.
+
+        By default this uses the task signature of the DSPy bridge for this task. If none is found, this fails. Can be
+        overwritten with a custom task signature, if no DSPy bridge will be implemented for this task.
+
+        :return: DSPy signature for this task.
+        :raises KeyError: If no DSPy bridge defined for this task.
+        """
+        try:
+            dspy_bridge = self._bridge if self._engine == EngineType.dspy else self._init_bridge(EngineType.dspy)
+            return dspy_bridge.prompt_signature
+
+        except KeyError as err:
+            raise KeyError(f"DSPy bridge not available for task {self.__class__.__name__}.") from err
+
+    @property
+    @abc.abstractmethod
+    def _optimizer_accuracy_metric(self) -> optimization.EvalMetric:
+        """Get DSPy optimizer accuracy metric for this task.
+
+        :return: DSPy optimizer accuracy metric for this task.
+        """
+
+    def optimize(self, optimizer: optimization.Optimizer) -> None:
+        """Optimize task prompt and few-shot examples with the available optimization config.
+
+        :param optimizer: Optimizer to run.
+        """
+        signature = self._get_task_signature()
+        examples = self._fewshot_to_dspy_examples(self._fewshot_examples)
+        optimizer(signature, examples)
+
+        # TODO change all fewshot example types to inherit from central FewshotExample, which requires input field spec.
+        #   Use Engine._convert_fewshot_examples() to convert examples to dicts, then convert those to dspy.Example.
+        # TODO implement abstract methods for classification task
+        # TODO set up test script
+        # TODO Convert task-specific into DSPY examples.
+        # TODO Run optimizer.
+        # TODO Convert DSPy into task-specific examples.
+        # TODO Refactor bridges so that _prompt_template is concatented from _prompt_description and
+        #   _prompt_example_template. This will enable updating each individually:
+        #       - _prompt_description will be set from optimized prompt text.
+        #       - _prompt_example_template will not be modified
+        #       - optimal example set will be set via task._fewshot_examples
+        # TODO Override fewshot examples, bridge templates.

@@ -54,7 +54,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         batch_size: int = -1,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[FewshotExample] = (),
+        fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
     ) -> None:
         """
@@ -82,7 +82,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
         )
-        self._fewshot_examples: Iterable[FewshotExample]
+        self._fewshot_examples: Sequence[FewshotExample]
 
     @override
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:

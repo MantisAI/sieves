@@ -36,7 +36,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: type[PromptSignature] | PromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
+        fewshot_examples: Sequence[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result | None]:
         assert isinstance(prompt_signature, type)
         cls_name = self.__class__.__name__

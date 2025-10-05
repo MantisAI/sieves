@@ -67,7 +67,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: type[PromptSignature] | PromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
+        fewshot_examples: Sequence[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result | None]:
         # Note: prompt_template is ignored here, as DSPy doesn't use it directly (only prompt_signature_description).
         assert isinstance(prompt_signature, type)

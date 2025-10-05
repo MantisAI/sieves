@@ -15,8 +15,9 @@ dependencies = [
     "jinja2>=3,<4",
     "loguru>=0.7,<1",
     "outlines>=1,<2",
+    "dspy-ai>=2,<3",
+    "dspy>=2,<3",
     "pydantic>=2,<3",
-    "scikit-learn>=1.6,<2",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -38,8 +39,6 @@ ingestion = [
 ]
 engines = [
     "accelerate>1.2,<2",
-    "dspy-ai>=2,<3",
-    "dspy>=2,<3",
     "gliner<1",
     "instructor>=1,<2",
     "langchain-core>=0.3,<0.4",

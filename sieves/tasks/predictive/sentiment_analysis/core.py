@@ -68,7 +68,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         batch_size: int = -1,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[FewshotExample] = (),
+        fewshot_examples: Sequence[FewshotExample] = (),
     ) -> None:
         """
         Initialize SentimentAnalysis task.
@@ -96,7 +96,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             prompt_signature_desc=prompt_signature_desc,
             fewshot_examples=fewshot_examples,
         )
-        self._fewshot_examples: Iterable[FewshotExample]
+        self._fewshot_examples: Sequence[FewshotExample]
 
     @override
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:

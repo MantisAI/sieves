@@ -85,7 +85,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         inference_mode: EngineInferenceMode,
         prompt_template: str | None,
         prompt_signature: type[EnginePromptSignature] | EnginePromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = (),
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ) -> Executable[EngineResult | None]:
         """Return a prompt executable for the given signature and mode.
 
@@ -99,7 +99,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         """
 
     @staticmethod
-    def _convert_fewshot_examples(fewshot_examples: Iterable[pydantic.BaseModel]) -> list[dict[str, Any]]:
+    def _convert_fewshot_examples(fewshot_examples: Sequence[pydantic.BaseModel]) -> list[dict[str, Any]]:
         """Convert few‑shot examples to dicts.
 
         :param fewshot_examples: Fewshot examples to convert.
@@ -148,7 +148,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         generator: Callable[[list[str]], Iterable[EngineResult]],
         template: jinja2.Template,
         values: Sequence[dict[str, Any]],
-        fewshot_examples: Iterable[pydantic.BaseModel],
+        fewshot_examples: Sequence[pydantic.BaseModel],
     ) -> Iterable[EngineResult | None]:
         """Run inference in batches with exception handling.
 

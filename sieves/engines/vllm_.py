@@ -44,7 +44,7 @@ class VLLM(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: type[PromptSignature] | PromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = (),
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
         template = self._create_template(prompt_template)
 

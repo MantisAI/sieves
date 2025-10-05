@@ -40,7 +40,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,
         prompt_signature: type[PromptSignature] | PromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = (),
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
         cls_name = self.__class__.__name__
         assert prompt_template, ValueError(f"prompt_template has to be provided to {cls_name} engine by task.")

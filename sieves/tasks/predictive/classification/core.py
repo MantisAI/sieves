@@ -52,11 +52,6 @@ _TaskBridge = (
     | VLLMClassification
 )
 
-# TODO
-#   - model signature must be _TaskModel, not engine wrapper.Model!
-#   - use GenerationSettings consistently across all engines
-#   - adjust tests
-
 
 class FewshotExampleMultiLabel(pydantic.BaseModel):
     """Few‑shot example for multi‑label classification with per‑label confidences."""
@@ -109,7 +104,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         batch_size: int = -1,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[FewshotExample] = (),
+        fewshot_examples: Sequence[FewshotExample] = (),
         label_descriptions: dict[str, str] | None = None,
         multi_label: bool = True,
         generation_settings: GenerationSettings = GenerationSettings(),
@@ -146,7 +141,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
         )
-        self._fewshot_examples: Iterable[FewshotExample]
+        self._fewshot_examples: Sequence[FewshotExample]
 
     def _validate_label_descriptions(self) -> None:
         """Validate that all label descriptions correspond to valid labels.

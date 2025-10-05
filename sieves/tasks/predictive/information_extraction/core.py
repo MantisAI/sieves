@@ -59,7 +59,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         batch_size: int = -1,
         prompt_template: str | None = None,
         prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[FewshotExample] = (),
+        fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
     ) -> None:
         """Initialize new PredictiveTask.
