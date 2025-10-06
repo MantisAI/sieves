@@ -12,6 +12,7 @@ from sieves.engines import EngineType, dspy_, instructor_, langchain_, ollama_, 
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.pii_masking.bridges import (
     DSPyPIIMasking,
@@ -37,10 +38,9 @@ class PIIEntity(pydantic.BaseModel, frozen=True):
     text: str
 
 
-class FewshotExample(pydantic.BaseModel):
+class FewshotExample(BaseFewshotExample):
     """Example for PII masking few-shot prompting."""
 
-    text: str
     reasoning: str
     masked_text: str
     pii_entities: list[PIIEntity]

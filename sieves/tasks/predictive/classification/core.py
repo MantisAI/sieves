@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
+import dspy
 import pydantic
 
 from sieves.data import Doc
@@ -26,6 +27,7 @@ from sieves.tasks.predictive.classification.bridges import (
     OutlinesClassification,
     VLLMClassification,
 )
+from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 
 _TaskModel = (
@@ -53,10 +55,9 @@ _TaskBridge = (
 )
 
 
-class FewshotExampleMultiLabel(pydantic.BaseModel):
+class FewshotExampleMultiLabel(BaseFewshotExample):
     """Few‑shot example for multi‑label classification with per‑label confidences."""
 
-    text: str
     reasoning: str
     confidence_per_label: dict[str, float]
 
@@ -68,10 +69,9 @@ class FewshotExampleMultiLabel(pydantic.BaseModel):
         return self
 
 
-class FewshotExampleSingleLabel(pydantic.BaseModel):
+class FewshotExampleSingleLabel(BaseFewshotExample):
     """Few‑shot example for single‑label classification with a global confidence."""
 
-    text: str
     reasoning: str
     label: str
     confidence: float
@@ -438,3 +438,14 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
         return datasets.Dataset.from_list(data, features=features, info=info)
+
+    @override
+    def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
+        if not self._multi_label:
+            if example["label"] == pred["label"]:
+                return (1 + pred["confidence"]) / 2
+            else:
+                return (1 - pred["confidence"]) / 2
+
+        else:
+            return 0

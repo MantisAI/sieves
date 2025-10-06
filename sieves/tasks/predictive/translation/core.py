@@ -14,6 +14,7 @@ from sieves.engines import EngineType, dspy_, instructor_, langchain_, ollama_, 
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.translation.bridges import (
     DSPyTranslation,
@@ -37,12 +38,16 @@ _TaskBridge = (
 )
 
 
-class FewshotExample(pydantic.BaseModel):
+class FewshotExample(BaseFewshotExample):
     """Few-shot example with a target translation."""
 
-    text: str
     to: str
     translation: str
+
+    @override
+    @property
+    def input_fields(self) -> Sequence[str]:
+        return "text", "to"
 
 
 class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):

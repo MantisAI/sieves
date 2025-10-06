@@ -15,6 +15,7 @@ from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import GliXBridge
+from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.summarization.bridges import (
     DSPySummarization,
@@ -41,10 +42,9 @@ _TaskBridge = (
 )
 
 
-class FewshotExample(pydantic.BaseModel):
+class FewshotExample(BaseFewshotExample):
     """Few-shot example with a target summary."""
 
-    text: str
     n_words: int
     summary: str
 

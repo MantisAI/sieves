@@ -14,6 +14,7 @@ from sieves.engines import EngineType, dspy_, instructor_, langchain_, ollama_, 
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.sentiment_analysis.bridges import (
     DSPySentimentAnalysis,
@@ -37,10 +38,9 @@ _TaskBridge = (
 )
 
 
-class FewshotExample(pydantic.BaseModel):
+class FewshotExample(BaseFewshotExample):
     """Few-shot example with per-aspect sentiment scores."""
 
-    text: str
     reasoning: str
     sentiment_per_aspect: dict[str, float]
 

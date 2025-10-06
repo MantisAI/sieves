@@ -15,6 +15,7 @@ from sieves.engines import EngineType, dspy_, glix_, instructor_, langchain_, ol
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
@@ -39,10 +40,9 @@ _TaskBridge = (
 )
 
 
-class FewshotExample(pydantic.BaseModel):
+class FewshotExample(BaseFewshotExample):
     """Few-shot example."""
 
-    text: str
     reasoning: str
     entities: list[pydantic.BaseModel]
 

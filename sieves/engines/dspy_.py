@@ -85,7 +85,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
 
         def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
             # Compile predictor with few-shot examples.
-            fewshot_examples_dicts = DSPy._convert_fewshot_examples(fewshot_examples)
+            fewshot_examples_dicts = DSPy.convert_fewshot_examples(fewshot_examples)
             generator_fewshot: dspy.Module | None = None
             if len(fewshot_examples_dicts):
                 examples = [dspy.Example(**fs_example) for fs_example in fewshot_examples_dicts]

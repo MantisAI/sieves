@@ -15,6 +15,7 @@ from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import GliXBridge
+from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.question_answering.bridges import (
     VLLMQA,
@@ -33,10 +34,9 @@ _TaskResult = pydantic.BaseModel | dspy_.Result | vllm_.Result
 _TaskBridge = DSPyQA | GliXBridge | InstructorQA | LangChainQA | OllamaQA | OutlinesQA | VLLMQA
 
 
-class FewshotExample(pydantic.BaseModel):
+class FewshotExample(BaseFewshotExample):
     """Few-shot example with questions and answers for a context."""
 
-    text: str
     reasoning: str
     questions: tuple[str, ...] | list[str]
     answers: tuple[str, ...] | list[str]

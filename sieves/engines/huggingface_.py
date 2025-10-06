@@ -49,7 +49,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         # Render template with few-shot examples. Note that we don't use extracted document values here, as HF zero-shot
         # pipelines only support one hypothesis template per call - and we want to batch, so our hypothesis template
         # will be document-invariant.
-        fewshot_examples_dict = HuggingFace._convert_fewshot_examples(fewshot_examples)
+        fewshot_examples_dict = HuggingFace.convert_fewshot_examples(fewshot_examples)
         # Render hypothesis template with everything but text.
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 

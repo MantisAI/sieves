@@ -99,7 +99,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         """
 
     @staticmethod
-    def _convert_fewshot_examples(fewshot_examples: Sequence[pydantic.BaseModel]) -> list[dict[str, Any]]:
+    def convert_fewshot_examples(fewshot_examples: Sequence[pydantic.BaseModel]) -> list[dict[str, Any]]:
         """Convert few‑shot examples to dicts.
 
         :param fewshot_examples: Fewshot examples to convert.
@@ -158,7 +158,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         :param fewshot_examples: Fewshot examples.
         :return: Results parsed from responses.
         """
-        fewshot_examples_dict = Engine._convert_fewshot_examples(fewshot_examples)
+        fewshot_examples_dict = Engine.convert_fewshot_examples(fewshot_examples)
         examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
 
         try:
