@@ -1,8 +1,10 @@
+"""Bridges for classification task."""
+
 import abc
 from collections import Counter
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Literal, TypeVar
+from typing import Literal, TypeVar, override
 
 import dspy
 import jinja2
@@ -26,21 +28,20 @@ _BridgeResult = TypeVar("_BridgeResult")
 
 
 class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
+    """Abstract base class for classification bridges."""
+
     def __init__(
         self,
         task_id: str,
-        prompt_template: str | None,
-        prompt_signature_desc: str | None,
+        prompt_instructions: str | None,
         labels: list[str],
         multi_label: bool,
         label_descriptions: dict[str, str] | None = None,
     ):
-        """
-        Initializes InformationExtractionBridge.
+        """Initialize InformationExtractionBridge.
 
         :param task_id: Task ID.
-        :param prompt_template: Custom prompt template.
-        :param prompt_signature_desc: Custom prompt signature description.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param labels: Labels to classify.
         :param multi_label: If True, task returns confidence scores for all specified labels. If False, task returns
             most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
@@ -49,8 +50,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         """
         super().__init__(
             task_id=task_id,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
             overwrite=False,
         )
         self._labels = labels
@@ -58,8 +58,8 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         self._label_descriptions = label_descriptions or {}
 
     def _get_label_descriptions(self) -> str:
-        """
-        Returns a string with the label descriptions.
+        """Return a string with the label descriptions.
+
         :return: A string with the label descriptions.
         """
         labels_with_descriptions: list[str] = []
@@ -78,20 +78,19 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
 
 
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
-    @property
-    def _prompt_template(self) -> str | None:
-        return None
+    """DSPy bridge for classification."""
 
+    @override
     @property
-    def _prompt_signature_description(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         if self._multi_label:
             return f"""
             Multi-label classification of the provided text given the labels {self._labels}.
-            For each label, provide the confidence with which you believe that the provided text should be assigned 
-            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the 
-            opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to 
+            For each label, provide the confidence with which you believe that the provided text should be assigned
+            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
+            opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to
             add up to 1.
-    
+
             {self._get_label_descriptions()}
             """
 
@@ -102,6 +101,17 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         {self._get_label_descriptions()}
         """
 
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return None
+
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return None
+
+    @override
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
         labels = self._labels
@@ -131,19 +141,21 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
             cls = SingleLabelTextClassification
 
-        cls.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+        cls.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
         return cls
 
+    @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.chain_of_thought
 
+    @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.confidence_per_label) == 1
             sorted_preds = sorted(
-                [(label, score) for label, score in result.completions.confidence_per_label[0].items()],
+                ((label, score) for label, score in result.completions.confidence_per_label[0].items()),
                 key=lambda x: x[1],
                 reverse=True,
             )
@@ -155,6 +167,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
@@ -175,10 +188,10 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                     label_scores[res.label] += max(0, min(res.confidence, 1))
 
             sorted_label_scores: list[dict[str, str | float]] = sorted(
-                [
+                (
                     {"label": label, "score": score / (doc_offset[1] - doc_offset[0])}
                     for label, score in label_scores.items()
-                ],
+                ),
                 key=lambda x: x["score"],
                 reverse=True,
             )
@@ -193,17 +206,23 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
 
 class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Result, huggingface_.InferenceMode]):
+    """HuggingFace bridge for classification."""
+
+    @override
     @property
-    def _prompt_template(self) -> str | None:
+    def _prompt_instructions(self) -> str:
+        return f"""
+        This text is about {{}}.
+        {self._get_label_descriptions()}
+        """
+
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
         if self._multi_label:
-            return (
-                f"""
-            This text is about {{}}.
-            {self._get_label_descriptions()}
-            """
-                + """
+            return """
             {% if examples|length > 0 -%}
-            
+
                 Examples:
                 <examples>
                 {%- for example in examples %}
@@ -211,7 +230,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
                         <text>{{ example.text }}</text>
                         <output>
                             <reasoning>{{ example.reasoning }}</reasoning>
-                            {%- for l, s in example.confidence_per_label.items() %}    
+                            {%- for l, s in example.confidence_per_label.items() %}
                             <label_score>
                                 <label>{{ l }}</label><
                                 score>{{ s }}</score>
@@ -221,40 +240,41 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
                 {% endfor %}</examples>
             {% endif %}
             """
-            )
 
-        return f"""
-        This text is about {{}}.
-        {self._get_label_descriptions()}
-        {{% if examples|length > 0 -%}}
-        
+        return """
+        {% if examples|length > 0 -%}
+
         Examples:
         <examples>
-        {{%- for example in examples %}}
+        {%- for example in examples %}
             <example>
-                <text>{{{{ example.text }}}}</text>
-                <reasoning>{{{{ example.reasoning }}}}</reasoning>
+                <text>{{ example.text }}</text>
+                <reasoning>{{ example.reasoning }}</reasoning>
                 <output>
-                    <label>{{{{ example.label }}}}</label><score>{{{{ example.confidence }}}}</score>
+                    <label>{{ example.label }}</label><score>{{ example.confidence }}</score>
                 </output>
             </example>
-        {{% endfor -%}}
+        {% endfor -%}
         </examples>
-        {{% endif -%}}
+        {% endif -%}
         """
 
+    @override
     @property
-    def _prompt_signature_description(self) -> str | None:
+    def _prompt_conclusion(self) -> str | None:
         return None
 
+    @override
     @property
     def prompt_signature(self) -> list[str]:
         return self._labels
 
+    @override
     @property
     def inference_mode(self) -> huggingface_.InferenceMode:
         return huggingface_.InferenceMode.zeroshot_cls
 
+    @override
     def integrate(self, results: Iterable[huggingface_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [(label, score) for label, score in zip(result["labels"], result["scores"])]
@@ -264,6 +284,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
                     doc.results[self._task_id] = doc.results[self._task_id][0]
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[huggingface_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[huggingface_.Result]:
@@ -281,10 +302,10 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
 
             # Average score, sort by it in descending order.
             sorted_label_scores: list[dict[str, str | float]] = sorted(
-                [
+                (
                     {"label": label, "score": score / (doc_offset[1] - doc_offset[0])}
                     for label, score in label_scores.items()
-                ],
+                ),
                 key=lambda x: x["score"],
                 reverse=True,
             )
@@ -297,25 +318,49 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
 class PydanticBasedClassification(
     ClassificationBridge[pydantic.BaseModel | list[str], pydantic.BaseModel | str, EngineInferenceMode], abc.ABC
 ):
+    """Base class for Pydantic-based classification bridges."""
+
+    @override
     @property
-    def _prompt_template(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         if self._multi_label:
             return (
                 f"""
             Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
             {self._get_label_descriptions()}"""
-                + """ 
+                + """
             For each label, provide the confidence with which you believe that the provided text should be assigned
             this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
-            opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision. 
-    
+            opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision.
+
             The output for two labels LABEL_1 and LABEL_2 should look like this:
             <output>
                 <reasoning>REASONING</reasoning>
                 <label_score><label>LABEL_1</label><score>CONFIDENCE_SCORE_1</score></label_score>
                 <label_score><label>LABEL_2</label><score>CONFIDENCE_SCORE_2</score></label_score>
             </output>
-    
+            """
+            )
+
+        return f"""
+        Classify the provided text. Your classification match one of these labels: {",".join(self._labels)}.
+        {self._get_label_descriptions()}
+        Also provide a confidence score reflecting how likely it is that your chosen label is the correct
+        fit for the text.
+
+        The output for two labels LABEL_1 and LABEL_2 should look like this:
+        <output>
+            <reasoning>REASONING</reasoning>
+            <label>LABEL_1</label>
+            <score>CONFIDENCE_SCORE_1</score>
+        </output>
+        """
+
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        if self._multi_label:
+            return """
             {% if examples|length > 0 -%}
                 Examples:
                 <examples>
@@ -324,62 +369,49 @@ class PydanticBasedClassification(
                         <text>{{ example.text }}</text>
                         <output>
                             <reasoning>{{ example.reasoning }}</reasoning>
-                            {%- for l, s in example.confidence_per_label.items() %}    
+                            {%- for l, s in example.confidence_per_label.items() %}
                             <label_score><label>{{ l }}</label><score>{{ s }}</score></label_score>{% endfor %}
                         </output>
                     </example>
                 {% endfor %}</examples>
             {% endif %}
-            ========
-            
-            <text>{{ text }}</text>
-            <output>
             """
-            )
 
-        return f"""
-        Classify the provided text. Your classification match one of these labels: {",".join(self._labels)}.
-        {self._get_label_descriptions()}
-        Also provide a confidence score reflecting how likely it is that your chosen label is the correct
-        fit for the text. 
-
-        The output for two labels LABEL_1 and LABEL_2 should look like this:
-        <output>
-            <reasoning>REASONING</reasoning>
-            <label>LABEL_1</label>
-            <score>CONFIDENCE_SCORE_1</score>
-        </output>
-
-        {{% if examples|length > 0 -%}}
+        return """
+        {% if examples|length > 0 -%}
             Examples:
             <examples>
-            {{%- for example in examples %}}
+            {%- for example in examples %}
                 <example>
-                    <text>{{{{ example.text }}}}</text>
+                    <text>{{ example.text }}</text>
                     <output>
-                        <reasoning>{{{{ example.reasoning }}}}</reasoning>
-                        <label>{{{{ example.label }}}}</label>
-                        <score>{{{{ example.confidence }}}}</score>
+                        <reasoning>{{ example.reasoning }}</reasoning>
+                        <label>{{ example.label }}</label>
+                        <score>{{ example.confidence }}</score>
                     </output>
                 </example>
-            {{% endfor %}}</examples>
-        {{% endif %}}
+            {% endfor %}</examples>
+        {% endif %}
+        """
+
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return """
         ========
-        
-        <text>{{{{ text }}}}</text>
+
+        <text>{{ text }}</text>
         <output>
         """
 
-    @property
-    def _prompt_signature_description(self) -> str | None:
-        return None
-
+    @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel] | list[str]:
         if self._multi_label:
             prompt_sig = pydantic.create_model(  # type: ignore[call-overload]
                 "MultilabelClassification",
                 __base__=pydantic.BaseModel,
+                __doc__="Result of multi-label classification.",
                 reasoning=(str, ...),
                 **{label: (float, ...) for label in self._labels},
             )
@@ -388,25 +420,25 @@ class PydanticBasedClassification(
             LabelType = Literal[*labels]  # type: ignore[valid-type]
 
             class SingleLabelClassification(pydantic.BaseModel):
+                """Result of single-label classification."""
+
                 reasoning: str
                 label: LabelType
                 score: float
 
             prompt_sig = SingleLabelClassification
 
-        if self.prompt_signature_description:
-            prompt_sig.__doc__ = jinja2.Template(self.prompt_signature_description).render()
-
         assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
         return prompt_sig
 
+    @override
     def integrate(self, results: Iterable[pydantic.BaseModel | str], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             if self._multi_label:
                 assert isinstance(result, pydantic.BaseModel)
                 label_scores = {k: v for k, v in result.model_dump().items() if k != "reasoning"}
                 doc.results[self._task_id] = sorted(
-                    [(label, score) for label, score in label_scores.items()], key=lambda x: x[1], reverse=True
+                    ((label, score) for label, score in label_scores.items()), key=lambda x: x[1], reverse=True
                 )
             else:
                 assert hasattr(result, "label") and hasattr(result, "score")
@@ -414,6 +446,7 @@ class PydanticBasedClassification(
 
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[pydantic.BaseModel | str], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel | str]:
@@ -456,32 +489,45 @@ class PydanticBasedClassification(
 
 
 class OllamaClassification(PydanticBasedClassification[ollama_.InferenceMode]):
+    """Ollama bridge for classification."""
+
+    @override
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
         return ollama_.InferenceMode.structured
 
 
 class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
+    """LangChain bridge for classification."""
+
+    @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
 
 
 class InstructorClassification(PydanticBasedClassification[instructor_.InferenceMode]):
+    """Instructor bridge for classification."""
+
+    @override
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.structured
 
 
 class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[EngineInferenceMode], abc.ABC):
+    """Base class for Pydantic-based classification bridges with label forcing."""
+
+    @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel] | list[str]:
         return super().prompt_signature if self._multi_label else self._labels
 
+    @override
     @property
-    def _prompt_template(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         if self._multi_label:
-            return super()._prompt_template
+            return super()._prompt_instructions
 
         return f"""
         Perform single-label classification of the provided text given the provided labels: {",".join(self._labels)}.
@@ -494,26 +540,31 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[En
             <reasoning>REASONING</reasoning>
             <label>LABEL_1</label>
         </output>
-
-        {{% if examples|length > 0 -%}}
-            Examples:
-            <examples>
-            {{%- for example in examples %}}
-                <example>
-                    <text>{{{{ example.text }}}}</text>
-                    <output>
-                        <reasoning>{{{{ example.reasoning }}}}</reasoning>
-                        <label>{{{{ example.label }}}}</label>
-                    </output>
-                </example>
-            {{% endfor %}}</examples>
-        {{% endif %}}
-        ========
-
-        <text>{{{{ text }}}}</text>
-        <output>
         """
 
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        if self._multi_label:
+            return super()._prompt_example_template
+
+        return """
+        {% if examples|length > 0 -%}
+            Examples:
+            <examples>
+            {%- for example in examples %}
+                <example>
+                    <text>{{ example.text }}</text>
+                    <output>
+                        <reasoning>{{ example.reasoning }}</reasoning>
+                        <label>{{ example.label }}</label>
+                    </output>
+                </example>
+            {% endfor %}</examples>
+        {% endif %}
+        """
+
+    @override
     def integrate(self, results: Iterable[pydantic.BaseModel | str], docs: Iterable[Doc]) -> Iterable[Doc]:
         if self._multi_label:
             return super().integrate(results, docs)
@@ -522,6 +573,7 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[En
             doc.results[self._task_id] = result
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[pydantic.BaseModel | str], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel | str]:
@@ -538,12 +590,18 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[En
 
 
 class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outlines_.InferenceMode]):
+    """Outlines bridge for classification."""
+
+    @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json if self._multi_label else outlines_.InferenceMode.choice
 
 
 class VLLMClassification(PydanticBasedClassificationWithLabelForcing[vllm_.InferenceMode]):
+    """vLLM bridge for classification."""
+
+    @override
     @property
     def inference_mode(self) -> vllm_.InferenceMode:
         return vllm_.InferenceMode.json if self._multi_label else vllm_.InferenceMode.choice

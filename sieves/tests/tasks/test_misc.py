@@ -18,30 +18,30 @@ from sieves.engines.utils import init_default_model
 from sieves.tasks.utils import PydanticToHFDatasets
 
 
-def test_custom_prompt_template() -> None:
-    prompt_template = "This is a different prompt template."
+def test_custom_prompt_instructions() -> None:
+    prompt_instructions = "This is a different prompt template."
     task = tasks.predictive.Classification(
         task_id="classifier",
         labels=["science", "politics"],
         model=transformers.pipeline(
             "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
         ),
-        prompt_template=prompt_template,
+        prompt_instructions=prompt_instructions,
     )
-    assert task.prompt_template == prompt_template
+    assert task.prompt_template.strip().startswith(prompt_instructions)
 
 
 def test_custom_prompt_signature_desc() -> None:
-    prompt_sig_desc = "This is a different prompt signature description."
+    prompt_instructions = "This is a different prompt signature description."
     task = tasks.predictive.Classification(
         task_id="classifier",
         labels=["science", "politics"],
         model=transformers.pipeline(
             "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
         ),
-        prompt_signature_desc=prompt_sig_desc,
+        prompt_instructions=prompt_instructions,
     )
-    assert task.prompt_signature_description == prompt_sig_desc
+    assert task.prompt_template.strip().startswith(prompt_instructions)
 
 
 def test_run_readme_example_short() -> None:
@@ -58,7 +58,7 @@ def test_run_readme_example_short() -> None:
     )
 
     # Run pipe and output results.
-    docs = list(pipe(docs))
+    list(pipe(docs))
 
 
 @pytest.mark.slow

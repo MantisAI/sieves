@@ -1,8 +1,10 @@
+"""Bridges for NER task."""
+
 import abc
 import re
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, TypeVar, override
 
 import dspy
 import jinja2
@@ -17,12 +19,19 @@ _BridgeResult = TypeVar("_BridgeResult")
 
 
 class Entity(pydantic.BaseModel):
+    """Class for storing entity information."""
+
     text: str
     start: int
     end: int
     entity_type: str
 
     def __eq__(self, other: object) -> bool:
+        """Compare two entities.
+
+        :param other: Other entity to compare with.
+        :return: True if entities are equal, False otherwise.
+        """
         if not isinstance(other, Entity):
             return False
         # Two entities are equal if they have the same start, end, text and entity_type
@@ -34,39 +43,45 @@ class Entity(pydantic.BaseModel):
         )
 
     def __hash__(self) -> int:
-        # Implement hash to make Entity objects usable in sets and as dict keys
+        """Compute entity hash.
+
+        :returns: Entity hash.
+        """
         return hash((self.start, self.end, self.text, self.entity_type))
 
 
 class Entities(pydantic.BaseModel):
+    """Collection of entities with associated text."""
+
     entities: list[Entity]
     text: str
 
 
 class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
+    """Abstract base class for NER bridges."""
+
     def __init__(
         self,
         entities: list[str],
         task_id: str,
-        prompt_template: str | None,
-        prompt_signature_desc: str | None,
+        prompt_instructions: str | None,
     ):
-        """
-        Initializes NERBridge.
+        """Initialize NERBridge.
+
         :param task_id: Task ID.
-        :param prompt_template: Custom prompt template.
-        :param prompt_signature_desc: Custom prompt signature description.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         """
         super().__init__(
             task_id=task_id,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
             overwrite=False,
         )
         self._entities = entities
 
+    @override
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         """Extract all values from doc instances that are to be injected into the prompts.
+
         Overriding the default implementation to include the entity types in the extracted values.
         :param docs: Docs to extract values from.
         :return Iterable[dict[str, Any]]: All values from doc instances that are to be injected into the prompts
@@ -78,8 +93,8 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         doc_text: str,
         result: _BridgeResult,
     ) -> list[Entity]:
-        """
-        Find all positions of an entity in a document.
+        """Find all positions of an entity in a document.
+
         :param doc_text: The text of the document.
         :param result: The result of the model.
         :return: The list of entities with start/end indices.
@@ -142,6 +157,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
         return sorted(new_entities, key=lambda x: x.start)
 
+    @override
     def integrate(self, results: Iterable[_BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
         docs_list = list(docs)
         results_list = list(results)
@@ -163,23 +179,33 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
 
 class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
-    @property
-    def _prompt_template(self) -> str | None:
-        return None
+    """DSPy bridge for NER."""
 
+    @override
     @property
-    def _prompt_signature_description(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         return """
-        A named entity recognition result that represents named entities from the provided text. 
+        A named entity recognition result that represents named entities from the provided text.
         For each entity found it includes:
         - exact text of the entity
-        - a context string that contains the exact entity text along with a few surrounding words 
+        - a context string that contains the exact entity text along with a few surrounding words
           (two or three surronding words). The context includes the entity text itself.
-        - if the same entity appears multiple times in the text, each occurrence is listed separately with its 
+        - if the same entity appears multiple times in the text, each occurrence is listed separately with its
         own context
         - the entity type from the provided list of entity types. Only entities of the specified types are included.
         """
 
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return None
+
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return None
+
+    @override
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
         entity_types = self._entities
@@ -206,14 +232,16 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
                 "in different contexts, include each occurrence separately."
             )
 
-        Prediction.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+        Prediction.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
         return Prediction
 
+    @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.predict
 
+    @override
     def consolidate(
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
@@ -239,12 +267,30 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
 
 
 class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode], abc.ABC):
+    """Base class for Pydantic-based NER bridges."""
+
+    @override
     @property
-    def _prompt_template(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         return """
-        Your goal is to extract named entities from the text. Only extract entities of the specified types: 
+        Your goal is to extract named entities from the text. Only extract entities of the specified types:
         {{ entity_types }}.
 
+        For each entity:
+        - Extract the exact text of the entity
+        - Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words after it.
+          DO NOT include the entire text as context. DO NOT include words that are not present in the original text
+          as introductory words (Eg. 'Text:' before context string).
+        - Specify which type of entity it is (must be one of the provided entity types)
+
+        IMPORTANT:
+        - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
+        """
+
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return """
         {% if examples|length > 0 -%}
             <examples>
             {%- for example in examples %}
@@ -264,26 +310,20 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
             {% endfor -%}
             </examples>
         {% endif %}
+        """
 
-        For each entity:
-        - Extract the exact text of the entity
-        - Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words after it. 
-          DO NOT include the entire text as context. DO NOT include words that are not present in the original text 
-          as introductory words (Eg. 'Text:' before context string).
-        - Specify which type of entity it is (must be one of the provided entity types)
-
-        IMPORTANT:
-        - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return """
+        ===========
 
         <text>{{ text }}</text>
         <entity_types>{{ entity_types }}</entity_types>
         <entities>
         """
 
-    @property
-    def _prompt_signature_description(self) -> str | None:
-        return ""
-
+    @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         entity_types = self._entities
@@ -295,13 +335,13 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
             entity_type: LiteralType
 
         class Prediction(pydantic.BaseModel):
-            entities: list[EntityWithContext] = []
+            """NER prediction."""
 
-        if self.prompt_signature_description:
-            Prediction.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+            entities: list[EntityWithContext] = []
 
         return Prediction
 
+    @override
     def consolidate(
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel]:
@@ -329,73 +369,97 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
 
 
 class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
+    """Outlines bridge for NER."""
+
+    @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
 
 
 class OllamaNER(PydanticBasedNER[ollama_.InferenceMode]):
+    """Ollama bridge for NER."""
+
+    @override
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
         return ollama_.InferenceMode.structured
 
 
 class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
+    """LangChain bridge for NER."""
+
+    @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
 
 
 class InstructorNER(PydanticBasedNER[instructor_.InferenceMode]):
+    """Instructor bridge for NER."""
+
+    @override
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.structured
 
 
 class VLLMNER(PydanticBasedNER[vllm_.InferenceMode]):
+    """vLLM bridge for NER."""
+
+    @override
     @property
     def inference_mode(self) -> vllm_.InferenceMode:
         return vllm_.InferenceMode.json
 
 
 class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
+    """GliX bridge for NER."""
+
     def __init__(
         self,
         entities: list[str],
         task_id: str,
-        prompt_template: str | None,
-        prompt_signature_desc: str | None,
+        prompt_instructions: str | None,
     ):
-        """
-        Initializes GliXNER bridge.
+        """Initialize GliXNER bridge.
+
         :param entities: List of entity types to extract.
         :param task_id: Task ID.
-        :param prompt_template: Custom prompt template.
-        :param prompt_signature_desc: Custom prompt signature description.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         """
         super().__init__(
             entities=entities,
             task_id=task_id,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
         )
 
-    @property
-    def _prompt_template(self) -> str | None:
-        return None
-
-    @property
-    def _prompt_signature_description(self) -> str | None:
-        return None
-
+    @override
     @property
     def prompt_signature(self) -> list[str]:
         return self._entities
 
+    @override
+    @property
+    def _prompt_instructions(self) -> str:
+        return ""
+
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return None
+
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return None
+
+    @override
     @property
     def inference_mode(self) -> glix_.InferenceMode:
         return glix_.InferenceMode.ner
 
+    @override
     def consolidate(
         self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[glix_.Result]:
@@ -420,6 +484,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
             # Yield results for this document (flattened list of entities)
             yield all_entities
 
+    @override
     def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         docs_list = list(docs)
         results_list = list(results)

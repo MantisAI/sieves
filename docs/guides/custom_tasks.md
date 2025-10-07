@@ -90,7 +90,7 @@ class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, Eng
     # This defines the default prompt template as Jinja2 template string.
     # We include an example block allowing us to include fewshot examples.
     @property
-    def _prompt_template(self) -> str | None:
+    def _prompt_instructions(self) -> str | None:
         return """
         Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. Provide your
         reasoning for why you estimate this score before you output the score.
@@ -199,14 +199,14 @@ class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, Out
     # For the initialization of the bridge. We raise an error if an engine has been specified that we don't support (due
     # to us not having a bridge implemented that would support this engine type).
     def _init_bridge(self, engine_type: EngineType) -> OutlinesSentimentAnalysis:
-       if engine_type == EngineType.outlines:
-           return OutlinesSentimentAnalysis(
-               task_id=self._task_id,
-               prompt_template=self._custom_prompt_template,
-               prompt_signature_desc=self._custom_prompt_signature_desc,
-           )
-       else:
-          raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
+        if engine_type == EngineType.outlines:
+            return OutlinesSentimentAnalysis(
+                task_id=self._task_id,
+                prompt_instructions=self._custom_prompt_instructions,
+                prompt_signature_desc=self._custom_prompt_signature_desc,
+            )
+        else:
+            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
 
     # Represents set of supported engine types.
     @property
@@ -220,7 +220,7 @@ class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, Out
         # Define metadata.
         info = datasets.DatasetInfo(
             description=f"Sentiment estimation dataset. Generated with sieves"
-            f"v{Config.get_version()}.",
+                        f"v{Config.get_version()}.",
             features=datasets.Features({"text": datasets.Value("string"), "score": datasets.Value("float32")}),
         )
 

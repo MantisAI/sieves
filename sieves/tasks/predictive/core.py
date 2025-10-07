@@ -72,8 +72,7 @@ class PredictiveTask(
         include_meta: bool,
         batch_size: int,
         overwrite: bool,
-        prompt_template: str | None,
-        prompt_signature_desc: str | None,
+        prompt_instructions: str | None,
         fewshot_examples: Sequence[FewshotExample],
         generation_settings: GenerationSettings,
     ):
@@ -86,8 +85,7 @@ class PredictiveTask(
         :param overwrite: Some tasks, e.g. anonymization or translation, output a modified version of the input text.
             If True, these tasks overwrite the original document text. If False, the result will just be stored in the
             documents' `.results` field.
-        :param prompt_template: Custom prompt template. If None, default template is being used.
-        :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
         """
@@ -95,8 +93,7 @@ class PredictiveTask(
 
         self._engine = init_engine(model, generation_settings)
         self._overwrite = overwrite
-        self._custom_prompt_template = prompt_template
-        self._custom_prompt_signature_desc = prompt_signature_desc
+        self._custom_prompt_instructions = prompt_instructions
         self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
         self._fewshot_examples = fewshot_examples
 
@@ -126,13 +123,13 @@ class PredictiveTask(
         """
 
     @property
-    def prompt_template(self) -> str | None:
+    def prompt_template(self) -> str:
         """Return prompt template.
 
         :return str | None: Prompt template.
         """
         prompt_template = self._bridge.prompt_template
-        assert prompt_template is None or isinstance(prompt_template, str)
+        assert isinstance(prompt_template, str)
         return prompt_template
 
     @property
@@ -208,8 +205,7 @@ class PredictiveTask(
             **super()._state,
             "model": self._engine.model,
             "generation_settings": self._engine.generation_settings.model_dump(),
-            "prompt_template": self._custom_prompt_template,
-            "prompt_signature_desc": self._custom_prompt_signature_desc,
+            "prompt_instructions": self._custom_prompt_instructions,
             "fewshot_examples": self._fewshot_examples,
         }
 
@@ -324,12 +320,14 @@ class PredictiveTask(
         :param optimizer: Optimizer to run.
         """
         signature = self._get_task_signature()
-        examples = [ex.to_dspy() for ex in self._fewshot_examples]
-        best_prompt, best_examples = optimizer(signature, examples, self._evaluate_optimization_example)
+        best_prompt, best_examples = optimizer(
+            signature, [ex.to_dspy() for ex in self._fewshot_examples], self._evaluate_optimization_example
+        )
+        fewshot_example_cls = self._fewshot_examples[0].__class__
+        examples = [fewshot_example_cls.from_dspy(ex) for ex in best_examples]  # noqa: F841
 
         # TODO
-        #  - Convert DSPy into task-specific examples.
-        #  - Refactor bridges so that _prompt_template is concatented from _prompt_description and
+        #  - Refactor bridges so that _prompt_instructions is concatented from _prompt_description and
         #   _prompt_example_template. This will enable updating each individually:
         #    - _prompt_description will be set from optimized prompt text.
         #    - _prompt_example_template will not be modified

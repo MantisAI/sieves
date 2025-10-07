@@ -84,6 +84,11 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
             generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
         def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
+            """Execute structured generation with DSPy.
+
+            :params values: Values to inject into prompts.
+            :returns: Results for prompts.
+            """
             # Compile predictor with few-shot examples.
             fewshot_examples_dicts = DSPy.convert_fewshot_examples(fewshot_examples)
             generator_fewshot: dspy.Module | None = None

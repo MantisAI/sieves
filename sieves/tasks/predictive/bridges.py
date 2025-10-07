@@ -18,31 +18,53 @@ TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult
 class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.ABC):
     """Bridge base class."""
 
-    def __init__(self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, overwrite: bool):
+    def __init__(self, task_id: str, prompt_instructions: str | None, overwrite: bool):
         """Initialize new bridge.
 
         :param task_id: Task ID.
-        :param prompt_template: Custom prompt template. If None, default will be used.
-        :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with produced text. Considered only by bridges for tasks producing
             fluent text - like translation, summarization, PII masking, etc.
         """
         self._task_id = task_id
-        self._custom_prompt_template = prompt_template
-        self._custom_prompt_signature_desc = prompt_signature_desc
+        self._custom_prompt_instructions = prompt_instructions
         self._overwrite = overwrite
 
     @property
     @abc.abstractmethod
-    def _prompt_template(self) -> str | None:
-        """Return default prompt template.
+    def _prompt_instructions(self) -> str:
+        """Return default prompt instructions.
 
-        :return: Default prompt template.
+        Instructions are injected at the beginning of each prompt.
+
+        :return: Default prompt instructions.
         """
 
     @property
-    def prompt_template(self) -> str | None:
+    @abc.abstractmethod
+    def _prompt_example_template(self) -> str | None:
+        """Return default prompt template for example injection.
+
+        Examples are injected between instructions and conclusions.
+
+        :return: Default prompt example template.
+        """
+
+    @property
+    @abc.abstractmethod
+    def _prompt_conclusion(self) -> str | None:
+        """Return prompt conclusion.
+
+        Prompt conclusions are injected at the end of each prompt.
+
+        :return: Default prompt conclusion.
+        """
+
+    @property
+    def prompt_template(self) -> str:
         """Return prompt template.
+
+        Chains `_prompt_instructions`, `_prompt_example_template` and `_prompt_conclusion`.
 
         Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
         Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
@@ -50,25 +72,11 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
         expectations when creating a prompt template.
         :return str | None: Prompt template as string. None if not used by engine.
         """
-        return self._custom_prompt_template or self._prompt_template
-
-    @property
-    @abc.abstractmethod
-    def _prompt_signature_description(self) -> str | None:
-        """Return default prompt signature description.
-
-        :return str | None: Default prompt signature description.
+        return f"""
+        {self._custom_prompt_instructions or self._prompt_instructions}
+        {self._prompt_example_template or ""}
+        {self._prompt_conclusion or ""}
         """
-
-    @property
-    def prompt_signature_description(self) -> str | None:
-        """Return prompt signature description.
-
-        This is used by some engines to aid the language model in generating structured output.
-
-        :return str | None: Prompt signature description. None if not used by engine.
-        """
-        return self._custom_prompt_signature_desc or self._prompt_signature_description
 
     @property
     @abc.abstractmethod
@@ -124,8 +132,7 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
     def __init__(
         self,
         task_id: str,
-        prompt_template: str | None,
-        prompt_signature_desc: str | None,
+        prompt_instructions: str | None,
         prompt_signature: tuple[str, ...] | list[str],
         inference_mode: glix_.InferenceMode,
         label_whitelist: tuple[str, ...] | None = None,
@@ -134,8 +141,7 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
         """Initialize GliX bridge.
 
         :param task_id: Task ID.
-        :param prompt_template: Custom prompt template.
-        :param prompt_signature_desc: Custom prompt signature description.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param prompt_signature: Prompt signature.
         :param inference_mode: Inference mode.
         :param label_whitelist: Labels to record predictions for. If None, predictions for all labels are recorded.
@@ -143,8 +149,7 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
         """
         super().__init__(
             task_id=task_id,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
             overwrite=False,
         )
         self._prompt_signature = prompt_signature
@@ -159,12 +164,18 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
 
     @override
     @property
-    def _prompt_template(self) -> str | None:
+    def _prompt_instructions(self) -> str:
+        # GliNER doesn't support custom instructions.
+        return ""
+
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
         return None
 
     @override
     @property
-    def _prompt_signature_description(self) -> str | None:
+    def _prompt_conclusion(self) -> str | None:
         return None
 
     @override

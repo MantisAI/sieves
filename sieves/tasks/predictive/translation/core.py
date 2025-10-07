@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
+import dspy
 import pydantic
 
 from sieves.data import Doc
@@ -61,8 +62,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         include_meta: bool = True,
         batch_size: int = -1,
         overwrite: bool = False,
-        prompt_template: str | None = None,
-        prompt_signature_desc: str | None = None,
+        prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
     ) -> None:
@@ -77,8 +77,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         :param overwrite: Some tasks, e.g. anonymization or translation, output a modified version of the input text.
             If True, these tasks overwrite the original document text. If False, the result will just be stored in the
             documents' `.results` field.
-        :param prompt_template: Custom prompt template. If None, task's default template is being used.
-        :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
         """
@@ -90,8 +89,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
             include_meta=include_meta,
             batch_size=batch_size,
             overwrite=overwrite,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
         )
@@ -110,8 +108,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         try:
             bridge = bridge_types[engine_type](
                 task_id=self._task_id,
-                prompt_template=self._custom_prompt_template,
-                prompt_signature_desc=self._custom_prompt_signature_desc,
+                prompt_instructions=self._custom_prompt_instructions,
                 overwrite=self._overwrite,
                 language=self._to,
             )
@@ -172,4 +169,8 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         train_kwargs: dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
+        raise NotImplementedError
+
+    @override
+    def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
         raise NotImplementedError

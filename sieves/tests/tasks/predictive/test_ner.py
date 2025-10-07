@@ -25,7 +25,7 @@ from sieves.tasks.predictive.ner.core import Entity
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run(ner_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
-        ner.TaskFewshotExample(
+        ner.FewshotExample(
             text="John studied data science in Barcelona and lives with Jaume",
             entities=[
                 Entity(text="John", context="John studied data", entity_type="PERSON"),
@@ -33,7 +33,7 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
                 Entity(text="Jaume", context="lives with Jaume", entity_type="PERSON"),
             ],
         ),
-        ner.TaskFewshotExample(
+        ner.FewshotExample(
             text="Maria studied computer engineering in Madrid and works with Carlos",
             entities=[
                 Entity(text="Maria", context="Maria studied computer", entity_type="PERSON"),
@@ -92,9 +92,7 @@ def test_serialization(ner_docs, batch_runtime) -> None:
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'model': {'is_placeholder': True,
                                 'value': 'dspy.clients.lm.LM'},
-                      'prompt_signature_desc': {'is_placeholder': False,
-                                                'value': None},
-                      'prompt_template': {'is_placeholder': False,
+                      'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False, 'value': 'NER'},
                       'version': Config.get_version()}]},

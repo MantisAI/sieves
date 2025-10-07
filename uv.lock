@@ -4376,11 +4376,12 @@ source = { editable = "." }
 dependencies = [
     { name = "chonkie" },
     { name = "datasets" },
+    { name = "dspy" },
+    { name = "dspy-ai" },
     { name = "jinja2" },
     { name = "loguru" },
     { name = "outlines" },
     { name = "pydantic" },
-    { name = "scikit-learn" },
 ]
 
 [package.optional-dependencies]
@@ -4390,8 +4391,6 @@ distill = [
 ]
 engines = [
     { name = "accelerate" },
-    { name = "dspy" },
-    { name = "dspy-ai" },
     { name = "gliner" },
     { name = "instructor" },
     { name = "langchain" },
@@ -4427,8 +4426,8 @@ requires-dist = [
     { name = "chonkie", specifier = ">=0.3,<1" },
     { name = "datasets", specifier = ">=3,<4" },
     { name = "docling", marker = "extra == 'ingestion'", specifier = ">=2,<3" },
-    { name = "dspy", marker = "extra == 'engines'", specifier = ">=2,<3" },
-    { name = "dspy-ai", marker = "extra == 'engines'", specifier = ">=2,<3" },
+    { name = "dspy", specifier = ">=2,<3" },
+    { name = "dspy-ai", specifier = ">=2,<3" },
     { name = "gliner", marker = "extra == 'engines'", specifier = "<1" },
     { name = "instructor", marker = "extra == 'engines'", specifier = ">=1,<2" },
     { name = "jinja2", specifier = ">=3,<4" },
@@ -4449,7 +4448,6 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7,<8" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6" },
-    { name = "scikit-learn", specifier = ">=1.6,<2" },
     { name = "sentencepiece", marker = "extra == 'engines'", specifier = "<1" },
     { name = "setfit", marker = "extra == 'distill'", specifier = ">=1.1,<2" },
     { name = "tesseract", marker = "extra == 'test'", specifier = ">=0.1,<1" },

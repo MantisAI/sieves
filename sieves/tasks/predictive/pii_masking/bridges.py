@@ -1,8 +1,9 @@
 """Bridges for PII masking task."""
+
 import abc
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Literal, TypeVar
+from typing import Literal, TypeVar, override
 
 import dspy
 import jinja2
@@ -22,8 +23,7 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
     def __init__(
         self,
         task_id: str,
-        prompt_template: str | None,
-        prompt_signature_desc: str | None,
+        prompt_instructions: str | None,
         overwrite: bool,
         mask_placeholder: str,
         pii_types: list[str] | None,
@@ -32,16 +32,14 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         Initialize PIIBridge.
 
         :param task_id: Task ID.
-        :param prompt_template: Custom prompt template.
-        :param prompt_signature_desc: Custom prompt signature description.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with masked text.
         :param mask_placeholder: String to replace PII with.
         :param pii_types: Types of PII to mask. If None, all common PII types will be masked.
         """
         super().__init__(
             task_id=task_id,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
             overwrite=overwrite,
         )
         self._mask_placeholder = mask_placeholder
@@ -49,7 +47,10 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         self._pii_entity_cls = self._create_pii_entity_cls()
 
     def _create_pii_entity_cls(self) -> type[pydantic.BaseModel]:
-        """Creates PII entity class."""
+        """Create PII entity class.
+
+        :returns: PII entity class.
+        """
         pii_types = self._pii_types
         PIIType = Literal[*pii_types] if pii_types else str
 
@@ -65,12 +66,9 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for PII masking."""
 
+    @override
     @property
-    def _prompt_template(self) -> str | None:
-        return None
-
-    @property
-    def _prompt_signature_description(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         default_pii_types_desc = "all types of personally identifiable information"
         pii_types_desc = ", ".join(self._pii_types) if self._pii_types else default_pii_types_desc
         return (
@@ -78,6 +76,17 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
             f"'{self._mask_placeholder}'."
         )
 
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return None
+
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return None
+
+    @override
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
         """Define prompt signature for DSPy."""
@@ -89,14 +98,17 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
             masked_text: str = dspy.OutputField(description="Text with all PII masked.")
             pii_entities: list[PIIEntity] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
 
-        PIIMasking.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+        PIIMasking.__doc__ = jinja2.Template(self._prompt_instructions).render()
+
         return PIIMasking
 
+    @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         """Return inference mode for DSPy engine."""
         return dspy_.InferenceMode.chain_of_thought
 
+    @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         """Integrate results into docs."""
         for doc, result in zip(docs, results):
@@ -111,6 +123,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
@@ -144,17 +157,22 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
     """Base class for Pydantic-based PII masking bridges."""
 
     @property
-    def _prompt_template(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         return """
         Identify and mask Personally Identifiable Information (PII) in the given text.
         {% if pii_types|length > 0 -%}
             Focus on these specific PII types: {{ pii_types|join(', ') }}.
         {% else -%}
-            Mask all common types of PII such as names, addresses, phone numbers, emails, SSNs, credit 
+            Mask all common types of PII such as names, addresses, phone numbers, emails, SSNs, credit
             card numbers, etc.
         {% endif -%}
         Replace each instance of PII with "{{ mask_placeholder }}".
-        
+        """
+
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return """
         {% if examples|length > 0 -%}
             <examples>
             {%- for example in examples %}
@@ -169,33 +187,35 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
             {% endfor -%}
             </examples>
         {% endif -%}
+        """
 
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return """
         ========
+
         <text>{{ text }}</text>
         <output>
         """
 
-    @property
-    def _prompt_signature_description(self) -> str | None:
-        return None
-
+    @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         """Define prompt signature for Pydantic-based engines."""
         PIIEntity = self._pii_entity_cls
 
         class PIIMasking(pydantic.BaseModel, frozen=True):
+            """PII masking output."""
+
             reasoning: str
             masked_text: str
             pii_entities: list[PIIEntity]  # type: ignore[valid-type]
 
-        if self.prompt_signature_description:
-            PIIMasking.__doc__ = jinja2.Template(self.prompt_signature_description).render()
-
         return PIIMasking
 
+    @override
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
-        """Integrate results into docs."""
         for doc, result in zip(docs, results):
             assert hasattr(result, "masked_text")
             assert hasattr(result, "pii_entities")
@@ -207,10 +227,10 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
 
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel]:
-        """Consolidate results from multiple chunks."""
         results = list(results)
         PIIEntity = self._pii_entity_cls
 
@@ -243,33 +263,45 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
 
 
 class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):
+    """Outlines bridge for PII masking."""
+
+    @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
 
 
 class OllamaPIIMasking(PydanticBasedPIIMasking[ollama_.InferenceMode]):
+    """Ollama bridge for PII masking."""
+
+    @override
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
         return ollama_.InferenceMode.structured
 
 
 class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
+    """LangChain bridge for PII masking."""
+
+    @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
 
 
 class InstructorPIIMasking(PydanticBasedPIIMasking[instructor_.InferenceMode]):
+    """Instructor bridge for PII masking."""
+
+    @override
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.structured
 
 
 class VLLMPIIMasking(PydanticBasedPIIMasking[vllm_.InferenceMode]):
-    """VLLM bridge for PII masking."""
+    """vLLM bridge for PII masking."""
 
+    @override
     @property
     def inference_mode(self) -> vllm_.InferenceMode:
-        """Return inference mode for VLLM engine."""
         return vllm_.InferenceMode.json

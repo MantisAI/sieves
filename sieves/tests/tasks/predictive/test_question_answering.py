@@ -134,9 +134,7 @@ def test_serialization(qa_docs, batch_runtime) -> None:
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'model': {'is_placeholder': True,
                                 'value': 'dspy.clients.lm.LM'},
-                      'prompt_signature_desc': {'is_placeholder': False,
-                                                'value': None},
-                      'prompt_template': {'is_placeholder': False,
+                      'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'questions': {'is_placeholder': False,
                                     'value': ['What branch of science is this '

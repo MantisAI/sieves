@@ -1,7 +1,9 @@
+"""Bridges for summarization task."""
+
 import abc
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, TypeVar
+from typing import Any, TypeVar, override
 
 import dspy
 import jinja2
@@ -19,43 +21,53 @@ class SummarizationBridge(
     Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode],
     abc.ABC,
 ):
+    """Abstract base class for summarization bridges."""
+
     def __init__(
         self,
         task_id: str,
-        prompt_template: str | None,
-        prompt_signature_desc: str | None,
+        prompt_instructions: str | None,
         overwrite: bool,
         n_words: int,
     ):
-        """
-        Initializes InformationExtractionBridge.
+        """Initialize InformationExtractionBridge.
+
         :param task_id: Task ID.
-        :param prompt_template: Custom prompt template.
-        :param prompt_signature_desc: Custom prompt signature description.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with summarization text.
         :param n_words: Approximate number of words in summary.
         """
         super().__init__(
             task_id=task_id,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
             overwrite=overwrite,
         )
         self._n_words = n_words
 
+    @override
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None, "n_words": self._n_words} for doc in docs)
 
 
 class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
-    @property
-    def _prompt_template(self) -> str | None:
-        return None
+    """DSPy bridge for summarization."""
 
+    @override
     @property
-    def _prompt_signature_description(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         return "Summary of a longer text."
 
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return None
+
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return None
+
+    @override
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
         class Summary(dspy.Signature):  # type: ignore[misc]
@@ -63,14 +75,16 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
             n_words: str = dspy.InputField(description="Number of words to approximately use for summary.")
             summary: str = dspy.OutputField(description="Summary of text.")
 
-        Summary.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+        Summary.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
         return Summary
 
+    @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.chain_of_thought
 
+    @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.summary) == 1
@@ -81,6 +95,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
 
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
@@ -105,11 +120,19 @@ class PydanticBasedSummarization(
     SummarizationBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode],
     abc.ABC,
 ):
+    """Base class for Pydantic-based summarization bridges."""
+
+    @override
     @property
-    def _prompt_template(self) -> str | None:
+    def _prompt_instructions(self) -> str:
         return """
         Your goal is to summarize a text. This summary should be around {{ max_n }} words.
+        """
 
+    @override
+    @property
+    def _prompt_example_template(self) -> str:
+        return """
         {% if examples|length > 0 -%}
             <examples>
             {%- for example in examples %}
@@ -121,28 +144,29 @@ class PydanticBasedSummarization(
             {% endfor -%}
             </examples>
         {% endif -%}
-
-        ========
-
-        <text>{{ text }}</text>
-        <approximate_number_of_words_in_summary>{{ n_words }}</approximate_number_of_words_in_summary>
-        <summary> 
         """
 
+    @override
     @property
-    def _prompt_signature_description(self) -> str | None:
-        return None
+    def _prompt_conclusion(self) -> str:
+        return """
+        ========
+        <text>{{ text }}</text>
+        <approximate_number_of_words_in_summary>{{ n_words }}</approximate_number_of_words_in_summary>
+        <summary>
+        """
 
+    @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         class Summary(pydantic.BaseModel, frozen=True):
-            summary: str
+            """Summary of the specified text."""
 
-        if self.prompt_signature_description:
-            Summary.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+            summary: str
 
         return Summary
 
+    @override
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "summary")
@@ -152,6 +176,7 @@ class PydanticBasedSummarization(
                 doc.text = result.summary
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel]:
@@ -172,30 +197,45 @@ class PydanticBasedSummarization(
 
 
 class OutlinesSummarization(PydanticBasedSummarization[outlines_.InferenceMode]):
+    """Outlines bridge for summarization."""
+
+    @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
 
 
 class OllamaSummarization(PydanticBasedSummarization[ollama_.InferenceMode]):
+    """Ollama bridge for summarization."""
+
+    @override
     @property
     def inference_mode(self) -> ollama_.InferenceMode:
         return ollama_.InferenceMode.structured
 
 
 class LangChainSummarization(PydanticBasedSummarization[langchain_.InferenceMode]):
+    """LangChain bridge for summarization."""
+
+    @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
 
 
 class InstructorSummarization(PydanticBasedSummarization[instructor_.InferenceMode]):
+    """Instructor bridge for summarization."""
+
+    @override
     @property
     def inference_mode(self) -> instructor_.InferenceMode:
         return instructor_.InferenceMode.structured
 
 
 class VLLMSummarization(PydanticBasedSummarization[vllm_.InferenceMode]):
+    """vLLM bridge for summarization."""
+
+    @override
     @property
     def inference_mode(self) -> vllm_.InferenceMode:
         return vllm_.InferenceMode.json
