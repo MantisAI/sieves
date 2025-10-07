@@ -11,7 +11,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, glix_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineInferenceMode, dspy_, glix_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -377,15 +377,6 @@ class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
         return outlines_.InferenceMode.json
 
 
-class OllamaNER(PydanticBasedNER[ollama_.InferenceMode]):
-    """Ollama bridge for NER."""
-
-    @override
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
     """LangChain bridge for NER."""
 
@@ -393,24 +384,6 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorNER(PydanticBasedNER[instructor_.InferenceMode]):
-    """Instructor bridge for NER."""
-
-    @override
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
-
-
-class VLLMNER(PydanticBasedNER[vllm_.InferenceMode]):
-    """vLLM bridge for NER."""
-
-    @override
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json
 
 
 class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):

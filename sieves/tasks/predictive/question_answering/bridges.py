@@ -10,7 +10,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -215,15 +215,6 @@ class OutlinesQA(PydanticBasedQA[outlines_.InferenceMode]):
         return outlines_.InferenceMode.json
 
 
-class OllamaQA(PydanticBasedQA[ollama_.InferenceMode]):
-    """Ollama bridge for question answering."""
-
-    @override
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainQA(PydanticBasedQA[langchain_.InferenceMode]):
     """LangChain bridge for question answering."""
 
@@ -231,21 +222,3 @@ class LangChainQA(PydanticBasedQA[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorQA(PydanticBasedQA[instructor_.InferenceMode]):
-    """Instructor bridge for question answering."""
-
-    @override
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
-
-
-class VLLMQA(PydanticBasedQA[vllm_.InferenceMode]):
-    """vLLM bridge for question answering."""
-
-    @override
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json

@@ -3,23 +3,17 @@ import os
 from functools import cache
 from typing import Any, NamedTuple
 
-import anthropic
 import dspy
 import gliner.multitask
-import instructor
 import outlines
 import pytest
 import tokenizers
 import transformers
-
-# import vllm
 from langchain.chat_models import init_chat_model
 
 from sieves import Doc
 from sieves.engines.engine_type import EngineType
 from sieves.engines.utils import GenerationSettings
-from sieves.engines.instructor_ import Model as InstructorModel
-from sieves.engines.ollama_ import Model as OllamaModel
 from sieves.tasks.types import Model
 
 
@@ -55,19 +49,10 @@ def _make_model(engine_type: EngineType) -> Model:
                 temperature=0,
             )
 
-        case EngineType.instructor:
-            model = InstructorModel(
-                name="claude-3-haiku-20240307",
-                client=instructor.from_anthropic(anthropic.AsyncClient()),
-            )
-
         case EngineType.huggingface:
             model = transformers.pipeline(
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
             )
-
-        case EngineType.ollama:
-            model = OllamaModel(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
 
         case EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
@@ -75,9 +60,6 @@ def _make_model(engine_type: EngineType) -> Model:
                 transformers.AutoModelForCausalLM.from_pretrained(model_name),
                 transformers.AutoTokenizer.from_pretrained(model_name),
             )
-
-        # case EngineType.vllm:
-        #     model = vllm.LLM("HuggingFaceTB/SmolLM-135M-Instruct")
 
         case _:
             raise ValueError(f"Unsupported runtime type {engine_type}.")

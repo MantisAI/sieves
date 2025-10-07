@@ -12,7 +12,7 @@ import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, glix_, huggingface_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineType, dspy_, glix_, huggingface_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.distillation_import import model2vec, setfit
@@ -21,37 +21,17 @@ from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.classification.bridges import (
     DSPyClassification,
     HuggingFaceClassification,
-    InstructorClassification,
     LangChainClassification,
-    OllamaClassification,
     OutlinesClassification,
-    VLLMClassification,
 )
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 
-_TaskModel = (
-    dspy_.Model
-    | glix_.Model
-    | instructor_.Model
-    | langchain_.Model
-    | huggingface_.Model
-    | ollama_.Model
-    | huggingface_.Model
-    | outlines_.Model
-    | vllm_.Model
-)
-_TaskPromptSignature = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature | vllm_.PromptSignature
-_TaskResult = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | glix_.Result | vllm_.Result
+_TaskModel = dspy_.Model | glix_.Model | langchain_.Model | huggingface_.Model | outlines_.Model
+_TaskPromptSignature = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | glix_.Result
 _TaskBridge = (
-    DSPyClassification
-    | GliXBridge
-    | InstructorClassification
-    | LangChainClassification
-    | HuggingFaceClassification
-    | OllamaClassification
-    | OutlinesClassification
-    | VLLMClassification
+    DSPyClassification | GliXBridge | LangChainClassification | HuggingFaceClassification | OutlinesClassification
 )
 
 
@@ -171,12 +151,9 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyClassification,
-            EngineType.instructor: InstructorClassification,
             EngineType.huggingface: HuggingFaceClassification,
             EngineType.outlines: OutlinesClassification,
-            EngineType.ollama: OllamaClassification,
             EngineType.langchain: LangChainClassification,
-            EngineType.vllm: VLLMClassification,
         }
 
         try:
@@ -198,13 +175,10 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
     def supports(self) -> set[EngineType]:
         return {
             EngineType.dspy,
-            EngineType.instructor,
             EngineType.glix,
             EngineType.huggingface,
             EngineType.langchain,
-            EngineType.ollama,
             EngineType.outlines,
-            EngineType.vllm,
         }
 
     def _validate_fewshot_examples(self) -> None:

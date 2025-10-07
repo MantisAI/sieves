@@ -10,7 +10,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -266,15 +266,6 @@ class OutlinesSentimentAnalysis(PydanticBasedSentAnalysis[outlines_.InferenceMod
         return outlines_.InferenceMode.json
 
 
-class OllamaSentimentAnalysis(PydanticBasedSentAnalysis[ollama_.InferenceMode]):
-    """Ollama bridge for sentiment analysis."""
-
-    @override
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceMode]):
     """LangChain bridge for sentiment analysis."""
 
@@ -282,21 +273,3 @@ class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceM
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorSentimentAnalysis(PydanticBasedSentAnalysis[instructor_.InferenceMode]):
-    """Instructor bridge for sentiment analysis."""
-
-    @override
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
-
-
-class VLLMSentimentAnalysis(PydanticBasedSentAnalysis[vllm_.InferenceMode]):
-    """vLLM bridge for sentiment analysis."""
-
-    @override
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json

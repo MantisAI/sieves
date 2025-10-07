@@ -107,7 +107,7 @@ def test_caching(batch_runtime) -> None:
 
 def test_engine_imports() -> None:
     """Tests direct runtime imports."""
-    from sieves.engines import VLLM, DSPy, GliX, HuggingFace, Instructor, LangChain, Ollama, Outlines  # noqa: F401
+    from sieves.engines import DSPy, GliX, HuggingFace, LangChain, Outlines  # noqa: F401
 
 
 def test_add_task_task(dummy_docs) -> None:

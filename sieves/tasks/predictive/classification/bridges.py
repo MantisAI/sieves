@@ -15,11 +15,8 @@ from sieves.engines import (
     EngineInferenceMode,
     dspy_,
     huggingface_,
-    instructor_,
     langchain_,
-    ollama_,
     outlines_,
-    vllm_,
 )
 from sieves.tasks.predictive.bridges import Bridge
 
@@ -488,15 +485,6 @@ class PydanticBasedClassification(
                 )
 
 
-class OllamaClassification(PydanticBasedClassification[ollama_.InferenceMode]):
-    """Ollama bridge for classification."""
-
-    @override
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
     """LangChain bridge for classification."""
 
@@ -504,15 +492,6 @@ class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMo
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorClassification(PydanticBasedClassification[instructor_.InferenceMode]):
-    """Instructor bridge for classification."""
-
-    @override
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
 
 
 class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[EngineInferenceMode], abc.ABC):
@@ -596,12 +575,3 @@ class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outline
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json if self._multi_label else outlines_.InferenceMode.choice
-
-
-class VLLMClassification(PydanticBasedClassificationWithLabelForcing[vllm_.InferenceMode]):
-    """vLLM bridge for classification."""
-
-    @override
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json if self._multi_label else vllm_.InferenceMode.choice

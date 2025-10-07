@@ -11,7 +11,7 @@ import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, glix_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineType, dspy_, glix_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
@@ -20,27 +20,14 @@ from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.summarization.bridges import (
     DSPySummarization,
-    InstructorSummarization,
     LangChainSummarization,
-    OllamaSummarization,
     OutlinesSummarization,
-    VLLMSummarization,
 )
 
-_TaskModel = (
-    dspy_.Model | glix_.Model | instructor_.Model | langchain_.Model | ollama_.Model | outlines_.Model | vllm_.Model
-)
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature | vllm_.Result
-_TaskResult = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
-_TaskBridge = (
-    DSPySummarization
-    | GliXBridge
-    | InstructorSummarization
-    | LangChainSummarization
-    | OutlinesSummarization
-    | OllamaSummarization
-    | VLLMSummarization
-)
+_TaskModel = dspy_.Model | glix_.Model | langchain_.Model | outlines_.Model
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature
+_TaskResult = outlines_.Result | dspy_.Result
+_TaskBridge = DSPySummarization | GliXBridge | LangChainSummarization | OutlinesSummarization
 
 
 class FewshotExample(BaseFewshotExample):
@@ -104,11 +91,8 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
 
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPySummarization,
-            EngineType.instructor: InstructorSummarization,
             EngineType.langchain: LangChainSummarization,
             EngineType.outlines: OutlinesSummarization,
-            EngineType.ollama: OllamaSummarization,
-            EngineType.vllm: VLLMSummarization,
         }
 
         try:
@@ -130,10 +114,8 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         return {
             EngineType.dspy,
             EngineType.glix,
-            EngineType.instructor,
-            EngineType.ollama,
+            EngineType.langchain,
             EngineType.outlines,
-            EngineType.vllm,
         }
 
     @property

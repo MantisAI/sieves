@@ -77,7 +77,7 @@ Distillation flow (optional):
 
 The unified `Engine` wraps different backends; some are optional via extras:
 - Structured generation: Outlines, Instructor, DSPy, LangChain
-- LLM hosting: Transformers, Ollama (vLLM wired but optional/experimental)
+- LLM hosting: Transformers, Ollama
 - Specialized: GLiNER for NER
 - Ingestion & parsing: Docling, Unstructured + Marker PDF
 - Chunking: Chonkie
@@ -187,7 +187,6 @@ Before opening a PR or proposing a patch, ensure:
 
 - Some engines do not support batching or few‑shotting uniformly; bridges handle compatibility
 - Optional extras gate heavy deps (transformers, accelerate, Ingestion stacks, distillation)
-- vLLM support exists but may be disabled/commented; verify environment before use
 
 ## Useful References
 

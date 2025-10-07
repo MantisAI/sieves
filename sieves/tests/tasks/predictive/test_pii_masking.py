@@ -12,11 +12,8 @@ from sieves.tasks.predictive import pii_masking
     "batch_runtime",
     (
         EngineType.dspy,
-        EngineType.instructor,
         EngineType.langchain,
-        EngineType.ollama,
         EngineType.outlines,
-        # EngineType.vllm,
     ),
     indirect=["batch_runtime"],
 )

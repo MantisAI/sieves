@@ -9,7 +9,7 @@ import dspy
 import pydantic
 
 from sieves.data.doc import Doc
-from sieves.engines import EngineType, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineType, dspy_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
@@ -17,19 +17,14 @@ from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.pii_masking.bridges import (
     DSPyPIIMasking,
-    InstructorPIIMasking,
     LangChainPIIMasking,
-    OllamaPIIMasking,
     OutlinesPIIMasking,
-    VLLMPIIMasking,
 )
 
-_TaskModel = dspy_.Model | instructor_.Model | langchain_.Model | ollama_.Model | outlines_.Model | vllm_.Model
+_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
 _TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
 _TaskResult = pydantic.BaseModel | dspy_.Result
-_TaskBridge = (
-    DSPyPIIMasking | InstructorPIIMasking | LangChainPIIMasking | OutlinesPIIMasking | OllamaPIIMasking | VLLMPIIMasking
-)
+_TaskBridge = DSPyPIIMasking | LangChainPIIMasking | OutlinesPIIMasking
 
 
 class PIIEntity(pydantic.BaseModel, frozen=True):
@@ -97,11 +92,8 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyPIIMasking,
-            EngineType.instructor: InstructorPIIMasking,
             EngineType.langchain: LangChainPIIMasking,
             EngineType.outlines: OutlinesPIIMasking,
-            EngineType.ollama: OllamaPIIMasking,
-            EngineType.vllm: VLLMPIIMasking,
         }
 
         try:
@@ -120,11 +112,8 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
     def supports(self) -> set[EngineType]:
         return {
             EngineType.dspy,
-            EngineType.instructor,
             EngineType.langchain,
-            EngineType.ollama,
             EngineType.outlines,
-            EngineType.vllm,
         }
 
     @property

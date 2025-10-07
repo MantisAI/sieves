@@ -11,11 +11,9 @@ from sieves.tasks.predictive import translation
 @pytest.mark.parametrize(
     "batch_runtime",
     (
-        EngineType.instructor,
+        EngineType.dspy,
         EngineType.langchain,
-        EngineType.ollama,
         EngineType.outlines,
-        # EngineType.vllm
     ),
     indirect=["batch_runtime"],
 )

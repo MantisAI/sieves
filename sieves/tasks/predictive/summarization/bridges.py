@@ -10,7 +10,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -205,15 +205,6 @@ class OutlinesSummarization(PydanticBasedSummarization[outlines_.InferenceMode])
         return outlines_.InferenceMode.json
 
 
-class OllamaSummarization(PydanticBasedSummarization[ollama_.InferenceMode]):
-    """Ollama bridge for summarization."""
-
-    @override
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainSummarization(PydanticBasedSummarization[langchain_.InferenceMode]):
     """LangChain bridge for summarization."""
 
@@ -221,21 +212,3 @@ class LangChainSummarization(PydanticBasedSummarization[langchain_.InferenceMode
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorSummarization(PydanticBasedSummarization[instructor_.InferenceMode]):
-    """Instructor bridge for summarization."""
-
-    @override
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
-
-
-class VLLMSummarization(PydanticBasedSummarization[vllm_.InferenceMode]):
-    """vLLM bridge for summarization."""
-
-    @override
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json

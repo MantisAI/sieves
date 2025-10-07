@@ -13,12 +13,9 @@ from sieves.tasks.predictive.ner.core import Entity
     "batch_runtime",
     (
         EngineType.dspy,
-        EngineType.instructor,
         EngineType.langchain,
-        EngineType.ollama,
         EngineType.outlines,
         EngineType.glix,
-        # EngineType.vllm,
     ),
     indirect=["batch_runtime"],
 )

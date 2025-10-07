@@ -10,7 +10,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -271,15 +271,6 @@ class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):
         return outlines_.InferenceMode.json
 
 
-class OllamaPIIMasking(PydanticBasedPIIMasking[ollama_.InferenceMode]):
-    """Ollama bridge for PII masking."""
-
-    @override
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
     """LangChain bridge for PII masking."""
 
@@ -287,21 +278,3 @@ class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorPIIMasking(PydanticBasedPIIMasking[instructor_.InferenceMode]):
-    """Instructor bridge for PII masking."""
-
-    @override
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
-
-
-class VLLMPIIMasking(PydanticBasedPIIMasking[vllm_.InferenceMode]):
-    """vLLM bridge for PII masking."""
-
-    @override
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json

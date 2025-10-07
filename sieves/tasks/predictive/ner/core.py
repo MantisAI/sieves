@@ -16,11 +16,8 @@ from sieves.engines import (
     dspy_,
     glix_,
     huggingface_,
-    instructor_,
     langchain_,
-    ollama_,
     outlines_,
-    vllm_,
 )
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
@@ -28,18 +25,13 @@ from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.ner.bridges import (
-    VLLMNER,
     DSPyNER,
     GliXNER,
-    InstructorNER,
     LangChainNER,
-    OllamaNER,
     OutlinesNER,
 )
 
-_TaskModel = (
-    dspy_.Model | glix_.Model | instructor_.Model | langchain_.Model | ollama_.Model | outlines_.Model | vllm_.Model
-)
+_TaskModel = dspy_.Model | glix_.Model | langchain_.Model | outlines_.Model
 _TaskPromptSignature = Any
 _TaskResult = (
     list[tuple[str, int, int]]
@@ -48,13 +40,10 @@ _TaskResult = (
     | dspy_.Result
     | glix_.Result
     | huggingface_.Result
-    | instructor_.Result
     | langchain_.Result
-    | ollama_.Result
     | outlines_.Result
-    | vllm_.Result
 )
-_TaskBridge = DSPyNER | GliXNER | InstructorNER | LangChainNER | OllamaNER | OutlinesNER | VLLMNER
+_TaskBridge = DSPyNER | GliXNER | LangChainNER | OutlinesNER
 
 
 class Entity(pydantic.BaseModel):
@@ -115,12 +104,9 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         bridge_types = {
             EngineType.langchain: LangChainNER,
-            EngineType.ollama: OllamaNER,
             EngineType.outlines: OutlinesNER,
             EngineType.dspy: DSPyNER,
-            EngineType.instructor: InstructorNER,
             EngineType.glix: GliXNER,
-            EngineType.vllm: VLLMNER,
         }
         try:
             bridge_class = bridge_types[engine_type]
@@ -138,12 +124,9 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     def supports(self) -> set[EngineType]:
         return {
             EngineType.langchain,
-            EngineType.ollama,
             EngineType.dspy,
             EngineType.outlines,
-            EngineType.instructor,
             EngineType.glix,
-            EngineType.vllm,
         }
 
     @override

@@ -11,7 +11,7 @@ import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, glix_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineType, dspy_, glix_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
@@ -19,20 +19,15 @@ from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.question_answering.bridges import (
-    VLLMQA,
     DSPyQA,
-    InstructorQA,
     LangChainQA,
-    OllamaQA,
     OutlinesQA,
 )
 
-_TaskModel = (
-    dspy_.Model | glix_.Model | instructor_.Model | langchain_.Model | ollama_.Model | outlines_.Model | vllm_.Model
-)
-_TaskPromptSignature = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature | vllm_.PromptSignature
-_TaskResult = pydantic.BaseModel | dspy_.Result | vllm_.Result
-_TaskBridge = DSPyQA | GliXBridge | InstructorQA | LangChainQA | OllamaQA | OutlinesQA | VLLMQA
+_TaskModel = dspy_.Model | glix_.Model | langchain_.Model | outlines_.Model
+_TaskPromptSignature = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult = pydantic.BaseModel | dspy_.Result
+_TaskBridge = DSPyQA | GliXBridge | LangChainQA | OutlinesQA
 
 
 class FewshotExample(BaseFewshotExample):
@@ -94,11 +89,8 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
 
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyQA,
-            EngineType.instructor: InstructorQA,
             EngineType.outlines: OutlinesQA,
-            EngineType.ollama: OllamaQA,
             EngineType.langchain: LangChainQA,
-            EngineType.vllm: VLLMQA,
         }
 
         try:
@@ -118,11 +110,9 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
     def supports(self) -> set[EngineType]:
         return {
             EngineType.dspy,
-            EngineType.instructor,
+            EngineType.glix,
             EngineType.langchain,
-            EngineType.ollama,
             EngineType.outlines,
-            EngineType.vllm,
         }
 
     @override

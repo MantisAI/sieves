@@ -10,7 +10,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -206,15 +206,6 @@ class OutlinesTranslation(PydanticBasedTranslation[outlines_.InferenceMode]):
         return outlines_.InferenceMode.json
 
 
-class OllamaTranslation(PydanticBasedTranslation[ollama_.InferenceMode]):
-    """Ollama bridge for translation."""
-
-    @override
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
     """LangChain bridge for translation."""
 
@@ -222,21 +213,3 @@ class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorTranslation(PydanticBasedTranslation[instructor_.InferenceMode]):
-    """Instructor bridge for translation."""
-
-    @override
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
-
-
-class VLLMTranslation(PydanticBasedTranslation[vllm_.InferenceMode]):
-    """vLLM bridge for translation."""
-
-    @override
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json

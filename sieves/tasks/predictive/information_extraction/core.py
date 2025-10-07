@@ -12,7 +12,7 @@ import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, glix_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineType, dspy_, glix_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
@@ -20,25 +20,15 @@ from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
-    InstructorInformationExtraction,
     LangChainInformationExtraction,
-    OllamaInformationExtraction,
     OutlinesInformationExtraction,
-    VLLMInformationExtraction,
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-_TaskModel = dspy_.Model | instructor_.Model | langchain_.Model | outlines_.Model | ollama_.Model | vllm_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature | vllm_.PromptSignature
-_TaskResult = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
-_TaskBridge = (
-    DSPyInformationExtraction
-    | InstructorInformationExtraction
-    | LangChainInformationExtraction
-    | OutlinesInformationExtraction
-    | OllamaInformationExtraction
-    | VLLMInformationExtraction
-)
+_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature
+_TaskResult = outlines_.Result | dspy_.Result
+_TaskBridge = DSPyInformationExtraction | LangChainInformationExtraction | OutlinesInformationExtraction
 
 
 class FewshotExample(BaseFewshotExample):
@@ -102,11 +92,8 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         """
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyInformationExtraction,
-            EngineType.instructor: InstructorInformationExtraction,
             EngineType.langchain: LangChainInformationExtraction,
             EngineType.outlines: OutlinesInformationExtraction,
-            EngineType.ollama: OllamaInformationExtraction,
-            EngineType.vllm: VLLMInformationExtraction,
         }
 
         try:
@@ -125,11 +112,8 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
     def supports(self) -> set[EngineType]:
         return {
             EngineType.dspy,
-            EngineType.instructor,
             EngineType.langchain,
-            EngineType.ollama,
             EngineType.outlines,
-            EngineType.vllm,
         }
 
     @override

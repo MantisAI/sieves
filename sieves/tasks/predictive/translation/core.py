@@ -11,7 +11,7 @@ import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineType, dspy_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
@@ -19,24 +19,14 @@ from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.translation.bridges import (
     DSPyTranslation,
-    InstructorTranslation,
     LangChainTranslation,
-    OllamaTranslation,
     OutlinesTranslation,
-    VLLMTranslation,
 )
 
-_TaskModel = dspy_.Model | instructor_.Model | langchain_.Model | ollama_.Model | outlines_.Model | vllm_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | vllm_.PromptSignature
-_TaskResult = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
-_TaskBridge = (
-    DSPyTranslation
-    | InstructorTranslation
-    | LangChainTranslation
-    | OutlinesTranslation
-    | OllamaTranslation
-    | VLLMTranslation
-)
+_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult = outlines_.Result | dspy_.Result
+_TaskBridge = DSPyTranslation | LangChainTranslation | OutlinesTranslation
 
 
 class FewshotExample(BaseFewshotExample):
@@ -98,11 +88,8 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyTranslation,
-            EngineType.instructor: InstructorTranslation,
             EngineType.langchain: LangChainTranslation,
             EngineType.outlines: OutlinesTranslation,
-            EngineType.ollama: OllamaTranslation,
-            EngineType.vllm: VLLMTranslation,
         }
 
         try:
@@ -120,7 +107,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
     @override
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.dspy, EngineType.instructor, EngineType.ollama, EngineType.outlines, EngineType.vllm}
+        return {EngineType.dspy, EngineType.langchain, EngineType.outlines}
 
     @override
     @property

@@ -54,7 +54,7 @@ Even in the era of generative AI, structured outputs and observability remain cr
 Many real-world scenarios require rapid prototyping with minimal data. Generative language models excel here, but
 producing clean, structured output can be challenging. Various tools address this need for structured/guided language
 model output, including [`outlines`](https://github.com/dottxt-ai/outlines), [`dspy`](https://github.com/stanfordnlp/dspy),
-[`ollama`](https://github.com/ollama/ollama), and others. Each has different design patterns, pros and cons. `sieves` wraps these tools and provides
+[`langchain`](https://github.com/langchain-ai/langchain), and others. Each has different design patterns, pros and cons. `sieves` wraps these tools and provides
 a unified interface for input, processing, and output.
 
 Developing NLP prototypes often involves repetitive steps: parsing and chunking documents, exporting results for
@@ -82,9 +82,7 @@ build modern NLP applications. It provides:
 - :robot: **Unified Generation Interface:** Seamlessly use multiple libraries
   - [`dspy`](https://github.com/stanfordnlp/dspy)
   - [`gliner`](https://github.com/urchade/GLiNER)
-  - [`instructor`](https://github.com/instructor-ai/instructor)
   - [`langchain`](https://github.com/langchain-ai/langchain)
-  - [`ollama`](https://github.com/ollama/ollama)
   - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`transformer`](https://github.com/huggingface/transformers)
 - :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
@@ -294,8 +292,11 @@ Below are minimal examples for creating model objects for each supported structu
   # Anthropic example (set ANTHROPIC_API_KEY in your environment)
   model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
 
-  # Tip: For local via Ollama, configure api_base and blank api_key:
+  # Tip: DSPy can integrate with Ollama and vLLM backends for local model serving.
+  # For Ollama, configure api_base and blank api_key:
   # model = dspy.LM("smollm:135m-instruct-v0.2-q8_0", api_base="http://localhost:11434", api_key="")
+  # For vLLM, use the OpenAI-compatible server:
+  # model = dspy.LM("meta-llama/Llama-3.2-1B-Instruct", api_base="http://localhost:8000/v1", api_key="")
   ```
 
 - GLiNER
@@ -318,18 +319,6 @@ Below are minimal examples for creating model objects for each supported structu
   )
   ```
 
-- Instructor
-
-  ```python
-  import anthropic
-  import instructor
-  from sieves.engines.instructor_ import Model
-  import os
-
-  client = instructor.from_anthropic(anthropic.AsyncClient(api_key=os.environ["ANTHROPIC_API_KEY"]))
-  model = Model(name="claude-3-haiku-20240307", client=client)
-  ```
-
 - Hugging Face Transformers (zero‑shot classification)
 
   ```python
@@ -339,15 +328,6 @@ Below are minimal examples for creating model objects for each supported structu
       "zero-shot-classification",
       model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33",
   )
-  ```
-
-- Ollama (local server)
-
-  ```python
-  from sieves.engines.ollama_ import Model
-
-  # Ensure `ollama serve` is running and the model is pulled (e.g., `ollama run smollm:135m-instruct-v0.2-q8_0`).
-  model = Model(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
   ```
 
 - Outlines
@@ -366,7 +346,7 @@ Below are minimal examples for creating model objects for each supported structu
 
 **Notes**
 - Provide provider API keys via environment variables (e.g., `ANTHROPIC_API_KEY`).
-- Some backends (e.g., DSPy) can be pointed to a local Ollama server via `api_base`.
+- **Local model serving:** DSPy can integrate with Ollama and vLLM for local model serving (see DSPy examples above).
 - After you have a `model`, use it in tasks like: `tasks.predictive.Classification(labels=[...], model=model)`.
 - A bunch of useful utilities for pre- and post-processing you might need.
 - An array of useful tasks you can right of the bat without having to roll your own.
@@ -379,7 +359,7 @@ abilities, but not the pipeline system, utilities and pre-built tasks that `siev
 flexibility to switch between different structured generation libraries). Then again, maybe you don't need all that -
 in which case we recommend using `outlines` (or any other structured generation libray) directly.
 
-Similarly, maybe you already have an existing tech stack in your project that uses exclusively `ollama`, `langchain`, or
+Similarly, maybe you already have an existing tech stack in your project that uses exclusively `langchain` or
 `dspy`? All of these libraries (and more) are supported by `sieves` - but they are not _just_ structured generation
 libraries, they come with a plethora of features that are out of scope for `sieves`. If your application deeply
 integrates with a framework like LangChain or DSPy, it may be reasonable to stick to those libraries directly.

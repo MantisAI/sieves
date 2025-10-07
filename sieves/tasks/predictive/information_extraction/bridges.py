@@ -10,7 +10,7 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -226,15 +226,6 @@ class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_
         return outlines_.InferenceMode.json
 
 
-class OllamaInformationExtraction(PydanticBasedInformationExtraction[ollama_.InferenceMode]):
-    """Ollama bridge for information extraction."""
-
-    @override
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainInformationExtraction(PydanticBasedInformationExtraction[langchain_.InferenceMode]):
     """LangChain bridge for information extraction."""
 
@@ -242,21 +233,3 @@ class LangChainInformationExtraction(PydanticBasedInformationExtraction[langchai
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorInformationExtraction(PydanticBasedInformationExtraction[instructor_.InferenceMode]):
-    """Instructor bridge for information extraction."""
-
-    @override
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
-
-
-class VLLMInformationExtraction(PydanticBasedInformationExtraction[vllm_.InferenceMode]):
-    """vLLM bridge for information extraction."""
-
-    @override
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json

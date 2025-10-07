@@ -13,11 +13,8 @@ from sieves.tasks.predictive import question_answering
     (
         EngineType.dspy,
         EngineType.glix,
-        EngineType.instructor,
         EngineType.langchain,
-        EngineType.ollama,
         EngineType.outlines,
-        # EngineType.vllm,
     ),
     indirect=["batch_runtime"],
 )
