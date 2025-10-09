@@ -683,13 +683,12 @@ wheels = [
 
 [[package]]
 name = "datasets"
-version = "4.2.0"
+version = "3.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dill" },
     { name = "filelock" },
     { name = "fsspec", extra = ["http"] },
-    { name = "httpx" },
     { name = "huggingface-hub" },
     { name = "multiprocess" },
     { name = "numpy" },
@@ -701,9 +700,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/70/48/0186fbc4b86a4f9ecaf04eb01e877e78b53bfa0b03be9c84b2298431ba33/datasets-4.2.0.tar.gz", hash = "sha256:8333a7db9f3bb8044c1b819a35d4e3e2809596c837793b0921382efffdc36e78", size = 582256, upload-time = "2025-10-09T16:10:15.534Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/89/d3d6fef58a488f8569c82fd293ab7cbd4250244d67f425dcae64c63800ea/datasets-3.6.0.tar.gz", hash = "sha256:1b2bf43b19776e2787e181cfd329cb0ca1a358ea014780c3581e0f276375e041", size = 569336, upload-time = "2025-05-07T15:15:02.659Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/91/9e/0bbbd09b116fd8ee2d3617e28e6598551d2f0f24d3a2ce99cc87ec85aeb0/datasets-4.2.0-py3-none-any.whl", hash = "sha256:fdc43aaf4a73b31f64f80f72f195ab413a1141ed15555d675b2fd17926f8b026", size = 506316, upload-time = "2025-10-09T16:10:13.375Z" },
+    { url = "https://files.pythonhosted.org/packages/20/34/a08b0ee99715eaba118cbe19a71f7b5e2425c2718ef96007c325944a1152/datasets-3.6.0-py3-none-any.whl", hash = "sha256:25000c4a2c0873a710df127d08a202a06eab7bf42441a6bc278b499c2f72cd1b", size = 491546, upload-time = "2025-05-07T15:14:59.742Z" },
 ]
 
 [[package]]
@@ -1863,20 +1862,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/73/c9/ff996fc5fa2d8d23136f07c56e88a1013fe1e03a35ef3e65899baa73c49e/langchain_ollama-0.3.10.tar.gz", hash = "sha256:5d942d331c44351bae5c5c5965603ceb20b0ee4d70082290f4b15bc638559756", size = 35771, upload-time = "2025-10-02T15:53:20.974Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4b/f2/d87767a106021206fb53faf7ae4517d365d353dc29a1649b9f3e47eef940/langchain_ollama-0.3.10-py3-none-any.whl", hash = "sha256:7550792872e8f86d362568e9ceb0f8085428bc59946c7b44e726358ba4b280f9", size = 27646, upload-time = "2025-10-02T15:53:19.89Z" },
-]
-
-[[package]]
-name = "langchain-openai"
-version = "0.3.35"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "openai" },
-    { name = "tiktoken" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/96/06d0d25a37e05a0ff2d918f0a4b0bf0732aed6a43b472b0b68426ce04ef8/langchain_openai-0.3.35.tar.gz", hash = "sha256:fa985fd041c3809da256a040c98e8a43e91c6d165b96dcfeb770d8bd457bf76f", size = 786635, upload-time = "2025-10-06T15:09:28.463Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/d5/c90c5478215c20ee71d8feaf676f7ffd78d0568f8c98bd83f81ce7562ed7/langchain_openai-0.3.35-py3-none-any.whl", hash = "sha256:76d5707e6e81fd461d33964ad618bd326cb661a1975cef7c1cb0703576bdada5", size = 75952, upload-time = "2025-10-06T15:09:27.137Z" },
 ]
 
 [[package]]
@@ -4459,10 +4444,7 @@ engines = [
     { name = "gliner" },
     { name = "instructor" },
     { name = "langchain" },
-    { name = "langchain-community" },
     { name = "langchain-core" },
-    { name = "langchain-ollama" },
-    { name = "langchain-openai" },
     { name = "nest-asyncio" },
     { name = "ollama" },
     { name = "sentencepiece" },
@@ -4478,6 +4460,8 @@ ingestion = [
 test = [
     { name = "anthropic" },
     { name = "langchain-anthropic" },
+    { name = "langchain-community" },
+    { name = "langchain-ollama" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "mypy" },
@@ -4493,7 +4477,7 @@ requires-dist = [
     { name = "accelerate", marker = "extra == 'engines'", specifier = ">1.2,<2" },
     { name = "anthropic", marker = "extra == 'test'", specifier = ">=0.45,<1" },
     { name = "chonkie", specifier = ">=1,<2" },
-    { name = "datasets", specifier = ">=4,<5" },
+    { name = "datasets", specifier = ">=3,<4" },
     { name = "docling", marker = "extra == 'ingestion'", specifier = ">=2,<3" },
     { name = "dspy", marker = "extra == 'engines'", specifier = ">=2,<3" },
     { name = "dspy-ai", marker = "extra == 'engines'", specifier = ">=2,<3" },
@@ -4502,10 +4486,9 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3,<4" },
     { name = "langchain", marker = "extra == 'engines'", specifier = ">=0.3,<0.4" },
     { name = "langchain-anthropic", marker = "extra == 'test'", specifier = ">0.3,<0.4" },
-    { name = "langchain-community", marker = "extra == 'engines'", specifier = ">=0.3.31,<0.4" },
+    { name = "langchain-community", marker = "extra == 'test'", specifier = ">=0.3.31,<0.4" },
     { name = "langchain-core", marker = "extra == 'engines'", specifier = ">=0.3,<0.4" },
-    { name = "langchain-ollama", marker = "extra == 'engines'", specifier = ">=0.3,<0.4" },
-    { name = "langchain-openai", marker = "extra == 'engines'", specifier = ">=0.3,<0.4" },
+    { name = "langchain-ollama", marker = "extra == 'test'", specifier = ">=0.3,<0.4" },
     { name = "loguru", specifier = ">=0.7,<1" },
     { name = "marker-pdf", extras = ["full"], marker = "extra == 'ingestion'", specifier = ">=1.6.1,<2" },
     { name = "mkdocs-material", marker = "extra == 'test'", specifier = ">=9.6,<10" },

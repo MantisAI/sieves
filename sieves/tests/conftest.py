@@ -41,7 +41,7 @@ def _make_model(engine_type: EngineType) -> Model:
     :return Any: Model instance.
     """
     openrouter_api_base = "https://openrouter.ai/api/v1/"
-    openrouter_model_id = 'qwen/qwen3-4b:free'
+    openrouter_model_id = "openai/gpt-oss-20b:free"
     ollama_api_base = "http://localhost:11434"
     ollama_model_id = "smollm:135m-instruct-v0.2-q8_0"
 
