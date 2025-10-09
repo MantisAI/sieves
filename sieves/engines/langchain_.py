@@ -6,9 +6,13 @@ from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import langchain_core.language_models
+import nest_asyncio
 import pydantic
 
 from sieves.engines.core import Executable, PydanticEngine
+
+# Apply nest_asyncio to allow nested event loops
+nest_asyncio.apply()
 
 Model = langchain_core.language_models.BaseChatModel
 PromptSignature = pydantic.BaseModel
@@ -54,7 +58,13 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
                     def generate(prompts: list[str]) -> Iterable[Result]:
                         try:
-                            yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
+                            try:
+                                loop = asyncio.get_running_loop()
+                                # We're in an async context, create a task.
+                                yield from loop.run_until_complete(model.abatch(prompts, **self._inference_kwargs))
+                            except RuntimeError:
+                                # No running loop, use asyncio.run().
+                                yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
 
                         except pydantic.ValidationError as ex:
                             raise pydantic.ValidationError(

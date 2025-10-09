@@ -7,13 +7,13 @@ import anthropic
 import dspy
 import gliner.multitask
 import instructor
+import openai
 import outlines
 import pytest
 import tokenizers
 import transformers
-
 # import vllm
-from langchain.chat_models import init_chat_model
+from langchain_ollama import ChatOllama
 
 from sieves import Doc
 from sieves.engines.engine_type import EngineType
@@ -40,25 +40,37 @@ def _make_model(engine_type: EngineType) -> Model:
     :param engine_type: Engine type. to create model for.
     :return Any: Model instance.
     """
+    openrouter_api_base = "https://openrouter.ai/api/v1/"
+    openrouter_model_id = 'qwen/qwen3-4b:free'
+    ollama_api_base = "http://localhost:11434"
+    ollama_model_id = "smollm:135m-instruct-v0.2-q8_0"
+
     match engine_type:
         case EngineType.dspy:
-            model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
+            model = dspy.LM(
+                f"openrouter/{openrouter_model_id}",
+                api_base=openrouter_api_base,
+                api_key=os.environ['OPENROUTER_API_KEY']
+            )
 
         case EngineType.glix:
             model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
 
         case EngineType.langchain:
-            model = init_chat_model(
-                model="claude-3-haiku-20240307",
-                api_key=os.environ["ANTHROPIC_API_KEY"],
-                model_provider="anthropic",
-                temperature=0,
+            model = ChatOllama(
+                model=ollama_model_id,
+                base_url=ollama_api_base,
+                temperature=0
             )
 
         case EngineType.instructor:
+            openai_client = openai.AsyncOpenAI(
+                api_key=os.environ['OPENROUTER_API_KEY'],
+                base_url=openrouter_api_base,
+            )
             model = InstructorModel(
-                name="claude-3-haiku-20240307",
-                client=instructor.from_anthropic(anthropic.AsyncClient()),
+                name=f"openrouter/{openrouter_model_id}",
+                client=instructor.from_openai(openai_client),
             )
 
         case EngineType.huggingface:
@@ -67,7 +79,7 @@ def _make_model(engine_type: EngineType) -> Model:
             )
 
         case EngineType.ollama:
-            model = OllamaModel(host="http://localhost:11434", name="smollm:135m-instruct-v0.2-q8_0")
+            model = OllamaModel(host=ollama_api_base, name=ollama_model_id)
 
         case EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
