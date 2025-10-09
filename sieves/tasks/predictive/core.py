@@ -327,12 +327,9 @@ class PredictiveTask(
         examples = [fewshot_example_cls.from_dspy(ex) for ex in best_examples]  # noqa: F841
 
         # TODO
-        #  - Refactor bridges so that _prompt_instructions is concatented from _prompt_description and
-        #   _prompt_example_template. This will enable updating each individually:
-        #    - _prompt_description will be set from optimized prompt text.
-        #    - _prompt_example_template will not be modified
-        #    - optimal example set will be set via task._fewshot_examples
-        #  - With optimization result: override fewshot examples, bridge templates.
+        #  - Update prompt_instruction in task
+        #  - Set fewshot examples
+        #  - Reinit bridge
         #  - Reshape into final test structure
         #  - Generalize test structure to other tasks
         #  - Implement full tests for other tasks
