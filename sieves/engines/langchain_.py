@@ -59,12 +59,11 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                     def generate(prompts: list[str]) -> Iterable[Result]:
                         try:
                             try:
-                                loop = asyncio.get_running_loop()
-                                # We're in an async context, create a task.
-                                yield from loop.run_until_complete(model.abatch(prompts, **self._inference_kwargs))
+                                # If we're in an sync context, fetch the running loop.
+                                context_call = asyncio.get_running_loop().run_until_complete
                             except RuntimeError:
-                                # No running loop, use asyncio.run().
-                                yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
+                                context_call = asyncio.run
+                            yield from context_call(model.abatch(prompts, **self._inference_kwargs))
 
                         except pydantic.ValidationError as ex:
                             raise pydantic.ValidationError(
