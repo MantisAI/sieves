@@ -21,10 +21,10 @@ jobs:
     - name: Maximize build space
       shell: bash
       run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/share/dotnet /
+            /usr/local/lib/android /
+            /opt/ghc /
+            /opt/hostedtoolcache/CodeQL
 
     - name: Checkout repo
       uses: actions/checkout@v4
@@ -47,14 +47,6 @@ jobs:
         sudo apt-get install tesseract-ocr
         uv venv .venv --python 3.12
         uv sync --all-extras
-
-    - name: Set up ollama
-      run: |
-        curl -fsSL https://ollama.ai/install.sh | sh
-        # Run as daemon if ollama default port is free (port usage fails if Ollama has been launched on this machine
-        # before otherwise).
-        ((! nc -z 127.0.0.1 11434) && (ollama serve &)) || true
-        ollama pull smollm:135m-instruct-v0.2-q8_0
 
     - name: Create and enable 4 GB swap
       run: |

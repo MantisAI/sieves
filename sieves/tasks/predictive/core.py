@@ -319,16 +319,20 @@ class PredictiveTask(
 
         :param optimizer: Optimizer to run.
         """
+        # Run optimizer to get best prompt and few-shot examples.
         signature = self._get_task_signature()
         best_prompt, best_examples = optimizer(
             signature, [ex.to_dspy() for ex in self._fewshot_examples], self._evaluate_optimization_example
         )
         fewshot_example_cls = self._fewshot_examples[0].__class__
-        examples = [fewshot_example_cls.from_dspy(ex) for ex in best_examples]  # noqa: F841
+
+        # Update few-shot examples and prompt instructions.
+        self._fewshot_examples = [fewshot_example_cls.from_dspy(ex) for ex in best_examples]
+        self._custom_prompt_instructions = best_prompt
+
+        #
 
         # TODO
-        #  - Update prompt_instruction in task
-        #  - Set fewshot examples
         #  - Reinit bridge
         #  - Reshape into final test structure
         #  - Generalize test structure to other tasks

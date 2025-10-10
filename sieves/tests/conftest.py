@@ -9,7 +9,7 @@ import outlines
 import pytest
 import tokenizers
 import transformers
-from langchain.chat_models import init_chat_model
+from langchain_openai import ChatOpenAI
 
 from sieves import Doc
 from sieves.engines.engine_type import EngineType
@@ -35,9 +35,7 @@ def _make_model(engine_type: EngineType) -> Model:
     :return Any: Model instance.
     """
     openrouter_api_base = "https://openrouter.ai/api/v1/"
-    openrouter_model_id = "openai/gpt-oss-20b:free"
-    ollama_api_base = "http://localhost:11434"
-    ollama_model_id = "smollm:135m-instruct-v0.2-q8_0"
+    openrouter_model_id = "z-ai/glm-4.5-air:free"
 
     match engine_type:
         case EngineType.dspy:
@@ -51,9 +49,10 @@ def _make_model(engine_type: EngineType) -> Model:
             model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
 
         case EngineType.langchain:
-            model = ChatOllama(
-                model=ollama_model_id,
-                base_url=ollama_api_base,
+            model = ChatOpenAI(
+                api_key=os.environ['OPENROUTER_API_KEY'],
+                base_url=openrouter_api_base,
+                model=openrouter_model_id,
                 temperature=0
             )
 

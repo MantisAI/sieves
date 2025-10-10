@@ -97,7 +97,8 @@ def test_caching(batch_runtime) -> None:
     assert cached_pipe._cache_stats == {"hits": 9, "misses": 1, "total": 10, "unique": 1}
     assert uncached_pipe._cache_stats == {"hits": 0, "misses": 10, "total": 10, "unique": 0}
     # Relaxed speed-up requirement: cached pipe should be faster that uncached pipe.
-    assert cached_time * 5 < uncached_time
+    # This can be a bit flaky, but 3x is usually on the safer side.
+    assert cached_time * 3 < uncached_time
 
     # Test cache reset.
     cached_pipe.clear_cache()

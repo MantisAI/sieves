@@ -17,7 +17,7 @@ dependencies = [
     "outlines>=1,<2",
     "dspy-ai>=2,<3",
     "dspy>=2,<3",
-    "pydantic>=2,<3",
+    "pydantic>=2,<3"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -58,9 +58,8 @@ test = [
     "pytest-cov>=6",
     "anthropic>=0.45,<1",
     "langchain-anthropic>0.3,<0.4",
-    "ollama>=0.4,<1",
     "langchain-community>=0.3.31,<0.4",
-    "langchain-ollama>=0.3,<0.4",
+    "langchain-openai>=0.3.35",
     "tesseract>=0.1,<1",
     # For generating documentation.
     "mkdocstrings[python]>=0.27,<1",
