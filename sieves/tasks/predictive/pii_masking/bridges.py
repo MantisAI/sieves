@@ -68,7 +68,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         default_pii_types_desc = "all types of personally identifiable information"
         pii_types_desc = ", ".join(self._pii_types) if self._pii_types else default_pii_types_desc
         return (
@@ -157,7 +157,7 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
     """Base class for Pydantic-based PII masking bridges."""
 
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """
         Identify and mask Personally Identifiable Information (PII) in the given text.
         {% if pii_types|length > 0 -%}

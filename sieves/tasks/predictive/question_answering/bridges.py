@@ -44,7 +44,7 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """Multi-question answering."""
 
     @override
@@ -114,7 +114,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """
         Use the given text to answer the following questions. Ensure you answer each question exactly once. Prefix each
         question with the number of the corresponding question. Provide a concise reasoning for your answers.

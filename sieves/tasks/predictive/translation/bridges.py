@@ -54,7 +54,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return "Translate this text into the target language."
 
     @override
@@ -123,7 +123,7 @@ class PydanticBasedTranslation(
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """
         Translate into {{ target_language }}.
         """

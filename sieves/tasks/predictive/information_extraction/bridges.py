@@ -48,7 +48,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return "Find all occurences of this kind of entitity within the text."
 
     @override
@@ -128,7 +128,7 @@ class PydanticBasedInformationExtraction(
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """
         Find all occurences of this kind of entitity within the text. Keep your reasoning concise - don't
         exhaustively list all identified entities in your reasoning.

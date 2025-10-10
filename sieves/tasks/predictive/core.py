@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+import contextlib
 import itertools
 import sys
 from collections.abc import Iterable, Sequence
@@ -306,27 +307,41 @@ class PredictiveTask(
             raise KeyError(f"DSPy bridge not available for task {self.__class__.__name__}.") from err
 
     @abc.abstractmethod
-    def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
+    def _evaluate_optimization_example(self, truth: dspy.Example, pred: dspy.Prediction) -> float:
         """Evaluate DSPy example for optimization.
 
-        :param example: Ground truth.
+        :param truth: Ground truth.
         :param pred: Predicted value.
         :return: Metric value.
         """
 
-    def optimize(self, optimizer: optimization.Optimizer) -> None:
+    def optimize(self, optimizer: optimization.Optimizer, verbose: bool = True) -> tuple[str, Sequence[FewshotExample]]:
         """Optimize task prompt and few-shot examples with the available optimization config.
 
+        Updates task to use best prompt and few-shot examples found by the optimizer.
+
         :param optimizer: Optimizer to run.
+        :param verbose: Whether to suppress output. DSPy produces a good amount of logs, so this can be useful to
+            not pollute your terminal. Only warnings and errors will be printed.
+
+        :return tuple[str, Sequence[FewshotExample]]: Best found prompt and few-shot examples.
         """
         # Run optimizer to get best prompt and few-shot examples.
         signature = self._get_task_signature()
-        best_prompt, best_examples = optimizer(
-            signature, [ex.to_dspy() for ex in self._fewshot_examples], self._evaluate_optimization_example
-        )
-        fewshot_example_cls = self._fewshot_examples[0].__class__
+        dspy_examples = [ex.to_dspy() for ex in self._fewshot_examples]
+        if verbose:
+            best_prompt, best_examples = optimizer(
+                signature, dspy_examples, self._evaluate_optimization_example, verbose=verbose
+            )
+        else:
+            with contextlib.redirect_stdout(None):
+                with contextlib.redirect_stderr(None):
+                    best_prompt, best_examples = optimizer(
+                        signature, dspy_examples, self._evaluate_optimization_example, verbose=verbose
+                    )
 
         # Update few-shot examples and prompt instructions.
+        fewshot_example_cls = self._fewshot_examples[0].__class__
         self._fewshot_examples = [fewshot_example_cls.from_dspy(ex) for ex in best_examples]
         self._validate_fewshot_examples()
         self._custom_prompt_instructions = best_prompt
@@ -334,8 +349,7 @@ class PredictiveTask(
         # Reinitialize bridge to use new prompt and few-shot examples.
         self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
 
+        return best_prompt, self._fewshot_examples
         # TODO
-        #  - Reshape into final test structure
         #  - Generalize test structure to other tasks
-        #  - Implement eval scores for tasks
         #  - Implement full tests for other tasks

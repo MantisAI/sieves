@@ -166,9 +166,11 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         raise NotImplementedError
 
     @override
-    def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
+    def _evaluate_optimization_example(
+        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any | None = None
+    ) -> float:
         # Compute entity detection F1 score based on (entity_type, text) pairs
-        true_entities = {(e["entity_type"], e["text"]) for e in example["pii_entities"]}
+        true_entities = {(e["entity_type"], e["text"]) for e in truth["pii_entities"]}
         pred_entities = {(e["entity_type"], e["text"]) for e in pred.get("pii_entities", [])}
 
         if not true_entities:

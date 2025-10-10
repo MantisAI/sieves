@@ -167,5 +167,5 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         raise NotImplementedError
 
     @override
-    def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
+    def _evaluate_optimization_example(self, truth: dspy.Example, pred: dspy.Prediction) -> float:
         raise NotImplementedError

@@ -174,7 +174,9 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         raise NotImplementedError
 
     @override
-    def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
+    def _evaluate_optimization_example(
+        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any | None = None
+    ) -> float:
         def entity_to_tuple(entity: dict) -> tuple:
             """Convert entity dict to hashable tuple for comparison.
 
@@ -187,7 +189,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             return tuple((k, v if not isinstance(v | list, dict) else str(v)) for k, v in items)
 
         # Compute set-based F1 score for entity extraction
-        true_entities = {entity_to_tuple(e) for e in example["entities"]}
+        true_entities = {entity_to_tuple(e) for e in truth["entities"]}
         pred_entities = {entity_to_tuple(e) for e in pred.get("entities", [])}
 
         if not true_entities:

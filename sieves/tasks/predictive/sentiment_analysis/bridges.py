@@ -40,7 +40,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """
         Aspect-based sentiment analysis of the provided text given the provided aspects.
         For each aspect, provide the sentiment score with which you reflects the sentiment in the provided text with
@@ -139,7 +139,7 @@ class PydanticBasedSentAnalysis(
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return (
             f"""
         Perform aspect-based sentiment analysis of the provided text given the provided aspects:

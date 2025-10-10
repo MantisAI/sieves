@@ -32,13 +32,22 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
 
     @property
     @abc.abstractmethod
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         """Return default prompt instructions.
 
         Instructions are injected at the beginning of each prompt.
 
         :return: Default prompt instructions.
         """
+
+    @property
+    def _prompt_instructions(self) -> str:
+        """Returns prompt instructions.
+
+        :returns: If `_custom_prompt_instructions` is set, this is used. Otherwise, `_default_prompt_instructions` is
+            used.
+        """
+        return self._custom_prompt_instructions or self._default_prompt_instructions
 
     @property
     @abc.abstractmethod
@@ -164,7 +173,7 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         # GliNER doesn't support custom instructions.
         return ""
 

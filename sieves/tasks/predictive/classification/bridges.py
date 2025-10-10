@@ -79,7 +79,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         if self._multi_label:
             return f"""
             Multi-label classification of the provided text given the labels {self._labels}.
@@ -207,7 +207,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return f"""
         This text is about {{}}.
         {self._get_label_descriptions()}
@@ -319,7 +319,7 @@ class PydanticBasedClassification(
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         if self._multi_label:
             return (
                 f"""
@@ -504,7 +504,7 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[En
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         if self._multi_label:
             return super()._prompt_instructions
 

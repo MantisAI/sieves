@@ -45,17 +45,22 @@ class Optimizer:
         self._compile_kwargs = {"requires_permission_to_run": False} | (dspy_compile_kwargs or {})
 
     def __call__(
-        self, signature: type[dspy.Signature] | type[dspy.Module], data: list[dspy.Example], evaluate: EvalMetric
+        self,
+        signature: type[dspy.Signature] | type[dspy.Module],
+        data: list[dspy.Example],
+        evaluate: EvalMetric,
+        verbose: bool = False,
     ) -> tuple[str, list[dspy.Example]]:
         """Optimize prompt and few-shot examples w.r.t. given signature and dataset.
 
         :param signature: Task to optimize.
         :param data: Dataset to use for optimization.
         :param evaluate: Evaluation metric to use for optimization.
+        :param verbose: Whether to log DSPy output.
         :return: Best combination of (1) prompt and (2) fewshot-examples.
         """
         predictor = dspy.Predict(signature)
-        teleprompter = dspy.MIPROv2(metric=evaluate, **(self._init_kwargs or {}))
+        teleprompter = dspy.MIPROv2(metric=evaluate, **(self._init_kwargs or {}), verbose=False)
         trainset, devset = self._split_data(data, self._val_frac, self._seed, self._shuffle)
 
         optimized_predictor: dspy.Predict = teleprompter.compile(

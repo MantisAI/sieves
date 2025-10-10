@@ -183,7 +183,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """
         A named entity recognition result that represents named entities from the provided text.
         For each entity found it includes:
@@ -271,7 +271,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """
         Your goal is to extract named entities from the text. Only extract entities of the specified types:
         {{ entity_types }}.
@@ -414,7 +414,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return ""
 
     @override

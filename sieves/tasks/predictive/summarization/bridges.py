@@ -54,7 +54,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return "Summary of a longer text."
 
     @override
@@ -124,7 +124,7 @@ class PydanticBasedSummarization(
 
     @override
     @property
-    def _prompt_instructions(self) -> str:
+    def _default_prompt_instructions(self) -> str:
         return """
         Your goal is to summarize a text. This summary should be around {{ max_n }} words.
         """
