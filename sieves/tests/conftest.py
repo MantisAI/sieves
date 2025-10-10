@@ -35,7 +35,7 @@ def _make_model(engine_type: EngineType) -> Model:
     :return Any: Model instance.
     """
     openrouter_api_base = "https://openrouter.ai/api/v1/"
-    openrouter_model_id = "z-ai/glm-4.5-air:free"
+    openrouter_model_id = "z-ai/glm-4.5-air"
 
     match engine_type:
         case EngineType.dspy:

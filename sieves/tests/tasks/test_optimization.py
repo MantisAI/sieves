@@ -4,10 +4,8 @@ from functools import cache
 
 import dspy
 import pydantic
-from loguru import logger
 
 from sieves import GenerationSettings
-from sieves.engines import EngineType
 from sieves.tasks.optimization import Optimizer
 from sieves.tasks.predictive import (
     classification,
@@ -32,7 +30,6 @@ def _model() -> dspy.LM:
         api_base="https://openrouter.ai/api/v1/",
         api_key=os.environ['OPENROUTER_API_KEY']
     )
-    # model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
 
     return model
 
