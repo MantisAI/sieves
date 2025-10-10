@@ -100,8 +100,9 @@ build modern NLP applications. It provides:
   - Named entity recognition
   - Coming soon: entity linking, knowledge graph creation, ...
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
-- :teacher: **Distillation:** Distill local, specialized models using your zero-shot model results automatically.
-  Export your results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) if you want to run your own training routine.
+- :rocket: **Optimization:** Improve task performance by optimizing prompts and few-shot examples using [DSPy's MIPROv2](https://dspy-docs.vercel.app/api/optimizers/MIPROv2)
+- :teacher: **Distillation:** Fine-tune smaller, specialized models using your zero-shot results with frameworks like SetFit and Model2Vec.
+  Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for custom training.
 - :recycle: **Caching** to avoid unnecessary model calls
 
 ---
