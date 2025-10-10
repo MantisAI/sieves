@@ -21,16 +21,16 @@ from sieves.tasks.predictive import (
 from sieves.tests.conftest import make_model
 
 
-@pytest.fixture(scope="module", autouse=True)
-def preserve_dspy_config():
-    """Save and restore DSPy global configuration to prevent test pollution."""
-    # Save current DSPy settings
-    original_settings = dspy.settings.copy()
-
-    yield
-
-    # Restore original settings after all optimization tests
-    dspy.settings.update(original_settings)
+# @pytest.fixture(scope="module", autouse=True)
+# def preserve_dspy_config():
+#     """Save and restore DSPy global configuration to prevent test pollution."""
+#     # Save current DSPy settings
+#     original_settings = dspy.settings.copy()
+#
+#     yield
+#
+#     # Restore original settings after all optimization tests
+#     dspy.settings = original_settings
 
 
 
@@ -125,11 +125,11 @@ def test_optimization_classification(batch_runtime) -> None:
         multi_label=True,
         labels=["comedy", "scifi"],
         fewshot_examples=examples_multi_label,
-        model=model,
-        generation_settings=GenerationSettings(),
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
     )
 
-    optimizer = _optimizer(model)
+    optimizer = _optimizer(batch_runtime.model)
 
     # Test evaluation.
     assert task_single_label._evaluate_optimization_example(
