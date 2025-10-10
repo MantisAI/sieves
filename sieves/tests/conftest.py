@@ -39,11 +39,12 @@ def make_model(engine_type: EngineType) -> Model:
 
     match engine_type:
         case EngineType.dspy:
-            model = dspy.LM(
-                f"openrouter/{openrouter_model_id}",
-                api_base=openrouter_api_base,
-                api_key=os.environ['OPENROUTER_API_KEY']
-            )
+            model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
+            # model = dspy.LM(
+            #     f"openrouter/{openrouter_model_id}",
+            #     api_base=openrouter_api_base,
+            #     api_key=os.environ['OPENROUTER_API_KEY']
+            # )
 
         case EngineType.glix:
             model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
