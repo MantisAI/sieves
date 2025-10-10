@@ -1,18 +1,14 @@
 """DSPy engine integration for Sieves."""
 
-import asyncio
 import enum
 from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import dspy
-import nest_asyncio
 import pydantic
 
 from sieves.engines.core import Engine, Executable
 from sieves.engines.types import GenerationSettings
-
-nest_asyncio.apply()
 
 PromptSignature = dspy.Signature | dspy.Module
 Model = dspy.LM | dspy.BaseLM
@@ -97,12 +93,14 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
             generator_fewshot: dspy.Module | None = None
             if len(fewshot_examples_dicts):
                 examples = [dspy.Example(**fs_example) for fs_example in fewshot_examples_dicts]
-                generator_fewshot = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
-            generator_async = dspy.asyncify(generator_fewshot or generator)
+                generator_fewshot = dspy.LabeledFewShot(k=len(examples)).compile(student=generator, trainset=examples)
 
             try:
-                calls = [generator_async(**doc_values, **self._inference_kwargs) for doc_values in values]
-                yield from asyncio.run(self._execute_async_calls(calls))
+                yield from (generator_fewshot or generator).batch(
+                    [dspy.Example(**doc_values).with_inputs(*doc_values.keys()) for doc_values in values],
+                    max_errors=0 if self._strict_mode else float("inf"),
+                    **{"disable_progress_bar": True} | self._inference_kwargs,
+                )
 
             except Exception as err:
                 if self._strict_mode:
