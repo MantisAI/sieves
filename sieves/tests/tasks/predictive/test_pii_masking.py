@@ -12,11 +12,8 @@ from sieves.tasks.predictive import pii_masking
     "batch_runtime",
     (
         EngineType.dspy,
-        EngineType.instructor,
         EngineType.langchain,
-        EngineType.ollama,
         EngineType.outlines,
-        # EngineType.vllm,
     ),
     indirect=["batch_runtime"],
 )
@@ -108,9 +105,7 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
                       'model': {'is_placeholder': True,
                                 'value': 'dspy.clients.lm.LM'},
                       'pii_types': {'is_placeholder': False, 'value': None},
-                      'prompt_signature_desc': {'is_placeholder': False,
-                                                'value': None},
-                      'prompt_template': {'is_placeholder': False,
+                      'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False,
                                   'value': 'PIIMasking'},

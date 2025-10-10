@@ -1,3 +1,5 @@
+"""Utilities."""
+
 from __future__ import annotations
 
 import abc
@@ -14,8 +16,8 @@ class PydanticToHFDatasets(abc.ABC):
 
     @classmethod
     def model_cls_to_features(cls, entity_type: type[pydantic.BaseModel]) -> datasets.Features:
-        """
-        Given a Pydantic model, build a `datasets.Sequence` of features that match its fields.
+        """Given a Pydantic model, build a `datasets.Sequence` of features that match its fields.
+
         :param entity_type: Entity type
         :return: `datasets.Features` instance for use in HF `datasets.Dataset`.
         """
@@ -31,9 +33,7 @@ class PydanticToHFDatasets(abc.ABC):
     def _annotation_to_values(
         cls, annotation: pydantic_core.core_schema.ModelField | type
     ) -> datasets.Value | datasets.Sequence:
-        """
-        Convert a type annotation (e.g. str, list[int], MyNestedModel) to
-        a Hugging Face `datasets` feature.
+        """Convert a type annotation (e.g. str, list[int], MyNestedModel) to a Hugging Face `datasets` feature.
 
         Handles:
           - Basic python types (str, int, float, bool)
@@ -56,10 +56,10 @@ class PydanticToHFDatasets(abc.ABC):
         # 2) Handle list[...] or tuple[...]
         if origin in (list, tuple):
             if len(args) == 1:
-                # e.g. list[str], tuple[int]
+                # e.g. list[str], tuple[int].  noqa: ERA001
                 item_type = args[0]
                 return datasets.Sequence(cls._annotation_to_values(item_type))
-            elif len(args) > 1 and origin == tuple:
+            elif len(args) > 1 and origin is tuple:
                 # e.g. tuple[str, int] => fallback to storing as string
                 return datasets.Sequence(datasets.Value("string"))
             else:
@@ -67,11 +67,11 @@ class PydanticToHFDatasets(abc.ABC):
                 return datasets.Sequence(datasets.Value("string"))
 
         # 3) Handle dict[...] => convert to sequence of { "key": str, "value": ... }
-        if origin == dict:
+        if origin is dict:
             # Typically we have 2 type args: key_type, value_type
             if len(args) == 2:
                 key_type, value_type = args
-                if key_type == str:
+                if key_type is str:
                     # For dict[str, T], store as a sequence of key-value pairs
                     return datasets.Sequence(
                         feature=datasets.Features(
@@ -97,11 +97,9 @@ class PydanticToHFDatasets(abc.ABC):
 
     @classmethod
     def model_to_dict(cls, model: pydantic.BaseModel | None) -> Any:
-        """
-        Given a Pydantic model instance (or nested structure),
-        return a Python object (dict, list, etc.) matching the
-        Hugging Face Features schema defined by `_pydantic_annotation_to_hf_value`.
+        """Given a Pydantic model instance (or nested structure), return a Python object (dict, list, etc.).
 
+        Matchies the Hugging Face Features schema defined by `_pydantic_annotation_to_hf_value`.
         Handles:
           - BaseModel subclasses (recursively)
           - Lists / tuples
@@ -135,9 +133,9 @@ class PydanticToHFDatasets(abc.ABC):
 
     @classmethod
     def _convert_value_for_dataset(cls, value: Any, annotation: Any) -> Any:
-        """
-        Recursively convert a value (with its declared annotation) to something
-        that fits the HF dataset row format. Parallel to `_pydantic_annotation_to_hf_value`.
+        """Recursively convert a value (with its declared annotation) to something that fits the HF dataset row format.
+
+        Parallel to `_pydantic_annotation_to_hf_value`.
 
         :param value: Value to convert.
         :param annotation: Type annotation of value.
@@ -159,10 +157,10 @@ class PydanticToHFDatasets(abc.ABC):
             # If it's actually a list/tuple, recursively process items
             if isinstance(value, list | tuple):
                 if len(args) == 1:
-                    # e.g. list[str], list[SomeSubModel]
+                    # e.g. list[str], list[SomeSubModel].
                     item_type = args[0]
                     return [cls._convert_value_for_dataset(v, item_type) for v in value]
-                elif len(args) > 1 and origin == tuple:
+                elif len(args) > 1 and origin is tuple:
                     # tuple[str, int, ...] => fallback to string or handle partial
                     return [str(v) for v in value]
                 else:
@@ -173,13 +171,13 @@ class PydanticToHFDatasets(abc.ABC):
                 return str(value)
 
         # 3) dict[str, X] => store as list of { "key": str, "value": X }
-        if origin == dict:
+        if origin is dict:
             # Check if the actual data is indeed a dict
             if isinstance(value, dict):
                 if len(args) == 2:
                     key_type, val_type = args
                     # only handle str-key dicts
-                    if key_type == str:
+                    if key_type is str:
                         kv_list = []
                         for k, v in value.items():
                             # Convert each item recursively

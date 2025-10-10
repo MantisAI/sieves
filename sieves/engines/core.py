@@ -8,7 +8,6 @@ import enum
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Sequence
 from typing import Any, Generic, Protocol, TypeVar, override
 
-import instructor.exceptions
 import jinja2
 import pydantic
 
@@ -85,7 +84,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         inference_mode: EngineInferenceMode,
         prompt_template: str | None,
         prompt_signature: type[EnginePromptSignature] | EnginePromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = (),
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ) -> Executable[EngineResult | None]:
         """Return a prompt executable for the given signature and mode.
 
@@ -99,7 +98,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         """
 
     @staticmethod
-    def _convert_fewshot_examples(fewshot_examples: Iterable[pydantic.BaseModel]) -> list[dict[str, Any]]:
+    def convert_fewshot_examples(fewshot_examples: Sequence[pydantic.BaseModel]) -> list[dict[str, Any]]:
         """Convert few‑shot examples to dicts.
 
         :param fewshot_examples: Fewshot examples to convert.
@@ -148,7 +147,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         generator: Callable[[list[str]], Iterable[EngineResult]],
         template: jinja2.Template,
         values: Sequence[dict[str, Any]],
-        fewshot_examples: Iterable[pydantic.BaseModel],
+        fewshot_examples: Sequence[pydantic.BaseModel],
     ) -> Iterable[EngineResult | None]:
         """Run inference in batches with exception handling.
 
@@ -158,20 +157,15 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         :param fewshot_examples: Fewshot examples.
         :return: Results parsed from responses.
         """
-        fewshot_examples_dict = Engine._convert_fewshot_examples(fewshot_examples)
+        fewshot_examples_dict = Engine.convert_fewshot_examples(fewshot_examples)
         examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
 
         try:
             yield from generator([template.render(**doc_values, **examples) for doc_values in values])
 
-        except (
-            TypeError,
-            pydantic.ValidationError,
-            instructor.exceptions.InstructorRetryException,
-            instructor.exceptions.IncompleteOutputException,
-        ) as err:
+        except Exception as err:
             if self._strict_mode:
-                raise ValueError(
+                raise type(err)(
                     "Encountered problem when executing prompt. Ensure your few-shot examples and document "
                     "chunks contain sensible information."
                 ) from err

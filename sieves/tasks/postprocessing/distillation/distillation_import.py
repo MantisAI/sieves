@@ -35,9 +35,10 @@ except ModuleNotFoundError:
 
     _missing_dependencies.append("model2vec")
 
-warnings.warn(
-    "Warning: distillation dependency [{deps}] could not be imported. Distilling with these tools requires them to "
-    "be installed.".format(deps=", ".join(_missing_dependencies))
-)
+if len(_missing_dependencies):
+    warnings.warn(
+        "Warning: distillation dependency [{deps}] could not be imported. Distilling with these tools requires them to "
+        "be installed.".format(deps=", ".join(_missing_dependencies))
+    )
 
 __all__ = ["model2vec", "sentence_transformers", "setfit"]

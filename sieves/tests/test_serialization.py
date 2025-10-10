@@ -13,7 +13,7 @@ from sieves.engines import EngineType
 from sieves.serialization import Config
 from sieves.tasks import preprocessing
 from sieves.tasks.predictive import classification
-from sieves.tests.conftest import _make_model
+from sieves.tests.conftest import make_model
 
 
 @pytest.mark.parametrize(
@@ -75,8 +75,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                         "value": {"science": "Everything about science.", "politics": "Everything about politics."},
                     },
                     'model': {'is_placeholder': True, 'value': 'dspy.clients.lm.LM'},
-                    "prompt_signature_desc": {"is_placeholder": False, "value": None},
-                    "prompt_template": {"is_placeholder": False, "value": None},
+                    "prompt_instructions": {"is_placeholder": False, "value": None},
                     "task_id": {"is_placeholder": False, "value": "classifier"},
                     "version": version,
                 },
@@ -102,7 +101,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
             tmp_path,
             (
                 {"chunker": chonkie.TokenChunker(tokenizer)},
-                {"model": _make_model(EngineType.dspy)},
+                {"model": make_model(EngineType.dspy)},
             ),
         )
 

@@ -6,6 +6,7 @@ from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import dspy
+import nest_asyncio
 import pydantic
 
 from sieves.engines.core import Engine, Executable
@@ -14,6 +15,9 @@ from sieves.engines.types import GenerationSettings
 PromptSignature = dspy.Signature | dspy.Module
 Model = dspy.LM | dspy.BaseLM
 Result = dspy.Prediction
+
+
+nest_asyncio.apply()
 
 
 class InferenceMode(enum.Enum):
@@ -67,7 +71,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: type[PromptSignature] | PromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
+        fewshot_examples: Sequence[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result | None]:
         # Note: prompt_template is ignored here, as DSPy doesn't use it directly (only prompt_signature_description).
         assert isinstance(prompt_signature, type)
@@ -84,21 +88,26 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
             generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
         def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
+            """Execute structured generation with DSPy.
+
+            :params values: Values to inject into prompts.
+            :returns: Results for prompts.
+            """
             # Compile predictor with few-shot examples.
-            fewshot_examples_dicts = DSPy._convert_fewshot_examples(fewshot_examples)
+            fewshot_examples_dicts = DSPy.convert_fewshot_examples(fewshot_examples)
             generator_fewshot: dspy.Module | None = None
             if len(fewshot_examples_dicts):
                 examples = [dspy.Example(**fs_example) for fs_example in fewshot_examples_dicts]
-                generator_fewshot = dspy.LabeledFewShot(k=5).compile(student=generator, trainset=examples)
-            generator_async = dspy.asyncify(generator_fewshot or generator)
+                generator_fewshot = dspy.LabeledFewShot(k=len(examples)).compile(student=generator, trainset=examples)
 
             try:
-                calls = [generator_async(**doc_values, **self._inference_kwargs) for doc_values in values]
+                gen = generator_fewshot or generator
+                calls = [gen.acall(**doc_values, **self._inference_kwargs) for doc_values in values]
                 yield from asyncio.run(self._execute_async_calls(calls))
 
-            except ValueError as err:
+            except Exception as err:
                 if self._strict_mode:
-                    raise ValueError(
+                    raise type(err)(
                         "Encountered problem when executing prompt. Ensure your few-shot examples and document "
                         "chunks contain sensible information."
                     ) from err

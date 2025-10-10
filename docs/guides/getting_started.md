@@ -132,12 +132,10 @@ for result in results:
 `sieves` supports multiple libraries for structured generation:
 
 - [`outlines`](https://github.com/outlines-dev/outlines)
-- [`dspy`](https://github.com/stanfordnlp/dspy)
-- [`instructor`](https://github.com/instructor-ai/instructor)
+- [`dspy`](https://github.com/stanfordnlp/dspy) - also supports Ollama and vLLM integration via `api_base`
 - [`langchain`](https://github.com/langchain-ai/langchain)
 - [`gliner`](https://github.com/urchade/GLiNER)
 - [`transformers`](https://github.com/huggingface/transformers)
-- [`ollama`](https://github.com/ollama/ollama)
 
 You pass models from these libraries directly to `PredictiveTask`. Optionally, you can include `GenerationSettings` to
 override defaults. Batching is controlled per task via the `batch_size` argument (see below).

@@ -15,8 +15,9 @@ dependencies = [
     "jinja2>=3,<4",
     "loguru>=0.7,<1",
     "outlines>=1,<2",
+    "dspy-ai>=2,<3",
+    "dspy>=2,<3",
     "pydantic>=2,<3",
-    "scikit-learn>=1.6,<2",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -38,17 +39,12 @@ ingestion = [
 ]
 engines = [
     "accelerate>1.2,<2",
-    "dspy-ai>=2,<3",
-    "dspy>=2,<3",
     "gliner<1",
-    "instructor>=1,<2",
     "langchain-core>=0.3,<0.4",
     "langchain>=0.3,<0.4",
     "nest-asyncio>=1,<2",
-    "ollama>=0.4,<1",
     "sentencepiece<1",
     "transformers>=4,<5",
-#    "vllm>=0.10,<1",
 ]
 distill = [
     "setfit>=1.1,<2",
@@ -61,10 +57,9 @@ test = [
     "mypy-extensions>=1",
     "pytest-cov>=6",
     "anthropic>=0.45,<1",
-    "langchain-anthropic>0.3,<0.4",
     "langchain-community>=0.3.31,<0.4",
-    "langchain-ollama>=0.3,<0.4",
-    "tesseract>=0.1,<1",
+    "langchain-openai>=0.3.35",
+#    "tesseract>=0.1,<1",
     # For generating documentation.
     "mkdocstrings[python]>=0.27,<1",
     "mkdocs-material>=9.6,<10",

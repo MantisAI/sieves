@@ -3,23 +3,17 @@ import os
 from functools import cache
 from typing import Any, NamedTuple
 
-import anthropic
 import dspy
 import gliner.multitask
-import instructor
-import openai
 import outlines
 import pytest
 import tokenizers
 import transformers
-# import vllm
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 
 from sieves import Doc
 from sieves.engines.engine_type import EngineType
 from sieves.engines.utils import GenerationSettings
-from sieves.engines.instructor_ import Model as InstructorModel
-from sieves.engines.ollama_ import Model as OllamaModel
 from sieves.tasks.types import Model
 
 
@@ -35,15 +29,13 @@ def tokenizer() -> tokenizers.Tokenizer:
 
 
 @cache
-def _make_model(engine_type: EngineType) -> Model:
+def make_model(engine_type: EngineType) -> Model:
     """Create model.
     :param engine_type: Engine type. to create model for.
     :return Any: Model instance.
     """
     openrouter_api_base = "https://openrouter.ai/api/v1/"
-    openrouter_model_id = "openai/gpt-oss-20b:free"
-    ollama_api_base = "http://localhost:11434"
-    ollama_model_id = "smollm:135m-instruct-v0.2-q8_0"
+    openrouter_model_id = "google/gemini-2.5-flash-lite-preview-09-2025"
 
     match engine_type:
         case EngineType.dspy:
@@ -57,20 +49,11 @@ def _make_model(engine_type: EngineType) -> Model:
             model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
 
         case EngineType.langchain:
-            model = ChatOllama(
-                model=ollama_model_id,
-                base_url=ollama_api_base,
-                temperature=0
-            )
-
-        case EngineType.instructor:
-            openai_client = openai.AsyncOpenAI(
+            model = ChatOpenAI(
                 api_key=os.environ['OPENROUTER_API_KEY'],
                 base_url=openrouter_api_base,
-            )
-            model = InstructorModel(
-                name=f"openrouter/{openrouter_model_id}",
-                client=instructor.from_openai(openai_client),
+                model=openrouter_model_id,
+                temperature=0
             )
 
         case EngineType.huggingface:
@@ -78,18 +61,12 @@ def _make_model(engine_type: EngineType) -> Model:
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
             )
 
-        case EngineType.ollama:
-            model = OllamaModel(host=ollama_api_base, name=ollama_model_id)
-
         case EngineType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
             model = outlines.models.from_transformers(
                 transformers.AutoModelForCausalLM.from_pretrained(model_name),
                 transformers.AutoTokenizer.from_pretrained(model_name),
             )
-
-        # case EngineType.vllm:
-        #     model = vllm.LLM("HuggingFaceTB/SmolLM-135M-Instruct")
 
         case _:
             raise ValueError(f"Unsupported runtime type {engine_type}.")
@@ -105,7 +82,7 @@ def _make_runtime(engine_type: EngineType, batch_size: int) -> Runtime:
     :param batch_size: Batch size to use in runtime.
     :return: Runtime tuple.
     """
-    return Runtime(_make_model(engine_type), GenerationSettings(), batch_size)
+    return Runtime(make_model(engine_type), GenerationSettings(), batch_size)
 
 
 @pytest.fixture(scope="function")

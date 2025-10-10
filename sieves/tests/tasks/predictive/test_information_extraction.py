@@ -18,11 +18,8 @@ class Person(pydantic.BaseModel, frozen=True):
     "batch_runtime",
     (
         EngineType.dspy,
-        EngineType.instructor,
         EngineType.langchain,
-        EngineType.ollama,
         EngineType.outlines,
-        # EngineType.vllm,
     ),
     indirect=["batch_runtime"],
 )
@@ -63,7 +60,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
         pipe["InformationExtraction"].distill(None, None, None, None, None, None, None, None)
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.ollama], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
 def test_to_hf_dataset(information_extraction_docs, batch_runtime) -> None:
     task = tasks.predictive.InformationExtraction(
         entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size
@@ -113,9 +110,7 @@ def test_serialization(information_extraction_docs, batch_runtime) -> None:
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'model': {'is_placeholder': True,
                                 'value': 'outlines.models.transformers.Transformers'},
-                      'prompt_signature_desc': {'is_placeholder': False,
-                                                'value': None},
-                      'prompt_template': {'is_placeholder': False,
+                      'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False,
                                   'value': 'InformationExtraction'},

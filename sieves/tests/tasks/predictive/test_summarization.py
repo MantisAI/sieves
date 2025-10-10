@@ -13,11 +13,8 @@ from sieves.tasks.predictive import summarization
     (
         EngineType.dspy,
         EngineType.glix,
-        EngineType.instructor,
         EngineType.langchain,
-        EngineType.ollama,
         EngineType.outlines,
-        # EngineType.vllm,
     ),
     indirect=["batch_runtime"],
 )
@@ -115,9 +112,7 @@ def test_serialization(summarization_docs, batch_runtime) -> None:
                       'model': {'is_placeholder': True,
                                 'value': 'dspy.clients.lm.LM'},
                       'n_words': {'is_placeholder': False, 'value': 10},
-                      'prompt_signature_desc': {'is_placeholder': False,
-                                                'value': None},
-                      'prompt_template': {'is_placeholder': False,
+                      'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False,
                                   'value': 'Summarization'},
