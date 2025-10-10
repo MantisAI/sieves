@@ -1,6 +1,7 @@
 """DSPy engine integration for Sieves."""
 
 import enum
+import os
 from collections.abc import Iterable, Sequence
 from typing import Any, override
 
@@ -96,10 +97,12 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                 generator_fewshot = dspy.LabeledFewShot(k=len(examples)).compile(student=generator, trainset=examples)
 
             try:
+                examples = [dspy.Example(**doc_values).with_inputs(*doc_values.keys()) for doc_values in values]
+                n_threads = min(os.cpu_count() or 1, len(examples))
                 yield from (generator_fewshot or generator).batch(
-                    [dspy.Example(**doc_values).with_inputs(*doc_values.keys()) for doc_values in values],
+                    examples,
                     max_errors=0 if self._strict_mode else float("inf"),
-                    **{"disable_progress_bar": True} | self._inference_kwargs,
+                    **({"disable_progress_bar": True, "num_threads": n_threads} | self._inference_kwargs),
                 )
 
             except Exception as err:
