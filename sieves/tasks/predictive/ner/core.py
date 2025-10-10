@@ -60,6 +60,11 @@ class FewshotExample(BaseFewshotExample):
     text: str
     entities: list[Entity]
 
+    @override
+    @property
+    def target_fields(self) -> Sequence[str]:
+        return ("entities",)
+
 
 class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     """Extract named entities from text using various engines."""
@@ -228,7 +233,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
 
     @override
     def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any | None = None
+        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
     ) -> float:
         # Compute entity-level F1 score based on (text, entity_type) pairs
         true_entities = {(e["text"], e["entity_type"]) for e in truth["entities"]}

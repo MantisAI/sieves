@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
-import dspy
 import pydantic
 
 from sieves.data import Doc
@@ -36,6 +35,16 @@ class FewshotExample(BaseFewshotExample):
     reasoning: str
     questions: tuple[str, ...] | list[str]
     answers: tuple[str, ...] | list[str]
+
+    @override
+    @property
+    def input_fields(self) -> Sequence[str]:
+        return "text", "questions"
+
+    @override
+    @property
+    def target_fields(self) -> Sequence[str]:
+        return ("answers",)
 
 
 class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -164,8 +173,4 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         train_kwargs: dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
-        raise NotImplementedError
-
-    @override
-    def _evaluate_optimization_example(self, truth: dspy.Example, pred: dspy.Prediction) -> float:
         raise NotImplementedError

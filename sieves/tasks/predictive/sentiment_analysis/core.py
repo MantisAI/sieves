@@ -35,6 +35,11 @@ class FewshotExample(BaseFewshotExample):
     reasoning: str
     sentiment_per_aspect: dict[str, float]
 
+    @override
+    @property
+    def target_fields(self) -> Sequence[str]:
+        return ("sentiment_per_aspect",)
+
     @pydantic.model_validator(mode="after")
     def check_confidence(self) -> FewshotExample:
         """Validate that 'overall' exists and all scores are in [0, 1]."""
@@ -180,7 +185,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
 
     @override
     def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any | None = None
+        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
     ) -> float:
         # Compute per-aspect accuracy as 1 - abs(true_sentiment - pred_sentiment)
         # Average across all aspects (same approach as multi-label classification)

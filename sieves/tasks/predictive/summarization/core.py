@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
-import dspy
 import pydantic
 
 from sieves.data import Doc
@@ -35,6 +34,11 @@ class FewshotExample(BaseFewshotExample):
 
     n_words: int
     summary: str
+
+    @override
+    @property
+    def target_fields(self) -> Sequence[str]:
+        return ("summary",)
 
 
 class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -164,8 +168,4 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         train_kwargs: dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
-        raise NotImplementedError
-
-    @override
-    def _evaluate_optimization_example(self, truth: dspy.Example, pred: dspy.Prediction) -> float:
         raise NotImplementedError

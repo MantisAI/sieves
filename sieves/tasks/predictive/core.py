@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import abc
 import contextlib
+import functools
 import itertools
+import json
 import sys
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -26,6 +28,19 @@ from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, Tas
 from sieves.tasks.types import Model
 
 
+class EvaluationSignature(dspy.Signature):
+    """Evaluate similarity between ground truth and predicted outputs."""
+
+    target_fields: str = dspy.InputField(desc="Names of output fields being compared.")
+    ground_truth: str = dspy.InputField(desc="Ground truth output values.")
+    prediction: str = dspy.InputField(desc="Predicted output values.")
+
+    reasoning: str = dspy.OutputField(desc="Step-by-step reasoning for the similarity assessment")
+    similarity_score: float = dspy.OutputField(
+        desc="Similarity score between 0.0 and 1.0, where 1.0 means identical and 0.0 means completely different."
+    )
+
+
 class FewshotExample(pydantic.BaseModel):
     """Few-shot example.
 
@@ -41,6 +56,14 @@ class FewshotExample(pydantic.BaseModel):
         :return: Sequence of field names.
         """
         return ("text",)
+
+    @property
+    @abc.abstractmethod
+    def target_fields(self) -> Sequence[str]:
+        """Define which fields are targets, i.e. the end results the task aims to produce.
+
+        :return: Sequence of field names.
+        """
 
     def to_dspy(self) -> dspy.Example:
         """Convert to `dspy.Example`.
@@ -306,14 +329,63 @@ class PredictiveTask(
         except KeyError as err:
             raise KeyError(f"DSPy bridge not available for task {self.__class__.__name__}.") from err
 
-    @abc.abstractmethod
-    def _evaluate_optimization_example(self, truth: dspy.Example, pred: dspy.Prediction) -> float:
+    def _evaluate_optimization_example(
+        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
+    ) -> float:
         """Evaluate DSPy example for optimization.
+
+        By default this implements an LLM-based evaluation that uses the model that drives optimization to compare
+        results. Where possible this should be replaced by a targeted, deterministic evaluation.
 
         :param truth: Ground truth.
         :param pred: Predicted value.
-        :return: Metric value.
+        :param model: Model used by optimizer.
+        :param trace: Optional trace information.
+        :return: Metric value between 0.0 and 1.0.
+        :raises KeyError: If target fields are missing from truth or prediction.
+        :raises ValueError: If similarity score cannot be parsed from LLM response.
         """
+        target_fields = list(self._fewshot_examples[0].target_fields)
+
+        # Filter truth and pred to only include target fields.
+        truth_filtered: dict[str, Any] = {}
+        for field in target_fields:
+            if field not in truth:
+                raise KeyError(f"Target field '{field}' missing from ground truth example: {dict(truth)}.")
+            truth_filtered[field] = truth[field]
+
+        pred_filtered: dict[str, Any] = {}
+        for field in target_fields:
+            if field not in pred:
+                raise KeyError(f"Target field '{field}' missing from prediction: {dict(pred)}.")
+            pred_filtered[field] = pred[field]
+
+        # Serialize to readable format
+        target_fields_str = ", ".join(target_fields)
+        ground_truth_str = json.dumps(truth_filtered, indent=2, default=str)
+        prediction_str = json.dumps(pred_filtered, indent=2, default=str)
+
+        # Create DSPy evaluator module
+        evaluator = dspy.Predict(EvaluationSignature)
+
+        # Call evaluator with the model
+        with dspy.context(lm=model):
+            result = evaluator(
+                target_fields=target_fields_str,
+                ground_truth=ground_truth_str,
+                prediction=prediction_str,
+            )
+
+        # Parse and validate score
+        try:
+            score = float(result.similarity_score)
+        except (ValueError, AttributeError, TypeError) as err:
+            raise ValueError(
+                f"Failed to parse similarity score from LLM response. Got: {getattr(result, 'similarity_score', None)}"
+            ) from err
+
+        # Clamp to [0, 1].
+        return max(0.0, min(1.0, score))
 
     def optimize(self, optimizer: optimization.Optimizer, verbose: bool = True) -> tuple[str, Sequence[FewshotExample]]:
         """Optimize task prompt and few-shot examples with the available optimization config.
@@ -326,19 +398,18 @@ class PredictiveTask(
 
         :return tuple[str, Sequence[FewshotExample]]: Best found prompt and few-shot examples.
         """
+        assert len(self._fewshot_examples) > 1, "At least two few-shot examples need to be provided to optimize."
+
         # Run optimizer to get best prompt and few-shot examples.
         signature = self._get_task_signature()
         dspy_examples = [ex.to_dspy() for ex in self._fewshot_examples]
+        pred_eval = functools.partial(self._evaluate_optimization_example, model=optimizer.model)
         if verbose:
-            best_prompt, best_examples = optimizer(
-                signature, dspy_examples, self._evaluate_optimization_example, verbose=verbose
-            )
+            best_prompt, best_examples = optimizer(signature, dspy_examples, pred_eval, verbose=verbose)
         else:
             with contextlib.redirect_stdout(None):
                 with contextlib.redirect_stderr(None):
-                    best_prompt, best_examples = optimizer(
-                        signature, dspy_examples, self._evaluate_optimization_example, verbose=verbose
-                    )
+                    best_prompt, best_examples = optimizer(signature, dspy_examples, pred_eval, verbose=verbose)
 
         # Update few-shot examples and prompt instructions.
         fewshot_example_cls = self._fewshot_examples[0].__class__
@@ -350,6 +421,3 @@ class PredictiveTask(
         self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
 
         return best_prompt, self._fewshot_examples
-        # TODO
-        #  - Generalize test structure to other tasks
-        #  - Implement full tests for other tasks

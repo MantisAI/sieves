@@ -70,6 +70,14 @@ class Optimizer:
         return optimized_predictor.signature.instructions, optimized_predictor.demos
 
     @property
+    def model(self) -> dspy.LM:
+        """Return model used for optimization.
+
+        :return dspy.LM: Model used for optimization.
+        """
+        return self._model
+
+    @property
     def _state(self) -> dict[str, Any]:
         """Return attributes to serialize.
 

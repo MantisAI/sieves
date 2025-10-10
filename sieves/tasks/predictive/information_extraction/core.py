@@ -37,6 +37,11 @@ class FewshotExample(BaseFewshotExample):
     reasoning: str
     entities: list[pydantic.BaseModel]
 
+    @override
+    @property
+    def target_fields(self) -> Sequence[str]:
+        return ("entities",)
+
 
 class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     """Information extraction task."""
@@ -175,7 +180,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
     @override
     def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any | None = None
+        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
     ) -> float:
         def entity_to_tuple(entity: dict) -> tuple:
             """Convert entity dict to hashable tuple for comparison.

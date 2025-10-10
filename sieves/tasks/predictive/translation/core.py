@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
-import dspy
 import pydantic
 
 from sieves.data import Doc
@@ -39,6 +38,11 @@ class FewshotExample(BaseFewshotExample):
     @property
     def input_fields(self) -> Sequence[str]:
         return "text", "to"
+
+    @override
+    @property
+    def target_fields(self) -> Sequence[str]:
+        return ("translation",)
 
 
 class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -156,8 +160,4 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         train_kwargs: dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
-        raise NotImplementedError
-
-    @override
-    def _evaluate_optimization_example(self, truth: dspy.Example, pred: dspy.Prediction) -> float:
         raise NotImplementedError
