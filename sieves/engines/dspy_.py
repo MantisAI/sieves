@@ -6,10 +6,13 @@ from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import dspy
+import nest_asyncio
 import pydantic
 
 from sieves.engines.core import Engine, Executable
 from sieves.engines.types import GenerationSettings
+
+nest_asyncio.apply()
 
 PromptSignature = dspy.Signature | dspy.Module
 Model = dspy.LM | dspy.BaseLM
