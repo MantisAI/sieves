@@ -28,7 +28,7 @@ def _model() -> dspy.LM:
     """
     return make_model(EngineType.dspy)
 
-
+@cache
 def _optimizer(model: dspy.LM) -> Optimizer:
     """Return optimizer to use for optimization.
 
