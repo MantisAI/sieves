@@ -1,11 +1,11 @@
 """Tests for task optimization."""
-import os
 from functools import cache
 
 import dspy
 import pydantic
 
 from sieves import GenerationSettings
+from sieves.engines import EngineType
 from sieves.tasks.optimization import Optimizer
 from sieves.tasks.predictive import (
     classification,
@@ -17,6 +17,7 @@ from sieves.tasks.predictive import (
     translation,
     question_answering,
 )
+from sieves.tests.conftest import make_model
 
 
 @cache
@@ -25,13 +26,8 @@ def _model() -> dspy.LM:
 
     :return dspy.LM: Model to use for optimization.
     """
-    model = dspy.LM(
-        f"openai/gpt-4.1-nano",
-        api_base="https://openrouter.ai/api/v1/",
-        api_key=os.environ['OPENROUTER_API_KEY']
-    )
+    return make_model(EngineType.dspy)
 
-    return model
 
 def _optimizer(model: dspy.LM) -> Optimizer:
     """Return optimizer to use for optimization.

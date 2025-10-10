@@ -29,13 +29,13 @@ def tokenizer() -> tokenizers.Tokenizer:
 
 
 @cache
-def _make_model(engine_type: EngineType) -> Model:
+def make_model(engine_type: EngineType) -> Model:
     """Create model.
     :param engine_type: Engine type. to create model for.
     :return Any: Model instance.
     """
     openrouter_api_base = "https://openrouter.ai/api/v1/"
-    openrouter_model_id = "google/gemini-2.5-flash"  # "openai/gpt-4.1-nano"
+    openrouter_model_id = "google/gemini-2.5-flash"
 
     match engine_type:
         case EngineType.dspy:
@@ -44,7 +44,6 @@ def _make_model(engine_type: EngineType) -> Model:
                 api_base=openrouter_api_base,
                 api_key=os.environ['OPENROUTER_API_KEY']
             )
-            # model = dspy.LM("claude-3.5-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
 
         case EngineType.glix:
             model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
@@ -83,7 +82,7 @@ def _make_runtime(engine_type: EngineType, batch_size: int) -> Runtime:
     :param batch_size: Batch size to use in runtime.
     :return: Runtime tuple.
     """
-    return Runtime(_make_model(engine_type), GenerationSettings(), batch_size)
+    return Runtime(make_model(engine_type), GenerationSettings(), batch_size)
 
 
 @pytest.fixture(scope="function")
