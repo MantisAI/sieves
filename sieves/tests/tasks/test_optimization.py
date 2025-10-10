@@ -612,7 +612,12 @@ def test_optimization_summarization(batch_runtime) -> None:
     assert isinstance(task._fewshot_examples, list)
 
 
-def test_optimization_translation() -> None:
+@pytest.mark.parametrize(
+    "batch_runtime",
+    [EngineType.dspy],
+    indirect=True,
+)
+def test_optimization_translation(batch_runtime) -> None:
     """Tests optimization for translation task using LLM-based evaluator."""
     examples = [
         translation.FewshotExample(
