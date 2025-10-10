@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import abc
-import contextlib
 import functools
 import itertools
 import json
+import logging
 import sys
+import warnings
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any, Generic, Self
@@ -404,12 +405,25 @@ class PredictiveTask(
         signature = self._get_task_signature()
         dspy_examples = [ex.to_dspy() for ex in self._fewshot_examples]
         pred_eval = functools.partial(self._evaluate_optimization_example, model=optimizer.model)
+
         if verbose:
             best_prompt, best_examples = optimizer(signature, dspy_examples, pred_eval, verbose=verbose)
         else:
-            with contextlib.redirect_stdout(None):
-                with contextlib.redirect_stderr(None):
+            # Temporarily suppress DSPy logs.
+            dspy_logger = logging.getLogger("dspy")
+            optuna_logger = logging.getLogger("optuna")
+            original_dspy_level = dspy_logger.level
+            original_optuna_level = optuna_logger.level
+
+            try:
+                dspy_logger.setLevel(logging.ERROR)
+                optuna_logger.setLevel(logging.ERROR)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
                     best_prompt, best_examples = optimizer(signature, dspy_examples, pred_eval, verbose=verbose)
+            finally:
+                dspy_logger.setLevel(original_dspy_level)
+                optuna_logger.setLevel(original_optuna_level)
 
         # Update few-shot examples and prompt instructions.
         fewshot_example_cls = self._fewshot_examples[0].__class__

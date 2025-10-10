@@ -3652,18 +3652,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest-ordering"
-version = "0.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pytest" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/ba/65091c36e6e18da479d22d860586e3ba3a4237cc92a66e3ddd945e4fe761/pytest-ordering-0.6.tar.gz", hash = "sha256:561ad653626bb171da78e682f6d39ac33bb13b3e272d406cd555adb6b006bda6", size = 2629, upload-time = "2018-11-14T00:55:26.004Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/98/adc368fe369465f291ab24e18b9900473786ed1afdf861ba90467eb0767e/pytest_ordering-0.6-py3-none-any.whl", hash = "sha256:3f314a178dbeb6777509548727dc69edf22d6d9a2867bf2d310ab85c403380b6", size = 4643, upload-time = "2018-10-25T16:25:18.445Z" },
-]
-
-[[package]]
 name = "python-bidi"
 version = "0.6.6"
 source = { registry = "https://pypi.org/simple" }
@@ -4421,11 +4409,6 @@ test = [
     { name = "pytest-cov" },
 ]
 
-[package.dev-dependencies]
-test = [
-    { name = "pytest-ordering" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "accelerate", marker = "extra == 'engines'", specifier = ">1.2,<2" },
@@ -4462,9 +4445,6 @@ requires-dist = [
     { name = "unstructured-inference", marker = "extra == 'ingestion'", specifier = ">=0.8,<1" },
 ]
 provides-extras = ["ingestion", "engines", "distill", "test"]
-
-[package.metadata.requires-dev]
-test = [{ name = "pytest-ordering", specifier = ">=0.6" }]
 
 [[package]]
 name = "six"

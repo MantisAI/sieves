@@ -1,8 +1,14 @@
 """Tests for task optimization."""
+import functools
+import gc
+import os
+import threading
+
 import dspy
 import pydantic
 import pytest
 
+from sieves import GenerationSettings
 from sieves.engines import EngineType
 from sieves.tasks.optimization import Optimizer
 from sieves.tasks.predictive import (
@@ -16,29 +22,45 @@ from sieves.tasks.predictive import (
     question_answering,
 )
 
+from sieves.tests.conftest import make_model
 
 
-def _optimizer(model: dspy.LM) -> Optimizer:
-    """Return optimizer to use for optimization.
+@pytest.fixture(scope="module")
+def optimizer(request) -> Optimizer:
+    """Return model and optimizer to use for optimization.
 
-    :param model: Model to use for optimization.
-    :return Optimizer: Optimizer to use for optimization.
+    :return: model and optimizer to use for optimization.
     """
-    return Optimizer(
+    model = make_model(EngineType.dspy)
+    optimizer = Optimizer(
         model,
         val_frac=.25,
         shuffle=True,
-        dspy_init_kwargs=dict(auto=None, num_candidates=1, max_errors=3),
-        dspy_compile_kwargs=dict(num_trials=1, minibatch=False)
+        dspy_init_kwargs=dict(
+            auto=None, num_candidates=1, max_bootstrapped_demos=1, max_labeled_demos=1, max_errors=10, num_threads=1
+        ),
+        dspy_compile_kwargs=dict(num_trials=1, minibatch=False),
     )
 
+    return optimizer
 
-@pytest.mark.parametrize(
-    "batch_runtime",
-    [EngineType.dspy],
-    indirect=True,
-)
-def test_optimization_classification(batch_runtime) -> None:
+# @functools.cache
+# def _optimizer(model: dspy.LM) -> Optimizer:
+#     """Return optimizer to use for optimization.
+#
+#     :param model: Model to use for optimization.
+#     :return Optimizer: Optimizer to use for optimization.
+#     """
+#     return Optimizer(
+#         model,
+#         val_frac=.25,
+#         shuffle=True,
+#         dspy_init_kwargs=dict(auto=None, num_candidates=1, max_errors=100, num_threads=1),
+#         dspy_compile_kwargs=dict(num_trials=1, minibatch=True, minibatch_size=1, minibatch_full_eval_steps=10),
+#     )
+
+
+def test_optimization_classification(optimizer) -> None:
     """Tests optimization for classification tasks."""
     rf = 'Is a fruit.'
     rv = 'Is a vegetable.'
@@ -101,18 +123,16 @@ def test_optimization_classification(batch_runtime) -> None:
         multi_label=False,
         labels=["fruit", "vegetable"],
         fewshot_examples=examples_single_label,
-        model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        model=optimizer.model,
+        generation_settings=GenerationSettings(),
     )
     task_multi_label = classification.Classification(
         multi_label=True,
         labels=["comedy", "scifi"],
         fewshot_examples=examples_multi_label,
-        model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        model=optimizer.model,
+        generation_settings=GenerationSettings(),
     )
-
-    optimizer = _optimizer(batch_runtime.model)
 
     # Test evaluation.
     assert task_single_label._evaluate_optimization_example(
@@ -148,12 +168,7 @@ def test_optimization_classification(batch_runtime) -> None:
     assert isinstance(task_multi_label._fewshot_examples, list)
 
 
-@pytest.mark.parametrize(
-    "batch_runtime",
-    [EngineType.dspy],
-    indirect=True,
-)
-def test_optimization_sentiment_analysis(batch_runtime) -> None:
+def test_optimization_sentiment_analysis(optimizer) -> None:
     """Tests optimization for sentiment analysis task."""
     examples = [
         sentiment_analysis.FewshotExample(
@@ -190,12 +205,10 @@ def test_optimization_sentiment_analysis(batch_runtime) -> None:
 
     task = sentiment_analysis.SentimentAnalysis(
         aspects=('quality', 'delivery'),
-        model=batch_runtime.model,
+        model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(),
     )
-
-    optimizer = _optimizer(batch_runtime.model)
 
     # Test evaluation: perfect match
     assert task._evaluate_optimization_example(
@@ -222,12 +235,7 @@ def test_optimization_sentiment_analysis(batch_runtime) -> None:
     assert isinstance(task._fewshot_examples, list)
 
 
-@pytest.mark.parametrize(
-    "batch_runtime",
-    [EngineType.dspy],
-    indirect=True,
-)
-def test_optimization_ner(batch_runtime) -> None:
+def test_optimization_ner(optimizer) -> None:
     """Tests optimization for NER task."""
     examples = [
         ner.FewshotExample(
@@ -273,12 +281,10 @@ def test_optimization_ner(batch_runtime) -> None:
 
     task = ner.NER(
         entities=['PERSON', 'LOCATION'],
-        model=batch_runtime.model,
+        model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(),
     )
-
-    optimizer = _optimizer(batch_runtime.model)
 
     # Test evaluation: perfect match (F1 = 1.0)
     assert task._evaluate_optimization_example(
@@ -324,12 +330,7 @@ def test_optimization_ner(batch_runtime) -> None:
     assert isinstance(task._fewshot_examples, list)
 
 
-@pytest.mark.parametrize(
-    "batch_runtime",
-    [EngineType.dspy],
-    indirect=True,
-)
-def test_optimization_pii_masking(batch_runtime) -> None:
+def test_optimization_pii_masking(optimizer) -> None:
     """Tests optimization for PII masking task."""
     examples = [
         pii_masking.FewshotExample(
@@ -384,12 +385,10 @@ def test_optimization_pii_masking(batch_runtime) -> None:
 
     task = pii_masking.PIIMasking(
         pii_types=['NAME', 'EMAIL'],
-        model=batch_runtime.model,
+        model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(),
     )
-
-    optimizer = _optimizer(batch_runtime.model)
 
     # Test evaluation: perfect match (F1 = 1.0)
     assert task._evaluate_optimization_example(
@@ -435,12 +434,7 @@ def test_optimization_pii_masking(batch_runtime) -> None:
     assert isinstance(task._fewshot_examples, list)
 
 
-@pytest.mark.parametrize(
-    "batch_runtime",
-    [EngineType.dspy],
-    indirect=True,
-)
-def test_optimization_information_extraction(batch_runtime) -> None:
+def test_optimization_information_extraction(optimizer) -> None:
     """Tests optimization for information extraction task."""
     # Define entity type for extraction
     class Person(pydantic.BaseModel, frozen=True):
@@ -487,12 +481,10 @@ def test_optimization_information_extraction(batch_runtime) -> None:
 
     task = information_extraction.InformationExtraction(
         entity_type=Person,
-        model=batch_runtime.model,
+        model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(),
     )
-
-    optimizer = _optimizer(batch_runtime.model)
 
     # Test evaluation: perfect match (F1 = 1.0)
     assert task._evaluate_optimization_example(
@@ -538,12 +530,7 @@ def test_optimization_information_extraction(batch_runtime) -> None:
     assert isinstance(task._fewshot_examples, list)
 
 
-@pytest.mark.parametrize(
-    "batch_runtime",
-    [EngineType.dspy],
-    indirect=True,
-)
-def test_optimization_summarization(batch_runtime) -> None:
+def test_optimization_summarization(optimizer) -> None:
     """Tests optimization for summarization task using LLM-based evaluator."""
     examples = [
         summarization.FewshotExample(
@@ -589,12 +576,10 @@ def test_optimization_summarization(batch_runtime) -> None:
 
     task = summarization.Summarization(
         n_words=30,
-        model=batch_runtime.model,
+        model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(),
     )
-
-    optimizer = _optimizer(batch_runtime.model)
 
     # Test LLM-based evaluation (no hardcoded scores since it uses LLM)
     # Just verify it runs and returns a score between 0 and 1
@@ -612,12 +597,7 @@ def test_optimization_summarization(batch_runtime) -> None:
     assert isinstance(task._fewshot_examples, list)
 
 
-@pytest.mark.parametrize(
-    "batch_runtime",
-    [EngineType.dspy],
-    indirect=True,
-)
-def test_optimization_translation(batch_runtime) -> None:
+def test_optimization_translation(optimizer) -> None:
     """Tests optimization for translation task using LLM-based evaluator."""
     examples = [
         translation.FewshotExample(
@@ -654,12 +634,10 @@ def test_optimization_translation(batch_runtime) -> None:
 
     task = translation.Translation(
         to='Spanish',
-        model=batch_runtime.model,
+        model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(),
     )
-
-    optimizer = _optimizer(batch_runtime.model)
 
     # Test LLM-based evaluation
     score = task._evaluate_optimization_example(
@@ -676,12 +654,7 @@ def test_optimization_translation(batch_runtime) -> None:
     assert isinstance(task._fewshot_examples, list)
 
 
-@pytest.mark.parametrize(
-    "batch_runtime",
-    [EngineType.dspy],
-    indirect=True,
-)
-def test_optimization_question_answering(batch_runtime) -> None:
+def test_optimization_question_answering(optimizer) -> None:
     """Tests optimization for question answering task using LLM-based evaluator."""
     questions = ['What is the main topic?', 'Who are the key people mentioned?']
 
@@ -728,12 +701,10 @@ def test_optimization_question_answering(batch_runtime) -> None:
 
     task = question_answering.QuestionAnswering(
         questions=questions,
-        model=batch_runtime.model,
+        model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(),
     )
-
-    optimizer = _optimizer(batch_runtime.model)
 
     # Test LLM-based evaluation
     score = task._evaluate_optimization_example(

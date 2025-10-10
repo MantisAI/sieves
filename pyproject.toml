@@ -17,7 +17,7 @@ dependencies = [
     "outlines>=1,<2",
     "dspy-ai>=2,<3",
     "dspy>=2,<3",
-    "pydantic>=2,<3"
+    "pydantic>=2,<3",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
