@@ -8,7 +8,6 @@ import enum
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Sequence
 from typing import Any, Generic, Protocol, TypeVar, override
 
-import instructor.exceptions
 import jinja2
 import pydantic
 
@@ -164,14 +163,9 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         try:
             yield from generator([template.render(**doc_values, **examples) for doc_values in values])
 
-        except (
-            TypeError,
-            pydantic.ValidationError,
-            instructor.exceptions.InstructorRetryException,
-            instructor.exceptions.IncompleteOutputException,
-        ) as err:
+        except Exception as err:
             if self._strict_mode:
-                raise ValueError(
+                raise type(err)(
                     "Encountered problem when executing prompt. Ensure your few-shot examples and document "
                     "chunks contain sensible information."
                 ) from err

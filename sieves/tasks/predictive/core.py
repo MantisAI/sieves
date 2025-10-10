@@ -328,12 +328,14 @@ class PredictiveTask(
 
         # Update few-shot examples and prompt instructions.
         self._fewshot_examples = [fewshot_example_cls.from_dspy(ex) for ex in best_examples]
+        self._validate_fewshot_examples()
         self._custom_prompt_instructions = best_prompt
 
-        #
+        # Reinitialize bridge to use new prompt and few-shot examples.
+        self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
 
         # TODO
-        #  - Reinit bridge
         #  - Reshape into final test structure
         #  - Generalize test structure to other tasks
+        #  - Implement eval scores for tasks
         #  - Implement full tests for other tasks

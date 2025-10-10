@@ -180,4 +180,12 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
 
     @override
     def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
-        raise NotImplementedError
+        # Compute per-aspect accuracy as 1 - abs(true_sentiment - pred_sentiment)
+        # Average across all aspects (same approach as multi-label classification)
+        accuracy = 0
+        for aspect, sentiment in example["sentiment_per_aspect"].items():
+            if aspect in pred["sentiment_per_aspect"]:
+                pred_sentiment = max(min(pred["sentiment_per_aspect"][aspect], 1), 0)
+                accuracy += 1 - abs(sentiment - pred_sentiment)
+
+        return accuracy / len(example["sentiment_per_aspect"])

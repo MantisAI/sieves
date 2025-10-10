@@ -167,4 +167,13 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
 
     @override
     def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
-        raise NotImplementedError
+        # Compute entity detection F1 score based on (entity_type, text) pairs
+        true_entities = {(e["entity_type"], e["text"]) for e in example["pii_entities"]}
+        pred_entities = {(e["entity_type"], e["text"]) for e in pred.get("pii_entities", [])}
+
+        if not true_entities:
+            return 1.0 if not pred_entities else 0.0
+
+        precision = len(true_entities & pred_entities) / len(pred_entities) if pred_entities else 0
+        recall = len(true_entities & pred_entities) / len(true_entities)
+        return 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0

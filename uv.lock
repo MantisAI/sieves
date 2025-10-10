@@ -1765,20 +1765,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-anthropic"
-version = "0.3.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anthropic" },
-    { name = "langchain-core" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/70/b0/84cfe0b4b829bcdc99fbb1a06973a6f3109b4e326292cdf5fa46f88dbf2f/langchain_anthropic-0.3.7.tar.gz", hash = "sha256:534cd1867bc41711cd8c3d0a0bc055e6c5a4215953c87260209a90dc5816f30d", size = 39838, upload-time = "2025-02-06T22:12:55.313Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f3/b3/111e1f41b0044687ec0c34c921ad52d33d2802282b1bc45343d5dd923fb6/langchain_anthropic-0.3.7-py3-none-any.whl", hash = "sha256:adec0a1daabd3c25249753c6cd625654917fb9e3feee68e72c7dc3f4449c0f3c", size = 22998, upload-time = "2025-02-06T22:12:51.94Z" },
-]
-
-[[package]]
 name = "langchain-community"
 version = "0.3.31"
 source = { registry = "https://pypi.org/simple" }
@@ -1817,19 +1803,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a8/04/0035bd1df8d0fb534afceabe3ba0a87c5af8c5020177650e9aa79aca3495/langchain_core-0.3.78.tar.gz", hash = "sha256:a174a2061f8659b916fd2b1c7d174b3ddd07be7ca45a07aaec442696df5101b6", size = 580473, upload-time = "2025-10-03T16:52:37.025Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9c/a7/ff35c108c4863c1bb99724a4253ff2324aea5789d689dd59424c07df1199/langchain_core-0.3.78-py3-none-any.whl", hash = "sha256:dafc4f7e9fd008f680bf0ffe5904dbaa45992abdb92627b68eccb7b4089cbbf0", size = 449610, upload-time = "2025-10-03T16:52:35.428Z" },
-]
-
-[[package]]
-name = "langchain-ollama"
-version = "0.3.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "ollama" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/73/c9/ff996fc5fa2d8d23136f07c56e88a1013fe1e03a35ef3e65899baa73c49e/langchain_ollama-0.3.10.tar.gz", hash = "sha256:5d942d331c44351bae5c5c5965603ceb20b0ee4d70082290f4b15bc638559756", size = 35771, upload-time = "2025-10-02T15:53:20.974Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4b/f2/d87767a106021206fb53faf7ae4517d365d353dc29a1649b9f3e47eef940/langchain_ollama-0.3.10-py3-none-any.whl", hash = "sha256:7550792872e8f86d362568e9ceb0f8085428bc59946c7b44e726358ba4b280f9", size = 27646, upload-time = "2025-10-02T15:53:19.89Z" },
 ]
 
 [[package]]
@@ -2788,19 +2761,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/69/1b/077b508e3e500e1629d366249c3ccb32f95e50258b231705c09e3c7a4366/olefile-0.47.zip", hash = "sha256:599383381a0bf3dfbd932ca0ca6515acd174ed48870cbf7fee123d698c192c1c", size = 112240, upload-time = "2023-12-01T16:22:53.025Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/17/d3/b64c356a907242d719fc668b71befd73324e47ab46c8ebbbede252c154b2/olefile-0.47-py2.py3-none-any.whl", hash = "sha256:543c7da2a7adadf21214938bb79c83ea12b473a4b6ee4ad4bf854e7715e13d1f", size = 114565, upload-time = "2023-12-01T16:22:51.518Z" },
-]
-
-[[package]]
-name = "ollama"
-version = "0.6.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d6/47/f9ee32467fe92744474a8c72e138113f3b529fc266eea76abfdec9a33f3b/ollama-0.6.0.tar.gz", hash = "sha256:da2b2d846b5944cfbcee1ca1e6ee0585f6c9d45a2fe9467cbcd096a37383da2f", size = 50811, upload-time = "2025-09-24T22:46:02.417Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/c1/edc9f41b425ca40b26b7c104c5f6841a4537bb2552bfa6ca66e81405bb95/ollama-0.6.0-py3-none-any.whl", hash = "sha256:534511b3ccea2dff419ae06c3b58d7f217c55be7897c8ce5868dfb6b219cf7a0", size = 14130, upload-time = "2025-09-24T22:46:01.19Z" },
 ]
 
 [[package]]
@@ -4410,7 +4370,6 @@ dependencies = [
     { name = "dspy" },
     { name = "dspy-ai" },
     { name = "jinja2" },
-    { name = "langchain-openai" },
     { name = "loguru" },
     { name = "outlines" },
     { name = "pydantic" },
@@ -4439,18 +4398,15 @@ ingestion = [
 ]
 test = [
     { name = "anthropic" },
-    { name = "langchain-anthropic" },
     { name = "langchain-community" },
-    { name = "langchain-ollama" },
+    { name = "langchain-openai" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "mypy" },
     { name = "mypy-extensions" },
-    { name = "ollama" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "tesseract" },
 ]
 
 [package.metadata]
@@ -4465,11 +4421,9 @@ requires-dist = [
     { name = "gliner", marker = "extra == 'engines'", specifier = "<1" },
     { name = "jinja2", specifier = ">=3,<4" },
     { name = "langchain", marker = "extra == 'engines'", specifier = ">=0.3,<0.4" },
-    { name = "langchain-anthropic", marker = "extra == 'test'", specifier = ">0.3,<0.4" },
     { name = "langchain-community", marker = "extra == 'test'", specifier = ">=0.3.31,<0.4" },
     { name = "langchain-core", marker = "extra == 'engines'", specifier = ">=0.3,<0.4" },
-    { name = "langchain-ollama", marker = "extra == 'test'", specifier = ">=0.3,<0.4" },
-    { name = "langchain-openai", specifier = ">=0.3.35" },
+    { name = "langchain-openai", marker = "extra == 'test'", specifier = ">=0.3.35" },
     { name = "loguru", specifier = ">=0.7,<1" },
     { name = "marker-pdf", extras = ["full"], marker = "extra == 'ingestion'", specifier = ">=1.6.1,<2" },
     { name = "mkdocs-material", marker = "extra == 'test'", specifier = ">=9.6,<10" },
@@ -4479,7 +4433,6 @@ requires-dist = [
     { name = "mypy-extensions", marker = "extra == 'test'", specifier = ">=1" },
     { name = "nest-asyncio", marker = "extra == 'engines'", specifier = ">=1,<2" },
     { name = "nltk", marker = "extra == 'ingestion'", specifier = ">=3.9.1" },
-    { name = "ollama", marker = "extra == 'test'", specifier = ">=0.4,<1" },
     { name = "outlines", specifier = ">=1,<2" },
     { name = "pre-commit", marker = "extra == 'test'", specifier = ">=4,<5" },
     { name = "pydantic", specifier = ">=2,<3" },
@@ -4487,7 +4440,6 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6" },
     { name = "sentencepiece", marker = "extra == 'engines'", specifier = "<1" },
     { name = "setfit", marker = "extra == 'distill'", specifier = ">=1.1,<2" },
-    { name = "tesseract", marker = "extra == 'test'", specifier = ">=0.1,<1" },
     { name = "transformers", marker = "extra == 'engines'", specifier = ">=4,<5" },
     { name = "unstructured", extras = ["all-docs"], marker = "extra == 'ingestion'", specifier = ">=0.16,<1" },
     { name = "unstructured-inference", marker = "extra == 'ingestion'", specifier = ">=0.8,<1" },
@@ -4619,12 +4571,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/a3/4d/6a19536c50b849338
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/3f/8ba87d9e287b9d385a02a7114ddcef61b26f86411e121c9003eb509a1773/tenacity-8.5.0-py3-none-any.whl", hash = "sha256:b594c2a5945830c267ce6b79a166228323ed52718f30302c1359836112346687", size = 28165, upload-time = "2024-07-05T07:25:29.591Z" },
 ]
-
-[[package]]
-name = "tesseract"
-version = "0.1.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8d/b7/c4fae9af5842f69d9c45bf1195a94aec090628535c102894552a7a7dbe6c/tesseract-0.1.3.tar.gz", hash = "sha256:4ab908f06ff15b60959ed0f200bddf8309ed02e6435ddc29445961cf8e3f5365", size = 45555135, upload-time = "2015-07-13T21:21:24.512Z" }
 
 [[package]]
 name = "threadpoolctl"

@@ -175,4 +175,24 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
     @override
     def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
-        raise NotImplementedError
+        def entity_to_tuple(entity: dict) -> tuple:
+            """Convert entity dict to hashable tuple for comparison.
+
+            Converts nested structures (lists, dicts) to strings to make them hashable.
+
+            :param entity: Entity dictionary to convert.
+            :return: Hashable tuple representation of the entity.
+            """
+            items = sorted(entity.items())
+            return tuple((k, v if not isinstance(v | list, dict) else str(v)) for k, v in items)
+
+        # Compute set-based F1 score for entity extraction
+        true_entities = {entity_to_tuple(e) for e in example["entities"]}
+        pred_entities = {entity_to_tuple(e) for e in pred.get("entities", [])}
+
+        if not true_entities:
+            return 1.0 if not pred_entities else 0.0
+
+        precision = len(true_entities & pred_entities) / len(pred_entities) if pred_entities else 0
+        recall = len(true_entities & pred_entities) / len(true_entities)
+        return 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0

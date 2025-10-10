@@ -41,8 +41,8 @@ class Optimizer:
         self._val_frac = val_frac
         self._seed = seed
         self._shuffle = shuffle
-        self._init_kwargs = dspy_init_kwargs
-        self._compile_kwargs = dspy_compile_kwargs
+        self._init_kwargs = dspy_init_kwargs or {}
+        self._compile_kwargs = {"requires_permission_to_run": False} | (dspy_compile_kwargs or {})
 
     def __call__(
         self, signature: type[dspy.Signature] | type[dspy.Module], data: list[dspy.Example], evaluate: EvalMetric

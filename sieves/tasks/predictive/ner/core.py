@@ -228,4 +228,13 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
 
     @override
     def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
-        raise NotImplementedError
+        # Compute entity-level F1 score based on (text, entity_type) pairs
+        true_entities = {(e["text"], e["entity_type"]) for e in example["entities"]}
+        pred_entities = {(e["text"], e["entity_type"]) for e in pred.get("entities", [])}
+
+        if not true_entities:
+            return 1.0 if not pred_entities else 0.0
+
+        precision = len(true_entities & pred_entities) / len(pred_entities) if pred_entities else 0
+        recall = len(true_entities & pred_entities) / len(true_entities)
+        return 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0

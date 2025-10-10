@@ -3,7 +3,6 @@
 import asyncio
 import enum
 from collections.abc import Iterable, Sequence
-from json import JSONDecodeError
 from typing import Any, override
 
 import langchain_core.language_models
@@ -66,11 +65,11 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                                 context_call = asyncio.run
                             yield from context_call(model.abatch(prompts, **self._inference_kwargs))
 
-                        except (pydantic.ValidationError, JSONDecodeError) as ex:
-                            raise pydantic.ValidationError(
+                        except Exception as err:
+                            raise type(err)(
                                 f"Encountered problem in parsing {cls_name} output. Double-check your prompts and "
                                 f"examples."
-                            ) from ex
+                            ) from err
 
                     generator = generate
                 case _:

@@ -101,9 +101,9 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                 calls = [generator_async(**doc_values, **self._inference_kwargs) for doc_values in values]
                 yield from asyncio.run(self._execute_async_calls(calls))
 
-            except ValueError as err:
+            except Exception as err:
                 if self._strict_mode:
-                    raise ValueError(
+                    raise type(err)(
                         "Encountered problem when executing prompt. Ensure your few-shot examples and document "
                         "chunks contain sensible information."
                     ) from err

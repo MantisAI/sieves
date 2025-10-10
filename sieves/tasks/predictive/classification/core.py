@@ -411,10 +411,15 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
     @override
     def _evaluate_optimization_example(self, example: dspy.Example, pred: dspy.Prediction) -> float:
         if not self._multi_label:
-            if example["label"] == pred["label"]:
-                return (1 + pred["confidence"]) / 2
-            else:
-                return (1 - pred["confidence"]) / 2
+            return pred["confidence"] if example["label"] == pred["label"] else 0
 
-        else:
-            return 0
+        # For multi-label: compute label-wise accuracy as
+        # 1 - abs(true confidence for label - predicted confidence for label)
+        # and normalize the sum of label-wise accuracies over all labels.
+        accuracy = 0
+        for label, confidence in example["confidence_per_label"].items():
+            if label in pred["confidence_per_label"]:
+                pred_confidence = max(min(pred["confidence_per_label"][label], 1), 0)
+                accuracy += 1 - abs(confidence - pred_confidence)
+
+        return accuracy / len(example["confidence_per_label"])

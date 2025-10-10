@@ -64,10 +64,12 @@ except ModuleNotFoundError:
     Outlines = MissingEngine  # type: ignore[misc,assignment]
     _missing_dependencies.append("outlines")
 
-warnings.warn(
-    "Warning: structured generation dependencies [{deps}] could not be imported. Generating with them requires them to"
-    " be installed.".format(deps=", ".join(_missing_dependencies))
-)
+
+if len(_missing_dependencies):
+    warnings.warn(
+        "Warning: structured generation dependencies [{deps}] could not be imported. Generating with them requires them"
+        " to be installed.".format(deps=", ".join(_missing_dependencies))
+    )
 
 
 __all__ = [
