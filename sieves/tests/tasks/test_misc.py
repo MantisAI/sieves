@@ -174,9 +174,10 @@ def test_pydantic_to_hf() -> None:
     assert features["c"].dtype == "string"
     assert all([name in features["b"].feature for name in ("key", "value")])
     dataset = datasets.Dataset.from_list(
-        [PydanticToHFDatasets.model_to_dict(WithDict(a=1, b={"blub": 2, "blab": 3}, c={"blib": 4}))], features=features
+        [PydanticToHFDatasets.model_to_dict(WithDict(a=1, b={"blub": 2, "blab": 3}, c={"blib": 4}))],
+        features=features
     )
-    assert list(dataset)[0] == {"a": 1, "b": {"key": ["blub", "blab"], "value": [2, 3]}, "c": "{'blib': 4}"}
+    assert list(dataset)[0] == {'a': 1, 'b': {'key': ['blub', 'blab'], 'value': [2, 3]}, 'c': "{'blib': 4}"}
 
     # With nested Pydantic models.
 

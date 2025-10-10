@@ -10,7 +10,7 @@ license = { text = "MIT" }
 dynamic = ["version", "authors"]
 requires-python = ">=3.12"
 dependencies = [
-    "chonkie>=0.3,<1",
+    "chonkie>=1,<2",
     "datasets>=3,<4",
     "jinja2>=3,<4",
     "loguru>=0.7,<1",
@@ -42,6 +42,7 @@ engines = [
     "gliner<1",
     "langchain-core>=0.3,<0.4",
     "langchain>=0.3,<0.4",
+    "nest-asyncio>=1,<2",
     "sentencepiece<1",
     "transformers>=4,<5",
 ]
@@ -57,6 +58,9 @@ test = [
     "pytest-cov>=6",
     "anthropic>=0.45,<1",
     "langchain-anthropic>0.3,<0.4",
+    "ollama>=0.4,<1",
+    "langchain-community>=0.3.31,<0.4",
+    "langchain-ollama>=0.3,<0.4",
     "tesseract>=0.1,<1",
     # For generating documentation.
     "mkdocstrings[python]>=0.27,<1",
