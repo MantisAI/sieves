@@ -15,39 +15,6 @@ from sieves.tasks.predictive import (
     translation,
     question_answering,
 )
-from sieves.tests.conftest import make_model
-
-# Import DSPy global state for cleanup
-try:
-    from dspy.clients.base_lm import GLOBAL_HISTORY
-except ImportError:
-    # Fallback for older DSPy versions
-    GLOBAL_HISTORY = None
-
-
-@pytest.fixture(scope="module", autouse=True)
-def cleanup_dspy_state():
-    """Clear DSPy global state before and after optimization tests.
-
-    This prevents test pollution and hanging issues caused by accumulated
-    global state in DSPy's GLOBAL_HISTORY singleton and settings.
-
-    Following pattern from DSPy's own test suite:
-    https://github.com/stanfordnlp/dspy/blob/main/tests/conftest.py
-    """
-    # Clear before tests
-    if GLOBAL_HISTORY is not None:
-        GLOBAL_HISTORY.clear()
-
-    yield
-
-    # Clear after tests to prevent CI hang
-    if GLOBAL_HISTORY is not None:
-        GLOBAL_HISTORY.clear()
-
-    # Also clear any lingering LM configuration
-    if hasattr(dspy, 'settings') and hasattr(dspy.settings, 'lm'):
-        dspy.settings.lm = None
 
 
 def _optimizer(model: dspy.LM) -> Optimizer:
@@ -65,6 +32,7 @@ def _optimizer(model: dspy.LM) -> Optimizer:
     )
 
 
+@pytest.mark.run(order=-1)
 @pytest.mark.parametrize(
     "batch_runtime",
     [EngineType.dspy],
