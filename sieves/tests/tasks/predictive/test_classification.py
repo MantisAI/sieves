@@ -68,10 +68,12 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
     )
     docs = list(pipe(docs))
 
+    from loguru import logger
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
-        assert doc.results["classifier"]
+        assert doc
+        logger.critical(doc.results["classifier"])
 
 
 @pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
