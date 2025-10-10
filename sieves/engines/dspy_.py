@@ -1,11 +1,12 @@
 """DSPy engine integration for Sieves."""
 
+import asyncio
 import enum
-import os
 from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import dspy
+import nest_asyncio
 import pydantic
 
 from sieves.engines.core import Engine, Executable
@@ -14,6 +15,9 @@ from sieves.engines.types import GenerationSettings
 PromptSignature = dspy.Signature | dspy.Module
 Model = dspy.LM | dspy.BaseLM
 Result = dspy.Prediction
+
+
+nest_asyncio.apply()
 
 
 class InferenceMode(enum.Enum):
@@ -97,13 +101,9 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
                 generator_fewshot = dspy.LabeledFewShot(k=len(examples)).compile(student=generator, trainset=examples)
 
             try:
-                examples = [dspy.Example(**doc_values).with_inputs(*doc_values.keys()) for doc_values in values]
-                n_threads = min(os.cpu_count() or 1, len(examples))
-                yield from (generator_fewshot or generator).batch(
-                    examples,
-                    max_errors=0 if self._strict_mode else float("inf"),
-                    **({"disable_progress_bar": True, "num_threads": n_threads} | self._inference_kwargs),
-                )
+                gen = generator_fewshot or generator
+                calls = [gen.acall(**doc_values, **self._inference_kwargs) for doc_values in values]
+                yield from asyncio.run(self._execute_async_calls(calls))
 
             except Exception as err:
                 if self._strict_mode:

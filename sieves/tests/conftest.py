@@ -35,16 +35,15 @@ def make_model(engine_type: EngineType) -> Model:
     :return Any: Model instance.
     """
     openrouter_api_base = "https://openrouter.ai/api/v1/"
-    openrouter_model_id = "google/gemini-2.5-flash"
+    openrouter_model_id = "google/gemini-2.5-flash-lite-preview-09-2025"
 
     match engine_type:
         case EngineType.dspy:
-            model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
-            # model = dspy.LM(
-            #     f"openrouter/{openrouter_model_id}",
-            #     api_base=openrouter_api_base,
-            #     api_key=os.environ['OPENROUTER_API_KEY']
-            # )
+            model = dspy.LM(
+                f"openrouter/{openrouter_model_id}",
+                api_base=openrouter_api_base,
+                api_key=os.environ['OPENROUTER_API_KEY']
+            )
 
         case EngineType.glix:
             model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
