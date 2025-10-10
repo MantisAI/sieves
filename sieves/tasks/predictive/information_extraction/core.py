@@ -186,7 +186,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             :return: Hashable tuple representation of the entity.
             """
             items = sorted(entity.items())
-            return tuple((k, v if not isinstance(v | list, dict) else str(v)) for k, v in items)
+            return tuple((k, v if not (isinstance(v, list) or isinstance(v, dict)) else str(v)) for k, v in items)
 
         # Compute set-based F1 score for entity extraction
         true_entities = {entity_to_tuple(e) for e in truth["entities"]}

@@ -3,12 +3,13 @@ import os
 from functools import cache
 
 import dspy
+import pydantic
 from loguru import logger
 
 from sieves import GenerationSettings
 from sieves.engines import EngineType
 from sieves.tasks.optimization import Optimizer
-from sieves.tasks.predictive import classification
+from sieves.tasks.predictive import classification, sentiment_analysis, ner, pii_masking, information_extraction
 
 
 @cache
@@ -25,6 +26,20 @@ def _model() -> dspy.LM:
     # model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
 
     return model
+
+def _optimizer(model: dspy.LM) -> Optimizer:
+    """Return optimizer to use for optimization.
+
+    :param model: Model to use for optimization.
+    :return Optimizer: Optimizer to use for optimization.
+    """
+    return Optimizer(
+        model,
+        val_frac=.25,
+        shuffle=True,
+        dspy_init_kwargs=dict(auto=None, num_candidates=2, max_errors=3),
+        dspy_compile_kwargs=dict(num_trials=1, minibatch=False)
+    )
 
 
 def test_optimization_classification() -> None:
@@ -103,13 +118,7 @@ def test_optimization_classification() -> None:
         generation_settings=GenerationSettings(),
     )
 
-    optimizer = Optimizer(
-        model,
-        val_frac=.25,
-        shuffle=True,
-        dspy_init_kwargs=dict(auto=None, num_candidates=2, max_errors=3),
-        dspy_compile_kwargs=dict(num_trials=1, minibatch=False)
-    )
+    optimizer = _optimizer(model)
 
     # Test evaluation.
     assert task_single_label._evaluate_optimization_example(
@@ -139,3 +148,369 @@ def test_optimization_classification() -> None:
     assert task_multi_label._custom_prompt_instructions == best_prompt
     assert task_multi_label._bridge._prompt_instructions == best_prompt
     assert isinstance(task_multi_label._fewshot_examples, list)
+
+
+def test_optimization_sentiment_analysis() -> None:
+    """Tests optimization for sentiment analysis task."""
+    model = _model()
+
+    examples = [
+        sentiment_analysis.FewshotExample(
+            text='Great product, excellent quality and fast shipping!',
+            reasoning='Very positive review praising both product and service.',
+            sentiment_per_aspect={'overall': 0.95, 'quality': 0.9, 'delivery': 0.95}
+        ),
+        sentiment_analysis.FewshotExample(
+            text='Terrible quality, arrived damaged and late.',
+            reasoning='Very negative review criticizing quality and delivery.',
+            sentiment_per_aspect={'overall': 0.1, 'quality': 0.05, 'delivery': 0.15}
+        ),
+        sentiment_analysis.FewshotExample(
+            text='Decent product but shipping was slow.',
+            reasoning='Mixed review with average product quality and poor delivery.',
+            sentiment_per_aspect={'overall': 0.5, 'quality': 0.6, 'delivery': 0.3}
+        ),
+        sentiment_analysis.FewshotExample(
+            text='Amazing quality! Worth every penny.',
+            reasoning='Very positive review focused on quality.',
+            sentiment_per_aspect={'overall': 0.95, 'quality': 1.0, 'delivery': 0.5}
+        ),
+        sentiment_analysis.FewshotExample(
+            text='Not great, not terrible. Just okay.',
+            reasoning='Neutral review with average sentiment.',
+            sentiment_per_aspect={'overall': 0.5, 'quality': 0.5, 'delivery': 0.5}
+        ),
+        sentiment_analysis.FewshotExample(
+            text='Quick delivery but product quality is poor.',
+            reasoning='Mixed review with good delivery but bad quality.',
+            sentiment_per_aspect={'overall': 0.4, 'quality': 0.2, 'delivery': 0.8}
+        ),
+    ]
+
+    task = sentiment_analysis.SentimentAnalysis(
+        aspects=('quality', 'delivery'),
+        model=model,
+        fewshot_examples=examples,
+        generation_settings=GenerationSettings(),
+    )
+
+    optimizer = _optimizer(model)
+
+    # Test evaluation: perfect match
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
+        pred=dspy.Prediction(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
+    ) == 1.0
+
+    # Test evaluation: partial match (MAE-based accuracy)
+    # |0.8-0.6| = 0.2, |0.7-0.5| = 0.2, |0.9-0.8| = 0.1
+    # Accuracy per aspect: (1-0.2) + (1-0.2) + (1-0.1) = 0.8 + 0.8 + 0.9 = 2.5
+    # Average: 2.5 / 3 ≈ 0.833
+    score = task._evaluate_optimization_example(
+        truth=dspy.Example(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
+        pred=dspy.Prediction(text='', reasoning='', sentiment_per_aspect={'overall': 0.6, 'quality': 0.5, 'delivery': 0.8}),
+    )
+    assert abs(score - 0.833) < 0.01
+
+    # Smoke-test optimization
+    best_prompt, best_examples = task.optimize(optimizer, verbose=False)
+    assert task._custom_prompt_instructions == best_prompt
+    assert task._bridge._prompt_instructions == best_prompt
+    assert isinstance(task._fewshot_examples, list)
+
+
+def test_optimization_ner() -> None:
+    """Tests optimization for NER task."""
+    model = _model()
+
+    examples = [
+        ner.FewshotExample(
+            text='John Smith visited Paris last week.',
+            entities=[
+                ner.Entity(text='John Smith', context='visited Paris', entity_type='PERSON'),
+                ner.Entity(text='Paris', context='John Smith visited', entity_type='LOCATION'),
+            ]
+        ),
+        ner.FewshotExample(
+            text='Apple CEO Tim Cook announced new products.',
+            entities=[
+                ner.Entity(text='Tim Cook', context='Apple CEO', entity_type='PERSON'),
+            ]
+        ),
+        ner.FewshotExample(
+            text='The meeting in London was attended by Sarah Johnson.',
+            entities=[
+                ner.Entity(text='London', context='meeting in', entity_type='LOCATION'),
+                ner.Entity(text='Sarah Johnson', context='attended by', entity_type='PERSON'),
+            ]
+        ),
+        ner.FewshotExample(
+            text='Berlin is the capital of Germany.',
+            entities=[
+                ner.Entity(text='Berlin', context='capital of Germany', entity_type='LOCATION'),
+            ]
+        ),
+        ner.FewshotExample(
+            text='Maria Rodriguez traveled to Tokyo.',
+            entities=[
+                ner.Entity(text='Maria Rodriguez', context='traveled to Tokyo', entity_type='PERSON'),
+                ner.Entity(text='Tokyo', context='Maria Rodriguez traveled', entity_type='LOCATION'),
+            ]
+        ),
+        ner.FewshotExample(
+            text='The conference in New York was successful.',
+            entities=[
+                ner.Entity(text='New York', context='conference in', entity_type='LOCATION'),
+            ]
+        ),
+    ]
+
+    task = ner.NER(
+        entities=['PERSON', 'LOCATION'],
+        model=model,
+        fewshot_examples=examples,
+        generation_settings=GenerationSettings(),
+    )
+
+    optimizer = _optimizer(model)
+
+    # Test evaluation: perfect match (F1 = 1.0)
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', entities=[
+            {'text': 'Alice', 'entity_type': 'PERSON'},
+            {'text': 'Boston', 'entity_type': 'LOCATION'},
+        ]),
+        pred=dspy.Prediction(text='', entities=[
+            {'text': 'Alice', 'entity_type': 'PERSON'},
+            {'text': 'Boston', 'entity_type': 'LOCATION'},
+        ]),
+    ) == 1.0
+
+    # Test evaluation: partial match (precision=0.5, recall=0.5, F1=0.5)
+    # True: {('Alice', 'PERSON'), ('Boston', 'LOCATION')}
+    # Pred: {('Alice', 'PERSON'), ('Chicago', 'LOCATION')}
+    # Intersection: {('Alice', 'PERSON')} = 1
+    # Precision: 1/2 = 0.5, Recall: 1/2 = 0.5, F1: 0.5
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', entities=[
+            {'text': 'Alice', 'entity_type': 'PERSON'},
+            {'text': 'Boston', 'entity_type': 'LOCATION'},
+        ]),
+        pred=dspy.Prediction(text='', entities=[
+            {'text': 'Alice', 'entity_type': 'PERSON'},
+            {'text': 'Chicago', 'entity_type': 'LOCATION'},
+        ]),
+    ) == 0.5
+
+    # Test evaluation: no entities in truth (empty case)
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', entities=[]),
+        pred=dspy.Prediction(text='', entities=[]),
+    ) == 1.0
+
+    # Smoke-test optimization
+    best_prompt, best_examples = task.optimize(optimizer, verbose=False)
+    assert task._custom_prompt_instructions == best_prompt
+    assert task._bridge._prompt_instructions == best_prompt
+    assert isinstance(task._fewshot_examples, list)
+
+
+def test_optimization_pii_masking() -> None:
+    """Tests optimization for PII masking task."""
+    model = _model()
+
+    examples = [
+        pii_masking.FewshotExample(
+            text='Please contact John Doe at john.doe@email.com for more information.',
+            reasoning='Contains a person name and email address that should be masked.',
+            masked_text='Please contact [MASKED] at [MASKED] for more information.',
+            pii_entities=[
+                pii_masking.PIIEntity(entity_type='NAME', text='John Doe'),
+                pii_masking.PIIEntity(entity_type='EMAIL', text='john.doe@email.com'),
+            ]
+        ),
+        pii_masking.FewshotExample(
+            text='Send the report to alice.smith@company.com by Friday.',
+            reasoning='Contains an email address.',
+            masked_text='Send the report to [MASKED] by Friday.',
+            pii_entities=[
+                pii_masking.PIIEntity(entity_type='EMAIL', text='alice.smith@company.com'),
+            ]
+        ),
+        pii_masking.FewshotExample(
+            text='Call Bob Johnson at the office tomorrow.',
+            reasoning='Contains a person name.',
+            masked_text='Call [MASKED] at the office tomorrow.',
+            pii_entities=[
+                pii_masking.PIIEntity(entity_type='NAME', text='Bob Johnson'),
+            ]
+        ),
+        pii_masking.FewshotExample(
+            text='Sarah Miller will attend the meeting.',
+            reasoning='Contains a person name.',
+            masked_text='[MASKED] will attend the meeting.',
+            pii_entities=[
+                pii_masking.PIIEntity(entity_type='NAME', text='Sarah Miller'),
+            ]
+        ),
+        pii_masking.FewshotExample(
+            text='Email the document to michael.brown@org.net and copy jane.white@org.net.',
+            reasoning='Contains two email addresses.',
+            masked_text='Email the document to [MASKED] and copy [MASKED].',
+            pii_entities=[
+                pii_masking.PIIEntity(entity_type='EMAIL', text='michael.brown@org.net'),
+                pii_masking.PIIEntity(entity_type='EMAIL', text='jane.white@org.net'),
+            ]
+        ),
+        pii_masking.FewshotExample(
+            text='The meeting is scheduled for 2pm.',
+            reasoning='No PII present in this text.',
+            masked_text='The meeting is scheduled for 2pm.',
+            pii_entities=[]
+        ),
+    ]
+
+    task = pii_masking.PIIMasking(
+        pii_types=['NAME', 'EMAIL'],
+        model=model,
+        fewshot_examples=examples,
+        generation_settings=GenerationSettings(),
+    )
+
+    optimizer = _optimizer(model)
+
+    # Test evaluation: perfect match (F1 = 1.0)
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', reasoning='', masked_text='', pii_entities=[
+            {'entity_type': 'NAME', 'text': 'Alice'},
+            {'entity_type': 'EMAIL', 'text': 'alice@test.com'},
+        ]),
+        pred=dspy.Prediction(text='', reasoning='', masked_text='', pii_entities=[
+            {'entity_type': 'NAME', 'text': 'Alice'},
+            {'entity_type': 'EMAIL', 'text': 'alice@test.com'},
+        ]),
+    ) == 1.0
+
+    # Test evaluation: partial match (precision=0.5, recall=0.5, F1=0.5)
+    # True: {('NAME', 'Alice'), ('EMAIL', 'alice@test.com')}
+    # Pred: {('NAME', 'Alice'), ('EMAIL', 'bob@test.com')}
+    # Intersection: {('NAME', 'Alice')} = 1
+    # Precision: 1/2 = 0.5, Recall: 1/2 = 0.5, F1: 0.5
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', reasoning='', masked_text='', pii_entities=[
+            {'entity_type': 'NAME', 'text': 'Alice'},
+            {'entity_type': 'EMAIL', 'text': 'alice@test.com'},
+        ]),
+        pred=dspy.Prediction(text='', reasoning='', masked_text='', pii_entities=[
+            {'entity_type': 'NAME', 'text': 'Alice'},
+            {'entity_type': 'EMAIL', 'text': 'bob@test.com'},
+        ]),
+    ) == 0.5
+
+    # Test evaluation: no PII (empty case)
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', reasoning='', masked_text='', pii_entities=[]),
+        pred=dspy.Prediction(text='', reasoning='', masked_text='', pii_entities=[]),
+    ) == 1.0
+
+    # Smoke-test optimization
+    best_prompt, best_examples = task.optimize(optimizer, verbose=False)
+    assert task._custom_prompt_instructions == best_prompt
+    assert task._bridge._prompt_instructions == best_prompt
+    assert isinstance(task._fewshot_examples, list)
+
+
+def test_optimization_information_extraction() -> None:
+    """Tests optimization for information extraction task."""
+    model = _model()
+
+    # Define entity type for extraction
+    class Person(pydantic.BaseModel, frozen=True):
+        """Person entity."""
+        name: str
+        age: int
+        occupation: str
+
+    examples = [
+        information_extraction.FewshotExample(
+            text='Alice Johnson is a 28-year-old software engineer.',
+            reasoning='Extract person information from bio.',
+            entities=[Person(name='Alice Johnson', age=28, occupation='software engineer')]
+        ),
+        information_extraction.FewshotExample(
+            text='Bob Smith, age 35, works as a teacher.',
+            reasoning='Extract person information from bio.',
+            entities=[Person(name='Bob Smith', age=35, occupation='teacher')]
+        ),
+        information_extraction.FewshotExample(
+            text='The team includes Sarah Lee (42, doctor) and Mike Brown (30, lawyer).',
+            reasoning='Extract multiple people from text.',
+            entities=[
+                Person(name='Sarah Lee', age=42, occupation='doctor'),
+                Person(name='Mike Brown', age=30, occupation='lawyer'),
+            ]
+        ),
+        information_extraction.FewshotExample(
+            text='Emma Davis is 25 and works as a designer.',
+            reasoning='Extract person information.',
+            entities=[Person(name='Emma Davis', age=25, occupation='designer')]
+        ),
+        information_extraction.FewshotExample(
+            text='Dr. John Williams, a 50-year-old researcher, published a new paper.',
+            reasoning='Extract person with title.',
+            entities=[Person(name='Dr. John Williams', age=50, occupation='researcher')]
+        ),
+        information_extraction.FewshotExample(
+            text='The company hired Lisa Chen (27) as an analyst.',
+            reasoning='Extract person information.',
+            entities=[Person(name='Lisa Chen', age=27, occupation='analyst')]
+        ),
+    ]
+
+    task = information_extraction.InformationExtraction(
+        entity_type=Person,
+        model=model,
+        fewshot_examples=examples,
+        generation_settings=GenerationSettings(),
+    )
+
+    optimizer = _optimizer(model)
+
+    # Test evaluation: perfect match (F1 = 1.0)
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', reasoning='', entities=[
+            {'name': 'Alice', 'age': 30, 'occupation': 'engineer'},
+            {'name': 'Bob', 'age': 25, 'occupation': 'designer'},
+        ]),
+        pred=dspy.Prediction(text='', reasoning='', entities=[
+            {'name': 'Alice', 'age': 30, 'occupation': 'engineer'},
+            {'name': 'Bob', 'age': 25, 'occupation': 'designer'},
+        ]),
+    ) == 1.0
+
+    # Test evaluation: partial match (precision=0.5, recall=0.5, F1=0.5)
+    # True entities (as sorted tuples): {('age',25),('name','Alice'),('occupation','engineer'), ('age',30),('name','Bob'),('occupation','designer')}
+    # Pred entities: one correct, one different
+    # This should give F1 of 0.5
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', reasoning='', entities=[
+            {'name': 'Alice', 'age': 30, 'occupation': 'engineer'},
+            {'name': 'Bob', 'age': 25, 'occupation': 'designer'},
+        ]),
+        pred=dspy.Prediction(text='', reasoning='', entities=[
+            {'name': 'Alice', 'age': 30, 'occupation': 'engineer'},
+            {'name': 'Charlie', 'age': 35, 'occupation': 'teacher'},
+        ]),
+    ) == 0.5
+
+    # Test evaluation: no entities (empty case)
+    assert task._evaluate_optimization_example(
+        truth=dspy.Example(text='', reasoning='', entities=[]),
+        pred=dspy.Prediction(text='', reasoning='', entities=[]),
+    ) == 1.0
+
+    # Smoke-test optimization
+    best_prompt, best_examples = task.optimize(optimizer, verbose=False)
+    assert task._custom_prompt_instructions == best_prompt
+    assert task._bridge._prompt_instructions == best_prompt
+    assert isinstance(task._fewshot_examples, list)
