@@ -1,11 +1,8 @@
 """Tests for task optimization."""
-from functools import cache
-
 import dspy
 import pydantic
 import pytest
 
-from sieves import GenerationSettings
 from sieves.engines import EngineType
 from sieves.tasks.optimization import Optimizer
 from sieves.tasks.predictive import (
@@ -20,21 +17,39 @@ from sieves.tasks.predictive import (
 )
 from sieves.tests.conftest import make_model
 
-
-# @pytest.fixture(scope="module", autouse=True)
-# def preserve_dspy_config():
-#     """Save and restore DSPy global configuration to prevent test pollution."""
-#     # Save current DSPy settings
-#     original_settings = dspy.settings.copy()
-#
-#     yield
-#
-#     # Restore original settings after all optimization tests
-#     dspy.settings = original_settings
+# Import DSPy global state for cleanup
+try:
+    from dspy.clients.base_lm import GLOBAL_HISTORY
+except ImportError:
+    # Fallback for older DSPy versions
+    GLOBAL_HISTORY = None
 
 
+@pytest.fixture(scope="module", autouse=True)
+def cleanup_dspy_state():
+    """Clear DSPy global state before and after optimization tests.
 
-@cache
+    This prevents test pollution and hanging issues caused by accumulated
+    global state in DSPy's GLOBAL_HISTORY singleton and settings.
+
+    Following pattern from DSPy's own test suite:
+    https://github.com/stanfordnlp/dspy/blob/main/tests/conftest.py
+    """
+    # Clear before tests
+    if GLOBAL_HISTORY is not None:
+        GLOBAL_HISTORY.clear()
+
+    yield
+
+    # Clear after tests to prevent CI hang
+    if GLOBAL_HISTORY is not None:
+        GLOBAL_HISTORY.clear()
+
+    # Also clear any lingering LM configuration
+    if hasattr(dspy, 'settings') and hasattr(dspy.settings, 'lm'):
+        dspy.settings.lm = None
+
+
 def _optimizer(model: dspy.LM) -> Optimizer:
     """Return optimizer to use for optimization.
 
