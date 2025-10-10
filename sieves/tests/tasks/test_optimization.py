@@ -3,6 +3,7 @@ from functools import cache
 
 import dspy
 import pydantic
+import pytest
 
 from sieves import GenerationSettings
 from sieves.engines import EngineType
@@ -20,13 +21,18 @@ from sieves.tasks.predictive import (
 from sieves.tests.conftest import make_model
 
 
-@cache
-def _model() -> dspy.LM:
-    """Return model to use for optimization.
+@pytest.fixture(scope="module", autouse=True)
+def preserve_dspy_config():
+    """Save and restore DSPy global configuration to prevent test pollution."""
+    # Save current DSPy settings
+    original_settings = dspy.settings.copy()
 
-    :return dspy.LM: Model to use for optimization.
-    """
-    return make_model(EngineType.dspy)
+    yield
+
+    # Restore original settings after all optimization tests
+    dspy.settings.update(original_settings)
+
+
 
 @cache
 def _optimizer(model: dspy.LM) -> Optimizer:
@@ -44,10 +50,13 @@ def _optimizer(model: dspy.LM) -> Optimizer:
     )
 
 
-def test_optimization_classification() -> None:
+@pytest.mark.parametrize(
+    "batch_runtime",
+    [EngineType.dspy],
+    indirect=True,
+)
+def test_optimization_classification(batch_runtime) -> None:
     """Tests optimization for classification tasks."""
-    model = _model()
-
     rf = 'Is a fruit.'
     rv = 'Is a vegetable.'
     examples_single_label = [
@@ -109,8 +118,8 @@ def test_optimization_classification() -> None:
         multi_label=False,
         labels=["fruit", "vegetable"],
         fewshot_examples=examples_single_label,
-        model=model,
-        generation_settings=GenerationSettings(),
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
     )
     task_multi_label = classification.Classification(
         multi_label=True,
