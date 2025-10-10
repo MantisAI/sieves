@@ -506,7 +506,7 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[En
     @property
     def _default_prompt_instructions(self) -> str:
         if self._multi_label:
-            return super()._prompt_instructions
+            return super()._default_prompt_instructions
 
         return f"""
         Perform single-label classification of the provided text given the provided labels: {",".join(self._labels)}.
