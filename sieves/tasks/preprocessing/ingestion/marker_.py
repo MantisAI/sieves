@@ -12,13 +12,15 @@ from marker.output import text_from_rendered
 from sieves.data import Doc
 from sieves.tasks.core import Task
 
+Converter = PdfConverter | TableConverter
+
 
 class Marker(Task):
     """Marker task for converting PDF documents to text."""
 
     def __init__(
         self,
-        converter: PdfConverter | TableConverter | None = None,
+        converter: Converter | None = None,
         export_format: str = "markdown",
         task_id: str | None = None,
         include_meta: bool = False,

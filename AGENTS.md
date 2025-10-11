@@ -79,7 +79,7 @@ The unified `Engine` wraps different backends; some are optional via extras:
 - Structured generation: Outlines, Instructor, DSPy, LangChain
 - LLM hosting: Transformers, Ollama
 - Specialized: GLiNER for NER
-- Ingestion & parsing: Docling, Unstructured + Marker PDF
+- Ingestion & parsing: Docling, Marker
 - Chunking: Chonkie
 
 Notes for agents:

@@ -2,8 +2,7 @@
 
 import sieves.tasks as tasks
 from sieves.data import Doc
-
-from .engines import GenerationSettings
-from .pipeline import Pipeline
+from sieves.engines import GenerationSettings
+from sieves.pipeline import Pipeline
 
 __all__ = ["Doc", "GenerationSettings", "tasks", "Pipeline"]

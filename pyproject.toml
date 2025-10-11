@@ -34,8 +34,6 @@ ingestion = [
     "docling>=2,<3",
     "marker-pdf[full]>=1.6.1,<2",
     "nltk>=3.9.1",
-    "unstructured-inference>=0.8,<1",
-    "unstructured[all-docs]>=0.16,<1",
 ]
 engines = [
     "accelerate>1.2,<2",

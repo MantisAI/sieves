@@ -11,13 +11,15 @@ from loguru import logger
 from sieves.data.doc import Doc
 from sieves.tasks.core import Task
 
+Converter = docling.document_converter.DocumentConverter
+
 
 class Docling(Task):
     """Parser wrapping the docling library to convert files into documents."""
 
     def __init__(
         self,
-        converter: docling.document_converter.DocumentConverter | None = None,
+        converter: Converter | None = None,
         export_format: str = "markdown",
         task_id: str | None = None,
         include_meta: bool = False,

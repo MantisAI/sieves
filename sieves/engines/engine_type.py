@@ -4,18 +4,24 @@ from __future__ import annotations
 
 import enum
 
-from .core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
-from .engine_import import dspy_, glix_, huggingface_, langchain_, outlines_
+from sieves.engines.core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
+from sieves.engines.engine_import import (
+    DSPy,
+    GliX,
+    HuggingFace,
+    LangChain,
+    Outlines,
+)
 
 
 class EngineType(enum.Enum):
     """Available engine types."""
 
-    dspy = dspy_.DSPy
-    glix = glix_.GliX
-    huggingface = huggingface_.HuggingFace
-    langchain = langchain_.LangChain
-    outlines = outlines_.Outlines
+    dspy = DSPy
+    glix = GliX
+    huggingface = HuggingFace
+    langchain = LangChain
+    outlines = Outlines
 
     @classmethod
     def all(cls) -> tuple[EngineType, ...]:

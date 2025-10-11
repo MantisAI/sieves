@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "sieves[engines]>=0.16",
+#     "sieves[engines]>=0.17",
 #     "typer>=0.12,<1",
 #     "datasets",
 #     "transformers>=4.53.0,<5",
@@ -46,7 +46,6 @@ Examples
 """
 
 import os
-from typing import Literal, Any
 
 import outlines
 import torch
@@ -55,7 +54,6 @@ import typer
 from datasets import Dataset, load_dataset
 from huggingface_hub import HfApi, get_token
 from loguru import logger
-from outlines.models import Transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import sieves

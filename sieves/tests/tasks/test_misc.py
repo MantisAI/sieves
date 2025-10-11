@@ -98,7 +98,7 @@ def test_run_readme_example_long(batch_runtime, tokenizer) -> None:
             loaded_pipe = Pipeline.load(
                 tmp_pipeline_file.name,
                 (
-                    {"converter": docling.document_converter.DocumentConverter()},
+                    {},
                     {"chunker": chonkie.TokenChunker(tokenizer)},
                     {"model": batch_runtime.model},
                 ),
