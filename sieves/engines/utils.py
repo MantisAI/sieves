@@ -8,24 +8,12 @@ from sieves.engines.engine_import import (
     dspy_,
     glix_,
     huggingface_,
-    instructor_,
     langchain_,
-    ollama_,
     outlines_,
-    vllm_,
 )
 from sieves.engines.types import GenerationSettings
 
-Model = (
-    dspy_.Model
-    | glix_.Model
-    | huggingface_.Model
-    | instructor_.Model
-    | langchain_.Model
-    | ollama_.Model
-    | outlines_.Model
-    | vllm_.Model
-)
+Model = dspy_.Model | glix_.Model | huggingface_.Model | langchain_.Model | outlines_.Model
 
 
 def init_default_model() -> outlines.models.Transformers:  # noqa: D401
@@ -56,11 +44,8 @@ def init_engine(
         dspy_: dspy_.DSPy,
         glix_: glix_.GliX,
         huggingface_: huggingface_.HuggingFace,
-        instructor_: instructor_.Instructor,
         langchain_: langchain_.LangChain,
-        ollama_: ollama_.Ollama,
         outlines_: outlines_.Outlines,
-        # vllm_: vllm_.VLLM,
     }
 
     for module, engine_type in module_engine_map.items():

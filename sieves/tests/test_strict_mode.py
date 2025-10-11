@@ -8,7 +8,7 @@ from sieves.tasks.predictive import information_extraction
 
 
 @pytest.mark.parametrize(
-    "batch_runtime", (EngineType.dspy, EngineType.langchain, EngineType.ollama), indirect=["batch_runtime"]
+    "batch_runtime", (EngineType.dspy, EngineType.langchain, EngineType.outlines), indirect=["batch_runtime"]
 )
 @pytest.mark.parametrize("strict_mode", [True, False])
 def test_strict_mode(batch_runtime, strict_mode):

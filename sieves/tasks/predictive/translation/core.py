@@ -10,39 +10,39 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineType, dspy_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.translation.bridges import (
     DSPyTranslation,
-    InstructorTranslation,
     LangChainTranslation,
-    OllamaTranslation,
     OutlinesTranslation,
-    VLLMTranslation,
 )
 
-_TaskModel = dspy_.Model | instructor_.Model | langchain_.Model | ollama_.Model | outlines_.Model | vllm_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | vllm_.PromptSignature
-_TaskResult = outlines_.Result | dspy_.Result | ollama_.Result | vllm_.Result
-_TaskBridge = (
-    DSPyTranslation
-    | InstructorTranslation
-    | LangChainTranslation
-    | OutlinesTranslation
-    | OllamaTranslation
-    | VLLMTranslation
-)
+_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult = outlines_.Result | dspy_.Result
+_TaskBridge = DSPyTranslation | LangChainTranslation | OutlinesTranslation
 
 
-class FewshotExample(pydantic.BaseModel):
+class FewshotExample(BaseFewshotExample):
     """Few-shot example with a target translation."""
 
-    text: str
     to: str
     translation: str
+
+    @override
+    @property
+    def input_fields(self) -> Sequence[str]:
+        return "text", "to"
+
+    @override
+    @property
+    def target_fields(self) -> Sequence[str]:
+        return ("translation",)
 
 
 class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -56,9 +56,8 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         include_meta: bool = True,
         batch_size: int = -1,
         overwrite: bool = False,
-        prompt_template: str | None = None,
-        prompt_signature_desc: str | None = None,
-        fewshot_examples: Iterable[FewshotExample] = (),
+        prompt_instructions: str | None = None,
+        fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
     ) -> None:
         """
@@ -72,8 +71,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         :param overwrite: Some tasks, e.g. anonymization or translation, output a modified version of the input text.
             If True, these tasks overwrite the original document text. If False, the result will just be stored in the
             documents' `.results` field.
-        :param prompt_template: Custom prompt template. If None, task's default template is being used.
-        :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
         """
@@ -85,8 +83,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
             include_meta=include_meta,
             batch_size=batch_size,
             overwrite=overwrite,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
         )
@@ -95,18 +92,14 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyTranslation,
-            EngineType.instructor: InstructorTranslation,
             EngineType.langchain: LangChainTranslation,
             EngineType.outlines: OutlinesTranslation,
-            EngineType.ollama: OllamaTranslation,
-            EngineType.vllm: VLLMTranslation,
         }
 
         try:
             bridge = bridge_types[engine_type](
                 task_id=self._task_id,
-                prompt_template=self._custom_prompt_template,
-                prompt_signature_desc=self._custom_prompt_signature_desc,
+                prompt_instructions=self._custom_prompt_instructions,
                 overwrite=self._overwrite,
                 language=self._to,
             )
@@ -118,7 +111,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
     @override
     @property
     def supports(self) -> set[EngineType]:
-        return {EngineType.dspy, EngineType.instructor, EngineType.ollama, EngineType.outlines, EngineType.vllm}
+        return {EngineType.dspy, EngineType.langchain, EngineType.outlines}
 
     @override
     @property

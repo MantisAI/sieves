@@ -72,6 +72,8 @@ We've prepared several guides to help you get up to speed quickly:
 - [Document Preprocessing](guides/preprocessing.md) - Master document parsing, chunking, and text standardization.
 - [Creating Custom Tasks](guides/custom_tasks.md) - Learn to create your own tasks when the built-in ones aren't enough.
 - [Saving and Loading Pipelines](guides/serialization.md) - Version and share your pipeline configurations.
+- [Task Optimization](guides/optimization.md) - Improve task performance by optimizing prompts and few-shot examples.
+- [Task Distillation](guides/distillation.md) - Fine-tune smaller, specialized models using zero-shot task results.
 
 ## Getting Help
 

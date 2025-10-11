@@ -1,7 +1,7 @@
 """Fallback engine types when optional dependencies are unavailable."""
 
 import enum
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any, override
 
 import pydantic
@@ -38,6 +38,6 @@ class MissingEngine(Engine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,
         prompt_signature: type[PromptSignature] | PromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = (),
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ) -> Callable[[Iterable[dict[str, Any]]], Iterable[Result | None]]:
         raise NotImplementedError

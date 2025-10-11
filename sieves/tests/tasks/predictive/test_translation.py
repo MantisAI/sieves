@@ -11,11 +11,9 @@ from sieves.tasks.predictive import translation
 @pytest.mark.parametrize(
     "batch_runtime",
     (
-        EngineType.instructor,
+        EngineType.dspy,
         EngineType.langchain,
-        EngineType.ollama,
         EngineType.outlines,
-        # EngineType.vllm
     ),
     indirect=["batch_runtime"],
 )
@@ -107,9 +105,7 @@ def test_serialization(translation_docs, batch_runtime) -> None:
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'model': {'is_placeholder': True,
                                 'value': 'dspy.clients.lm.LM'},
-                      'prompt_signature_desc': {'is_placeholder': False,
-                                                'value': None},
-                      'prompt_template': {'is_placeholder': False,
+                      'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False,
                                   'value': 'Translation'},

@@ -6,9 +6,12 @@ from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import langchain_core.language_models
+import nest_asyncio
 import pydantic
 
 from sieves.engines.core import Executable, PydanticEngine
+
+nest_asyncio.apply()
 
 Model = langchain_core.language_models.BaseChatModel
 PromptSignature = pydantic.BaseModel
@@ -36,7 +39,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,  # noqa: UP007
         prompt_signature: type[PromptSignature] | PromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = tuple(),
+        fewshot_examples: Sequence[pydantic.BaseModel] = tuple(),
     ) -> Executable[Result | None]:
         assert isinstance(prompt_signature, type)
         cls_name = self.__class__.__name__
@@ -56,11 +59,11 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                         try:
                             yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
 
-                        except pydantic.ValidationError as ex:
-                            raise pydantic.ValidationError(
+                        except Exception as err:
+                            raise type(err)(
                                 f"Encountered problem in parsing {cls_name} output. Double-check your prompts and "
                                 f"examples."
-                            ) from ex
+                            ) from err
 
                     generator = generate
                 case _:

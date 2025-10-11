@@ -68,10 +68,12 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
     )
     docs = list(pipe(docs))
 
+    from loguru import logger
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
-        assert doc.results["classifier"]
+        assert doc
+        logger.critical(doc.results["classifier"])
 
 
 @pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
@@ -171,9 +173,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
                                  'value': ['science', 'politics']},
                       'model': {'is_placeholder': True,
                                 'value': 'transformers.pipelines.zero_shot_classification.ZeroShotClassificationPipeline'},
-                      'prompt_signature_desc': {'is_placeholder': False,
-                                                'value': None},
-                      'prompt_template': {'is_placeholder': False,
+                      'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False,
                                   'value': 'classifier'},

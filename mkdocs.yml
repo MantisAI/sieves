@@ -31,8 +31,9 @@ plugins:
           options:
             docstring_style: sphinx
             show_source: true
-            signatures: true
             inherited_members: true
+            extra:
+              signatures: true
 
 markdown_extensions:
   - admonition
@@ -76,13 +77,12 @@ nav:
             - engines/dspy.md
             - engines/gliner.md
             - engines/huggingface.md
-            - engines/instructor.md
             - engines/langchain.md
-            - engines/ollama.md
             - engines/outlines.md
-            - engines/vllm.md
   - Guides:
       - guides/getting_started.md
       - guides/preprocessing.md
       - guides/serialization.md
       - guides/custom_tasks.md
+      - guides/optimization.md
+      - guides/distillation.md

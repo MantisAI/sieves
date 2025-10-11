@@ -1,14 +1,16 @@
+"""Bridges for question answering task."""
+
 import abc
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, TypeVar
+from typing import Any, TypeVar, override
 
 import dspy
 import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, instructor_, langchain_, ollama_, outlines_, vllm_
+from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -16,37 +18,46 @@ _BridgeResult = TypeVar("_BridgeResult")
 
 
 class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
-    def __init__(
-        self, task_id: str, prompt_template: str | None, prompt_signature_desc: str | None, questions: list[str]
-    ):
-        """
-        Initializes QuestionAnsweringBridge.
+    """Abstract base class for question answering bridges."""
+
+    def __init__(self, task_id: str, prompt_instructions: str | None, questions: list[str]):
+        """Initialize QuestionAnsweringBridge.
+
         :param task_id: Task ID.
-        :param prompt_template: Custom prompt template.
-        :param prompt_signature_desc: Custom prompt signature description.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param questions: Questions to answer.
         """
         super().__init__(
             task_id=task_id,
-            prompt_template=prompt_template,
-            prompt_signature_desc=prompt_signature_desc,
+            prompt_instructions=prompt_instructions,
             overwrite=False,
         )
         self._questions = questions
 
+    @override
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
         return ({"text": doc.text if doc.text else None, "questions": self._questions} for doc in docs)
 
 
 class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
-    @property
-    def _prompt_template(self) -> str | None:
-        return None
+    """DSPy bridge for question answering."""
 
+    @override
     @property
-    def _prompt_signature_description(self) -> str | None:
+    def _default_prompt_instructions(self) -> str:
         return """Multi-question answering."""
 
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return None
+
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        return None
+
+    @override
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
         n_questions = len(self._questions)
@@ -64,20 +75,23 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
                 max_length=n_questions,
             )
 
-        QuestionAnswering.__doc__ = jinja2.Template(self.prompt_signature_description).render()
+        QuestionAnswering.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
         return QuestionAnswering
 
+    @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return dspy_.InferenceMode.chain_of_thought
 
+    @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.answers) == len(self._questions)
             doc.results[self._task_id] = result.answers
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[dspy_.Result]:
@@ -96,67 +110,78 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
 
 
 class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode], abc.ABC):
+    """Base class for Pydantic-based question answering bridges."""
+
+    @override
     @property
-    def _prompt_template(self) -> str | None:
-        questions_block = "\n\t\t" + "\n\t\t".join(
-            [f"<question>{i + 1}. {question}</question>" for i, question in enumerate(self._questions)]
-        )
-        return f"""
-        Use the given text to answer the following questions. Ensure you answer each question exactly once. Prefix each 
-        question with the number of the corresponding question. Provide a concise reasoning for your answers. 
-        
-        {{% if examples|length > 0 -%}}
+    def _default_prompt_instructions(self) -> str:
+        return """
+        Use the given text to answer the following questions. Ensure you answer each question exactly once. Prefix each
+        question with the number of the corresponding question. Provide a concise reasoning for your answers.
+        """
+
+    @override
+    @property
+    def _prompt_example_template(self) -> str | None:
+        return """
+        {% if examples|length > 0 -%}
             <examples>
-            {{%- for example in examples %}}
+            {%- for example in examples %}
                 <example>
-                    <text>"{{{{ example.text }}}}"</text>
+                    <text>"{{ example.text }}"</text>
                     <questions>
-                    {{% for q in example.questions %}}    <question>{{{{ loop.index }}}}. {{{{ q }}}}</question>
-                    {{% endfor -%}}
+                    {% for q in example.questions %}    <question>{{ loop.index }}. {{ q }}</question>
+                    {% endfor -%}
                     </questions>
                     <output>
-                        <reasoning>{{{{ example.reasoning }}}}</reasoning>
+                        <reasoning>{{ example.reasoning }}</reasoning>
                         <answers>
-                        {{% for a in example.answers %}}  <answer>{{{{ loop.index }}}}. {{{{ a }}}}</answer>
-                        {{% endfor -%}}
+                        {% for a in example.answers %}  <answer>{{ loop.index }}. {{ a }}</answer>
+                        {% endfor -%}
                         <answers>
                     </output>
                 </example>
-            {{% endfor %}}
+            {% endfor %}
             <examples>
-        {{% endif -%}}
+        {% endif -%}
+        """
 
+    @override
+    @property
+    def _prompt_conclusion(self) -> str | None:
+        questions_block = "\n\t\t" + "\n\t\t".join(
+            [f"<question>{i + 1}. {question}</question>" for i, question in enumerate(self._questions)]
+        )
+
+        return f"""
         ========
         <text>{{{{ text }}}}</text>
         <questions>{questions_block}</questions>
         <output>
         """
 
-    @property
-    def _prompt_signature_description(self) -> str | None:
-        return None
-
+    @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         prompt_sig = pydantic.create_model(
             "QuestionAnswering",
             __base__=pydantic.BaseModel,
+            __doc__="Question answering of specified text.",
             reasoning=(str, ...),
             answers=(pydantic.conlist(str, min_length=len(self._questions), max_length=len(self._questions)), ...),
         )
 
-        if self.prompt_signature_description:
-            prompt_sig.__doc__ = jinja2.Template(self.prompt_signature_description).render()
-
         assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
         return prompt_sig
 
+    @override
     def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "answers")
             doc.results[self._task_id] = result.answers
         return docs
 
+    @override
     def consolidate(
         self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Iterable[pydantic.BaseModel]:
@@ -182,30 +207,18 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
 
 
 class OutlinesQA(PydanticBasedQA[outlines_.InferenceMode]):
+    """Outlines bridge for question answering."""
+
+    @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return outlines_.InferenceMode.json
 
 
-class OllamaQA(PydanticBasedQA[ollama_.InferenceMode]):
-    @property
-    def inference_mode(self) -> ollama_.InferenceMode:
-        return ollama_.InferenceMode.structured
-
-
 class LangChainQA(PydanticBasedQA[langchain_.InferenceMode]):
+    """LangChain bridge for question answering."""
+
+    @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return langchain_.InferenceMode.structured
-
-
-class InstructorQA(PydanticBasedQA[instructor_.InferenceMode]):
-    @property
-    def inference_mode(self) -> instructor_.InferenceMode:
-        return instructor_.InferenceMode.structured
-
-
-class VLLMQA(PydanticBasedQA[vllm_.InferenceMode]):
-    @property
-    def inference_mode(self) -> vllm_.InferenceMode:
-        return vllm_.InferenceMode.json

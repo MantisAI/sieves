@@ -3,24 +3,84 @@
 from __future__ import annotations
 
 import abc
+import functools
 import itertools
+import json
+import logging
 import sys
+import warnings
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Generic
+from typing import Any, Generic, Self
 
 import datasets
+import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, EngineType  # noqa: F401
+from sieves.engines import Engine, EngineInferenceMode, EngineType  # noqa: F401
 from sieves.engines.types import GenerationSettings
 from sieves.engines.utils import init_engine
 from sieves.serialization import Config
+from sieves.tasks import optimization
 from sieves.tasks.core import Task
 from sieves.tasks.postprocessing.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
 from sieves.tasks.types import Model
+
+
+class EvaluationSignature(dspy.Signature):
+    """Evaluate similarity between ground truth and predicted outputs."""
+
+    target_fields: str = dspy.InputField(desc="Names of output fields being compared.")
+    ground_truth: str = dspy.InputField(desc="Ground truth output values.")
+    prediction: str = dspy.InputField(desc="Predicted output values.")
+
+    reasoning: str = dspy.OutputField(desc="Step-by-step reasoning for the similarity assessment")
+    similarity_score: float = dspy.OutputField(
+        desc="Similarity score between 0.0 and 1.0, where 1.0 means identical and 0.0 means completely different."
+    )
+
+
+class FewshotExample(pydantic.BaseModel):
+    """Few-shot example.
+
+    :params text: Input text.
+    """
+
+    text: str
+
+    @property
+    def input_fields(self) -> Sequence[str]:
+        """Defines which fields are inputs.
+
+        :return: Sequence of field names.
+        """
+        return ("text",)
+
+    @property
+    @abc.abstractmethod
+    def target_fields(self) -> Sequence[str]:
+        """Define which fields are targets, i.e. the end results the task aims to produce.
+
+        :return: Sequence of field names.
+        """
+
+    def to_dspy(self) -> dspy.Example:
+        """Convert to `dspy.Example`.
+
+        :returns: Example as `dspy.Example`.
+        """
+        return dspy.Example(**Engine.convert_fewshot_examples([self])[0]).with_inputs(self.input_fields)
+
+    @classmethod
+    def from_dspy(cls, example: dspy.Example) -> Self:
+        """Convert from `dspy.Example`.
+
+        :param example: Example as `dspy.Example`.
+        :returns: Example as `FewshotExample`.
+        """
+        return cls(**example)
 
 
 class PredictiveTask(
@@ -37,9 +97,8 @@ class PredictiveTask(
         include_meta: bool,
         batch_size: int,
         overwrite: bool,
-        prompt_template: str | None,
-        prompt_signature_desc: str | None,
-        fewshot_examples: Iterable[pydantic.BaseModel],
+        prompt_instructions: str | None,
+        fewshot_examples: Sequence[FewshotExample],
         generation_settings: GenerationSettings,
     ):
         """Initialize PredictiveTask.
@@ -51,8 +110,7 @@ class PredictiveTask(
         :param overwrite: Some tasks, e.g. anonymization or translation, output a modified version of the input text.
             If True, these tasks overwrite the original document text. If False, the result will just be stored in the
             documents' `.results` field.
-        :param prompt_template: Custom prompt template. If None, default template is being used.
-        :param prompt_signature_desc: Custom prompt signature description. If None, default will be used.
+        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
         """
@@ -60,8 +118,7 @@ class PredictiveTask(
 
         self._engine = init_engine(model, generation_settings)
         self._overwrite = overwrite
-        self._custom_prompt_template = prompt_template
-        self._custom_prompt_signature_desc = prompt_signature_desc
+        self._custom_prompt_instructions = prompt_instructions
         self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
         self._fewshot_examples = fewshot_examples
 
@@ -91,13 +148,13 @@ class PredictiveTask(
         """
 
     @property
-    def prompt_template(self) -> str | None:
+    def prompt_template(self) -> str:
         """Return prompt template.
 
         :return str | None: Prompt template.
         """
         prompt_template = self._bridge.prompt_template
-        assert prompt_template is None or isinstance(prompt_template, str)
+        assert isinstance(prompt_template, str)
         return prompt_template
 
     @property
@@ -160,13 +217,20 @@ class PredictiveTask(
             yield from docs_batch
 
     @property
+    def fewshot_examples(self) -> Sequence[FewshotExample]:
+        """Return few-shot examples.
+
+        :return: Few-shot examples.
+        """
+        return self._fewshot_examples
+
+    @property
     def _state(self) -> dict[str, Any]:
         return {
             **super()._state,
             "model": self._engine.model,
             "generation_settings": self._engine.generation_settings.model_dump(),
-            "prompt_template": self._custom_prompt_template,
-            "prompt_signature_desc": self._custom_prompt_signature_desc,
+            "prompt_instructions": self._custom_prompt_instructions,
             "fewshot_examples": self._fewshot_examples,
         }
 
@@ -249,3 +313,125 @@ class PredictiveTask(
             return datasets.DatasetDict({"train": train_val_dataset["train"], "val": train_val_dataset["test"]})
 
         return datasets.DatasetDict({"train": hf_dataset})
+
+    def _get_task_signature(self) -> type[dspy.Signature] | type[dspy.Module]:
+        """Get DSPy signature for this task.
+
+        By default this uses the task signature of the DSPy bridge for this task. If none is found, this fails. Can be
+        overwritten with a custom task signature, if no DSPy bridge will be implemented for this task.
+
+        :return: DSPy signature for this task.
+        :raises KeyError: If no DSPy bridge defined for this task.
+        """
+        try:
+            dspy_bridge = self._bridge if self._engine == EngineType.dspy else self._init_bridge(EngineType.dspy)
+            return dspy_bridge.prompt_signature
+
+        except KeyError as err:
+            raise KeyError(f"DSPy bridge not available for task {self.__class__.__name__}.") from err
+
+    def _evaluate_optimization_example(
+        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
+    ) -> float:
+        """Evaluate DSPy example for optimization.
+
+        By default this implements an LLM-based evaluation that uses the model that drives optimization to compare
+        results. Where possible this should be replaced by a targeted, deterministic evaluation.
+
+        :param truth: Ground truth.
+        :param pred: Predicted value.
+        :param model: Model used by optimizer.
+        :param trace: Optional trace information.
+        :return: Metric value between 0.0 and 1.0.
+        :raises KeyError: If target fields are missing from truth or prediction.
+        :raises ValueError: If similarity score cannot be parsed from LLM response.
+        """
+        target_fields = list(self._fewshot_examples[0].target_fields)
+
+        # Filter truth and pred to only include target fields.
+        truth_filtered: dict[str, Any] = {}
+        for field in target_fields:
+            if field not in truth:
+                raise KeyError(f"Target field '{field}' missing from ground truth example: {dict(truth)}.")
+            truth_filtered[field] = truth[field]
+
+        pred_filtered: dict[str, Any] = {}
+        for field in target_fields:
+            if field not in pred:
+                raise KeyError(f"Target field '{field}' missing from prediction: {dict(pred)}.")
+            pred_filtered[field] = pred[field]
+
+        # Serialize to readable format
+        target_fields_str = ", ".join(target_fields)
+        ground_truth_str = json.dumps(truth_filtered, indent=2, default=str)
+        prediction_str = json.dumps(pred_filtered, indent=2, default=str)
+
+        # Create DSPy evaluator module
+        evaluator = dspy.Predict(EvaluationSignature)
+
+        # Call evaluator with the model
+        with dspy.context(lm=model):
+            result = evaluator(
+                target_fields=target_fields_str,
+                ground_truth=ground_truth_str,
+                prediction=prediction_str,
+            )
+
+        # Parse and validate score
+        try:
+            score = float(result.similarity_score)
+        except (ValueError, AttributeError, TypeError) as err:
+            raise ValueError(
+                f"Failed to parse similarity score from LLM response. Got: {getattr(result, 'similarity_score', None)}"
+            ) from err
+
+        # Clamp to [0, 1].
+        return max(0.0, min(1.0, score))
+
+    def optimize(self, optimizer: optimization.Optimizer, verbose: bool = True) -> tuple[str, Sequence[FewshotExample]]:
+        """Optimize task prompt and few-shot examples with the available optimization config.
+
+        Updates task to use best prompt and few-shot examples found by the optimizer.
+
+        :param optimizer: Optimizer to run.
+        :param verbose: Whether to suppress output. DSPy produces a good amount of logs, so this can be useful to
+            not pollute your terminal. Only warnings and errors will be printed.
+
+        :return tuple[str, Sequence[FewshotExample]]: Best found prompt and few-shot examples.
+        """
+        assert len(self._fewshot_examples) > 1, "At least two few-shot examples need to be provided to optimize."
+
+        # Run optimizer to get best prompt and few-shot examples.
+        signature = self._get_task_signature()
+        dspy_examples = [ex.to_dspy() for ex in self._fewshot_examples]
+        pred_eval = functools.partial(self._evaluate_optimization_example, model=optimizer.model)
+
+        if verbose:
+            best_prompt, best_examples = optimizer(signature, dspy_examples, pred_eval, verbose=verbose)
+        else:
+            # Temporarily suppress DSPy logs.
+            dspy_logger = logging.getLogger("dspy")
+            optuna_logger = logging.getLogger("optuna")
+            original_dspy_level = dspy_logger.level
+            original_optuna_level = optuna_logger.level
+
+            try:
+                dspy_logger.setLevel(logging.ERROR)
+                optuna_logger.setLevel(logging.ERROR)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    best_prompt, best_examples = optimizer(signature, dspy_examples, pred_eval, verbose=verbose)
+            finally:
+                dspy_logger.setLevel(original_dspy_level)
+                optuna_logger.setLevel(original_optuna_level)
+
+        # Update few-shot examples and prompt instructions.
+        fewshot_example_cls = self._fewshot_examples[0].__class__
+        self._fewshot_examples = [fewshot_example_cls.from_dspy(ex) for ex in best_examples]
+        self._validate_fewshot_examples()
+        self._custom_prompt_instructions = best_prompt
+
+        # Reinitialize bridge to use new prompt and few-shot examples.
+        self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
+
+        return best_prompt, self._fewshot_examples

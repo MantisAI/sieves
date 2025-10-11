@@ -52,7 +52,7 @@ class GliX(Engine[PromptSignature, Result, Model, InferenceMode]):
         inference_mode: InferenceMode,
         prompt_template: str | None,
         prompt_signature: type[PromptSignature] | PromptSignature,
-        fewshot_examples: Iterable[pydantic.BaseModel] = (),
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ) -> Executable[Result]:
         assert isinstance(prompt_signature, list)
         cls_name = self.__class__.__name__

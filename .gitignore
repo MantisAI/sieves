@@ -8,3 +8,4 @@ dist/
 .venv/
 .env
 .windsurfrules
+site/

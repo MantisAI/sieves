@@ -46,16 +46,6 @@ except ModuleNotFoundError:
 
 
 try:
-    from . import instructor_
-    from .instructor_ import Instructor
-except ModuleNotFoundError:
-    from . import missing as instructor_
-
-    Instructor = MissingEngine  # type: ignore[misc,assignment]
-    _missing_dependencies.append("instructor")
-
-
-try:
     from . import langchain_
     from .langchain_ import LangChain
 except ModuleNotFoundError:
@@ -63,16 +53,6 @@ except ModuleNotFoundError:
 
     LangChain = MissingEngine  # type: ignore[misc,assignment]
     _missing_dependencies.append("langchain")
-
-
-try:
-    from . import ollama_
-    from .ollama_ import Ollama
-except ModuleNotFoundError:
-    from . import missing as ollama_
-
-    Ollama = MissingEngine  # type: ignore[misc,assignment]
-    _missing_dependencies.append("ollama")
 
 
 try:
@@ -85,19 +65,11 @@ except ModuleNotFoundError:
     _missing_dependencies.append("outlines")
 
 
-try:
-    from . import vllm_
-    from .vllm_ import VLLM
-except ModuleNotFoundError:
-    from . import missing as vllm_
-
-    VLLM = MissingEngine  # type: ignore[misc,assignment]
-    _missing_dependencies.append("vllm")
-
-warnings.warn(
-    "Warning: structured generation dependencies [{deps}] could not be imported. Generating with them requires them to"
-    " be installed.".format(deps=", ".join(_missing_dependencies))
-)
+if len(_missing_dependencies):
+    warnings.warn(
+        "Warning: structured generation dependencies [{deps}] could not be imported. Generating with them requires them"
+        " to be installed.".format(deps=", ".join(_missing_dependencies))
+    )
 
 
 __all__ = [
@@ -107,14 +79,8 @@ __all__ = [
     "GliX",
     "huggingface_",
     "HuggingFace",
-    "instructor_",
-    "Instructor",
     "langchain_",
     "LangChain",
-    "ollama_",
-    "Ollama",
     "outlines_",
     "Outlines",
-    "vllm_",
-    "VLLM",
 ]
