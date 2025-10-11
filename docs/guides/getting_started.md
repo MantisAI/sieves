@@ -64,7 +64,7 @@ doc = Doc(
 )
 ```
 
-Note: File-based ingestion (Docling/Unstructured/Marker) is optional and not installed by default. To enable it, install the ingestion extra or the specific libraries you need:
+Note: File-based ingestion (Docling/Marker/...) is optional and not installed by default. To enable it, install the ingestion extra or the specific libraries you need:
 
 ```bash
 pip install "sieves[ingestion]"

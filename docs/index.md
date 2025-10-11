@@ -18,7 +18,7 @@ Core package with minimal dependencies:
 ```bash
 pip install sieves
 ```
-Note: Ingestion libraries (document parsing such as `docling`, `unstructured`, `marker`) are not installed by default. Install them manually or use the ingestion extra:
+Note: Ingestion libraries (document parsing such as `docling`) are not installed by default. Install them manually or use the ingestion extra:
 
 ```bash
 pip install "sieves[ingestion]"

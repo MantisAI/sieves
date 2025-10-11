@@ -34,7 +34,7 @@ pipe_left += pipe_right  # appends all tasks from right
 # - Using "+=" mutates the existing pipeline by appending tasks
 ```
 
-Note: Ingestion libraries (e.g., Docling, Unstructured, Marker) are optional and not installed by default. Install them manually or via the extra:
+Note: Ingestion libraries (e.g., `docling`) are optional and not installed by default. Install them manually or via the extra:
 
 ```bash
 pip install "sieves[ingestion]"

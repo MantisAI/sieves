@@ -7,13 +7,13 @@
 
 ## Document Parsing
 
-Note: Ingestion libraries are optional and not installed by default. To use document parsing (Docling, Unstructured, Marker), install them manually or install the `ingestion` extra:
+Note: Ingestion libraries are optional and not installed by default. To use document ingestion, install them manually or install the `ingestion` extra:
 
 ```bash
 pip install "sieves[ingestion]"
 ```
 
-You can also install individual libraries directly (e.g., `pip install docling`, `pip install unstructured`).
+You can also install individual libraries directly (e.g., `pip install docling`).
 
 ### Using Ingestion
 
@@ -63,45 +63,6 @@ processed_docs = list(pipeline(docs))
 # Access the parsed text
 for doc in processed_docs:
     print(doc.text)
-```
-
-### Using Unstructured
-
-The `Unstructured` task uses the [unstructured](https://github.com/Unstructured-IO/unstructured/) library, which provides robust document parsing capabilities:
-
-```python
-from sieves import Pipeline, tasks, Doc
-from unstructured.cleaners.core import (
-    clean_extra_whitespace
-)
-
-# Create an unstructured parser with cleaning functions
-parser = tasks.preprocessing.Unstructured(
-    # Add cleaning functions to process the text
-    cleaners=(clean_extra_whitespace,)  # Normalize whitespace
-)
-
-# Create and run the pipeline
-pipeline = Pipeline([parser])
-docs = [Doc(text="● This is a dummy   document.®")]
-processed_docs = list(pipeline(docs))
-```
-
-### Text Cleaning Functions
-
-The Unstructured library provides several cleaning functions that you can combine:
-
-```python
-from unstructured.cleaners.core import (
-    clean,                    # Combined cleaning function
-    clean_bullets,           # Remove bullet points (•, -, etc.)
-    clean_ordered_bullets,   # Remove numbered bullets (1., a., etc.)
-    clean_extra_whitespace,  # Normalize whitespace
-    clean_dashes,           # Remove dashes
-    clean_non_ascii_chars,  # Remove non-ASCII characters
-    clean_trailing_punctuation,  # Remove trailing punctuation
-    bytes_string_to_string  # Convert byte strings to normal strings
-)
 ```
 
 ## Document Chunking

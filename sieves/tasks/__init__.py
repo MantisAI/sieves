@@ -1,9 +1,9 @@
 """Tasks."""
 
-from . import predictive, preprocessing
-from .core import Task
-from .postprocessing import DistillationFramework
-from .predictive import (
+from sieves.tasks import predictive, preprocessing
+from sieves.tasks.core import Task
+from sieves.tasks.postprocessing import DistillationFramework
+from sieves.tasks.predictive import (
     NER,
     Classification,
     InformationExtraction,
@@ -13,8 +13,8 @@ from .predictive import (
     Summarization,
     Translation,
 )
-from .predictive.core import PredictiveTask
-from .preprocessing import Chunking, Ingestion
+from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.preprocessing import Chunking, Ingestion
 
 __all__ = [
     "Chunking",

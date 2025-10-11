@@ -30,7 +30,7 @@ def test_serialization() -> None:
                 {
                     "cls_name": "sieves.tasks.preprocessing.ingestion.core.Ingestion",
                     'batch_size': {'is_placeholder': False, "value": -1},
-                    "converter": {"is_placeholder": True, "value": "docling.document_converter.DocumentConverter"},
+                    "converter": {"is_placeholder": False, "value": None},
                     "export_format": {"is_placeholder": False, "value": "markdown"},
                     "include_meta": {"is_placeholder": False, "value": False},
                     "task_id": {"is_placeholder": False, "value": "Ingestion"},

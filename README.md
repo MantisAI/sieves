@@ -87,7 +87,7 @@ build modern NLP applications. It provides:
   - [`transformer`](https://github.com/huggingface/transformers)
 - :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
 - :hammer_and_wrench: **Integrated Tools:**
-  - Document parsing (optional via `ingestion` extra): [`docling`](https://github.com/DS4SD/docling), [`unstructured`](https://github.com/Unstructured-IO/unstructured/), [`marker`](https://github.com/VikParuchuri/marker)
+  - Document parsing (optional via `ingestion` extra): [`docling`](https://github.com/DS4SD/docling), [`marker`](https://github.com/VikParuchuri/marker)
   - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
 - :label: **Ready-to-Use Tasks:**
   - Multi-label classification
@@ -135,7 +135,7 @@ for doc in pipe(docs):
 # For multi-step pipelines, you can write:
 #   pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(labels=[...], model=model)
 # Note: Ingestion libraries are optional and not installed by default.
-#       Install with: pip install "sieves[ingestion]" or install the specific libraries directly (e.g., docling, unstructured).
+#       Install with: pip install "sieves[ingestion]" or install the specific libraries directly (e.g., `docling`, `marker`).
 # Note: additional Pipeline parameters (e.g., use_cache=False) are only available via the verbose init,
 # e.g., Pipeline([t1, t2], use_cache=False).
 ```
@@ -148,7 +148,7 @@ This example demonstrates PDF parsing, text chunking, and classification.
 Note: Ingestion libraries are optional and not installed by default. To run the ingestion step, install with the extra or install the libraries directly:
 
 ```
-pip install "sieves[ingestion]"   # or install docling/unstructured directly
+pip install "sieves[ingestion]"   # or install ingestion libraries directly
 ```
 
 ```python
