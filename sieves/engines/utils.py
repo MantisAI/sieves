@@ -41,11 +41,11 @@ def init_engine(
     """
     model_type = type(model)
     module_engine_map = {
-        dspy_: getattr(dspy_, "DSPy"),
-        glix_: getattr(glix_, "GliX"),
-        huggingface_: getattr(huggingface_, "HuggingFace"),
-        langchain_: getattr(langchain_, "LangChain"),
-        outlines_: getattr(outlines_, "Outlines"),
+        dspy_: getattr(dspy_, "DSPy", None),
+        glix_: getattr(glix_, "GliX", None),
+        huggingface_: getattr(huggingface_, "HuggingFace", None),
+        langchain_: getattr(langchain_, "LangChain", None),
+        outlines_: getattr(outlines_, "Outlines", None),
     }
 
     for module, engine_type in module_engine_map.items():
