@@ -2,12 +2,10 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "sieves[engines]>=0.17",
+#     "sieves[engines]>=0.17.2",
 #     "typer>=0.12,<1",
 #     "datasets",
-#     "transformers>=4.53.0,<5",
 #     "huggingface-hub[hf_transfer]",
-#     "torch",
 # ]
 # ///
 
