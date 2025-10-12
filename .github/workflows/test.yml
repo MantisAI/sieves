@@ -18,13 +18,13 @@ jobs:
 
     steps:
 
-#    - name: Maximize build space
-#      shell: bash
-#      run: |
-#          sudo rm -rf /usr/share/dotnet \
-#            /usr/local/lib/android \
-#            /opt/ghc \
-#            /opt/hostedtoolcache/CodeQL
+    - name: Maximize build space
+      shell: bash
+      run: |
+          sudo rm -rf /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /opt/hostedtoolcache/CodeQL
 
     - name: Checkout repo
       uses: actions/checkout@v4
