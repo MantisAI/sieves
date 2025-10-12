@@ -15,6 +15,7 @@ dependencies = [
     "jinja2>=3,<4",
     "loguru>=0.7,<1",
     "outlines>=1,<2",
+    "transformers[torch]>=4,<5",
     "dspy-ai>=2,<3",
     "dspy>=2,<3",
     "pydantic>=2,<3",
@@ -42,7 +43,6 @@ engines = [
     "langchain>=0.3,<0.4",
     "nest-asyncio>=1,<2",
     "sentencepiece<1",
-    "transformers>=4,<5",
 ]
 distill = [
     "setfit>=1.1,<2",

@@ -6,14 +6,7 @@ This allows us to import everything downstream without having to worry about opt
 an engine/model from a non-installed library, we terminate with an error.
 """
 
-# mypy: disable-error-code="no-redef"
-
-import warnings
-
 from .missing import MissingEngine
-
-_missing_dependencies: list[str] = []
-
 
 try:
     from . import dspy_
@@ -22,7 +15,6 @@ except ModuleNotFoundError:
     from . import missing as dspy_
 
     DSPy = MissingEngine  # type: ignore[misc,assignment]
-    _missing_dependencies.append("dspy")
 
 
 try:
@@ -32,7 +24,6 @@ except ModuleNotFoundError:
     from . import missing as glix_
 
     GliX = MissingEngine  # type: ignore[misc,assignment]
-    _missing_dependencies.append("gliner")
 
 
 try:
@@ -42,7 +33,6 @@ except ModuleNotFoundError:
     from . import missing as huggingface_
 
     HuggingFace = MissingEngine  # type: ignore[misc,assignment]
-    _missing_dependencies.append("transformers")
 
 
 try:
@@ -52,7 +42,6 @@ except ModuleNotFoundError:
     from . import missing as langchain_
 
     LangChain = MissingEngine  # type: ignore[misc,assignment]
-    _missing_dependencies.append("langchain")
 
 
 try:
@@ -62,14 +51,6 @@ except ModuleNotFoundError:
     from . import missing as outlines_
 
     Outlines = MissingEngine  # type: ignore[misc,assignment]
-    _missing_dependencies.append("outlines")
-
-
-if len(_missing_dependencies):
-    warnings.warn(
-        "Warning: structured generation dependencies [{deps}] could not be imported. Generating with them requires them"
-        " to be installed.".format(deps=", ".join(_missing_dependencies))
-    )
 
 
 __all__ = [

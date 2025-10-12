@@ -3752,6 +3752,7 @@ dependencies = [
     { name = "loguru" },
     { name = "outlines" },
     { name = "pydantic" },
+    { name = "transformers", extra = ["torch"] },
 ]
 
 [package.optional-dependencies]
@@ -3766,7 +3767,6 @@ engines = [
     { name = "langchain-core" },
     { name = "nest-asyncio" },
     { name = "sentencepiece" },
-    { name = "transformers" },
 ]
 ingestion = [
     { name = "docling" },
@@ -3817,7 +3817,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6" },
     { name = "sentencepiece", marker = "extra == 'engines'", specifier = "<1" },
     { name = "setfit", marker = "extra == 'distill'", specifier = ">=1.1,<2" },
-    { name = "transformers", marker = "extra == 'engines'", specifier = ">=4,<5" },
+    { name = "transformers", extras = ["torch"], specifier = ">=4,<5" },
 ]
 provides-extras = ["ingestion", "engines", "distill", "test"]
 
@@ -4154,6 +4154,12 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fb/4b/3341d2fade52634d877476f4ed5fa8f7bf3f1e867bfba76f0fb341e2885f/transformers-4.54.0.tar.gz", hash = "sha256:843da4d66a573cef3d1b2e7a1d767e77da054621e69d9f3faff761e55a1f8203", size = 9510412, upload-time = "2025-07-25T18:58:20.826Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/34/4d82dc596764de9d14285f8ed53b50896bf05fbbcd71a82c6d174b3ab8c7/transformers-4.54.0-py3-none-any.whl", hash = "sha256:c96e607f848625965b76c677b2c2576f2c7b7097c1c5292b281919d90675a25e", size = 11176597, upload-time = "2025-07-25T18:58:17.677Z" },
+]
+
+[package.optional-dependencies]
+torch = [
+    { name = "accelerate" },
+    { name = "torch" },
 ]
 
 [[package]]
