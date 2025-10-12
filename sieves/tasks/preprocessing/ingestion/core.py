@@ -69,8 +69,8 @@ class Ingestion(Task):
 
         # Identify the ingestion task that maps to the specified converter's type.
         converter_module_map = {
-            docling_: getattr(docling_, "Docling"),
-            marker_: getattr(marker_, "Marker"),
+            docling_: getattr(docling_, "Docling", None),
+            marker_: getattr(marker_, "Marker", None),
         }
 
         for module, ingestion_task_type in converter_module_map.items():
