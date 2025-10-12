@@ -41,12 +41,19 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install tesseract-ocr
+
+    - name: Install Python dependencies
+      run: |
         uv venv .venv --python 3.12
-        uv sync --all-extras
+        uv build
+        source .venv/bin/activate
+        uv pip install ./dist/sieves-*.whl
+        # Optional dependencies need to be installed in separate command.
+        uv pip install 'sieves[engines,ingestion,distill,test]'
 
     - name: Create and enable 4 GB swap
       run: |
@@ -61,18 +68,19 @@ jobs:
         source .venv/bin/activate
         mkdocs build
 
+    - name: Stage tests out-of-tree
+      run: |
+        mkdir -p "$RUNNER_TEMP/sieves-tests"
+        rsync -a --delete sieves/tests/ "$RUNNER_TEMP/sieves-tests/"
 
     - name: Run tests
+      working-directory: ${{ runner.temp }}/sieves-tests
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       run: |
-        source .venv/bin/activate
-        pytest -x --cov --cov-report=xml -m "not slow"
-
-    - name: Debug
-      run: |
-        ls -lh
+        source $GITHUB_WORKSPACE/.venv/bin/activate
+        pytest -x --cov=sieves --cov-report=xml:$GITHUB_WORKSPACE/coverage.xml -m "not slow" -c "$GITHUB_WORKSPACE/pyproject.toml"
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
