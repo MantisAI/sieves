@@ -46,10 +46,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install tesseract-ocr
 
-    - name: Build project wheel
-      run: |
-        uv build
-
     - name: Install Python dependencies
       run: |
         uv venv .venv --python 3.12
