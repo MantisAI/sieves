@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = [
-#     "sieves[engines]>=0.17.2",
+#     "sieves[engines]>=0.17.4",
 #     "typer>=0.12,<1",
 #     "datasets",
 #     "huggingface-hub[hf_transfer]",
@@ -401,15 +401,18 @@ def classify(
     zeroshot_tag = "zero-shot-classification"
     # Explicitly designed for zero-shot classification: build directly as pipeline.
     if info.pipeline_tag == zeroshot_tag or zeroshot_tag in set(info.tags or []):
+        logger.info("Initializing zero-shot classifciation pipeline.")
         model = transformers.pipeline(zeroshot_tag, model=model, device=device)
     # Otherwise: build Outlines model around it to enforce structured generation.
     else:
+        logger.info("Initializing Outlines model.")
         model = outlines.models.from_transformers(
             AutoModelForCausalLM.from_pretrained(model, **({"device": device} if device else {})),
             AutoTokenizer.from_pretrained(model),
         )
 
     # Build task and pipeline.
+    logger.info("Initializing pipeline.")
     task = sieves.tasks.Classification(
         labels=labels_list,
         model=model,
@@ -423,10 +426,14 @@ def classify(
     )
     pipe = sieves.Pipeline([task])
 
-    logger.info(f"Running {'multi-label ' if multi_label else ''}classification pipeline with labels {labels_list}.")
+    docs = [sieves.Doc(text=t) for t in processed_texts]
+    logger.critical(
+        f"Running {'multi-label ' if multi_label else ''}classification pipeline with labels {labels_list} on "
+        f"{len(docs)} docs."
+    )
     docs = list(pipe([sieves.Doc(text=t) for t in processed_texts]))
 
-    logger.info("Logging stats.")
+    logger.critical("Logging stats.")
     _log_stats(
         docs=docs,
         task=task,
