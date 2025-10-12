@@ -40,7 +40,7 @@ Here's how to distill a classification task using SetFit:
 import os
 import dspy
 from sieves.tasks import Classification
-from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.distillation.types import DistillationFramework
 from sieves import Pipeline, Doc
 
 # 1. Run zero-shot classification task
@@ -219,7 +219,7 @@ output_path/
 Model2Vec is ideal for extremely fast inference with minimal resource usage:
 
 ```python
-from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.distillation.types import DistillationFramework
 
 task.distill(
     base_model_id="minishlab/potion-base-8M",

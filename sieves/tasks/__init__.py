@@ -1,8 +1,7 @@
 """Tasks."""
 
-from sieves.tasks import predictive, preprocessing
+from sieves.tasks import DistillationFramework, predictive, preprocessing
 from sieves.tasks.core import Task
-from sieves.tasks.postprocessing import DistillationFramework
 from sieves.tasks.predictive import (
     NER,
     Classification,
