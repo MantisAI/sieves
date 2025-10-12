@@ -50,7 +50,7 @@ jobs:
       run: |
         uv venv .venv --python 3.12
         uv build
-        source .venv-installed/bin/activate
+        source .venv/bin/activate
         uv pip install ./dist/sieves-*.whl
         # Optional dependencies need to be installed in separate command.
         uv pip install 'sieves[engines,ingestion,distill,test]'
