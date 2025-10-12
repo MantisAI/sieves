@@ -18,13 +18,13 @@ jobs:
 
     steps:
 
-    - name: Maximize build space
-      shell: bash
-      run: |
-          sudo rm -rf /usr/share/dotnet \
-            /usr/local/lib/android \
-            /opt/ghc \
-            /opt/hostedtoolcache/CodeQL
+#    - name: Maximize build space
+#      shell: bash
+#      run: |
+#          sudo rm -rf /usr/share/dotnet \
+#            /usr/local/lib/android \
+#            /opt/ghc \
+#            /opt/hostedtoolcache/CodeQL
 
     - name: Checkout repo
       uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
     - name: Stage tests out-of-tree
       run: |
         mkdir -p "$RUNNER_TEMP/sieves-tests"
-        cp -r sieves/tests/ "$RUNNER_TEMP/sieves-tests/"
+        rsync -a --delete sieves/tests/ "$RUNNER_TEMP/sieves-tests/"
 
     - name: Run tests
       working-directory: ${{ runner.temp }}/sieves-tests
@@ -80,8 +80,7 @@ jobs:
         OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       run: |
         source $GITHUB_WORKSPACE/.venv/bin/activate
-        cd
-        pytest -x --cov=sieves --cov-report=xml:$GITHUB_WORKSPACE/coverage.xml -m "not slow"
+        pytest -x --cov=sieves --cov-report=xml:$GITHUB_WORKSPACE/coverage.xml -m "not slow" -c "$GITHUB_WORKSPACE/pyproject.toml"
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
