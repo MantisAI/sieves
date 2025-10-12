@@ -24,7 +24,7 @@ from sieves.engines.utils import init_engine
 from sieves.serialization import Config
 from sieves.tasks import optimization
 from sieves.tasks.core import Task
-from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
 from sieves.tasks.types import Model
 
