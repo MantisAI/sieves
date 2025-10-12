@@ -69,11 +69,14 @@ class Ingestion(Task):
 
         # Identify the ingestion task that maps to the specified converter's type.
         converter_module_map = {
-            docling_: docling_.Docling,
-            marker_: marker_.Marker,
+            docling_: getattr(docling_, "Docling"),
+            marker_: getattr(marker_, "Marker"),
         }
 
         for module, ingestion_task_type in converter_module_map.items():
+            if ingestion_task_type is None:
+                continue
+
             try:
                 module_converter_types = module.Converter.__args__
             except AttributeError:
@@ -93,8 +96,9 @@ class Ingestion(Task):
                 return ingestion_task
 
         raise ValueError(
-            f"converter type {self._converter} is not supported. Please check the documentation "
-            f"and ensure you're providing a supported converter type."
+            f"converter type {self._converter} is not supported. Please check the documentation and ensure that (1) "
+            f"you're providing a supported converter type and that (2) the corresponding library is installed in your "
+            f"environment."
         )
 
     def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:

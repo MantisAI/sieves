@@ -13,7 +13,7 @@ from sieves.data import Doc
 from sieves.engines import EngineType, dspy_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
-from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.translation.bridges import (

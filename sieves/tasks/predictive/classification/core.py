@@ -15,8 +15,8 @@ from sieves.data import Doc
 from sieves.engines import EngineType, dspy_, glix_, huggingface_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
-from sieves.tasks.postprocessing.distillation.distillation_import import model2vec, setfit
-from sieves.tasks.postprocessing.distillation.types import DistillationFramework
+from sieves.tasks.distillation.distillation_import import model2vec, setfit
+from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.classification.bridges import (
     DSPyClassification,

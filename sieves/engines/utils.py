@@ -41,14 +41,17 @@ def init_engine(
     """
     model_type = type(model)
     module_engine_map = {
-        dspy_: dspy_.DSPy,
-        glix_: glix_.GliX,
-        huggingface_: huggingface_.HuggingFace,
-        langchain_: langchain_.LangChain,
-        outlines_: outlines_.Outlines,
+        dspy_: getattr(dspy_, "DSPy"),
+        glix_: getattr(glix_, "GliX"),
+        huggingface_: getattr(huggingface_, "HuggingFace"),
+        langchain_: getattr(langchain_, "LangChain"),
+        outlines_: getattr(outlines_, "Outlines"),
     }
 
     for module, engine_type in module_engine_map.items():
+        if engine_type is None:
+            continue
+
         try:
             module_model_types = module.Model.__args__
         except AttributeError:
@@ -64,6 +67,6 @@ def init_engine(
             return internal_engine
 
     raise ValueError(
-        f"Model type {model.__class__} is not supported. Please check the documentation and ensure you're "
-        f"providing a supported model type."
+        f"Model type {model.__class__} is not supported. Please check the documentation and ensure that (1) you're "
+        f"providing a supported model type and that (2) the corresponding library is installed in your environment."
     )
