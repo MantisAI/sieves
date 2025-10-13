@@ -1,9 +1,4 @@
 """Tests for task optimization."""
-import functools
-import gc
-import os
-import threading
-
 import dspy
 import pydantic
 import pytest
