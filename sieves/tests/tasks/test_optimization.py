@@ -44,22 +44,6 @@ def optimizer(request) -> Optimizer:
 
     return optimizer
 
-# @functools.cache
-# def _optimizer(model: dspy.LM) -> Optimizer:
-#     """Return optimizer to use for optimization.
-#
-#     :param model: Model to use for optimization.
-#     :return Optimizer: Optimizer to use for optimization.
-#     """
-#     return Optimizer(
-#         model,
-#         val_frac=.25,
-#         shuffle=True,
-#         dspy_init_kwargs=dict(auto=None, num_candidates=1, max_errors=100, num_threads=1),
-#         dspy_compile_kwargs=dict(num_trials=1, minibatch=True, minibatch_size=1, minibatch_full_eval_steps=10),
-#     )
-
-
 def test_optimization_classification(optimizer) -> None:
     """Tests optimization for classification tasks."""
     rf = 'Is a fruit.'
