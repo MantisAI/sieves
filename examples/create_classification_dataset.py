@@ -45,6 +45,7 @@ Examples
 
 import os
 
+import huggingface_hub
 import outlines
 import torch
 import transformers
@@ -374,6 +375,10 @@ def classify(
             no valid texts are available for classification.
 
     """
+    token = os.environ.get("HF_TOKEN") or huggingface_hub.get_token()
+    if token:
+        huggingface_hub.login(token=token)
+
     logger.info("Loading and preparing data.")
     (
         ds,
