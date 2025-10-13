@@ -18,6 +18,7 @@
 ![PyPI - Status](https://img.shields.io/pypi/status/sieves)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
+<a href="https://doi.org/10.5281/zenodo.17342348"><img src="https://zenodo.org/badge/902811666.svg" alt="DOI"></a>
 
 ## Zero-shot document processing made easy.
 

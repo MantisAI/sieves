@@ -39,6 +39,7 @@ def optimizer(request) -> Optimizer:
 
     return optimizer
 
+
 def test_optimization_classification(optimizer) -> None:
     """Tests optimization for classification tasks."""
     rf = 'Is a fruit.'
