@@ -1,5 +1,6 @@
 """Outlines engine wrapper supporting text, choices, regex and JSON schemas."""
 
+import asyncio
 import enum
 from collections.abc import Iterable, Sequence
 from typing import Any, Literal, override
@@ -83,7 +84,7 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                         return generator(prompt, **self._inference_kwargs)
 
                     calls = [generate_async(prompt) for prompt in prompts]
-                    results = self._execute_async_calls(calls)
+                    results = asyncio.run(self._execute_async_calls(calls))
 
                 if inference_mode == InferenceMode.json:
                     assert len(results) == len(prompts)
