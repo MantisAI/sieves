@@ -106,6 +106,12 @@ build modern NLP applications. It provides:
   Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for custom training.
 - :recycle: **Caching** to avoid unnecessary model calls
 
+> [!IMPORTANT]
+> `sieves` was built with and requires Python 3.12 or higher. Note however that some dependencies (such as `pyarrow`
+> via `datasets`) don't have prebuilt wheels for Python versions newer than 3.12 yet, in which case you'll need to
+> manually install those dependencies.
+> For the time being we recommend using `sieves` with Python 3.12.
+
 ---
 
 ### Getting Started
