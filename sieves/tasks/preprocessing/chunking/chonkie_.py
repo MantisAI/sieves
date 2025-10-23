@@ -41,7 +41,11 @@ class Chonkie(Task):
             if len(docs_batch) == 0:
                 break
 
-            chunks = self._chunker.chunk_batch([doc.text for doc in docs_batch], show_progress=False)
+            # Signature varies in between versions, try both.
+            try:
+                chunks = self._chunker.chunk_batch([doc.text for doc in docs_batch], show_progress=False)
+            except TypeError:
+                chunks = self._chunker.chunk_batch([doc.text for doc in docs_batch], show_progress_bar=False)  # type: ignore[unknown-argument]
             assert len(chunks) == len(docs_batch)
 
             for doc, doc_chunks in zip(docs_batch, chunks):
