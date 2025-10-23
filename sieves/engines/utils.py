@@ -52,6 +52,7 @@ def init_engine(
         if engine_type is None:
             continue
 
+        assert hasattr(module, "Model")
         try:
             module_model_types = module.Model.__args__
         except AttributeError:
