@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from types import NoneType
-from typing import Any
+from typing import Any, Literal
 
 from sieves.data.doc import Doc
 from sieves.serialization import Config
@@ -23,7 +23,7 @@ class Ingestion(Task):
     def __init__(
         self,
         converter: Converter | None = None,
-        export_format: str = "markdown",
+        export_format: Literal["markdown", "html"] = "markdown",
         task_id: str | None = None,
         include_meta: bool = False,
         batch_size: int = -1,
@@ -77,6 +77,7 @@ class Ingestion(Task):
             if ingestion_task_type is None:
                 continue
 
+            assert hasattr(module, "Converter")
             try:
                 module_converter_types = module.Converter.__args__
             except AttributeError:

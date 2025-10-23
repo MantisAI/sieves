@@ -1,10 +1,13 @@
 """Wrapper for `Docling` for the conversion of complex files into markdown."""
 
+import itertools
+import sys
 import warnings
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Literal
 
 import docling.datamodel.document
+import docling.datamodel.settings
 import docling.document_converter
 from loguru import logger
 
@@ -20,7 +23,7 @@ class Docling(Task):
     def __init__(
         self,
         converter: Converter | None = None,
-        export_format: str = "markdown",
+        export_format: Literal["markdown", "html"] = "markdown",
         task_id: str | None = None,
         include_meta: bool = False,
         batch_size: int = -1,
@@ -36,15 +39,19 @@ class Docling(Task):
         self._converter = converter if converter else docling.document_converter.DocumentConverter()
         self._export_format = export_format
 
-    def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
-        """Parse resources using docling.
+        # Set batch size in Docling performance settings.
+        docling.datamodel.settings.settings.perf.doc_batch_size = (
+            self._batch_size if self._batch_size > 0 else sys.maxsize
+        )
 
-        :param docs: Resources to process.
-        :return: Parsed documents
+    def _validate_docs(self, docs: Iterable[Doc]) -> None:
+        """Validate documents.
+
+        Raises warning if docs already have text values, as they will be overwritten.
+
+        :param docs: Docs to validate.
+        :raises ValueError: If documents do not have a URI.
         """
-        docs = list(docs)
-
-        # Validate docs.
         have_text = False
         for doc in docs:
             assert doc.uri, ValueError("Documents have to have a value for .uri.")
@@ -53,26 +60,32 @@ class Docling(Task):
         if have_text:
             warnings.warn(f"Task {self._task_id} is about to overwrite existing .text values.")
 
-        parsed_resources: list[docling.datamodel.document.ConversionResult] = list(
-            self._converter.convert_all([resource.uri for resource in docs])
-        )
-        assert len(parsed_resources) == len(docs)
+    def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
+        """Parse resources using docling.
 
-        for doc, parsed_resource in zip(docs, parsed_resources):
+        :param docs: Resources to process.
+        :return: Parsed documents.
+        :raises ValueError: If documents failed to parse.
+        """
+        docs_iters = itertools.tee(docs, 3)
+        self._validate_docs(docs_iters[0])
+
+        for doc, parsed_resource in zip(
+            docs_iters[2], self._converter.convert_all([resource.uri for resource in docs_iters[1]])
+        ):
             try:
                 if self._include_meta:
                     doc.meta |= {self.id: parsed_resource}
-                if self._export_format == "markdown":
-                    doc.text = parsed_resource.document.export_to_markdown()
-                elif self._export_format == "html":
+                if self._export_format == "html":
                     doc.text = parsed_resource.document.export_to_html()
-                elif self._export_format == "json":
-                    doc.text = parsed_resource.document.export_to_dict()
+                else:
+                    doc.text = parsed_resource.document.export_to_markdown()
+
             except Exception as e:
                 logger.error(f"Failed to parse file {doc.uri}: {str(e)}")
-                continue
+                raise e
 
-        return docs
+            yield doc
 
     @property
     def _state(self) -> dict[str, Any]:

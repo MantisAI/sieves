@@ -9,3 +9,4 @@ dist/
 .env
 .windsurfrules
 site/
+.DS_Store
