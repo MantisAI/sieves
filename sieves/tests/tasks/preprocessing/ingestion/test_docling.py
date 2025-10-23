@@ -1,6 +1,7 @@
 """Tests for Docling task."""
 from pathlib import Path
 
+import pytest
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, smolvlm_picture_description
 from docling.document_converter import DocumentConverter, ImageFormatOption
@@ -54,6 +55,7 @@ def test_serialization() -> None:
     assert docs[0] == list(deserialized_pipeline(resources))[0]
 
 
+@pytest.mark.slow
 def test_image_description_with_local_vlm() -> None:
     """Test image description with local VLM model."""
     converter = DocumentConverter(
