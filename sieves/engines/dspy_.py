@@ -13,7 +13,7 @@ from sieves.engines.core import Engine, Executable
 from sieves.engines.types import GenerationSettings
 
 PromptSignature = dspy.Signature | dspy.Module
-Model = dspy.LM | dspy.BaseLM
+Model = dspy.LM | dspy.BaseLM | dspy.clients.lm.LM
 Result = dspy.Prediction
 
 
