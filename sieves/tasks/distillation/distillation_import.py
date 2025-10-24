@@ -10,20 +10,20 @@ a non-installed distillation framework, we terminate with an error.
 
 try:
     import sentence_transformers
-except ModuleNotFoundError:
+except (ModuleNotFoundError, ImportError):
     sentence_transformers = None
 
 
 try:
     import setfit
-except ModuleNotFoundError:
+except (ModuleNotFoundError, ImportError):
     setfit = None
 
 
 try:
     import model2vec
     import model2vec.train
-except ModuleNotFoundError:
+except (ModuleNotFoundError, ImportError):
     model2vec = None
 
 

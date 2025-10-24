@@ -19,6 +19,7 @@ dependencies = [
     "dspy-ai>=2,<3",
     "dspy>=2,<3",
     "pydantic>=2,<3",
+    "nest-asyncio>=1,<2",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -40,7 +41,6 @@ engines = [
     "gliner<1",
     "langchain-core>=0.3,<0.4",
     "langchain>=0.3,<0.4",
-    "nest-asyncio>=1,<2",
     "sentencepiece<1",
 ]
 distill = [
