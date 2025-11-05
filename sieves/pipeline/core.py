@@ -110,7 +110,8 @@ class Pipeline:
             processed_docs = iter(processed_docs)
 
         # Iterate over all docs. Retrieve doc from cache if available, otherwise add to cache.
-        for i, doc in tqdm.tqdm(enumerate(docs_iters[1]), desc="Running pipeline", total=n_docs):
+        progress_bar = tqdm.tqdm(desc="Running pipeline", total=n_docs)
+        for i, doc in enumerate(docs_iters[1]):
             assert doc.text or doc.uri
             self._cache_stats["total"] += 1
             # Docs must either all have URIs or texts. Either is a sufficient identifier. If first task is Ingestion
@@ -129,7 +130,12 @@ class Pipeline:
                 self._cache_stats["hits"] += 1
                 processed_doc = self._cache[doc_cache_id]
 
+            progress_bar.update(1)
+            progress_bar.refresh()
+
             yield processed_doc
+
+        progress_bar.close()
 
     def dump(self, path: Path | str) -> None:
         """Save pipeline config to disk.
