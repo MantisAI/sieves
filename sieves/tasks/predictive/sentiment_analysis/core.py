@@ -32,7 +32,7 @@ _TaskBridge = DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSenti
 class FewshotExample(BaseFewshotExample):
     """Few-shot example with per-aspect sentiment scores."""
 
-    reasoning: str
+    reasoning: str | None = None
     sentiment_per_aspect: dict[str, float]
 
     @override

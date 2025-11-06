@@ -94,10 +94,10 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
         class PIIMasking(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to mask PII from.")
-            reasoning: str = dspy.OutputField(
+            reasoning: str | None = dspy.OutputField(
                 description="Reasoning about what PII was found and masked. Provide this for complex cases where "
                 "explanation would be helpful.",
-                default="",
+                default=None,
             )
             masked_text: str = dspy.OutputField(description="Text with all PII masked.")
             pii_entities: list[PIIEntity] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
@@ -144,7 +144,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
             reasonings: list[str] = []
 
             for res in doc_results:
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
                 masked_texts.append(res.masked_text)
                 for entity in res.pii_entities:
                     if entity not in seen_entities:
@@ -212,8 +212,8 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
         class PIIMasking(pydantic.BaseModel, frozen=True):
             """PII masking output."""
 
-            reasoning: str = pydantic.Field(
-                default="",
+            reasoning: str | None = pydantic.Field(
+                default=None,
                 description="Reasoning about what PII was found and masked. Provide this for complex cases where "
                 "explanation would be helpful.",
             )
@@ -258,7 +258,7 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                 assert hasattr(res, "masked_text")
                 assert hasattr(res, "pii_entities")
 
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
                 masked_texts.append(res.masked_text)
                 for entity in res.pii_entities:
                     if entity not in seen_entities:

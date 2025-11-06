@@ -118,8 +118,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
             class MultiLabelTextClassification(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to classify.")
-                reasoning: str = dspy.OutputField(
-                    default="", description="Provide reasoning for complex or ambiguous classifications."
+                reasoning: str | None = dspy.OutputField(
+                    default=None, description="Provide reasoning for complex or ambiguous classifications."
                 )
                 confidence_per_label: dict[LabelType, float] = dspy.OutputField(
                     description="Confidence per label that text should be classified with this label."
@@ -135,8 +135,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                     description="Correct label for the provided text. You MUST NOT provide a list for this attribute. "
                     "This a single label. Do not wrap this label in []."
                 )
-                reasoning: str = dspy.OutputField(
-                    default="", description="Provide reasoning for complex or ambiguous classifications."
+                reasoning: str | None = dspy.OutputField(
+                    default=None, description="Provide reasoning for complex or ambiguous classifications."
                 )
                 confidence: float = dspy.OutputField(
                     description="Confidence that this label is correct as a float between 0 and 1."
@@ -202,7 +202,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             yield dspy.Prediction.from_completions(
                 {
                     "confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
-                    "reasoning": [str([res.reasoning for res in doc_results])],
+                    "reasoning": [str([res.reasoning or "" for res in doc_results])],
                 },
                 signature=self.prompt_signature,
             )
@@ -416,9 +416,9 @@ class PydanticBasedClassification(
                 __base__=pydantic.BaseModel,
                 __doc__="Result of multi-label classification.",
                 reasoning=(
-                    str,
+                    str | None,
                     pydantic.Field(
-                        default="", description="Provide reasoning for complex or ambiguous classifications."
+                        default=None, description="Provide reasoning for complex or ambiguous classifications."
                     ),
                 ),
                 **{label: (float, ...) for label in self._labels},
@@ -430,8 +430,8 @@ class PydanticBasedClassification(
             class SingleLabelClassification(pydantic.BaseModel):
                 """Result of single-label classification."""
 
-                reasoning: str = pydantic.Field(
-                    default="", description="Provide reasoning for complex or ambiguous classifications."
+                reasoning: str | None = pydantic.Field(
+                    default=None, description="Provide reasoning for complex or ambiguous classifications."
                 )
                 label: LabelType
                 score: float
@@ -473,7 +473,7 @@ class PydanticBasedClassification(
                     continue  # type: ignore[unreachable]
 
                 assert hasattr(res, "reasoning")
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
                 # We clamp the score to 0 <= x <= 1. Alternatively we could force this in the prompt signature, but
                 # this fails occasionally with some models and feels too strict.
                 if self._multi_label:

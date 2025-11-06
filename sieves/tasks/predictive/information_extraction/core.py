@@ -34,7 +34,7 @@ _TaskBridge = DSPyInformationExtraction | LangChainInformationExtraction | Outli
 class FewshotExample(BaseFewshotExample):
     """Few-shot example."""
 
-    reasoning: str = ""
+    reasoning: str | None = None
     entities: list[pydantic.BaseModel]
 
     @override

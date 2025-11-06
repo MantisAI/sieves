@@ -73,8 +73,8 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
         class Translation(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField()
             target_language: str = dspy.InputField()
-            reasoning: str = dspy.OutputField(
-                default="", description="Provide reasoning for translation choices when relevant."
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for translation choices when relevant."
             )
             translation: str = dspy.OutputField()
 
@@ -166,8 +166,8 @@ class PydanticBasedTranslation(
         class Translation(pydantic.BaseModel, frozen=True):
             """Translation."""
 
-            reasoning: str = pydantic.Field(
-                default="", description="Provide reasoning for translation choices when relevant."
+            reasoning: str | None = pydantic.Field(
+                default=None, description="Provide reasoning for translation choices when relevant."
             )
             translation: str
 

@@ -67,8 +67,8 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
             questions: tuple[str, ...] = dspy.InputField(
                 description="Questions to answer based on the text.", min_length=n_questions, max_length=n_questions
             )
-            reasoning: str = dspy.OutputField(
-                default="", description="Provide reasoning for complex or ambiguous answers."
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for complex or ambiguous answers."
             )
             answers: tuple[str, ...] = dspy.OutputField(
                 description="Answers to questions, in the same sequence as the questions. Each answer corresponds to "
@@ -171,8 +171,8 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
             __base__=pydantic.BaseModel,
             __doc__="Question answering of specified text.",
             reasoning=(
-                str,
-                pydantic.Field(default="", description="Provide reasoning for complex or ambiguous answers."),
+                str | None,
+                pydantic.Field(default=None, description="Provide reasoning for complex or ambiguous answers."),
             ),
             answers=(pydantic.conlist(str, min_length=len(self._questions), max_length=len(self._questions)), ...),
         )
@@ -205,7 +205,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
 
                 assert hasattr(rec, "reasoning")
                 assert hasattr(rec, "answers")
-                reasonings.append(rec.reasoning)
+                reasonings.append(rec.reasoning or "")
                 for i, answer in enumerate(rec.answers):
                     answers[i] += answer + " "
 

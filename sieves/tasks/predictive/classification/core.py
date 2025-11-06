@@ -33,12 +33,13 @@ _TaskResult = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | gl
 _TaskBridge = (
     DSPyClassification | GliXBridge | LangChainClassification | HuggingFaceClassification | OutlinesClassification
 )
+_TaskInferenceMode = glix_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | langchain_.InferenceMode
 
 
 class FewshotExampleMultiLabel(BaseFewshotExample):
     """Few‑shot example for multi‑label classification with per‑label confidences."""
 
-    reasoning: str = ""
+    reasoning: str | None = None
     confidence_per_label: dict[str, float]
 
     @override
@@ -57,7 +58,7 @@ class FewshotExampleMultiLabel(BaseFewshotExample):
 class FewshotExampleSingleLabel(BaseFewshotExample):
     """Few‑shot example for single‑label classification with a global confidence."""
 
-    reasoning: str = ""
+    reasoning: str | None = None
     label: str
     confidence: float
 
@@ -97,6 +98,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         label_descriptions: dict[str, str] | None = None,
         multi_label: bool = True,
         generation_settings: GenerationSettings = GenerationSettings(),
+        inference_mode: _TaskInferenceMode | None = None,
     ) -> None:
         """Initialize new PredictiveTask.
 
@@ -127,6 +129,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
+            inference_mode=inference_mode,
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
@@ -154,7 +157,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 prompt_signature=self._labels,
-                inference_mode=glix_.InferenceMode.classification,
+                inference_mode=self._inference_mode or glix_.InferenceMode.classification,
                 label_whitelist=tuple(self._labels),
                 only_keep_best=not self._multi_label,
             )

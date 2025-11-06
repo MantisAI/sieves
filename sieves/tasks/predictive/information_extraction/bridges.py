@@ -68,7 +68,9 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
         class Entities(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to extract entities from.")
-            reasoning: str = dspy.OutputField(default="", description="Provide reasoning for complex extraction cases.")
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for complex extraction cases."
+            )
             entities: list[extraction_type] = dspy.OutputField(description="Entities to extract from text.")  # type: ignore[valid-type]
 
         Entities.__doc__ = jinja2.Template(self._prompt_instructions).render()
@@ -104,7 +106,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
                     continue
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
                 assert len(res.completions.entities) == 1
                 if entity_type_is_frozen:
                     # Ensure not to add duplicate entities.
@@ -172,7 +174,9 @@ class PydanticBasedInformationExtraction(
         class Entity(pydantic.BaseModel, frozen=True):
             """Entity to extract from text."""
 
-            reasoning: str = pydantic.Field(default="", description="Provide reasoning for complex extraction cases.")
+            reasoning: str | None = pydantic.Field(
+                default=None, description="Provide reasoning for complex extraction cases."
+            )
             entities: list[entity_type]  # type: ignore[valid-type]
 
         return Entity
@@ -203,7 +207,7 @@ class PydanticBasedInformationExtraction(
                     continue  # type: ignore[unreachable]
 
                 assert hasattr(res, "reasoning")
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
 
                 assert hasattr(res, "entities")
                 if entity_type_is_frozen:

@@ -70,8 +70,8 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
 
         class SentimentAnalysis(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to determine sentiments for.")
-            reasoning: str = dspy.OutputField(
-                default="", description="Provide reasoning for aspect-based sentiment assessments when beneficial."
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for aspect-based sentiment assessments when beneficial."
             )
             sentiment_per_aspect: dict[AspectType, float] = dspy.OutputField(
                 description="Sentiment in this text with respect to the corresponding aspect."
@@ -129,7 +129,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
             yield dspy.Prediction.from_completions(
                 {
                     "sentiment_per_aspect": [{sls["aspect"]: sls["score"] for sls in sorted_aspect_scores}],
-                    "reasoning": [str([res.reasoning for res in doc_results])],
+                    "reasoning": [str([res.reasoning or "" for res in doc_results])],
                 },
                 signature=self.prompt_signature,
             )
@@ -215,9 +215,10 @@ class PydanticBasedSentAnalysis(
             __base__=pydantic.BaseModel,
             __doc__="Sentiment analysis of specified text.",
             reasoning=(
-                str,
+                str | None,
                 pydantic.Field(
-                    default="", description="Provide reasoning for aspect-based sentiment assessments when beneficial."
+                    default=None,
+                    description="Provide reasoning for aspect-based sentiment assessments when beneficial.",
                 ),
             ),
             **{aspect: (float, ...) for aspect in self._aspects},
@@ -252,7 +253,7 @@ class PydanticBasedSentAnalysis(
                     continue  # type: ignore[unreachable]
 
                 assert hasattr(rec, "reasoning")
-                reasonings.append(rec.reasoning)
+                reasonings.append(rec.reasoning or "")
                 for aspect in self._aspects:
                     # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
