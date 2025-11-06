@@ -15,6 +15,7 @@ from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
+TaskInferenceMode = dspy_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
@@ -27,6 +28,7 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         overwrite: bool,
         mask_placeholder: str,
         pii_types: list[str] | None,
+        inference_mode: TaskInferenceMode | None,
     ):
         """
         Initialize PIIBridge.
@@ -36,11 +38,13 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         :param overwrite: Whether to overwrite text with masked text.
         :param mask_placeholder: String to replace PII with.
         :param pii_types: Types of PII to mask. If None, all common PII types will be masked.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=overwrite,
+            inference_mode=inference_mode,
         )
         self._mask_placeholder = mask_placeholder
         self._pii_types = pii_types
@@ -94,10 +98,10 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
         class PIIMasking(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to mask PII from.")
-            reasoning: str = dspy.OutputField(
+            reasoning: str | None = dspy.OutputField(
                 description="Reasoning about what PII was found and masked. Provide this for complex cases where "
                 "explanation would be helpful.",
-                default="",
+                default=None,
             )
             masked_text: str = dspy.OutputField(description="Text with all PII masked.")
             pii_entities: list[PIIEntity] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
@@ -110,7 +114,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         """Return inference mode for DSPy engine."""
-        return dspy_.InferenceMode.chain_of_thought
+        return self._inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -144,7 +148,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
             reasonings: list[str] = []
 
             for res in doc_results:
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
                 masked_texts.append(res.masked_text)
                 for entity in res.pii_entities:
                     if entity not in seen_entities:
@@ -212,8 +216,8 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
         class PIIMasking(pydantic.BaseModel, frozen=True):
             """PII masking output."""
 
-            reasoning: str = pydantic.Field(
-                default="",
+            reasoning: str | None = pydantic.Field(
+                default=None,
                 description="Reasoning about what PII was found and masked. Provide this for complex cases where "
                 "explanation would be helpful.",
             )
@@ -258,7 +262,7 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                 assert hasattr(res, "masked_text")
                 assert hasattr(res, "pii_entities")
 
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
                 masked_texts.append(res.masked_text)
                 for entity in res.pii_entities:
                     if entity not in seen_entities:
@@ -276,7 +280,7 @@ class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
+        return self._inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
@@ -285,4 +289,4 @@ class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured
+        return self._inference_mode or langchain_.InferenceMode.structured

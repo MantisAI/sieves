@@ -128,3 +128,23 @@ def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
 
     with pytest.raises(KeyError):
         task.to_hf_dataset([Doc(text="This is a dummy text.")])
+
+
+@pytest.mark.parametrize(
+    "batch_runtime",
+    [EngineType.dspy, EngineType.langchain, EngineType.outlines, EngineType.glix],
+    indirect=["batch_runtime"],
+)
+def test_inference_mode_override(batch_runtime) -> None:
+    """Test that inference_mode parameter overrides the default value."""
+    dummy = "dummy_inference_mode"
+
+    task = ner.NER(
+        entities=["PERSON", "LOCATION", "COMPANY"],
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
+        inference_mode=dummy,
+    )
+
+    assert task._bridge.inference_mode == dummy

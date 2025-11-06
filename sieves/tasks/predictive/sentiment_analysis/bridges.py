@@ -15,22 +15,31 @@ from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
+TaskInferenceMode = dspy_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class SentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
     """Abstract base class for sentiment analysis bridges."""
 
-    def __init__(self, task_id: str, prompt_instructions: str | None, aspects: tuple[str, ...]):
+    def __init__(
+        self,
+        task_id: str,
+        prompt_instructions: str | None,
+        aspects: tuple[str, ...],
+        inference_mode: TaskInferenceMode | None,
+    ):
         """Initialize SentAnalysisBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param aspects: Aspects to consider.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
+            inference_mode=inference_mode,
         )
         self._aspects = aspects
 
@@ -70,8 +79,8 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
 
         class SentimentAnalysis(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to determine sentiments for.")
-            reasoning: str = dspy.OutputField(
-                default="", description="Provide reasoning for aspect-based sentiment assessments when beneficial."
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for aspect-based sentiment assessments when beneficial."
             )
             sentiment_per_aspect: dict[AspectType, float] = dspy.OutputField(
                 description="Sentiment in this text with respect to the corresponding aspect."
@@ -84,7 +93,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.chain_of_thought
+        return self._inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -129,7 +138,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
             yield dspy.Prediction.from_completions(
                 {
                     "sentiment_per_aspect": [{sls["aspect"]: sls["score"] for sls in sorted_aspect_scores}],
-                    "reasoning": [str([res.reasoning for res in doc_results])],
+                    "reasoning": [str([res.reasoning or "" for res in doc_results])],
                 },
                 signature=self.prompt_signature,
             )
@@ -215,9 +224,10 @@ class PydanticBasedSentAnalysis(
             __base__=pydantic.BaseModel,
             __doc__="Sentiment analysis of specified text.",
             reasoning=(
-                str,
+                str | None,
                 pydantic.Field(
-                    default="", description="Provide reasoning for aspect-based sentiment assessments when beneficial."
+                    default=None,
+                    description="Provide reasoning for aspect-based sentiment assessments when beneficial.",
                 ),
             ),
             **{aspect: (float, ...) for aspect in self._aspects},
@@ -252,7 +262,7 @@ class PydanticBasedSentAnalysis(
                     continue  # type: ignore[unreachable]
 
                 assert hasattr(rec, "reasoning")
-                reasonings.append(rec.reasoning)
+                reasonings.append(rec.reasoning or "")
                 for aspect in self._aspects:
                     # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
@@ -271,7 +281,7 @@ class OutlinesSentimentAnalysis(PydanticBasedSentAnalysis[outlines_.InferenceMod
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
+        return self._inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceMode]):
@@ -280,4 +290,4 @@ class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceM
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured
+        return self._inference_mode or langchain_.InferenceMode.structured

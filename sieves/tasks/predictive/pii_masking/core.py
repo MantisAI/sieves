@@ -19,6 +19,7 @@ from sieves.tasks.predictive.pii_masking.bridges import (
     DSPyPIIMasking,
     LangChainPIIMasking,
     OutlinesPIIMasking,
+    TaskInferenceMode,
 )
 
 _TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
@@ -37,7 +38,7 @@ class PIIEntity(pydantic.BaseModel, frozen=True):
 class FewshotExample(BaseFewshotExample):
     """Example for PII masking few-shot prompting."""
 
-    reasoning: str = ""
+    reasoning: str | None = None
     masked_text: str
     pii_entities: list[PIIEntity]
 
@@ -62,6 +63,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
+        inference_mode: TaskInferenceMode | None = None,
     ) -> None:
         """
         Initialize PIIMasking task.
@@ -78,6 +80,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
             task's default template is used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
+        :param inference_mode: Inference mode to use. If None, the default mode for this task will be used.
         """
         self._pii_types = pii_types
         self._mask_placeholder = mask_placeholder
@@ -91,6 +94,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
+            inference_mode=inference_mode,
         )
 
     @override
@@ -108,6 +112,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
                 mask_placeholder=self._mask_placeholder,
                 pii_types=self._pii_types,
                 overwrite=self._overwrite,
+                inference_mode=self._inference_mode,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err

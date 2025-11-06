@@ -15,6 +15,7 @@ from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
+TaskInferenceMode = dspy_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class TranslationBridge(
@@ -29,18 +30,21 @@ class TranslationBridge(
         prompt_instructions: str | None,
         overwrite: bool,
         language: str,
+        inference_mode: TaskInferenceMode | None,
     ):
-        """Initialize InformationExtractionBridge.
+        """Initialize TranslationBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with translation.
         :param language: Language to translate to.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=overwrite,
+            inference_mode=inference_mode,
         )
         self._to = language
 
@@ -73,8 +77,8 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
         class Translation(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField()
             target_language: str = dspy.InputField()
-            reasoning: str = dspy.OutputField(
-                default="", description="Provide reasoning for translation choices when relevant."
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for translation choices when relevant."
             )
             translation: str = dspy.OutputField()
 
@@ -85,7 +89,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.predict
+        return self._inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -166,8 +170,8 @@ class PydanticBasedTranslation(
         class Translation(pydantic.BaseModel, frozen=True):
             """Translation."""
 
-            reasoning: str = pydantic.Field(
-                default="", description="Provide reasoning for translation choices when relevant."
+            reasoning: str | None = pydantic.Field(
+                default=None, description="Provide reasoning for translation choices when relevant."
             )
             translation: str
 
@@ -209,7 +213,7 @@ class OutlinesTranslation(PydanticBasedTranslation[outlines_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
+        return self._inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
@@ -218,4 +222,4 @@ class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured
+        return self._inference_mode or langchain_.InferenceMode.structured

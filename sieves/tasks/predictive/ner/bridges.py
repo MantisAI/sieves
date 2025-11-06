@@ -16,6 +16,7 @@ from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
+TaskInferenceMode = dspy_.InferenceMode | glix_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class Entity(pydantic.BaseModel):
@@ -65,16 +66,19 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         entities: list[str],
         task_id: str,
         prompt_instructions: str | None,
+        inference_mode: TaskInferenceMode | None,
     ):
         """Initialize NERBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
+            inference_mode=inference_mode,
         )
         self._entities = entities
 
@@ -227,8 +231,8 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
             text: str = dspy.InputField(description="Text to extract entities from")
             entity_types: list[str] = dspy.InputField(description="List of entity types to extract")
 
-            reasoning: str = dspy.OutputField(
-                default="", description="Provide reasoning for complex entity extraction decisions."
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for complex entity extraction decisions."
             )
             entities: list[Entity] = dspy.OutputField(
                 description="List of entities found in the text. If the same entity appears multiple times "
@@ -242,7 +246,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.predict
+        return self._inference_mode or dspy_.InferenceMode.predict
 
     @override
     def consolidate(
@@ -340,8 +344,8 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         class Prediction(pydantic.BaseModel):
             """NER prediction."""
 
-            reasoning: str = pydantic.Field(
-                default="", description="Provide reasoning for complex entity extraction decisions."
+            reasoning: str | None = pydantic.Field(
+                default=None, description="Provide reasoning for complex entity extraction decisions."
             )
             entities: list[EntityWithContext] = []
 
@@ -380,7 +384,7 @@ class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
+        return self._inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
@@ -389,7 +393,7 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured
+        return self._inference_mode or langchain_.InferenceMode.structured
 
 
 class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
@@ -400,17 +404,17 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
         entities: list[str],
         task_id: str,
         prompt_instructions: str | None,
+        inference_mode: glix_.InferenceMode | None,
     ):
         """Initialize GliXNER bridge.
 
         :param entities: List of entity types to extract.
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         super().__init__(
-            entities=entities,
-            task_id=task_id,
-            prompt_instructions=prompt_instructions,
+            entities=entities, task_id=task_id, prompt_instructions=prompt_instructions, inference_mode=inference_mode
         )
 
     @override
@@ -436,7 +440,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> glix_.InferenceMode:
-        return glix_.InferenceMode.ner
+        return self._inference_mode or glix_.InferenceMode.ner
 
     @override
     def consolidate(

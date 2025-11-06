@@ -10,27 +10,36 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, glix_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
+TaskInferenceMode = dspy_.InferenceMode | glix_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
     """Abstract base class for question answering bridges."""
 
-    def __init__(self, task_id: str, prompt_instructions: str | None, questions: list[str]):
+    def __init__(
+        self,
+        task_id: str,
+        prompt_instructions: str | None,
+        questions: list[str],
+        inference_mode: TaskInferenceMode | None,
+    ):
         """Initialize QuestionAnsweringBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param questions: Questions to answer.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
+            inference_mode=inference_mode,
         )
         self._questions = questions
 
@@ -67,8 +76,8 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
             questions: tuple[str, ...] = dspy.InputField(
                 description="Questions to answer based on the text.", min_length=n_questions, max_length=n_questions
             )
-            reasoning: str = dspy.OutputField(
-                default="", description="Provide reasoning for complex or ambiguous answers."
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for complex or ambiguous answers."
             )
             answers: tuple[str, ...] = dspy.OutputField(
                 description="Answers to questions, in the same sequence as the questions. Each answer corresponds to "
@@ -85,7 +94,7 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.chain_of_thought
+        return self._inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -171,8 +180,8 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
             __base__=pydantic.BaseModel,
             __doc__="Question answering of specified text.",
             reasoning=(
-                str,
-                pydantic.Field(default="", description="Provide reasoning for complex or ambiguous answers."),
+                str | None,
+                pydantic.Field(default=None, description="Provide reasoning for complex or ambiguous answers."),
             ),
             answers=(pydantic.conlist(str, min_length=len(self._questions), max_length=len(self._questions)), ...),
         )
@@ -205,7 +214,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
 
                 assert hasattr(rec, "reasoning")
                 assert hasattr(rec, "answers")
-                reasonings.append(rec.reasoning)
+                reasonings.append(rec.reasoning or "")
                 for i, answer in enumerate(rec.answers):
                     answers[i] += answer + " "
 
@@ -218,7 +227,7 @@ class OutlinesQA(PydanticBasedQA[outlines_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
+        return self._inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainQA(PydanticBasedQA[langchain_.InferenceMode]):
@@ -227,4 +236,4 @@ class LangChainQA(PydanticBasedQA[langchain_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured
+        return self._inference_mode or langchain_.InferenceMode.structured

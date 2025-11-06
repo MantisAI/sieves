@@ -15,6 +15,7 @@ from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
+TaskInferenceMode = dspy_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class InformationExtractionBridge(
@@ -28,17 +29,20 @@ class InformationExtractionBridge(
         task_id: str,
         prompt_instructions: str | None,
         entity_type: type[pydantic.BaseModel],
+        inference_mode: TaskInferenceMode | None,
     ):
         """Initialize InformationExtractionBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param entity_type: Type to extract.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
+            inference_mode=inference_mode,
         )
         self._entity_type = entity_type
 
@@ -68,7 +72,9 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
         class Entities(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to extract entities from.")
-            reasoning: str = dspy.OutputField(default="", description="Provide reasoning for complex extraction cases.")
+            reasoning: str | None = dspy.OutputField(
+                default=None, description="Provide reasoning for complex extraction cases."
+            )
             entities: list[extraction_type] = dspy.OutputField(description="Entities to extract from text.")  # type: ignore[valid-type]
 
         Entities.__doc__ = jinja2.Template(self._prompt_instructions).render()
@@ -78,7 +84,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.chain_of_thought
+        return self._inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -104,7 +110,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
                     continue
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
                 assert len(res.completions.entities) == 1
                 if entity_type_is_frozen:
                     # Ensure not to add duplicate entities.
@@ -172,7 +178,9 @@ class PydanticBasedInformationExtraction(
         class Entity(pydantic.BaseModel, frozen=True):
             """Entity to extract from text."""
 
-            reasoning: str = pydantic.Field(default="", description="Provide reasoning for complex extraction cases.")
+            reasoning: str | None = pydantic.Field(
+                default=None, description="Provide reasoning for complex extraction cases."
+            )
             entities: list[entity_type]  # type: ignore[valid-type]
 
         return Entity
@@ -203,7 +211,7 @@ class PydanticBasedInformationExtraction(
                     continue  # type: ignore[unreachable]
 
                 assert hasattr(res, "reasoning")
-                reasonings.append(res.reasoning)
+                reasonings.append(res.reasoning or "")
 
                 assert hasattr(res, "entities")
                 if entity_type_is_frozen:
@@ -224,7 +232,7 @@ class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
+        return self._inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainInformationExtraction(PydanticBasedInformationExtraction[langchain_.InferenceMode]):
@@ -233,4 +241,4 @@ class LangChainInformationExtraction(PydanticBasedInformationExtraction[langchai
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured
+        return self._inference_mode or langchain_.InferenceMode.structured
