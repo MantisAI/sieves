@@ -23,6 +23,7 @@ from sieves.tasks.predictive.classification.bridges import (
     HuggingFaceClassification,
     LangChainClassification,
     OutlinesClassification,
+    TaskInferenceMode,
 )
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
@@ -33,7 +34,6 @@ _TaskResult = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | gl
 _TaskBridge = (
     DSPyClassification | GliXBridge | LangChainClassification | HuggingFaceClassification | OutlinesClassification
 )
-_TaskInferenceMode = glix_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | langchain_.InferenceMode
 
 
 class FewshotExampleMultiLabel(BaseFewshotExample):
@@ -98,7 +98,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         label_descriptions: dict[str, str] | None = None,
         multi_label: bool = True,
         generation_settings: GenerationSettings = GenerationSettings(),
-        inference_mode: _TaskInferenceMode | None = None,
+        inference_mode: TaskInferenceMode | None = None,
     ) -> None:
         """Initialize new PredictiveTask.
 
@@ -179,6 +179,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 labels=self._labels,
                 label_descriptions=self._label_descriptions,
                 multi_label=self._multi_label,
+                inference_mode=self._inference_mode,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err

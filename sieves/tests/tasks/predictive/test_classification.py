@@ -5,11 +5,11 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline, engines
-from sieves.engines import EngineType
+from sieves.engines import EngineType, dspy_, langchain_, outlines_, huggingface_, glix_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
-from sieves.tests.conftest import Runtime, _make_runtime
+from sieves.tests.conftest import Runtime
 
 
 def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = True) -> None:
@@ -300,3 +300,20 @@ def test_result_to_scores() -> None:
             not_label: str
 
         classification.Classification._result_to_scores(BadPRes(not_label="x"))
+
+
+@pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
+def test_inference_mode_override(batch_runtime) -> None:
+    """Test that inference_mode parameter overrides the default value."""
+    dummy = "dummy_inference_mode"
+
+    task = classification.Classification(
+        task_id="classifier",
+        labels=["science", "politics"],
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
+        inference_mode=dummy,
+    )
+
+    assert task._bridge.inference_mode == dummy

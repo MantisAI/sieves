@@ -124,9 +124,9 @@ class PredictiveTask(
         self._engine = init_engine(model, generation_settings)
         self._overwrite = overwrite
         self._custom_prompt_instructions = prompt_instructions
+        self._inference_mode = inference_mode
         self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
         self._fewshot_examples = fewshot_examples
-        self._inference_mode = inference_mode
 
         self._validate_fewshot_examples()
 

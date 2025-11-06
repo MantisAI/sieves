@@ -10,11 +10,12 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, glix_, langchain_, outlines_
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
+TaskInferenceMode = dspy_.InferenceMode | glix_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class SummarizationBridge(
@@ -29,18 +30,21 @@ class SummarizationBridge(
         prompt_instructions: str | None,
         overwrite: bool,
         n_words: int,
+        inference_mode: EngineInferenceMode | None = None,
     ):
-        """Initialize InformationExtractionBridge.
+        """Initialize SummarizationBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with summarization text.
         :param n_words: Approximate number of words in summary.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=overwrite,
+            inference_mode=inference_mode,
         )
         self._n_words = n_words
 
@@ -85,7 +89,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.chain_of_thought
+        return self._inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -208,7 +212,7 @@ class OutlinesSummarization(PydanticBasedSummarization[outlines_.InferenceMode])
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
+        return self._inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainSummarization(PydanticBasedSummarization[langchain_.InferenceMode]):
@@ -217,4 +221,4 @@ class LangChainSummarization(PydanticBasedSummarization[langchain_.InferenceMode
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured
+        return self._inference_mode or langchain_.InferenceMode.structured

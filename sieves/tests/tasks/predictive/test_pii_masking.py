@@ -2,7 +2,7 @@
 import pytest
 
 from sieves import Doc, Pipeline, tasks
-from sieves.engines import EngineType
+from sieves.engines import EngineType, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import pii_masking
@@ -114,3 +114,22 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
  'version': Config.get_version()}
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}])
+
+
+@pytest.mark.parametrize(
+    "batch_runtime",
+    [EngineType.dspy, EngineType.langchain, EngineType.outlines],
+    indirect=["batch_runtime"],
+)
+def test_inference_mode_override(batch_runtime) -> None:
+    """Test that inference_mode parameter overrides the default value."""
+    dummy = "dummy_inference_mode"
+
+    task = tasks.predictive.PIIMasking(
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
+        inference_mode=dummy,
+    )
+
+    assert task._bridge.inference_mode == dummy

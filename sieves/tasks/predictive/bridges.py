@@ -18,17 +18,21 @@ TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult
 class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.ABC):
     """Bridge base class."""
 
-    def __init__(self, task_id: str, prompt_instructions: str | None, overwrite: bool):
+    def __init__(
+        self, task_id: str, prompt_instructions: str | None, overwrite: bool, inference_mode: EngineInferenceMode | None
+    ):
         """Initialize new bridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with produced text. Considered only by bridges for tasks producing
             fluent text - like translation, summarization, PII masking, etc.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         """
         self._task_id = task_id
         self._custom_prompt_instructions = prompt_instructions
         self._overwrite = overwrite
+        self._inference_mode = inference_mode
 
     @property
     @abc.abstractmethod
@@ -152,17 +156,14 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param prompt_signature: Prompt signature.
-        :param inference_mode: Inference mode.
+        :param inference_mode: Inference mode. If None, the default inference mode is used.
         :param label_whitelist: Labels to record predictions for. If None, predictions for all labels are recorded.
         :param only_keep_best: Whether to only return the result with the highest score.
         """
         super().__init__(
-            task_id=task_id,
-            prompt_instructions=prompt_instructions,
-            overwrite=False,
+            task_id=task_id, prompt_instructions=prompt_instructions, overwrite=False, inference_mode=inference_mode
         )
         self._prompt_signature = prompt_signature
-        self._inference_mode = inference_mode
         self._label_whitelist = label_whitelist
         self._has_scores = inference_mode in (
             glix_.InferenceMode.classification,

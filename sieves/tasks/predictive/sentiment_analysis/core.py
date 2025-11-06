@@ -21,6 +21,7 @@ from sieves.tasks.predictive.sentiment_analysis.bridges import (
     DSPySentimentAnalysis,
     LangChainSentimentAnalysis,
     OutlinesSentimentAnalysis,
+    TaskInferenceMode,
 )
 
 _TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
@@ -64,6 +65,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         batch_size: int = -1,
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
+        inference_mode: TaskInferenceMode | None = None,
     ) -> None:
         """
         Initialize SentimentAnalysis task.
@@ -77,6 +79,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         :param batch_size: Batch size to use for inference. Use -1 to process all documents at once.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
+        :param inference_mode: Inference mode to use. If None, the default mode for this task will be used.
         """
         self._aspects = tuple(sorted(set(aspects) | {"overall"}))
         super().__init__(
@@ -88,6 +91,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             overwrite=False,
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
+            inference_mode=inference_mode,
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
@@ -106,6 +110,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 aspects=self._aspects,
+                inference_mode=self._inference_mode,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err

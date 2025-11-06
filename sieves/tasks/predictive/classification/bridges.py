@@ -14,6 +14,7 @@ from sieves.data import Doc
 from sieves.engines import (
     EngineInferenceMode,
     dspy_,
+    glix_,
     huggingface_,
     langchain_,
     outlines_,
@@ -22,6 +23,7 @@ from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
+TaskInferenceMode = glix_.InferenceMode | dspy_.InferenceMode | huggingface_.InferenceMode | langchain_.InferenceMode
 
 
 class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
@@ -33,6 +35,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         prompt_instructions: str | None,
         labels: list[str],
         multi_label: bool,
+        inference_mode: EngineInferenceMode | None,
         label_descriptions: dict[str, str] | None = None,
     ):
         """Initialize InformationExtractionBridge.
@@ -43,12 +46,11 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         :param multi_label: If True, task returns confidence scores for all specified labels. If False, task returns
             most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
             accuracy.
+        :param inference_mode: Inference mode. If None, default mode is used.
         :param label_descriptions: Optional descriptions for each label.
         """
         super().__init__(
-            task_id=task_id,
-            prompt_instructions=prompt_instructions,
-            overwrite=False,
+            task_id=task_id, prompt_instructions=prompt_instructions, overwrite=False, inference_mode=inference_mode
         )
         self._labels = labels
         self._multi_label = multi_label
@@ -151,7 +153,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return dspy_.InferenceMode.chain_of_thought
+        return self._inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -275,7 +277,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     @override
     @property
     def inference_mode(self) -> huggingface_.InferenceMode:
-        return huggingface_.InferenceMode.zeroshot_cls
+        return self._inference_mode or huggingface_.InferenceMode.zeroshot_cls
 
     @override
     def integrate(self, results: Iterable[huggingface_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -504,7 +506,7 @@ class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMo
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return langchain_.InferenceMode.structured
+        return self._inference_mode or langchain_.InferenceMode.structured
 
 
 class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[EngineInferenceMode], abc.ABC):
@@ -587,4 +589,6 @@ class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outline
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json if self._multi_label else outlines_.InferenceMode.choice
+        return self._inference_mode or (
+            outlines_.InferenceMode.json if self._multi_label else outlines_.InferenceMode.choice
+        )
