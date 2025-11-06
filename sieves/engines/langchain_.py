@@ -60,7 +60,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                             yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
 
                         except Exception as err:
-                            raise type(err)(
+                            raise RuntimeError(
                                 f"Encountered problem in parsing {cls_name} output. Double-check your prompts and "
                                 f"examples."
                             ) from err

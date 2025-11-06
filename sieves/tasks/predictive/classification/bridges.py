@@ -409,7 +409,12 @@ class PydanticBasedClassification(
                 "MultilabelClassification",
                 __base__=pydantic.BaseModel,
                 __doc__="Result of multi-label classification.",
-                reasoning=(str, ...),
+                reasoning=(
+                    str,
+                    pydantic.Field(
+                        default="", description="Provide reasoning for complex or ambiguous classifications."
+                    ),
+                ),
                 **{label: (float, ...) for label in self._labels},
             )
         else:
@@ -419,7 +424,9 @@ class PydanticBasedClassification(
             class SingleLabelClassification(pydantic.BaseModel):
                 """Result of single-label classification."""
 
-                reasoning: str
+                reasoning: str = pydantic.Field(
+                    default="", description="Provide reasoning for complex or ambiguous classifications."
+                )
                 label: LabelType
                 score: float
 

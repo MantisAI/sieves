@@ -165,7 +165,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
 
         except Exception as err:
             if self._strict_mode:
-                raise type(err)(
+                raise RuntimeError(
                     "Encountered problem when executing prompt. Ensure your few-shot examples and document "
                     "chunks contain sensible information."
                 ) from err

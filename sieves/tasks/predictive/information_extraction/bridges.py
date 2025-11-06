@@ -171,7 +171,7 @@ class PydanticBasedInformationExtraction(
         class Entity(pydantic.BaseModel, frozen=True):
             """Entity to extract from text."""
 
-            reasoning: str
+            reasoning: str = pydantic.Field(default="", description="Provide reasoning for complex extraction cases.")
             entities: list[entity_type]  # type: ignore[valid-type]
 
         return Entity

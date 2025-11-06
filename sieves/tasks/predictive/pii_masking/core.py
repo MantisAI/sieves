@@ -37,7 +37,7 @@ class PIIEntity(pydantic.BaseModel, frozen=True):
 class FewshotExample(BaseFewshotExample):
     """Example for PII masking few-shot prompting."""
 
-    reasoning: str
+    reasoning: str = ""
     masked_text: str
     pii_entities: list[PIIEntity]
 
