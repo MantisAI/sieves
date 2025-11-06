@@ -36,7 +36,10 @@ class EvaluationSignature(dspy.Signature):
     ground_truth: str = dspy.InputField(desc="Ground truth output values.")
     prediction: str = dspy.InputField(desc="Predicted output values.")
 
-    reasoning: str = dspy.OutputField(desc="Step-by-step reasoning for the similarity assessment")
+    reasoning: str = dspy.OutputField(
+        desc="Step-by-step reasoning for the similarity assessment. Provide this when the assessment is non-trivial.",
+        default="",
+    )
     similarity_score: float = dspy.OutputField(
         desc="Similarity score between 0.0 and 1.0, where 1.0 means identical and 0.0 means completely different."
     )

@@ -94,7 +94,11 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
         class PIIMasking(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to mask PII from.")
-            reasoning: str = dspy.OutputField(description="Reasoning about what PII was found and masked.")
+            reasoning: str = dspy.OutputField(
+                description="Reasoning about what PII was found and masked. Provide this for complex cases where "
+                "explanation would be helpful.",
+                default="",
+            )
             masked_text: str = dspy.OutputField(description="Text with all PII masked.")
             pii_entities: list[PIIEntity] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
 
@@ -208,7 +212,11 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
         class PIIMasking(pydantic.BaseModel, frozen=True):
             """PII masking output."""
 
-            reasoning: str
+            reasoning: str = pydantic.Field(
+                default="",
+                description="Reasoning about what PII was found and masked. Provide this for complex cases where "
+                "explanation would be helpful.",
+            )
             masked_text: str
             pii_entities: list[PIIEntity]  # type: ignore[valid-type]
 
