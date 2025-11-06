@@ -68,6 +68,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
         class Entities(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to extract entities from.")
+            reasoning: str = dspy.OutputField(default="", description="Provide reasoning for complex extraction cases.")
             entities: list[extraction_type] = dspy.OutputField(description="Entities to extract from text.")  # type: ignore[valid-type]
 
         Entities.__doc__ = jinja2.Template(self._prompt_instructions).render()

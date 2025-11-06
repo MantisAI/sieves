@@ -118,6 +118,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
             class MultiLabelTextClassification(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to classify.")
+                reasoning: str = dspy.OutputField(
+                    default="", description="Provide reasoning for complex or ambiguous classifications."
+                )
                 confidence_per_label: dict[LabelType, float] = dspy.OutputField(
                     description="Confidence per label that text should be classified with this label."
                 )
@@ -131,6 +134,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                 label: LabelType = dspy.OutputField(
                     description="Correct label for the provided text. You MUST NOT provide a list for this attribute. "
                     "This a single label. Do not wrap this label in []."
+                )
+                reasoning: str = dspy.OutputField(
+                    default="", description="Provide reasoning for complex or ambiguous classifications."
                 )
                 confidence: float = dspy.OutputField(
                     description="Confidence that this label is correct as a float between 0 and 1."
