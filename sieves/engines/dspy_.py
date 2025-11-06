@@ -54,6 +54,7 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         super().__init__(model, generation_settings)
         cfg = generation_settings.config_kwargs or {}
         dspy.configure(lm=model, **cfg)
+        dspy.disable_litellm_logging()
 
     @override
     @property
