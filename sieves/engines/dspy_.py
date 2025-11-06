@@ -6,6 +6,7 @@ from collections.abc import Iterable, Sequence
 from typing import Any, override
 
 import dspy
+import litellm
 import nest_asyncio
 import pydantic
 
@@ -54,6 +55,10 @@ class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
         super().__init__(model, generation_settings)
         cfg = generation_settings.config_kwargs or {}
         dspy.configure(lm=model, **cfg)
+
+        # Disable noisy LiteLLM logging.
+        dspy.disable_litellm_logging()
+        litellm._logging._disable_debugging()
 
     @override
     @property
