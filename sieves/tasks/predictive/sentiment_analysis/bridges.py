@@ -70,6 +70,9 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
 
         class SentimentAnalysis(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to determine sentiments for.")
+            reasoning: str = dspy.OutputField(
+                default="", description="Provide reasoning for aspect-based sentiment assessments when beneficial."
+            )
             sentiment_per_aspect: dict[AspectType, float] = dspy.OutputField(
                 description="Sentiment in this text with respect to the corresponding aspect."
             )
@@ -211,7 +214,12 @@ class PydanticBasedSentAnalysis(
             "SentimentAnalysis",
             __base__=pydantic.BaseModel,
             __doc__="Sentiment analysis of specified text.",
-            reasoning=(str, ...),
+            reasoning=(
+                str,
+                pydantic.Field(
+                    default="", description="Provide reasoning for aspect-based sentiment assessments when beneficial."
+                ),
+            ),
             **{aspect: (float, ...) for aspect in self._aspects},
         )
 

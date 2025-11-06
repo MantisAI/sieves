@@ -73,6 +73,9 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
         class Summary(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to summarize.")
             n_words: str = dspy.InputField(description="Number of words to approximately use for summary.")
+            reasoning: str = dspy.OutputField(
+                default="", description="Provide reasoning for summarization choices when appropriate."
+            )
             summary: str = dspy.OutputField(description="Summary of text.")
 
         Summary.__doc__ = jinja2.Template(self._prompt_instructions).render()
@@ -162,6 +165,9 @@ class PydanticBasedSummarization(
         class Summary(pydantic.BaseModel, frozen=True):
             """Summary of the specified text."""
 
+            reasoning: str = pydantic.Field(
+                default="", description="Provide reasoning for summarization choices when appropriate."
+            )
             summary: str
 
         return Summary

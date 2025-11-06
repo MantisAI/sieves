@@ -73,6 +73,9 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
         class Translation(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField()
             target_language: str = dspy.InputField()
+            reasoning: str = dspy.OutputField(
+                default="", description="Provide reasoning for translation choices when relevant."
+            )
             translation: str = dspy.OutputField()
 
         Translation.__doc__ = jinja2.Template(self._prompt_instructions).render()
@@ -163,6 +166,9 @@ class PydanticBasedTranslation(
         class Translation(pydantic.BaseModel, frozen=True):
             """Translation."""
 
+            reasoning: str = pydantic.Field(
+                default="", description="Provide reasoning for translation choices when relevant."
+            )
             translation: str
 
         return Translation
