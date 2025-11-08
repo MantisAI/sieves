@@ -61,9 +61,10 @@ A `Bridge` requires you to implement/specify the following:
 - A _prompt template_ (optional depending on the engine used).
 - A _prompt signature description_ (optional depending on the engine used).
 - A _prompt signature_ describing how results have to be structured.
-- Which _inference mode_ to use. This defines how to engine queries the model and parses the results.
 - How to _integrate_ results into docs.
 - How to _consolidate_ results from multiple doc chunks into one result per doc.
+
+The _inference mode_ (which defines how the engine queries the model and parses the results) is configured via `GenerationSettings` when creating the task, rather than in the Bridge.
 
 We'll save this in `sentiment_analysis_bridges.py`.
 
@@ -86,7 +87,7 @@ class SentimentEstimate(pydantic.BaseModel):
 
 
 # This is the bridge class.
-class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, EngineInferenceMode]):
+class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate]):
     # This defines the default prompt template as Jinja2 template string.
     # We include an example block allowing us to include fewshot examples.
     @property
@@ -121,11 +122,6 @@ class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, Eng
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         return SentimentEstimate
-
-    # Outlines as a JSON mode, which allows complex return objects to be specified and parsed as Pydantic objects.
-    @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return outlines_.InferenceMode.json
 
     # We copy the result score into our doc's results attribute.
     def integrate(self, results: Iterable[SentimentEstimate], docs: Iterable[Doc]) -> Iterable[Doc]:
