@@ -43,6 +43,7 @@ def test_serialization(dummy_docs) -> None:
                     "interval": {"is_placeholder": False, "value": 5},
                     "task_id": {"is_placeholder": False, "value": "NaiveChunker"},
                     "version": Config.get_version(),
+                    'condition': {'is_placeholder': False, 'value': None},
                 }
             ],
         },

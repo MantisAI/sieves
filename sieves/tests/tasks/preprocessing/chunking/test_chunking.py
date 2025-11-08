@@ -37,6 +37,7 @@ def test_serialization(tokenizer) -> None:
                     "include_meta": {"is_placeholder": False, "value": False},
                     "task_id": {"is_placeholder": False, "value": "Chunking"},
                     "version": Config.get_version(),
+                    'condition': {'is_placeholder': False, 'value': None},
                 }
             ],
         },

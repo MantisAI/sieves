@@ -1,6 +1,6 @@
 """Allows masking of PII (Personally Identifiable Information) in text documents."""
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import Any, override
 
@@ -62,6 +62,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
+        condition: Callable[[Doc], bool] | None = None,
     ) -> None:
         """
         Initialize PIIMasking task.
@@ -79,6 +80,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation. Use the `inference_mode` field to specify the
             inference mode for the engine. If not provided, the engine will use its default mode.
+        :param condition: Optional callable that determines whether to process each document.
         """
         self._pii_types = pii_types
         self._mask_placeholder = mask_placeholder
@@ -92,6 +94,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
+            condition=condition,
         )
 
     @override

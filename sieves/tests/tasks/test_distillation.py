@@ -142,6 +142,7 @@ def test_serialization(batch_runtime) -> None:
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
                       'batch_size': {'is_placeholder': False, 'value': -1},
+                      'condition': {'is_placeholder': False, 'value': None},
                       'generation_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,

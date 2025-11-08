@@ -92,7 +92,7 @@ class Config(pydantic.BaseModel):
         :param attributes: Attributes to include in config.
         :return Config: Instance of dynamic config class.
         """
-        config_type = pydantic.create_model(  # type: ignore[call-overload]
+        config_type = pydantic.create_model(  # type: ignore[_call-overload]
             f"{cls_obj}Config",
             __base__=Config,
             **{attr_id: (Attribute, ...) for attr_id in attributes},
@@ -186,7 +186,7 @@ class Config(pydantic.BaseModel):
         with open(path) as file:
             data = yaml.safe_load(file)
 
-        config = pydantic.create_model(  # type: ignore[call-overload]
+        config = pydantic.create_model(  # type: ignore[_call-overload]
             f"{data['cls_name']}Config",
             __base__=Config,
             cls_name=(str, ...),

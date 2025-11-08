@@ -22,7 +22,7 @@ Optimization is valuable when:
 > Optimization involves **multiple LLM calls** during the search process. Costs depend on:
 > - Dataset size (more examples = more evaluations)
 > - DSPy optimizer configuration (`num_candidates`, `num_trials`)
-> - Model pricing (larger models cost more per call)
+> - Model pricing (larger models cost more per _call)
 >
 > Start with small datasets and conservative optimizer settings to control costs.
 
@@ -112,7 +112,7 @@ These tasks use a **generic LLM-as-judge evaluator** that compares ground truth 
 - **Translation** - Evaluates translation quality
 - **Question Answering** - Evaluates answer correctness
 
-> **Note**: LLM-based evaluation adds additional costs since each evaluation requires an extra LLM call.
+> **Note**: LLM-based evaluation adds additional costs since each evaluation requires an extra LLM _call.
 
 ## Optimizer Configuration
 

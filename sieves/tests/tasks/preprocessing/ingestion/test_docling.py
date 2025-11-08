@@ -43,6 +43,7 @@ def test_serialization() -> None:
                     "include_meta": {"is_placeholder": False, "value": False},
                     "task_id": {"is_placeholder": False, "value": "Docling"},
                     "version": version,
+                    'condition': {'is_placeholder': False, 'value': None},
                 }
             ],
         },

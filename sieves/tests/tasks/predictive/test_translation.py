@@ -109,6 +109,7 @@ def test_serialization(translation_docs, batch_runtime) -> None:
                                           'value': None},
                       'task_id': {'is_placeholder': False,
                                   'value': 'Translation'},
+                      'condition': {'is_placeholder': False, 'value': None},
                       'to': {'is_placeholder': False, 'value': 'Spanish'},
                       'version': Config.get_version()}]},
  'use_cache': {'is_placeholder': False, 'value': True},

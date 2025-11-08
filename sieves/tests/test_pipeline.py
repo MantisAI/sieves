@@ -15,7 +15,7 @@ from sieves.tasks import Classification
 )
 def test_double_task(dummy_docs, batch_runtime) -> None:
     class DummyTask(tasks.Task):
-        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)
             for _doc in _docs:
                 _doc.results[self._task_id] = "dummy"
@@ -115,7 +115,7 @@ def test_add_task_task(dummy_docs) -> None:
     """Chaining two tasks with ``+`` yields a working Pipeline with both results."""
 
     class DummyTask(tasks.Task):
-        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)
             for _doc in _docs:
                 _doc.results[self._task_id] = "ok"
@@ -138,7 +138,7 @@ def test_add_pipeline_task_and_task_pipeline(dummy_docs) -> None:
     """Chaining Pipeline+Task and Task+Pipeline produces identical outputs order-wise."""
 
     class DummyTask(tasks.Task):
-        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)
             for _doc in _docs:
                 _doc.results[self._task_id] = "ok"
@@ -163,7 +163,7 @@ def test_add_pipeline_pipeline(dummy_docs) -> None:
     """Chaining Pipeline+Pipeline concatenates tasks and preserves left cache semantics."""
 
     class DummyTask(tasks.Task):
-        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)
             for _doc in _docs:
                 _doc.results[self._task_id] = "ok"
@@ -183,7 +183,7 @@ def test_add_does_not_mutate_originals() -> None:
     """Chaining should not mutate the original Task or Pipeline instances."""
 
     class DummyTask(tasks.Task):
-        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             yield from _docs
 
     t1 = DummyTask(task_id="t1", include_meta=False, batch_size=-1)
@@ -203,7 +203,7 @@ def test_add_cache_semantics(dummy_docs) -> None:
     """Verify cache propagation rules for all supported chaining combinations."""
 
     class DummyTask(tasks.Task):
-        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             yield from _docs
 
     t1 = DummyTask(task_id="t1", include_meta=False, batch_size=-1)
@@ -232,7 +232,7 @@ def test_iadd_pipeline_task(dummy_docs) -> None:
     """Pipeline ``+= Task`` appends in-place and preserves order and cache semantics."""
 
     class DummyTask(tasks.Task):
-        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)
             for _doc in _docs:
                 _doc.results[self._task_id] = "ok"
@@ -260,7 +260,7 @@ def test_iadd_pipeline_pipeline(dummy_docs) -> None:
     """Pipeline ``+= Pipeline`` appends all tasks and preserves left cache semantics."""
 
     class DummyTask(tasks.Task):
-        def __call__(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)
             for _doc in _docs:
                 _doc.results[self._task_id] = "ok"

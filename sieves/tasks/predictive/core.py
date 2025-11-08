@@ -9,7 +9,7 @@ import json
 import logging
 import sys
 import warnings
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import Any, Generic, Self
 
@@ -103,6 +103,7 @@ class PredictiveTask(
         prompt_instructions: str | None,
         fewshot_examples: Sequence[FewshotExample],
         generation_settings: GenerationSettings,
+        condition: Callable[[Doc], bool] | None = None,
     ):
         """Initialize PredictiveTask.
 
@@ -117,8 +118,9 @@ class PredictiveTask(
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation. Use the `inference_mode` field to specify the
             inference mode for the engine. If not provided, the engine will use its default mode.
+        :param condition: Optional callable that determines whether to process each document.
         """
-        super().__init__(task_id=task_id, include_meta=include_meta, batch_size=batch_size)
+        super().__init__(task_id=task_id, include_meta=include_meta, batch_size=batch_size, condition=condition)
 
         self._engine = init_engine(model, generation_settings)
         self._generation_settings = generation_settings
@@ -172,7 +174,7 @@ class PredictiveTask(
         assert sig_desc is None or isinstance(sig_desc, str)
         return sig_desc
 
-    def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
+    def _call(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         """Execute the task on a set of documents.
 
         :param docs: Documents to process.
@@ -291,7 +293,7 @@ class PredictiveTask(
         :param val_frac: Fraction of data to use for validation set.
         :param seed: RNG seed.
         :param init_kwargs: Kwargs passed on to model/trainer initialization.
-        :param train_kwargs: Kwargs passed on to training call.
+        :param train_kwargs: Kwargs passed on to training _call.
         :raises KeyError: If expected columns don't exist in `hf_dataset`.
         """
 

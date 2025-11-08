@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import Any, override
 
@@ -97,6 +97,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         label_descriptions: dict[str, str] | None = None,
         multi_label: bool = True,
         generation_settings: GenerationSettings = GenerationSettings(),
+        condition: Callable[[Doc], bool] | None = None,
     ) -> None:
         """Initialize new PredictiveTask.
 
@@ -112,6 +113,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
             accuracy.
         :param generation_settings: Generation settings.
+        :param condition: Optional callable that determines whether to process each document.
         """
         self._labels = labels
         self._label_descriptions = label_descriptions or {}
@@ -127,6 +129,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
+            condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
 

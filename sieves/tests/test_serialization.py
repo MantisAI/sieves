@@ -53,6 +53,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                     "cls_name": "sieves.tasks.preprocessing.chunking.core.Chunking",
                     "include_meta": {"is_placeholder": False, "value": False},
                     "task_id": {"is_placeholder": False, "value": "Chunking"},
+                    'condition': {'is_placeholder': False, 'value': None},
                     "version": version,
                 },
                 {
@@ -67,6 +68,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                             'inference_mode': None,
                         }
                     },
+                    'condition': {'is_placeholder': False, 'value': None},
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
                     "include_meta": {"is_placeholder": False, "value": True},
                     'batch_size': {'is_placeholder': False, 'value': -1},

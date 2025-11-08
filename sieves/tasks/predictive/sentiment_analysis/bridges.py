@@ -219,7 +219,7 @@ class PydanticBasedSentAnalysis(
     @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
-        prompt_sig = pydantic.create_model(  # type: ignore[call-overload]
+        prompt_sig = pydantic.create_model(  # type: ignore[_call-overload]
             "SentimentAnalysis",
             __base__=pydantic.BaseModel,
             __doc__="Sentiment analysis of specified text.",
