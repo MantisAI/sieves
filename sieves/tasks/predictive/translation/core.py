@@ -20,7 +20,6 @@ from sieves.tasks.predictive.translation.bridges import (
     DSPyTranslation,
     LangChainTranslation,
     OutlinesTranslation,
-    TaskInferenceMode,
 )
 
 _TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
@@ -60,7 +59,6 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
-        inference_mode: TaskInferenceMode | None = None,
     ) -> None:
         """
         Initialize Translation task.
@@ -76,7 +74,6 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
-        :param inference_mode: Inference mode to use. If None, the default mode for this task will be used.
         """
         self._to = to
 
@@ -89,7 +86,6 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
-            inference_mode=inference_mode,
         )
 
     @override
@@ -106,7 +102,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
                 prompt_instructions=self._custom_prompt_instructions,
                 overwrite=self._overwrite,
                 language=self._to,
-                inference_mode=self._inference_mode,
+                generation_settings=self._generation_settings,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err

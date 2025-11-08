@@ -23,7 +23,6 @@ from sieves.tasks.predictive.classification.bridges import (
     HuggingFaceClassification,
     LangChainClassification,
     OutlinesClassification,
-    TaskInferenceMode,
 )
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
@@ -98,7 +97,6 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         label_descriptions: dict[str, str] | None = None,
         multi_label: bool = True,
         generation_settings: GenerationSettings = GenerationSettings(),
-        inference_mode: TaskInferenceMode | None = None,
     ) -> None:
         """Initialize new PredictiveTask.
 
@@ -129,7 +127,6 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
-            inference_mode=inference_mode,
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
@@ -157,7 +154,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 prompt_signature=self._labels,
-                inference_mode=self._inference_mode or glix_.InferenceMode.classification,
+                generation_settings=self._generation_settings,
                 label_whitelist=tuple(self._labels),
                 only_keep_best=not self._multi_label,
             )
@@ -179,7 +176,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 labels=self._labels,
                 label_descriptions=self._label_descriptions,
                 multi_label=self._multi_label,
-                inference_mode=self._inference_mode,
+                generation_settings=self._generation_settings,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err

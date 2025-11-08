@@ -21,7 +21,6 @@ from sieves.tasks.predictive.question_answering.bridges import (
     DSPyQA,
     LangChainQA,
     OutlinesQA,
-    TaskInferenceMode,
 )
 
 _TaskModel = dspy_.Model | glix_.Model | langchain_.Model | outlines_.Model
@@ -61,7 +60,6 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
-        inference_mode: TaskInferenceMode | None = None,
     ) -> None:
         """
         Initialize QuestionAnswering task.
@@ -74,7 +72,6 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
-        :param inference_mode: Inference mode to use. If None, the default mode for this task will be used.
         """
         self._questions = questions
         super().__init__(
@@ -86,7 +83,6 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
-            inference_mode=inference_mode,
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
@@ -97,7 +93,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 prompt_signature=self._questions,
-                inference_mode=self._inference_mode or glix_.InferenceMode.question_answering,
+                generation_settings=self._generation_settings,
             )
 
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
@@ -114,7 +110,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 questions=self._questions,
-                inference_mode=self._inference_mode,
+                generation_settings=self._generation_settings,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err

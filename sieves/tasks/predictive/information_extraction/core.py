@@ -22,7 +22,6 @@ from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
     LangChainInformationExtraction,
     OutlinesInformationExtraction,
-    TaskInferenceMode,
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
@@ -57,7 +56,6 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
-        inference_mode: TaskInferenceMode | None = None,
     ) -> None:
         """Initialize new PredictiveTask.
 
@@ -69,7 +67,6 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
-        :param inference_mode: Inference mode to use. If None, the default mode for this task will be used.
         """
         self._entity_type = entity_type
 
@@ -82,7 +79,6 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
-            inference_mode=inference_mode,
         )
 
         if not self._entity_type.model_config.get("frozen", False):
@@ -110,7 +106,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 entity_type=self._entity_type,
-                inference_mode=self._inference_mode,
+                generation_settings=self._generation_settings,
             )
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err

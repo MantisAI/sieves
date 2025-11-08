@@ -29,7 +29,6 @@ from sieves.tasks.predictive.ner.bridges import (
     GliXNER,
     LangChainNER,
     OutlinesNER,
-    TaskInferenceMode,
 )
 
 _TaskModel = dspy_.Model | glix_.Model | langchain_.Model | outlines_.Model
@@ -80,7 +79,6 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
-        inference_mode: TaskInferenceMode | None = None,
     ) -> None:
         """
         Initialize NER task.
@@ -93,7 +91,6 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation.
-        :param inference_mode: Inference mode to use. If None, the default mode for this task will be used.
         """
         self._entities = entities or ["PERSON", "LOCATION", "ORGANIZATION"]
         super().__init__(
@@ -105,7 +102,6 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
-            inference_mode=inference_mode,
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
@@ -123,7 +119,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 entities=self._entities,
-                inference_mode=self._inference_mode,
+                generation_settings=self._generation_settings,
             )
             return result  # type: ignore[return-value]
         except KeyError as err:

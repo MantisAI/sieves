@@ -2,7 +2,7 @@
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType, dspy_, langchain_, outlines_
+from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import translation
@@ -101,7 +101,7 @@ def test_serialization(translation_docs, batch_runtime) -> None:
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
-                                                        'strict_mode': False}},
+                                                        'strict_mode': False, 'inference_mode': None}},
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'model': {'is_placeholder': True,
                                 'value': 'dspy.clients.lm.LM'},
@@ -124,22 +124,13 @@ def test_serialization(translation_docs, batch_runtime) -> None:
 )
 def test_inference_mode_override(batch_runtime) -> None:
     """Test that inference_mode parameter overrides the default value."""
-    # Select a non-default inference mode based on engine type
-    if "dspy" in batch_runtime.model.__class__.__module__:
-        custom_mode = dspy_.InferenceMode.chain_of_thought
-    elif "langchain" in batch_runtime.model.__class__.__module__:
-        custom_mode = langchain_.InferenceMode.structured
-    elif "outlines" in batch_runtime.model.__class__.__module__:
-        custom_mode = outlines_.InferenceMode.text
-    else:
-        raise ValueError(f"Unsupported engine type: {batch_runtime.model.__class__.__module__}")
+    dummy = "dummy_inference_mode"
 
     task = translation.Translation(
         to="Spanish",
         model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(inference_mode=dummy),
         batch_size=batch_runtime.batch_size,
-        inference_mode=custom_mode,
     )
 
-    assert task._bridge.inference_mode == custom_mode
+    assert task._bridge.inference_mode == dummy

@@ -3,7 +3,7 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline, tasks
-from sieves.engines import EngineType, dspy_, langchain_, outlines_
+from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import information_extraction
@@ -106,7 +106,7 @@ def test_serialization(information_extraction_docs, batch_runtime) -> None:
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
-                                                        'strict_mode': False}},
+                                                        'strict_mode': False, 'inference_mode': None}},
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'model': {'is_placeholder': True,
                                 'value': 'outlines.models.transformers.Transformers'},
@@ -133,9 +133,8 @@ def test_inference_mode_override(batch_runtime) -> None:
     task = tasks.predictive.InformationExtraction(
         entity_type=Person,
         model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        generation_settings=GenerationSettings(inference_mode=dummy),
         batch_size=batch_runtime.batch_size,
-        inference_mode=dummy,
     )
 
     assert task._bridge.inference_mode == dummy

@@ -9,6 +9,7 @@ from typing import Any, Generic, TypeVar, override
 
 from sieves.data import Doc
 from sieves.engines import EngineInferenceMode, glix_
+from sieves.engines.types import GenerationSettings
 
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
 TaskResult = TypeVar("TaskResult")
@@ -19,7 +20,7 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
     """Bridge base class."""
 
     def __init__(
-        self, task_id: str, prompt_instructions: str | None, overwrite: bool, inference_mode: EngineInferenceMode | None
+        self, task_id: str, prompt_instructions: str | None, overwrite: bool, generation_settings: GenerationSettings
     ):
         """Initialize new bridge.
 
@@ -27,12 +28,12 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with produced text. Considered only by bridges for tasks producing
             fluent text - like translation, summarization, PII masking, etc.
-        :param inference_mode: Inference mode. If None, the default inference mode is used.
+        :param generation_settings: Generation settings including inference_mode.
         """
         self._task_id = task_id
         self._custom_prompt_instructions = prompt_instructions
         self._overwrite = overwrite
-        self._inference_mode = inference_mode
+        self._generation_settings = generation_settings
 
     @property
     @abc.abstractmethod
@@ -147,7 +148,7 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
         task_id: str,
         prompt_instructions: str | None,
         prompt_signature: tuple[str, ...] | list[str],
-        inference_mode: glix_.InferenceMode,
+        generation_settings: GenerationSettings,
         label_whitelist: tuple[str, ...] | None = None,
         only_keep_best: bool = False,
     ):
@@ -156,19 +157,18 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param prompt_signature: Prompt signature.
-        :param inference_mode: Inference mode. If None, the default inference mode is used.
+        :param generation_settings: Generation settings including inference_mode.
         :param label_whitelist: Labels to record predictions for. If None, predictions for all labels are recorded.
         :param only_keep_best: Whether to only return the result with the highest score.
         """
         super().__init__(
-            task_id=task_id, prompt_instructions=prompt_instructions, overwrite=False, inference_mode=inference_mode
+            task_id=task_id,
+            prompt_instructions=prompt_instructions,
+            overwrite=False,
+            generation_settings=generation_settings,
         )
         self._prompt_signature = prompt_signature
         self._label_whitelist = label_whitelist
-        self._has_scores = inference_mode in (
-            glix_.InferenceMode.classification,
-            glix_.InferenceMode.question_answering,
-        )
         self._only_keep_best = only_keep_best
         self._pred_attr: str | None = None
 
@@ -196,7 +196,16 @@ class GliXBridge(Bridge[list[str], glix_.Result, glix_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> glix_.InferenceMode:
-        return self._inference_mode
+        return self._generation_settings.inference_mode or glix_.InferenceMode.classification
+
+    @property
+    def _has_scores(self) -> bool:
+        """Check if inference mode produces scores."""
+        inference_mode = self.inference_mode
+        return inference_mode in (
+            glix_.InferenceMode.classification,
+            glix_.InferenceMode.question_answering,
+        )
 
     @override
     def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:

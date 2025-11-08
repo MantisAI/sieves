@@ -145,6 +145,7 @@ override defaults. Batching is controlled per task via the `batch_size` argument
 - strict_mode: False (on parse issues, return None instead of raising)
 - init_kwargs/inference_kwargs: None (use engine defaults)
 - config_kwargs: None (used by some backends like DSPy)
+- inference_mode: None (use engine defaults; specifies how the engine queries the model and parses results)
 
 Batching is configured on each task via `batch_size`:
 - `batch_size = -1` processes all inputs at once (default)
@@ -158,6 +159,25 @@ classifier = tasks.predictive.Classification(
     labels=["science", "politics"],
     model=model,
     generation_settings=GenerationSettings(strict_mode=True),
+    batch_size=8,
+)
+```
+
+To specify an inference mode (engine-specific):
+
+```python
+import outlines
+from sieves.engines import outlines_
+from sieves.engines.utils import GenerationSettings
+
+model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+classifier = tasks.predictive.Classification(
+    labels=["science", "politics"],
+    model=model,
+    generation_settings=GenerationSettings(
+        strict_mode=True,
+        inference_mode=outlines_.InferenceMode.json  # Specifies how to parse results
+    ),
     batch_size=8,
 )
 ```
