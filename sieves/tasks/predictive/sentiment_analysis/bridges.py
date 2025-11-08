@@ -11,11 +11,11 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
+from sieves.engines.types import GenerationSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
-TaskInferenceMode = dspy_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class SentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
@@ -26,20 +26,20 @@ class SentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInf
         task_id: str,
         prompt_instructions: str | None,
         aspects: tuple[str, ...],
-        inference_mode: TaskInferenceMode | None,
+        generation_settings: GenerationSettings,
     ):
         """Initialize SentAnalysisBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param aspects: Aspects to consider.
-        :param inference_mode: Inference mode. If None, the default inference mode is used.
+        :param generation_settings: Generation settings including inference_mode.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
-            inference_mode=inference_mode,
+            generation_settings=generation_settings,
         )
         self._aspects = aspects
 
@@ -93,7 +93,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return self._inference_mode or dspy_.InferenceMode.predict
+        return self._generation_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -281,7 +281,7 @@ class OutlinesSentimentAnalysis(PydanticBasedSentAnalysis[outlines_.InferenceMod
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return self._inference_mode or outlines_.InferenceMode.json
+        return self._generation_settings.inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceMode]):
@@ -290,4 +290,4 @@ class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceM
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return self._inference_mode or langchain_.InferenceMode.structured
+        return self._generation_settings.inference_mode or langchain_.InferenceMode.structured

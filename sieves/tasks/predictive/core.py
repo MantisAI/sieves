@@ -103,7 +103,6 @@ class PredictiveTask(
         prompt_instructions: str | None,
         fewshot_examples: Sequence[FewshotExample],
         generation_settings: GenerationSettings,
-        inference_mode: EngineInferenceMode | None,
     ):
         """Initialize PredictiveTask.
 
@@ -116,15 +115,15 @@ class PredictiveTask(
             documents' `.results` field.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
-        :param generation_settings: Settings for structured generation.
-        :param inference_mode: Inference mode to use. If None, the default mode for this task will be used.
+        :param generation_settings: Settings for structured generation. Use the `inference_mode` field to specify the
+            inference mode for the engine. If not provided, the engine will use its default mode.
         """
         super().__init__(task_id=task_id, include_meta=include_meta, batch_size=batch_size)
 
         self._engine = init_engine(model, generation_settings)
+        self._generation_settings = generation_settings
         self._overwrite = overwrite
         self._custom_prompt_instructions = prompt_instructions
-        self._inference_mode = inference_mode
         self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
         self._fewshot_examples = fewshot_examples
 

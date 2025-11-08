@@ -12,11 +12,11 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import EngineInferenceMode, dspy_, glix_, langchain_, outlines_
+from sieves.engines.types import GenerationSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
-TaskInferenceMode = dspy_.InferenceMode | glix_.InferenceMode | langchain_.InferenceMode | outlines_.InferenceMode
 
 
 class Entity(pydantic.BaseModel):
@@ -66,19 +66,19 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         entities: list[str],
         task_id: str,
         prompt_instructions: str | None,
-        inference_mode: TaskInferenceMode | None,
+        generation_settings: GenerationSettings,
     ):
         """Initialize NERBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param inference_mode: Inference mode. If None, the default inference mode is used.
+        :param generation_settings: Generation settings including inference_mode.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
-            inference_mode=inference_mode,
+            generation_settings=generation_settings,
         )
         self._entities = entities
 
@@ -246,7 +246,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return self._inference_mode or dspy_.InferenceMode.predict
+        return self._generation_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
     def consolidate(
@@ -384,7 +384,7 @@ class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return self._inference_mode or outlines_.InferenceMode.json
+        return self._generation_settings.inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
@@ -393,7 +393,7 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return self._inference_mode or langchain_.InferenceMode.structured
+        return self._generation_settings.inference_mode or langchain_.InferenceMode.structured
 
 
 class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
@@ -404,17 +404,20 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
         entities: list[str],
         task_id: str,
         prompt_instructions: str | None,
-        inference_mode: glix_.InferenceMode | None,
+        generation_settings: GenerationSettings,
     ):
         """Initialize GliXNER bridge.
 
         :param entities: List of entity types to extract.
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param inference_mode: Inference mode. If None, the default inference mode is used.
+        :param generation_settings: Generation settings including inference_mode.
         """
         super().__init__(
-            entities=entities, task_id=task_id, prompt_instructions=prompt_instructions, inference_mode=inference_mode
+            entities=entities,
+            task_id=task_id,
+            prompt_instructions=prompt_instructions,
+            generation_settings=generation_settings,
         )
 
     @override
@@ -440,7 +443,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> glix_.InferenceMode:
-        return self._inference_mode or glix_.InferenceMode.ner
+        return self._generation_settings.inference_mode or glix_.InferenceMode.ner
 
     @override
     def consolidate(

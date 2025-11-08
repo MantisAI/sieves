@@ -63,7 +63,8 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                             'config_kwargs': None,
                             'inference_kwargs': None,
                             'init_kwargs': None,
-                            'strict_mode': False
+                            'strict_mode': False,
+                            'inference_mode': None,
                         }
                     },
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
