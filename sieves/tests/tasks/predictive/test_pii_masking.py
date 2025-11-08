@@ -109,6 +109,7 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
                                           'value': None},
                       'task_id': {'is_placeholder': False,
                                   'value': 'PIIMasking'},
+                      'condition': {'is_placeholder': False, 'value': None},
                       'version': Config.get_version()}]},
  'use_cache': {'is_placeholder': False, 'value': True},
  'version': Config.get_version()}

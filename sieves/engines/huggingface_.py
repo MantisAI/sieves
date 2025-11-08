@@ -47,7 +47,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         assert isinstance(prompt_signature, list)
 
         # Render template with few-shot examples. Note that we don't use extracted document values here, as HF zero-shot
-        # pipelines only support one hypothesis template per call - and we want to batch, so our hypothesis template
+        # pipelines only support one hypothesis template per _call - and we want to batch, so our hypothesis template
         # will be document-invariant.
         fewshot_examples_dict = HuggingFace.convert_fewshot_examples(fewshot_examples)
         # Render hypothesis template with everything but text.

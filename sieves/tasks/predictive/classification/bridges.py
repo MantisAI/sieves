@@ -415,7 +415,7 @@ class PydanticBasedClassification(
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel] | list[str]:
         if self._multi_label:
-            prompt_sig = pydantic.create_model(  # type: ignore[call-overload]
+            prompt_sig = pydantic.create_model(  # type: ignore[_call-overload]
                 "MultilabelClassification",
                 __base__=pydantic.BaseModel,
                 __doc__="Result of multi-label classification.",

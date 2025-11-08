@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import Any, override
 
@@ -64,6 +64,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         batch_size: int = -1,
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
+        condition: Callable[[Doc], bool] | None = None,
     ) -> None:
         """
         Initialize SentimentAnalysis task.
@@ -77,6 +78,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         :param batch_size: Batch size to use for inference. Use -1 to process all documents at once.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
+        :param condition: Optional callable that determines whether to process each document.
         """
         self._aspects = tuple(sorted(set(aspects) | {"overall"}))
         super().__init__(
@@ -88,6 +90,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             overwrite=False,
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
+            condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
 

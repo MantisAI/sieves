@@ -116,6 +116,7 @@ def test_serialization(summarization_docs, batch_runtime) -> None:
                                           'value': None},
                       'task_id': {'is_placeholder': False,
                                   'value': 'Summarization'},
+                      'condition': {'is_placeholder': False, 'value': None},
                       'version': Config.get_version()}]},
  'use_cache': {'is_placeholder': False, 'value': True},
  'version': Config.get_version()}

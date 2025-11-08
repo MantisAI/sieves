@@ -93,6 +93,7 @@ def test_serialization(ner_docs, batch_runtime) -> None:
                       'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False, 'value': 'NER'},
+                      'condition': {'is_placeholder': False, 'value': None},
                       'version': Config.get_version()}]},
  'use_cache': {'is_placeholder': False, 'value': True},
  'version': Config.get_version()}

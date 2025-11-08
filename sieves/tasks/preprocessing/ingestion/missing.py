@@ -20,5 +20,5 @@ class MissingIngestion(Task):
         raise ImportError("Optional ingestion dependency not installed. Install with: uv sync --extra ingestion")
 
     @override
-    def __call__(self, docs: Iterable[Doc]) -> Iterable[Doc]:
+    def _call(self, docs: Iterable[Doc]) -> Iterable[Doc]:
         raise NotImplementedError

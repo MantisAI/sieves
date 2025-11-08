@@ -143,43 +143,46 @@ def test_serialization(classification_docs, batch_runtime) -> None:
 
     config = pipe.serialize()
     assert config.model_dump() == {'cls_name': 'sieves.pipeline.core.Pipeline',
- 'tasks': {'is_placeholder': False,
-           'value': [{'cls_name': 'sieves.tasks.predictive.classification.core.Classification',
-                      'fewshot_examples': {'is_placeholder': False,
-                                           'value': ()},
-                      'batch_size': {'is_placeholder': False, "value": -1},
-                      'generation_settings': {'is_placeholder': False,
-                                              'value': {
-                                                        'config_kwargs': None,
-                                                        'inference_kwargs': None,
-                                                        'init_kwargs': None,
-                                                        'strict_mode': False, 'inference_mode': None}},
-                      'include_meta': {'is_placeholder': False, 'value': True},
-                      'label_descriptions': {'is_placeholder': False,
-                                             'value': {'politics': 'Topics '
-                                                                   'related to '
-                                                                   'government, '
-                                                                   'elections, '
-                                                                   'and '
-                                                                   'political '
-                                                                   'systems',
-                                                       'science': 'Topics '
-                                                                  'related to '
-                                                                  'scientific '
-                                                                  'disciplines '
-                                                                  'and '
-                                                                  'research'}},
-                      'labels': {'is_placeholder': False,
-                                 'value': ['science', 'politics']},
-                      'model': {'is_placeholder': True,
-                                'value': 'transformers.pipelines.zero_shot_classification.ZeroShotClassificationPipeline'},
-                      'prompt_instructions': {'is_placeholder': False,
-                                          'value': None},
-                      'task_id': {'is_placeholder': False,
-                                  'value': 'classifier'},
-                      'version': Config.get_version()}]},
- 'use_cache': {'is_placeholder': False, 'value': True},
- 'version': Config.get_version()}
+                                   'tasks': {'is_placeholder': False,
+                                             'value': [{
+                                                           'cls_name': 'sieves.tasks.predictive.classification.core.Classification',
+                                                           'fewshot_examples': {'is_placeholder': False,
+                                                                                'value': ()},
+                                                           'batch_size': {'is_placeholder': False, "value": -1},
+                                                           'generation_settings': {'is_placeholder': False,
+                                                                                   'value': {
+                                                                                       'config_kwargs': None,
+                                                                                       'inference_kwargs': None,
+                                                                                       'init_kwargs': None,
+                                                                                       'strict_mode': False,
+                                                                                       'inference_mode': None}},
+                                                           'include_meta': {'is_placeholder': False, 'value': True},
+                                                           'label_descriptions': {'is_placeholder': False,
+                                                                                  'value': {'politics': 'Topics '
+                                                                                                        'related to '
+                                                                                                        'government, '
+                                                                                                        'elections, '
+                                                                                                        'and '
+                                                                                                        'political '
+                                                                                                        'systems',
+                                                                                            'science': 'Topics '
+                                                                                                       'related to '
+                                                                                                       'scientific '
+                                                                                                       'disciplines '
+                                                                                                       'and '
+                                                                                                       'research'}},
+                                                           'labels': {'is_placeholder': False,
+                                                                      'value': ['science', 'politics']},
+                                                           'model': {'is_placeholder': True,
+                                                                     'value': 'transformers.pipelines.zero_shot_classification.ZeroShotClassificationPipeline'},
+                                                           'prompt_instructions': {'is_placeholder': False,
+                                                                                   'value': None},
+                                                           'task_id': {'is_placeholder': False,
+                                                                       'value': 'classifier'},
+                                                           'condition': {'is_placeholder': False, 'value': None},
+                                                           'version': Config.get_version()}]},
+                                   'use_cache': {'is_placeholder': False, 'value': True},
+                                   'version': Config.get_version()}
 
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}])
 

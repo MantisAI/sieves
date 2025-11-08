@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import Any, override
 
@@ -55,6 +55,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         generation_settings: GenerationSettings = GenerationSettings(),
+        condition: Callable[[Doc], bool] | None = None,
     ) -> None:
         """Initialize new Summarization task.
 
@@ -70,6 +71,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation. Use the `inference_mode` field to specify the
             inference mode for the engine.
+        :param condition: Optional callable that determines whether to process each document.
         """
         self._n_words = n_words
 
@@ -82,6 +84,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
             generation_settings=generation_settings,
+            condition=condition,
         )
 
     @override

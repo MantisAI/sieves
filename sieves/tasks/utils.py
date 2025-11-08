@@ -127,7 +127,7 @@ class PydanticToHFDatasets(abc.ABC):
             return out
 
         # 2) If it’s not a model, we fallback to checking the type annotation dynamically or just returning the raw.
-        #    But typically you'd call this function on the *top-level Pydantic model instance*.
+        #    But typically you'd _call this function on the *top-level Pydantic model instance*.
         #    For safety:
         return model  # type: ignore[unreachable]
 
