@@ -142,6 +142,7 @@ def test_condition_preserves_document_order() -> None:
     assert len(result) == 5
     for i, doc in enumerate(result):
         assert doc.text == f"Doc {i}"
+        assert doc.results['DummyTask'] != i % 2
 
 
 def test_condition_in_pipeline() -> None:

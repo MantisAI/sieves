@@ -86,7 +86,7 @@ build modern NLP applications. It provides:
   - [`langchain`](https://github.com/langchain-ai/langchain)
   - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`transformer`](https://github.com/huggingface/transformers)
-- :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring
+- :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring with conditional task execution
 - :hammer_and_wrench: **Integrated Tools:**
   - Document parsing (optional via `ingestion` extra): [`docling`](https://github.com/DS4SD/docling), [`marker`](https://github.com/VikParuchuri/marker)
   - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
@@ -246,6 +246,7 @@ Encapsulates a single processing step in a pipeline.
 - Defines input arguments
 - Wraps and initializes `Bridge` instances handling task-engine-specific logic
 - Implements task-specific dataset export
+- Supports **conditional execution**: skip documents based on custom logic without materializing all docs upfront
 
 #### `GenerationSettings`
 Controls behavior of structured generation across tasks.
