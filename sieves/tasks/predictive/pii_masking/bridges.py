@@ -56,7 +56,7 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         :returns: PII entity class.
         """
         pii_types = self._pii_types
-        PIIType = Literal[*pii_types] if pii_types else str
+        PIIType = Literal[*pii_types] if pii_types else str  # type: ignore[invalid-type-form]
 
         class PIIEntity(pydantic.BaseModel, frozen=True):
             """PII entity."""

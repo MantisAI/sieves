@@ -186,6 +186,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for res in doc_results:
+                if res is None:
+                    continue
+
                 # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                 # but this fails occasionally with some models and feels too strict.
                 if self._multi_label:
@@ -206,7 +209,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             yield dspy.Prediction.from_completions(
                 {
                     "confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
-                    "reasoning": [str([res.reasoning or "" for res in doc_results])],
+                    "reasoning": [str([getattr(res, "reasoning", "") for res in doc_results])],
                 },
                 signature=self.prompt_signature,
             )
@@ -415,7 +418,7 @@ class PydanticBasedClassification(
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel] | list[str]:
         if self._multi_label:
-            prompt_sig = pydantic.create_model(  # type: ignore[_call-overload]
+            prompt_sig = pydantic.create_model(  # type: ignore[no-matching-overload]
                 "MultilabelClassification",
                 __base__=pydantic.BaseModel,
                 __doc__="Result of multi-label classification.",
