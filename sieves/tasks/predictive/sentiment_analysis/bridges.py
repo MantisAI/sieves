@@ -119,6 +119,9 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for res in doc_results:
+                if res is None:
+                    continue
+
                 assert len(res.completions.sentiment_per_aspect) == 1
                 for label, score in res.completions.sentiment_per_aspect[0].items():
                     # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
@@ -138,7 +141,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
             yield dspy.Prediction.from_completions(
                 {
                     "sentiment_per_aspect": [{sls["aspect"]: sls["score"] for sls in sorted_aspect_scores}],
-                    "reasoning": [str([res.reasoning or "" for res in doc_results])],
+                    "reasoning": [str([getattr(res, "reasoning", "") for res in doc_results if res is not None])],
                 },
                 signature=self.prompt_signature,
             )
@@ -219,7 +222,7 @@ class PydanticBasedSentAnalysis(
     @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
-        prompt_sig = pydantic.create_model(  # type: ignore[_call-overload]
+        prompt_sig = pydantic.create_model(  # type: ignore[no-matching-overload]
             "SentimentAnalysis",
             __base__=pydantic.BaseModel,
             __doc__="Sentiment analysis of specified text.",

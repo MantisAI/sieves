@@ -262,6 +262,9 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
 
             # Process each chunk for this document
             for chunk_result in doc_results:
+                if chunk_result is None:
+                    continue
+
                 if not hasattr(chunk_result, "entities") or not chunk_result.entities:
                     continue
 
@@ -366,6 +369,9 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
 
             # Process each chunk for this document
             for chunk_result in doc_results:
+                if chunk_result is None:
+                    continue
+
                 if not hasattr(chunk_result, "entities") or not chunk_result.entities:
                     continue
 
@@ -459,6 +465,9 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
 
             # Keep track of which chunk each entity came from
             for chunk_idx, chunk_result in enumerate(doc_results):
+                if chunk_result is None:
+                    continue
+
                 # Process entities in this chunk
                 for entity in chunk_result:
                     if isinstance(entity, dict):

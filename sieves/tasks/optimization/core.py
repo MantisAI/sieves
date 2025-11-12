@@ -75,6 +75,7 @@ class Optimizer:
 
         :return dspy.LM: Model used for optimization.
         """
+        assert isinstance(self._model, dspy.LM)
         return self._model
 
     @property

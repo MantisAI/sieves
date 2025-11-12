@@ -55,7 +55,7 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
         # Create Generator instance responsible for generating non-parsed text.
         if isinstance(prompt_signature, list):
-            prompt_signature = Literal[*prompt_signature]
+            prompt_signature = Literal[*prompt_signature]  # type: ignore[invalid-type-form]
 
         if inference_mode == InferenceMode.regex:
             prompt_signature = outlines.types.Regex(prompt_signature)
@@ -81,7 +81,9 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
                         :param prompt: Prompt to generate result for.
                         :return: Result for prompt. Results are None if corresponding prompt failed.
                         """
-                        return generator(prompt, **self._inference_kwargs)
+                        result = generator(prompt, **self._inference_kwargs)
+                        assert isinstance(result, Result) or result is None
+                        return result
 
                     calls = [generate_async(prompt) for prompt in prompts]
                     results = asyncio.run(self._execute_async_calls(calls))

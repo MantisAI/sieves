@@ -115,6 +115,9 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
             answers: list[str] = [""] * len(self._questions)
 
             for res in doc_results:
+                if res is None:
+                    continue
+
                 for i, answer in enumerate(res.answers):
                     answers[i] = f"{answers[i]} {answer}".strip()
 
