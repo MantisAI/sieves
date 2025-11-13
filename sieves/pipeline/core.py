@@ -91,11 +91,12 @@ class Pipeline:
                 self._cache_stats["unique"] += 1
                 yield doc
 
-    def __call__(self, docs: Iterable[Doc], in_place: bool = False) -> Iterable[Doc]:
+    def __call__(self, docs: Iterable[Doc], in_place: bool = False, show_progress: bool = True) -> Iterable[Doc]:
         """Process a list of documents through all tasks.
 
         :param docs: Documents to process.
         :param in_place: Whether to modify documents in-place or create copies.
+        :parma show_progress: Whether to show progress bar.
         :return Iterable[Doc]: Processed documents.
         """
         n_docs: int | None = len(docs) if isinstance(docs, Sized) else None
@@ -109,8 +110,12 @@ class Pipeline:
         if not isinstance(processed_docs, Iterator):
             processed_docs = iter(processed_docs)
 
+        # Initialize (nested) progress bar, if progress bar is requested.
+        progress_bar: tqdm.tqdm | None = None
+        if show_progress:
+            progress_bar = tqdm.tqdm(desc="Running pipeline", total=n_docs)
+
         # Iterate over all docs. Retrieve doc from cache if available, otherwise add to cache.
-        progress_bar = tqdm.tqdm(desc="Running pipeline", total=n_docs)
         for i, doc in enumerate(docs_iters[1]):
             assert doc.text or doc.uri
             self._cache_stats["total"] += 1
@@ -130,12 +135,14 @@ class Pipeline:
                 self._cache_stats["hits"] += 1
                 processed_doc = self._cache[doc_cache_id]
 
-            progress_bar.update(1)
-            progress_bar.refresh()
+            if show_progress:
+                progress_bar.update(1)
+                progress_bar.refresh()
 
             yield processed_doc
 
-        progress_bar.close()
+        if show_progress:
+            progress_bar.close()
 
     def dump(self, path: Path | str) -> None:
         """Save pipeline config to disk.
