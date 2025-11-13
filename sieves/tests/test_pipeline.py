@@ -1,6 +1,7 @@
 # mypy: ignore-errors
 import time
 from collections.abc import Iterable
+import tqdm
 
 import pytest
 
@@ -140,12 +141,14 @@ def test_add_pipeline_task_and_task_pipeline(dummy_docs) -> None:
     class DummyTask(tasks.Task):
         def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
             _docs = list(_docs)
+            import time
+            time.sleep(3)
             for _doc in _docs:
                 _doc.results[self._task_id] = "ok"
             yield from _docs
 
-    t1 = DummyTask(task_id="t1", include_meta=False, batch_size=-1)
-    t2 = DummyTask(task_id="t2", include_meta=False, batch_size=-1)
+    t1 = DummyTask(task_id="t1", include_meta=False, batch_size=1)
+    t2 = DummyTask(task_id="t2", include_meta=False, batch_size=1)
 
     p1 = Pipeline([t1])
     p2 = p1 + t2
@@ -157,6 +160,36 @@ def test_add_pipeline_task_and_task_pipeline(dummy_docs) -> None:
         for d in docs:
             assert d.results["t1"] == "ok"
             assert d.results["t2"] == "ok"
+
+
+if __name__ == '__main__':
+
+    class DummyTask(tasks.Task):
+        def _call(self, _docs: Iterable[Doc]) -> Iterable[Doc]:
+            _docs = list(_docs)
+            import time
+
+            for _doc in _docs:
+                time.sleep(.5)
+                _doc.results[self._task_id] = "ok"
+                yield _doc
+
+    t1 = DummyTask(task_id="t1", include_meta=False, batch_size=1)
+    t2 = DummyTask(task_id="t2", include_meta=False, batch_size=1)
+    pipe = t1 + t2
+
+    dummy_docs = [Doc(text=str(i)) for i in (1, 2, 3)]
+    docs = list(pipe(dummy_docs))
+    assert len(docs) == 3
+
+    dummy_docs = [Doc(text=str(i)) for i in (4, 5, 6)]
+    for i in tqdm.tqdm([1, 2, 3], desc="Outer loop", total=3, position=0, leave=False):
+        docs = list(pipe(dummy_docs))
+        assert len(docs) == 3
+
+    dummy_docs = [Doc(text=str(i)) for i in (7, 8, 9)]
+    docs = list(pipe(dummy_docs, show_progress=False))
+    assert len(docs) == 3
 
 
 def test_add_pipeline_pipeline(dummy_docs) -> None:
