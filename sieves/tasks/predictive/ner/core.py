@@ -24,12 +24,7 @@ from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.ner.bridges import (
-    DSPyNER,
-    GliNERNER,
-    LangChainNER,
-    OutlinesNER,
-)
+from sieves.tasks.predictive.ner.bridges import DSPyNER, EntityWithContext, GlinerNER, LangChainNER, OutlinesNER
 
 _TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
 _TaskPromptSignature = Any
@@ -43,22 +38,14 @@ _TaskResult = (
     | langchain_.Result
     | outlines_.Result
 )
-_TaskBridge = DSPyNER | GliNERNER | LangChainNER | OutlinesNER
-
-
-class Entity(pydantic.BaseModel):
-    """Entity mention with text span and type."""
-
-    text: str
-    context: str
-    entity_type: str
+_TaskBridge = DSPyNER | GlinerNER | LangChainNER | OutlinesNER
 
 
 class FewshotExample(BaseFewshotExample):
     """Few‑shot example with entities annotated in text."""
 
     text: str
-    entities: list[Entity]
+    entities: list[EntityWithContext]
 
     @override
     @property
@@ -114,7 +101,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.langchain: LangChainNER,
             EngineType.outlines: OutlinesNER,
             EngineType.dspy: DSPyNER,
-            EngineType.gliner: GliNERNER,
+            EngineType.gliner: GlinerNER,
         }
 
         try:

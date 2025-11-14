@@ -1,5 +1,5 @@
 """NER task."""
 
-from .core import NER, Entity, FewshotExample, _TaskPromptSignature, _TaskResult
+from .core import NER, EntityWithContext, FewshotExample, _TaskPromptSignature, _TaskResult
 
-__all__ = ["Entity", "NER", "FewshotExample", "_TaskResult", "_TaskPromptSignature"]
+__all__ = ["EntityWithContext", "NER", "FewshotExample", "_TaskResult", "_TaskPromptSignature"]

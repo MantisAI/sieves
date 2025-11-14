@@ -20,6 +20,14 @@ _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
+class EntityWithContext(pydantic.BaseModel):
+    """Entity mention with text span and type."""
+
+    text: str
+    context: str
+    entity_type: str
+
+
 class Entity(pydantic.BaseModel):
     """Class for storing entity information."""
 
@@ -120,10 +128,21 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
             # Get the entity and context texts from the model
             entity_text = getattr(entity_with_context, "text", "")
-            context = getattr(entity_with_context, "context", "")
+            context = getattr(entity_with_context, "context", None)
             entity_type = getattr(entity_with_context, "entity_type", "")
 
             if not entity_text:
+                continue
+
+            if context is None:
+                new_entities.append(
+                    Entity(
+                        text=entity_text,
+                        start=-1,
+                        end=-1,
+                        entity_type=entity_type,
+                    )
+                )
                 continue
 
             entity_text_lower = entity_text.lower()
@@ -403,7 +422,7 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
         return self._generation_settings.inference_mode or langchain_.InferenceMode.structured
 
 
-class GliNERNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
+class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
     """GliNER bridge for NER."""
 
     def __init__(
@@ -469,74 +488,35 @@ class GliNERNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                 if chunk_result is None:
                     continue
 
-                # Process entities in this chunk
-                for entity in chunk_result:
-                    if isinstance(entity, dict):
-                        # Add chunk index to the entity for reference in integrate
-                        entity_copy = entity.copy()
-                        entity_copy["chunk_idx"] = chunk_idx
-                        all_entities.append(entity_copy)
+                # Process entities in this chunk.
+                normalized_entities = [
+                    {"entity_type": entity_type, "text": entity_text}
+                    for entity_type in chunk_result["entities"]
+                    for entity_text in chunk_result["entities"][entity_type]
+                ]
+                for entity in normalized_entities:
+                    all_entities.append(entity)
 
-            # Yield results for this document (flattened list of entities)
             yield all_entities
 
     @override
     def integrate(self, results: Iterable[gliner_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        docs_list = list(docs)
-        results_list = list(results)
+        class EntityWithoutContext(pydantic.BaseModel):
+            """Class for storing entities without context."""
 
-        # Process each document
-        for doc, result in zip(docs_list, results_list):
-            entities_list: list[Entity] = []
-            doc_text = doc.text if doc.text is not None else ""
+            text: str
+            entity_type: str
 
-            # Get chunk information from the document
-            chunk_offsets: list[int] = []
-            if hasattr(doc, "chunks") and doc.chunks:
-                # Calculate beginning position of each chunk in the original text
-                current_offset = 0
-                for chunk in doc.chunks:
-                    chunk_offsets.append(current_offset)
-                    current_offset += len(chunk) + 1
+        class Entities(pydantic.BaseModel):
+            """Class for storing entities."""
 
-            # Process entities in this document
-            if result:
-                for entity_dict in result:
-                    if not isinstance(entity_dict, dict):
-                        continue
+            entities: list[EntityWithoutContext]
+            doc_text: str
 
-                    try:
-                        entity_text = str(entity_dict.get("text", ""))
-                        entity_start = int(entity_dict.get("start", 0))
-                        entity_end = int(entity_dict.get("end", 0))
-                        entity_type = str(entity_dict.get("label", ""))
+        entities = [
+            Entities(entities=[EntityWithoutContext.model_validate(res) for res in doc_results], doc_text=doc.text)
+            for doc_results, doc in zip(results, docs)
+        ]
+        docs = super().integrate(entities, docs)
 
-                        # Get the chunk index (added in consolidate)
-                        chunk_idx = int(entity_dict.get("chunk_idx", 0))
-
-                        # Add chunk offset to entity positions
-                        adjusted_start = entity_start
-                        adjusted_end = entity_end
-
-                        if chunk_offsets and chunk_idx < len(chunk_offsets):
-                            # Adjust positions based on chunk offset
-                            adjusted_start += chunk_offsets[chunk_idx]
-                            adjusted_end += chunk_offsets[chunk_idx]
-
-                        entities_list.append(
-                            Entity(
-                                text=entity_text,
-                                start=adjusted_start,
-                                end=adjusted_end,
-                                entity_type=entity_type,
-                            )
-                        )
-                    except (ValueError, TypeError) as e:
-                        print(f"Error processing entity: {e}")
-                        continue
-
-            # Create the final entities object and store in document results
-            entities_obj = Entities(text=doc_text, entities=entities_list)
-            doc.results[self._task_id] = entities_obj
-
-        return docs_list
+        return docs

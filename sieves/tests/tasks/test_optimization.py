@@ -227,40 +227,40 @@ def test_optimization_ner(optimizer) -> None:
         ner.FewshotExample(
             text='John Smith visited Paris last week.',
             entities=[
-                ner.Entity(text='John Smith', context='visited Paris', entity_type='PERSON'),
-                ner.Entity(text='Paris', context='John Smith visited', entity_type='LOCATION'),
+                ner.EntityWithContext(text='John Smith', context='visited Paris', entity_type='PERSON'),
+                ner.EntityWithContext(text='Paris', context='John Smith visited', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='Apple CEO Tim Cook announced new products.',
             entities=[
-                ner.Entity(text='Tim Cook', context='Apple CEO', entity_type='PERSON'),
+                ner.EntityWithContext(text='Tim Cook', context='Apple CEO', entity_type='PERSON'),
             ]
         ),
         ner.FewshotExample(
             text='The meeting in London was attended by Sarah Johnson.',
             entities=[
-                ner.Entity(text='London', context='meeting in', entity_type='LOCATION'),
-                ner.Entity(text='Sarah Johnson', context='attended by', entity_type='PERSON'),
+                ner.EntityWithContext(text='London', context='meeting in', entity_type='LOCATION'),
+                ner.EntityWithContext(text='Sarah Johnson', context='attended by', entity_type='PERSON'),
             ]
         ),
         ner.FewshotExample(
             text='Berlin is the capital of Germany.',
             entities=[
-                ner.Entity(text='Berlin', context='capital of Germany', entity_type='LOCATION'),
+                ner.EntityWithContext(text='Berlin', context='capital of Germany', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='Maria Rodriguez traveled to Tokyo.',
             entities=[
-                ner.Entity(text='Maria Rodriguez', context='traveled to Tokyo', entity_type='PERSON'),
-                ner.Entity(text='Tokyo', context='Maria Rodriguez traveled', entity_type='LOCATION'),
+                ner.EntityWithContext(text='Maria Rodriguez', context='traveled to Tokyo', entity_type='PERSON'),
+                ner.EntityWithContext(text='Tokyo', context='Maria Rodriguez traveled', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='The conference in New York was successful.',
             entities=[
-                ner.Entity(text='New York', context='conference in', entity_type='LOCATION'),
+                ner.EntityWithContext(text='New York', context='conference in', entity_type='LOCATION'),
             ]
         ),
     ]

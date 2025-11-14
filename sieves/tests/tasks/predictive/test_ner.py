@@ -6,7 +6,7 @@ from sieves.engines import EngineType, GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import ner
-from sieves.tasks.predictive.ner.core import Entity
+from sieves.tasks.predictive.ner.core import EntityWithContext
 
 
 @pytest.mark.parametrize(
@@ -25,17 +25,17 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
         ner.FewshotExample(
             text="John studied data science in Barcelona and lives with Jaume",
             entities=[
-                Entity(text="John", context="John studied data", entity_type="PERSON"),
-                Entity(text="Barcelona", context="science in Barcelona", entity_type="LOCATION"),
-                Entity(text="Jaume", context="lives with Jaume", entity_type="PERSON"),
+                EntityWithContext(text="John", context="John studied data", entity_type="PERSON"),
+                EntityWithContext(text="Barcelona", context="science in Barcelona", entity_type="LOCATION"),
+                EntityWithContext(text="Jaume", context="lives with Jaume", entity_type="PERSON"),
             ],
         ),
         ner.FewshotExample(
             text="Maria studied computer engineering in Madrid and works with Carlos",
             entities=[
-                Entity(text="Maria", context="Maria studied computer", entity_type="PERSON"),
-                Entity(text="Madrid", context="engineering in Madrid and works", entity_type="LOCATION"),
-                Entity(text="Carlos", context="works with Carlos", entity_type="PERSON"),
+                EntityWithContext(text="Maria", context="Maria studied computer", entity_type="PERSON"),
+                EntityWithContext(text="Madrid", context="engineering in Madrid and works", entity_type="LOCATION"),
+                EntityWithContext(text="Carlos", context="works with Carlos", entity_type="PERSON"),
             ],
         ),
     ]
@@ -53,8 +53,11 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
     docs = list(pipe(ner_docs))
 
     assert len(docs) == 2
+    print("***")
+    print(batch_runtime.model.__class__)
     for doc in docs:
         assert "NER" in doc.results
+        print(doc.results["NER"])
 
     with pytest.raises(NotImplementedError):
         pipe["NER"].distill(None, None, None, None, None, None, None, None)
