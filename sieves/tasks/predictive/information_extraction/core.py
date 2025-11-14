@@ -105,7 +105,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             # TODO
             #   x. Construct schema from pydantic object (first-level only) - or allow alternative type?
             #   x. Process .structure types correctly in GliNERBridge.
-            #   3. Ensure that integrated results are in line with how other bridges do it (to ensure HF dataset export
+            #   x. Ensure that integrated results are in line with how other bridges do it (to ensure HF dataset export
             #      works).
             #   4. Add new inference type NER, merge GliNERNERBridge into GliNERBridge.
             #   5. Other tasks/tests to be updated?
@@ -221,7 +221,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
     @override
     def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
+        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
     ) -> float:
         def entity_to_tuple(entity: dict) -> tuple:
             """Convert entity dict to hashable tuple for comparison.

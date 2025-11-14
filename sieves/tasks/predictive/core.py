@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+import functools
 import itertools
 import json
 import logging
@@ -337,7 +338,7 @@ class PredictiveTask(
             raise KeyError(f"DSPy bridge not available for task {self.__class__.__name__}.") from err
 
     def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any | None, model: dspy.LM
+        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
     ) -> float:
         """Evaluate DSPy example for optimization.
 
@@ -411,20 +412,10 @@ class PredictiveTask(
         signature = self._get_task_signature()
         dspy_examples = [ex.to_dspy() for ex in self._fewshot_examples]
 
-        def _pred_eval(truth: dspy.Example, pred: dspy.Prediction, trace: Any) -> float:
-            """Wraps optimization evaluator, injects model.
-
-            :param truth: Ground truth.
-            :param pred: Predicted value.
-            :param trace: Optional trace information.
-            :return: Metric value between 0.0 and 1.0.
-            :raises KeyError: If target fields are missing from truth or prediction.
-            :raises ValueError: If similarity score cannot be parsed from LLM response.
-            """
-            return self._evaluate_optimization_example(truth, pred, trace, model=optimizer.model)
+        pred_eval = functools.partial(self._evaluate_optimization_example, model=optimizer.model)
 
         if verbose:
-            best_prompt, best_examples = optimizer(signature, dspy_examples, _pred_eval, verbose=verbose)
+            best_prompt, best_examples = optimizer(signature, dspy_examples, pred_eval, verbose=verbose)
         else:
             # Temporarily suppress DSPy logs.
             dspy_logger = logging.getLogger("dspy")
@@ -437,7 +428,7 @@ class PredictiveTask(
                 optuna_logger.setLevel(logging.ERROR)
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    best_prompt, best_examples = optimizer(signature, dspy_examples, _pred_eval, verbose=verbose)
+                    best_prompt, best_examples = optimizer(signature, dspy_examples, pred_eval, verbose=verbose)
             finally:
                 dspy_logger.setLevel(original_dspy_level)
                 optuna_logger.setLevel(original_optuna_level)

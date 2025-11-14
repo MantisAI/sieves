@@ -427,7 +427,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
     @override
     def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
+        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
     ) -> float:
         if not self._multi_label:
             return 1 - abs(truth["confidence"] - pred["confidence"]) if truth["label"] == pred["label"] else 0
