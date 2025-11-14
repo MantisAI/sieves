@@ -1,4 +1,4 @@
-"""GliNER engine wrapper built on top of GLiNER multi‑task pipelines."""
+"""GLiNER2 engine wrapper built on top of GLiNER2 multi‑task pipelines."""
 
 import enum
 import warnings
@@ -25,7 +25,7 @@ class InferenceMode(enum.Enum):
 
 
 class GliNER(Engine[PromptSignature, Result, Model, InferenceMode]):
-    """Engine adapter for GliNER v2."""
+    """Engine adapter for GLiNER2."""
 
     @override
     @property

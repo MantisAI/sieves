@@ -156,8 +156,8 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
     ):
         """Initialize GLiNER2 bridge.
 
-        Important: currently only GliNER schemas/structures with one key each are supported. We do NOT support composite
-        requests like `create_schema().entities().classification(). ...`.
+        Important: currently only GLiNER2 schemas/structures with one key each are supported. We do NOT support
+        composite requests like `create_schema().entities().classification(). ...`.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
@@ -184,7 +184,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        # GliNER doesn't support custom instructions.
+        # GLiNER2 doesn't support custom instructions.
         return ""
 
     @override

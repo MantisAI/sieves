@@ -62,7 +62,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
     ) -> None:
         """Initialize new PredictiveTask.
 
-        :param entity_type: Object type to extract. When using this task with a GliNER model, this has to be of type
+        :param entity_type: Object type to extract. When using this task with a GLiNER2 model, this has to be of type
             `gliner2.inference.engine.StructureBuilder`; otherwise a `pydantic.BaseModel`.
         :param model: Model to use.
         :param task_id: Task ID.
@@ -102,14 +102,6 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         :raises ValueError: If engine type is not supported.
         """
         if engine_type == EngineType.gliner:
-            # TODO
-            #   x. Construct schema from pydantic object (first-level only) - or allow alternative type?
-            #   x. Process .structure types correctly in GliNERBridge.
-            #   x. Ensure that integrated results are in line with how other bridges do it (to ensure HF dataset export
-            #      works).
-            #   4. Add new inference type NER, merge GliNERNERBridge into GliNERBridge.
-            #   5. Other tasks/tests to be updated?
-            #   6. Make sure all tests pass, update docs to reflect GliNER2 support.
             assert isinstance(self._entity_type, gliner2.inference.engine.StructureBuilder), TypeError(
                 "You need to use specify `entity_type` as a `gliner2.inference.engine.StructureBuilder` "
                 "when running with a GLiNER2 model."
@@ -165,7 +157,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
-        # If we're using GliNER: fetch Pydantic prompt signature representation.
+        # If we're using GLiNER2: fetch Pydantic prompt signature representation.
         if isinstance(self._bridge, GliNERBridge):
             entity_type = self._bridge.prompt_signature_pydantic
             assert entity_type is not None

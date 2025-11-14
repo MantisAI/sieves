@@ -9,11 +9,10 @@ import dspy
 import pydantic
 
 from sieves.data.doc import Doc
-from sieves.engines import EngineType, dspy_, gliner_, langchain_, outlines_
+from sieves.engines import EngineType, dspy_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import GliNERBridge
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.pii_masking.bridges import (
@@ -22,10 +21,10 @@ from sieves.tasks.predictive.pii_masking.bridges import (
     OutlinesPIIMasking,
 )
 
-_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | gliner_.PromptSignature
-_TaskResult = gliner_.Result | pydantic.BaseModel | dspy_.Result
-_TaskBridge = GliNERBridge | DSPyPIIMasking | LangChainPIIMasking | OutlinesPIIMasking
+_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult = pydantic.BaseModel | dspy_.Result
+_TaskBridge = DSPyPIIMasking | LangChainPIIMasking | OutlinesPIIMasking
 
 
 class PIIEntity(pydantic.BaseModel, frozen=True):

@@ -423,7 +423,7 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
 
 
 class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
-    """GliNER bridge for NER."""
+    """GLiNER2 bridge for NER."""
 
     def __init__(
         self,
@@ -432,7 +432,7 @@ class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         prompt_instructions: str | None,
         generation_settings: GenerationSettings,
     ):
-        """Initialize GliNERNER bridge.
+        """Initialize GLiNER2 NER bridge.
 
         :param entities: List of entity types to extract.
         :param task_id: Task ID.
