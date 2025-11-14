@@ -15,7 +15,7 @@ from sieves.tasks.predictive.ner.core import Entity
         EngineType.dspy,
         EngineType.langchain,
         EngineType.outlines,
-        EngineType.glix,
+        EngineType.gliner,
     ),
     indirect=["batch_runtime"],
 )
@@ -103,7 +103,7 @@ def test_serialization(ner_docs, batch_runtime) -> None:
     )
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.glix], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [EngineType.gliner], indirect=["batch_runtime"])
 def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
     task = ner.NER(
         entities=["PERSON", "LOCATION", "COMPANY"],
@@ -134,7 +134,7 @@ def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines, EngineType.glix],
+    [EngineType.dspy, EngineType.langchain, EngineType.outlines, EngineType.gliner],
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:

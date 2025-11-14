@@ -4,7 +4,7 @@ from functools import cache
 from typing import Any, NamedTuple
 
 import dspy
-import gliner.multitask
+import gliner2
 import outlines
 import pytest
 import tokenizers
@@ -45,8 +45,8 @@ def make_model(engine_type: EngineType) -> Model:
                 api_key=os.environ['OPENROUTER_API_KEY']
             )
 
-        case EngineType.glix:
-            model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
+        case EngineType.gliner:
+            model = gliner2.GLiNER2.from_pretrained("fastino/gliner2-base-v1")
 
         case EngineType.langchain:
             model = ChatOpenAI(

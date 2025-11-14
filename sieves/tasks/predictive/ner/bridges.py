@@ -7,11 +7,12 @@ from functools import cached_property
 from typing import Any, Literal, TypeVar, override
 
 import dspy
+import gliner2.inference.engine
 import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, glix_, langchain_, outlines_
+from sieves.engines import EngineInferenceMode, dspy_, gliner_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.tasks.predictive.bridges import Bridge
 
@@ -402,8 +403,8 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
         return self._generation_settings.inference_mode or langchain_.InferenceMode.structured
 
 
-class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
-    """GliX bridge for NER."""
+class GliNERNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
+    """GliNER bridge for NER."""
 
     def __init__(
         self,
@@ -412,7 +413,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
         prompt_instructions: str | None,
         generation_settings: GenerationSettings,
     ):
-        """Initialize GliXNER bridge.
+        """Initialize GliNERNER bridge.
 
         :param entities: List of entity types to extract.
         :param task_id: Task ID.
@@ -428,8 +429,8 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
 
     @override
     @property
-    def prompt_signature(self) -> list[str]:
-        return self._entities
+    def prompt_signature(self) -> gliner2.inference.engine.Schema:
+        return gliner2.inference.engine.Schema().entities(entity_types=self._entities, dtype="list")
 
     @override
     @property
@@ -448,13 +449,13 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
 
     @override
     @property
-    def inference_mode(self) -> glix_.InferenceMode:
-        return self._generation_settings.inference_mode or glix_.InferenceMode.ner
+    def inference_mode(self) -> gliner_.InferenceMode:
+        return self._generation_settings.inference_mode or gliner_.InferenceMode.entities
 
     @override
     def consolidate(
-        self, results: Iterable[glix_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[glix_.Result]:
+        self, results: Iterable[gliner_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Iterable[gliner_.Result]:
         results = list(results)
 
         # Simply group results by document without trying to adjust positions
@@ -480,7 +481,7 @@ class GliXNER(NERBridge[list[str], glix_.Result, glix_.InferenceMode]):
             yield all_entities
 
     @override
-    def integrate(self, results: Iterable[glix_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Iterable[gliner_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         docs_list = list(docs)
         results_list = list(results)
 

@@ -10,11 +10,10 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, glix_, langchain_, outlines_
+from sieves.engines import EngineType, dspy_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import GliXBridge
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.summarization.bridges import (
@@ -23,10 +22,10 @@ from sieves.tasks.predictive.summarization.bridges import (
     OutlinesSummarization,
 )
 
-_TaskModel = dspy_.Model | glix_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | glix_.PromptSignature
+_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
 _TaskResult = outlines_.Result | dspy_.Result
-_TaskBridge = DSPySummarization | GliXBridge | LangChainSummarization | OutlinesSummarization
+_TaskBridge = DSPySummarization | LangChainSummarization | OutlinesSummarization
 
 
 class FewshotExample(BaseFewshotExample):
@@ -89,17 +88,6 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
 
     @override
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
-        if engine_type == EngineType.glix:
-            return GliXBridge(
-                task_id=self._task_id,
-                prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=[],
-                generation_settings=GenerationSettings(
-                    inference_mode=self._generation_settings.inference_mode or glix_.InferenceMode.summarization,
-                    **{k: v for k, v in self._generation_settings.dict().items() if k != "inference_mode"},
-                ),
-            )
-
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPySummarization,
             EngineType.langchain: LangChainSummarization,
@@ -108,7 +96,6 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
 
         try:
             bridge_type = bridge_types[engine_type]
-            assert not issubclass(bridge_type, GliXBridge)
 
             return bridge_type(
                 task_id=self._task_id,
@@ -125,7 +112,6 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
     def supports(self) -> set[EngineType]:
         return {
             EngineType.dspy,
-            EngineType.glix,
             EngineType.langchain,
             EngineType.outlines,
         }

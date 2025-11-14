@@ -2,10 +2,10 @@
 
 from sieves.engines.engine_import import (
     dspy_,
-    glix_,
+    gliner_,
     huggingface_,
     langchain_,
     outlines_,
 )
 
-Model = dspy_.Model | glix_.Model | huggingface_.Model | langchain_.Model | outlines_.Model
+Model = dspy_.Model | gliner_.Model | huggingface_.Model | langchain_.Model | outlines_.Model

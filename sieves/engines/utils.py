@@ -6,14 +6,14 @@ import transformers
 from sieves.engines.core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.engines.engine_import import (
     dspy_,
-    glix_,
+    gliner_,
     huggingface_,
     langchain_,
     outlines_,
 )
 from sieves.engines.types import GenerationSettings
 
-Model = dspy_.Model | glix_.Model | huggingface_.Model | langchain_.Model | outlines_.Model
+Model = dspy_.Model | gliner_.Model | huggingface_.Model | langchain_.Model | outlines_.Model
 
 
 def init_default_model() -> outlines.models.Transformers:  # noqa: D401
@@ -42,7 +42,7 @@ def init_engine(
     model_type = type(model)
     module_engine_map = {
         dspy_: getattr(dspy_, "DSPy", None),
-        glix_: getattr(glix_, "GliX", None),
+        gliner_: getattr(gliner_, "GliNER", None),
         huggingface_: getattr(huggingface_, "HuggingFace", None),
         langchain_: getattr(langchain_, "LangChain", None),
         outlines_: getattr(outlines_, "Outlines", None),

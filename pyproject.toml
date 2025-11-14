@@ -8,7 +8,7 @@ readme = "README.md"
 description = "Plug-and-play, zero-shot document processing pipelines."
 license = { text = "MIT" }
 dynamic = ["version", "authors"]
-requires-python = ">=3.12"
+requires-python = "==3.12.*"
 dependencies = [
     "chonkie>=1,<2",
     "datasets>=3,<4",
@@ -38,7 +38,7 @@ ingestion = [
 ]
 engines = [
     "accelerate>1.2,<2",
-    "gliner<1",
+    "gliner2>=1,<2",
     "langchain-core>=0.3,<0.4",
     "langchain>=0.3,<0.4",
     "sentencepiece<1",

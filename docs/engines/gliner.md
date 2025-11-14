@@ -1,3 +1,3 @@
 # GliNER
 
-::: sieves.engines.glix_.GliX
+::: sieves.engines.gliner_.GliNER

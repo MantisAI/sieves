@@ -18,12 +18,12 @@ except ModuleNotFoundError:
 
 
 try:
-    from . import glix_
-    from .glix_ import GliX
+    from . import gliner_
+    from .gliner_ import GliNER
 except ModuleNotFoundError:
-    from . import missing as glix_
+    from . import missing as gliner_
 
-    GliX = MissingEngine  # type: ignore[misc,assignment]
+    GliNER = MissingEngine  # type: ignore[misc,assignment]
 
 
 try:
@@ -56,8 +56,8 @@ except ModuleNotFoundError:
 __all__ = [
     "dspy_",
     "DSPy",
-    "glix_",
-    "GliX",
+    "gliner_",
+    "GliNER",
     "huggingface_",
     "HuggingFace",
     "langchain_",

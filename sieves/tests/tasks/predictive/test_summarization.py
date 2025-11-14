@@ -12,7 +12,7 @@ from sieves.tasks.predictive import summarization
     "batch_runtime",
     (
         EngineType.dspy,
-        EngineType.glix,
+        EngineType.gliner,
         EngineType.langchain,
         EngineType.outlines,
     ),

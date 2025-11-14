@@ -3,6 +3,7 @@
 from sieves.tasks import predictive, preprocessing
 from sieves.tasks.core import Task
 from sieves.tasks.distillation.types import DistillationFramework
+from sieves.tasks.optimization import Optimizer
 from sieves.tasks.predictive import (
     NER,
     Classification,
@@ -20,9 +21,10 @@ __all__ = [
     "Chunking",
     "Classification",
     "DistillationFramework",
-    "NER",
     "InformationExtraction",
     "Ingestion",
+    "NER",
+    "Optimizer",
     "SentimentAnalysis",
     "Summarization",
     "Translation",
