@@ -87,7 +87,11 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             condition=condition,
         )
 
-        if issubclass(entity_type, pydantic.BaseModel) and not self._entity_type.model_config.get("frozen", False):
+        if (
+            isinstance(entity_type, type)
+            and issubclass(entity_type, pydantic.BaseModel)
+            and not self._entity_type.model_config.get("frozen", False)
+        ):
             warnings.warn(
                 f"Entity type provided to task {self._task_id} isn't frozen, which means that entities can't "
                 f"be deduplicated. Modify entity_type to be frozen=True."
