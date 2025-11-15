@@ -100,12 +100,14 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         :param engine_type: Type of engine to initialize bridge for.
         :return _TaskBridge: Engine task bridge.
         :raises ValueError: If engine type is not supported.
+        :raises TypeError: On entity type and engine type mismatch.
         """
         if engine_type == EngineType.gliner:
-            assert isinstance(self._entity_type, gliner2.inference.engine.StructureBuilder), TypeError(
-                "You need to use specify `entity_type` as a `gliner2.inference.engine.StructureBuilder` "
-                "when running with a GLiNER2 model."
-            )
+            if not isinstance(self._entity_type, gliner2.inference.engine.StructureBuilder):
+                raise TypeError(
+                    "You need to use specify `entity_type` as a `gliner2.inference.engine.StructureBuilder` "
+                    "when running with a GLiNER2 model."
+                )
 
             return GliNERBridge(
                 task_id=self._task_id,
@@ -115,9 +117,10 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
                 inference_mode=gliner_.InferenceMode.structure,
             )
 
-        assert issubclass(self._entity_type, pydantic.BaseModel), TypeError(
-            "You need to use specify `entity_type` as a `pydantic.BaseModel` when not running with a GLiNER2 model."
-        )
+        if not issubclass(self._entity_type, pydantic.BaseModel):
+            raise TypeError(
+                "You need to use specify `entity_type` as a `pydantic.BaseModel` when not running with a GLiNER2 model."
+            )
 
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPyInformationExtraction,

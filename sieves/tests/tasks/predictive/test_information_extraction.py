@@ -60,7 +60,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
 
     # Ensure entity type checks work as expected.
     if entity_type is not PersonGliner:
-        with pytest.raises(AssertionError, TypeError):
+        with pytest.raises(TypeError):
             tasks.predictive.InformationExtraction(
                 entity_type=PersonGliner,
                 model=batch_runtime.model,
@@ -69,7 +69,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
                 **fewshot_args
             )
     else:
-        with pytest.raises(AssertionError, TypeError):
+        with pytest.raises(TypeError):
             tasks.predictive.InformationExtraction(
                 entity_type=Person,
                 model=batch_runtime.model,
