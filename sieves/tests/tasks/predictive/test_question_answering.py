@@ -12,7 +12,6 @@ from sieves.tasks.predictive import question_answering
     "batch_runtime",
     (
         EngineType.dspy,
-        EngineType.glix,
         EngineType.langchain,
         EngineType.outlines,
     ),
@@ -151,7 +150,7 @@ def test_serialization(qa_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.glix, EngineType.langchain, EngineType.outlines],
+    [EngineType.dspy, EngineType.langchain, EngineType.outlines],
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:

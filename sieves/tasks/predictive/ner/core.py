@@ -14,7 +14,7 @@ from sieves.data import Doc
 from sieves.engines import (
     EngineType,
     dspy_,
-    glix_,
+    gliner_,
     huggingface_,
     langchain_,
     outlines_,
@@ -24,41 +24,28 @@ from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.ner.bridges import (
-    DSPyNER,
-    GliXNER,
-    LangChainNER,
-    OutlinesNER,
-)
+from sieves.tasks.predictive.ner.bridges import DSPyNER, EntityWithContext, GlinerNER, LangChainNER, OutlinesNER
 
-_TaskModel = dspy_.Model | glix_.Model | langchain_.Model | outlines_.Model
+_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
 _TaskPromptSignature = Any
 _TaskResult = (
     list[tuple[str, int, int]]
     | list[tuple[str, str, int, int]]
     | pydantic.BaseModel
     | dspy_.Result
-    | glix_.Result
+    | gliner_.Result
     | huggingface_.Result
     | langchain_.Result
     | outlines_.Result
 )
-_TaskBridge = DSPyNER | GliXNER | LangChainNER | OutlinesNER
-
-
-class Entity(pydantic.BaseModel):
-    """Entity mention with text span and type."""
-
-    text: str
-    context: str
-    entity_type: str
+_TaskBridge = DSPyNER | GlinerNER | LangChainNER | OutlinesNER
 
 
 class FewshotExample(BaseFewshotExample):
     """Few‑shot example with entities annotated in text."""
 
     text: str
-    entities: list[Entity]
+    entities: list[EntityWithContext]
 
     @override
     @property
@@ -114,8 +101,9 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.langchain: LangChainNER,
             EngineType.outlines: OutlinesNER,
             EngineType.dspy: DSPyNER,
-            EngineType.glix: GliXNER,
+            EngineType.gliner: GlinerNER,
         }
+
         try:
             bridge_class = bridge_types[engine_type]
             result = bridge_class(
@@ -135,7 +123,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             EngineType.langchain,
             EngineType.dspy,
             EngineType.outlines,
-            EngineType.glix,
+            EngineType.gliner,
         }
 
     @override
@@ -237,7 +225,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
 
     @override
     def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
+        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
     ) -> float:
         # Compute entity-level F1 score based on (text, entity_type) pairs
         true_entities = {(e["text"], e["entity_type"]) for e in truth["entities"]}

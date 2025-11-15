@@ -5,7 +5,7 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline, engines
-from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_, huggingface_, glix_
+from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_, huggingface_, gliner_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import classification
@@ -68,16 +68,14 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
     )
     docs = list(pipe(docs))
 
-    from loguru import logger
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
         assert doc
-        logger.critical(doc.results["classifier"])
 
 
 @pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
-@pytest.mark.parametrize("fewshot", [False])
+@pytest.mark.parametrize("fewshot", [True, False])
 @pytest.mark.parametrize("multilabel", [True])
 def test_run(classification_docs, batch_runtime, fewshot, multilabel):
     _run(batch_runtime, classification_docs, fewshot, multilabel)

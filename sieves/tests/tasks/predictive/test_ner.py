@@ -6,7 +6,7 @@ from sieves.engines import EngineType, GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import ner
-from sieves.tasks.predictive.ner.core import Entity
+from sieves.tasks.predictive.ner.core import EntityWithContext
 
 
 @pytest.mark.parametrize(
@@ -15,7 +15,7 @@ from sieves.tasks.predictive.ner.core import Entity
         EngineType.dspy,
         EngineType.langchain,
         EngineType.outlines,
-        EngineType.glix,
+        EngineType.gliner,
     ),
     indirect=["batch_runtime"],
 )
@@ -25,17 +25,17 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
         ner.FewshotExample(
             text="John studied data science in Barcelona and lives with Jaume",
             entities=[
-                Entity(text="John", context="John studied data", entity_type="PERSON"),
-                Entity(text="Barcelona", context="science in Barcelona", entity_type="LOCATION"),
-                Entity(text="Jaume", context="lives with Jaume", entity_type="PERSON"),
+                EntityWithContext(text="John", context="John studied data", entity_type="PERSON"),
+                EntityWithContext(text="Barcelona", context="science in Barcelona", entity_type="LOCATION"),
+                EntityWithContext(text="Jaume", context="lives with Jaume", entity_type="PERSON"),
             ],
         ),
         ner.FewshotExample(
             text="Maria studied computer engineering in Madrid and works with Carlos",
             entities=[
-                Entity(text="Maria", context="Maria studied computer", entity_type="PERSON"),
-                Entity(text="Madrid", context="engineering in Madrid and works", entity_type="LOCATION"),
-                Entity(text="Carlos", context="works with Carlos", entity_type="PERSON"),
+                EntityWithContext(text="Maria", context="Maria studied computer", entity_type="PERSON"),
+                EntityWithContext(text="Madrid", context="engineering in Madrid and works", entity_type="LOCATION"),
+                EntityWithContext(text="Carlos", context="works with Carlos", entity_type="PERSON"),
             ],
         ),
     ]
@@ -53,8 +53,11 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
     docs = list(pipe(ner_docs))
 
     assert len(docs) == 2
+    print("***")
+    print(batch_runtime.model.__class__)
     for doc in docs:
         assert "NER" in doc.results
+        print(doc.results["NER"])
 
     with pytest.raises(NotImplementedError):
         pipe["NER"].distill(None, None, None, None, None, None, None, None)
@@ -103,7 +106,7 @@ def test_serialization(ner_docs, batch_runtime) -> None:
     )
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.glix], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [EngineType.gliner], indirect=["batch_runtime"])
 def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
     task = ner.NER(
         entities=["PERSON", "LOCATION", "COMPANY"],
@@ -134,7 +137,7 @@ def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines, EngineType.glix],
+    [EngineType.dspy, EngineType.langchain, EngineType.outlines, EngineType.gliner],
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:

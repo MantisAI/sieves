@@ -14,6 +14,7 @@ from sieves.tasks.predictive import sentiment_analysis
         EngineType.dspy,
         EngineType.langchain,
         EngineType.outlines,
+        EngineType.gliner,
     ),
     indirect=["batch_runtime"],
 )

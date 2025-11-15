@@ -64,7 +64,7 @@ def test_run_readme_example_short() -> None:
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "batch_runtime",
-    [engines.EngineType.glix],
+    [engines.EngineType.gliner],
     indirect=True,
 )
 def test_run_readme_example_long(batch_runtime, tokenizer) -> None:

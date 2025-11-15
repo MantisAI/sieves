@@ -82,7 +82,7 @@ build modern NLP applications. It provides:
 - :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models
 - :robot: **Unified Generation Interface:** Seamlessly use multiple libraries
   - [`dspy`](https://github.com/stanfordnlp/dspy)
-  - [`gliner`](https://github.com/urchade/GLiNER)
+  - [`gliner2`](https://github.com/fastino-ai/GLiNER2)
   - [`langchain`](https://github.com/langchain-ai/langchain)
   - [`outlines`](https://github.com/dottxt-ai/outlines)
   - [`transformer`](https://github.com/huggingface/transformers)
@@ -161,7 +161,7 @@ pip install "sieves[ingestion]"   # or install ingestion libraries directly
 ```python
 import pickle
 
-import gliner.multitask
+import gliner2
 import chonkie
 import tokenizers
 import docling.document_converter
@@ -172,11 +172,10 @@ from sieves import Pipeline, tasks, Doc
 docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
 
 # 2. Choose a model for structured generation.
-model_name = 'knowledgator/gliner-multitask-v1.0'
-model = gliner.GLiNER.from_pretrained(model_name)
+model = gliner2.GLiNER2.from_pretrained("fastino/gliner2-base-v1")
 
 # 3. Create chunker object.
-chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained(model_name))
+chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))
 
 # 3. Create pipeline with tasks.
 pipe = Pipeline(
@@ -308,11 +307,11 @@ Below are minimal examples for creating model objects for each supported structu
   # model = dspy.LM("meta-llama/Llama-3.2-1B-Instruct", api_base="http://localhost:8000/v1", api_key="")
   ```
 
-- GLiNER
+- GLiNER2
 
   ```python
-  import gliner
-  model = gliner.GLiNER.from_pretrained("knowledgator/gliner-multitask-v1.0")
+  import gliner2
+  model = gliner2.GLiNER2.from_pretrained("fastino/gliner2-base-v1")
   ```
 
 - LangChain

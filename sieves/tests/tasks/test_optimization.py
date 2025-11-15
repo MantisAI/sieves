@@ -118,21 +118,25 @@ def test_optimization_classification(optimizer) -> None:
     assert task_single_label._evaluate_optimization_example(
         truth=dspy.Example(text="", reasoning="", label="fruit", confidence=.7),
         pred=dspy.Prediction(text="", reasoning="", label="fruit", confidence=.1),
+        trace=None,
         model=optimizer.model,
     ) == .4
     assert task_single_label._evaluate_optimization_example(
         truth=dspy.Example(text="", reasoning="", label="fruit", confidence=.7),
         pred=dspy.Prediction(text="", reasoning="", label="vegetable", confidence=.1),
+        trace=None,
         model=optimizer.model,
     ) == 0
     assert task_multi_label._evaluate_optimization_example(
         truth=dspy.Example(text="", reasoning="", confidence_per_label={"comedy": .4, "scifi": .2}),
         pred=dspy.Prediction(text="", reasoning="", confidence_per_label={"comedy": .1, "scifi": .3}),
+        trace=None,
         model=optimizer.model,
     ) == .8
     assert task_multi_label._evaluate_optimization_example(
         truth=dspy.Example(text="", reasoning="", confidence_per_label={"comedy": .4, "scifi": .2}),
         pred=dspy.Prediction(text="", reasoning="", confidence_per_label={"comedy": .4, "scifi": .2}),
+        trace=None,
         model=optimizer.model,
     ) == 1
 
@@ -194,7 +198,8 @@ def test_optimization_sentiment_analysis(optimizer) -> None:
     assert task._evaluate_optimization_example(
         truth=dspy.Example(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
         pred=dspy.Prediction(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
-        model=optimizer.model,
+        trace=None,
+        model=optimizer.model
     ) == 1.0
 
     # Test evaluation: partial match (MAE-based accuracy)
@@ -204,6 +209,7 @@ def test_optimization_sentiment_analysis(optimizer) -> None:
     score = task._evaluate_optimization_example(
         truth=dspy.Example(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
         pred=dspy.Prediction(text='', reasoning='', sentiment_per_aspect={'overall': 0.6, 'quality': 0.5, 'delivery': 0.8}),
+        trace=None,
         model=optimizer.model,
     )
     assert abs(score - 0.833) < 0.01
@@ -221,40 +227,40 @@ def test_optimization_ner(optimizer) -> None:
         ner.FewshotExample(
             text='John Smith visited Paris last week.',
             entities=[
-                ner.Entity(text='John Smith', context='visited Paris', entity_type='PERSON'),
-                ner.Entity(text='Paris', context='John Smith visited', entity_type='LOCATION'),
+                ner.EntityWithContext(text='John Smith', context='visited Paris', entity_type='PERSON'),
+                ner.EntityWithContext(text='Paris', context='John Smith visited', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='Apple CEO Tim Cook announced new products.',
             entities=[
-                ner.Entity(text='Tim Cook', context='Apple CEO', entity_type='PERSON'),
+                ner.EntityWithContext(text='Tim Cook', context='Apple CEO', entity_type='PERSON'),
             ]
         ),
         ner.FewshotExample(
             text='The meeting in London was attended by Sarah Johnson.',
             entities=[
-                ner.Entity(text='London', context='meeting in', entity_type='LOCATION'),
-                ner.Entity(text='Sarah Johnson', context='attended by', entity_type='PERSON'),
+                ner.EntityWithContext(text='London', context='meeting in', entity_type='LOCATION'),
+                ner.EntityWithContext(text='Sarah Johnson', context='attended by', entity_type='PERSON'),
             ]
         ),
         ner.FewshotExample(
             text='Berlin is the capital of Germany.',
             entities=[
-                ner.Entity(text='Berlin', context='capital of Germany', entity_type='LOCATION'),
+                ner.EntityWithContext(text='Berlin', context='capital of Germany', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='Maria Rodriguez traveled to Tokyo.',
             entities=[
-                ner.Entity(text='Maria Rodriguez', context='traveled to Tokyo', entity_type='PERSON'),
-                ner.Entity(text='Tokyo', context='Maria Rodriguez traveled', entity_type='LOCATION'),
+                ner.EntityWithContext(text='Maria Rodriguez', context='traveled to Tokyo', entity_type='PERSON'),
+                ner.EntityWithContext(text='Tokyo', context='Maria Rodriguez traveled', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='The conference in New York was successful.',
             entities=[
-                ner.Entity(text='New York', context='conference in', entity_type='LOCATION'),
+                ner.EntityWithContext(text='New York', context='conference in', entity_type='LOCATION'),
             ]
         ),
     ]
@@ -276,6 +282,7 @@ def test_optimization_ner(optimizer) -> None:
             {'text': 'Alice', 'entity_type': 'PERSON'},
             {'text': 'Boston', 'entity_type': 'LOCATION'},
         ]),
+        trace=None,
         model=optimizer.model,
     ) == 1.0
 
@@ -293,14 +300,16 @@ def test_optimization_ner(optimizer) -> None:
             {'text': 'Alice', 'entity_type': 'PERSON'},
             {'text': 'Chicago', 'entity_type': 'LOCATION'},
         ]),
-        model=optimizer.model,
+        trace=None,
+        model=optimizer.model
     ) == 0.5
 
     # Test evaluation: no entities in truth (empty case)
     assert task._evaluate_optimization_example(
         truth=dspy.Example(text='', entities=[]),
         pred=dspy.Prediction(text='', entities=[]),
-        model=optimizer.model,
+        trace=None,
+        model=optimizer.model
     ) == 1.0
 
     # Smoke-test optimization
@@ -380,7 +389,8 @@ def test_optimization_pii_masking(optimizer) -> None:
             {'entity_type': 'NAME', 'text': 'Alice'},
             {'entity_type': 'EMAIL', 'text': 'alice@test.com'},
         ]),
-        model=optimizer.model,
+        trace=None,
+model=optimizer.model
     ) == 1.0
 
     # Test evaluation: partial match (precision=0.5, recall=0.5, F1=0.5)
@@ -397,14 +407,16 @@ def test_optimization_pii_masking(optimizer) -> None:
             {'entity_type': 'NAME', 'text': 'Alice'},
             {'entity_type': 'EMAIL', 'text': 'bob@test.com'},
         ]),
-        model=optimizer.model,
+        trace=None,
+model=optimizer.model
     ) == 0.5
 
     # Test evaluation: no PII (empty case)
     assert task._evaluate_optimization_example(
         truth=dspy.Example(text='', reasoning='', masked_text='', pii_entities=[]),
         pred=dspy.Prediction(text='', reasoning='', masked_text='', pii_entities=[]),
-        model=optimizer.model,
+        trace=None,
+model=optimizer.model
     ) == 1.0
 
     # Smoke-test optimization
@@ -476,7 +488,8 @@ def test_optimization_information_extraction(optimizer) -> None:
             {'name': 'Alice', 'age': 30, 'occupation': 'engineer'},
             {'name': 'Bob', 'age': 25, 'occupation': 'designer'},
         ]),
-        model=optimizer.model,
+        trace=None,
+model=optimizer.model
     ) == 1.0
 
     # Test evaluation: partial match (precision=0.5, recall=0.5, F1=0.5)
@@ -493,14 +506,16 @@ def test_optimization_information_extraction(optimizer) -> None:
             {'name': 'Alice', 'age': 30, 'occupation': 'engineer'},
             {'name': 'Charlie', 'age': 35, 'occupation': 'teacher'},
         ]),
-        model=optimizer.model,
+        trace=None,
+model=optimizer.model
     ) == 0.5
 
     # Test evaluation: no entities (empty case)
     assert task._evaluate_optimization_example(
         truth=dspy.Example(text='', reasoning='', entities=[]),
         pred=dspy.Prediction(text='', reasoning='', entities=[]),
-        model=optimizer.model,
+        trace=None,
+model=optimizer.model
     ) == 1.0
 
     # Smoke-test optimization
@@ -566,7 +581,8 @@ def test_optimization_summarization(optimizer) -> None:
     score = task._evaluate_optimization_example(
         truth=dspy.Example(text='', n_words=30, summary='Short summary about climate.'),
         pred=dspy.Prediction(text='', n_words=30, summary='Brief summary on climate change.'),
-        model=optimizer.model,
+        trace=None,
+model=optimizer.model
     )
     assert 0.5 <= score <= 1.0
 
@@ -623,7 +639,8 @@ def test_optimization_translation(optimizer) -> None:
     score = task._evaluate_optimization_example(
         truth=dspy.Example(text='Good morning.', to='Spanish', translation='Buenos días.'),
         pred=dspy.Prediction(text='Good morning.', to='Spanish', translation='Buen día.'),
-        model=optimizer.model,
+        trace=None,
+model=optimizer.model
     )
     assert 0.7 <= score <= 1.0
 
@@ -690,7 +707,8 @@ def test_optimization_question_answering(optimizer) -> None:
     score = task._evaluate_optimization_example(
         truth=dspy.Example(text='', reasoning='', questions=questions, answers=['Climate change', 'Scientists']),
         pred=dspy.Prediction(text='', reasoning='', questions=questions, answers=['Global warming', 'Researchers']),
-        model=optimizer.model,
+        trace=None,
+        model=optimizer.model
     )
     assert 0.5 <= score <= 1.0
 

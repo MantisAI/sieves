@@ -9,15 +9,16 @@ from typing import Any, override
 
 import datasets
 import dspy
+import gliner2.inference.engine
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, glix_, huggingface_, langchain_, outlines_
+from sieves.engines import EngineType, dspy_, gliner_, huggingface_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.distillation_import import model2vec, setfit
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import GliXBridge
+from sieves.tasks.predictive.bridges import GliNERBridge
 from sieves.tasks.predictive.classification.bridges import (
     DSPyClassification,
     HuggingFaceClassification,
@@ -27,11 +28,11 @@ from sieves.tasks.predictive.classification.bridges import (
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 
-_TaskModel = dspy_.Model | glix_.Model | langchain_.Model | huggingface_.Model | outlines_.Model
-_TaskPromptSignature = glix_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | glix_.Result
+_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | huggingface_.Model | outlines_.Model
+_TaskPromptSignature = gliner_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | gliner_.Result
 _TaskBridge = (
-    DSPyClassification | GliXBridge | LangChainClassification | HuggingFaceClassification | OutlinesClassification
+    DSPyClassification | GliNERBridge | LangChainClassification | HuggingFaceClassification | OutlinesClassification
 )
 
 
@@ -151,15 +152,17 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         :return: Engine task.
         :raises ValueError: If engine type is not supported.
         """
-        if engine_type == EngineType.glix:
-            # GliXBridge needs different arguments than other bridges, hence we instantiate it differently.
-            return GliXBridge(
+        if engine_type == EngineType.gliner:
+            return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=self._labels,
+                prompt_signature=gliner2.inference.engine.Schema().classification(
+                    task="classification",
+                    labels=self._label_descriptions or self._labels,
+                    multi_label=self._multi_label,
+                ),
                 generation_settings=self._generation_settings,
-                label_whitelist=tuple(self._labels),
-                only_keep_best=not self._multi_label,
+                inference_mode=gliner_.InferenceMode.classification,
             )
 
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
@@ -171,7 +174,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
         try:
             bridge_type = bridge_types[engine_type]
-            assert not issubclass(bridge_type, GliXBridge)
+            assert not issubclass(bridge_type, GliNERBridge)
 
             return bridge_type(
                 task_id=self._task_id,
@@ -189,7 +192,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
     def supports(self) -> set[EngineType]:
         return {
             EngineType.dspy,
-            EngineType.glix,
+            EngineType.gliner,
             EngineType.huggingface,
             EngineType.langchain,
             EngineType.outlines,
@@ -424,7 +427,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
 
     @override
     def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, model: dspy.LM, trace: Any | None = None
+        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
     ) -> float:
         if not self._multi_label:
             return 1 - abs(truth["confidence"] - pred["confidence"]) if truth["label"] == pred["label"] else 0

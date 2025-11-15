@@ -8,7 +8,7 @@ import dspy
 
 from sieves.serialization import Attribute, Config
 
-EvalMetric = Callable[[dspy.Example, dspy.Prediction], float]
+EvalMetric = Callable[[dspy.Example, dspy.Prediction, Any], float]
 
 
 class Optimizer:

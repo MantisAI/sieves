@@ -1,4 +1,4 @@
 # Bridge
 
 ::: sieves.tasks.predictive.bridges.Bridge
-::: sieves.tasks.predictive.bridges.GliXBridge
+::: sieves.tasks.predictive.bridges.GliNERBridge

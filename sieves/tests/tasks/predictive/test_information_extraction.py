@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import gliner2
 import pydantic
 import pytest
 
@@ -13,6 +14,9 @@ class Person(pydantic.BaseModel, frozen=True):
     name: str
     age: pydantic.PositiveInt
 
+PersonGliner = gliner2.inference.engine.Schema().structure(
+    "Person"
+).field("name", dtype="str").field("age", dtype="str")
 
 @pytest.mark.parametrize(
     "batch_runtime",
@@ -20,6 +24,7 @@ class Person(pydantic.BaseModel, frozen=True):
         EngineType.dspy,
         EngineType.langchain,
         EngineType.outlines,
+        EngineType.gliner,
     ),
     indirect=["batch_runtime"],
 )
@@ -29,7 +34,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
         information_extraction.FewshotExample(
             text="Ada Lovelace lived to 47 years old. Zeno of Citium died with 72 years.",
             reasoning="There is mention of two people in this text, including lifespans. I will extract those.",
-            entities=[Person(name="Ada Loveloace", age=47), Person(name="Zeno of Citium", age=72)],
+            entities=[Person(name="Ada Lovelace", age=47), Person(name="Zeno of Citium", age=72)],
         ),
         information_extraction.FewshotExample(
             text="Alan Watts passed away at the age of 58 years. Alan Watts was 58 years old at the time of his death.",
@@ -38,20 +43,43 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
         ),
     ]
 
+    entity_type = PersonGliner if isinstance(batch_runtime.model, gliner2.GLiNER2) else Person
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     pipe = Pipeline(
         [
+            tasks.predictive.InformationExtraction(
+                entity_type=entity_type,
+                model=batch_runtime.model,
+                generation_settings=batch_runtime.generation_settings,
+                batch_size=batch_runtime.batch_size,
+                **fewshot_args
+            ),
+        ]
+    )
+    docs = list(pipe(information_extraction_docs))
+
+    # Ensure entity type checks work as expected.
+    if entity_type is not PersonGliner:
+        with pytest.raises(TypeError):
+            tasks.predictive.InformationExtraction(
+                entity_type=PersonGliner,
+                model=batch_runtime.model,
+                generation_settings=batch_runtime.generation_settings,
+                batch_size=batch_runtime.batch_size,
+                **fewshot_args
+            )
+    else:
+        with pytest.raises(TypeError):
             tasks.predictive.InformationExtraction(
                 entity_type=Person,
                 model=batch_runtime.model,
                 generation_settings=batch_runtime.generation_settings,
                 batch_size=batch_runtime.batch_size,
-                **fewshot_args),
-        ]
-    )
-    docs = list(pipe(information_extraction_docs))
+                **fewshot_args
+            )
 
     assert len(docs) == 2
+    print(batch_runtime.model.__class__)
     for doc in docs:
         assert doc.text
         assert "InformationExtraction" in doc.results
@@ -60,13 +88,16 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
         pipe["InformationExtraction"].distill(None, None, None, None, None, None, None, None)
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [EngineType.gliner], indirect=["batch_runtime"])
 def test_to_hf_dataset(information_extraction_docs, batch_runtime) -> None:
     task = tasks.predictive.InformationExtraction(
-        entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size
+        entity_type=PersonGliner,
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size
     )
     pipe = Pipeline(task)
-    docs = pipe(information_extraction_docs)
+    docs = list(pipe(information_extraction_docs))
 
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(docs)

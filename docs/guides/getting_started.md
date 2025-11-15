@@ -134,7 +134,7 @@ for result in results:
 - [`outlines`](https://github.com/outlines-dev/outlines)
 - [`dspy`](https://github.com/stanfordnlp/dspy) - also supports Ollama and vLLM integration via `api_base`
 - [`langchain`](https://github.com/langchain-ai/langchain)
-- [`gliner`](https://github.com/urchade/GLiNER)
+- [`gliner2`](https://github.com/fastino-ai/GLiNER2)
 - [`transformers`](https://github.com/huggingface/transformers)
 
 You pass models from these libraries directly to `PredictiveTask`. Optionally, you can include `GenerationSettings` to

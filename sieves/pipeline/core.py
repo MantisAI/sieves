@@ -136,12 +136,14 @@ class Pipeline:
                 processed_doc = self._cache[doc_cache_id]
 
             if show_progress:
+                assert progress_bar is not None
                 progress_bar.update(1)
                 progress_bar.refresh()
 
             yield processed_doc
 
         if show_progress:
+            assert progress_bar is not None
             progress_bar.close()
 
     def dump(self, path: Path | str) -> None:

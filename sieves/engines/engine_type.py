@@ -7,7 +7,7 @@ import enum
 from sieves.engines.core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.engines.engine_import import (
     DSPy,
-    GliX,
+    GliNER,
     HuggingFace,
     LangChain,
     Outlines,
@@ -18,7 +18,7 @@ class EngineType(enum.Enum):
     """Available engine types."""
 
     dspy = DSPy
-    glix = GliX
+    gliner = GliNER
     huggingface = HuggingFace
     langchain = LangChain
     outlines = Outlines

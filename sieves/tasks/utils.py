@@ -6,6 +6,7 @@ import abc
 import typing
 from typing import Any
 
+# TODO: Suppress Pydantic deprecation warnings when importing this
 import datasets
 import pydantic
 import pydantic_core.core_schema
@@ -23,6 +24,7 @@ class PydanticToHFDatasets(abc.ABC):
         """
         field_features: dict[str, datasets.Value] = {}
 
+        # TODO Suppress warnings about model_fields access.
         for field_name, field_info in entity_type.model_fields.items():
             # field_info.annotation is e.g. str, list[str], MyNestedModel, etc.
             field_features[field_name] = cls._annotation_to_values(field_info.annotation)  # type: ignore[arg-type]
