@@ -143,9 +143,9 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
         return bridge
 
+    @staticmethod
     @override
-    @property
-    def supports(self) -> set[EngineType]:
+    def supports() -> set[EngineType]:
         return {
             EngineType.dspy,
             EngineType.gliner,

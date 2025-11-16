@@ -7,7 +7,7 @@ import pytest
 from sieves import Doc, Pipeline, engines
 from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_, huggingface_, gliner_
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask
+from sieves.tasks import PredictiveTask, Classification
 from sieves.tasks.predictive import classification
 from sieves.tests.conftest import Runtime
 
@@ -65,14 +65,14 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
         assert doc
 
 
-@pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
 @pytest.mark.parametrize("multilabel", [True])
 def test_run(classification_docs, batch_runtime, fewshot, multilabel):
     _run(batch_runtime, classification_docs, fewshot, multilabel)
 
 
-@pytest.mark.parametrize("runtime", EngineType.all(), indirect=["runtime"])
+@pytest.mark.parametrize("runtime", Classification.supports(), indirect=["runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run_nonbatched(classification_docs, runtime, fewshot):
     _run(runtime, classification_docs, fewshot)
@@ -275,7 +275,7 @@ def test_result_to_scores() -> None:
         classification.Classification._result_to_scores(BadPRes(not_label="x"))
 
 
-@pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
 def test_inference_mode_override(batch_runtime) -> None:
     """Test that inference_mode parameter overrides the default value."""
     dummy = "dummy_inference_mode"

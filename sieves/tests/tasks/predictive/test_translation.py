@@ -10,11 +10,7 @@ from sieves.tasks.predictive import translation
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    translation.Translation.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -120,7 +116,7 @@ def test_serialization(translation_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines],
+    translation.Translation.supports(),
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:

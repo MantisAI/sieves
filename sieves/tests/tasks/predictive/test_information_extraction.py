@@ -6,7 +6,7 @@ import pytest
 from sieves import Doc, Pipeline, tasks
 from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask
+from sieves.tasks import PredictiveTask, InformationExtraction
 from sieves.tasks.predictive import information_extraction
 
 
@@ -20,12 +20,7 @@ PersonGliner = gliner2.inference.engine.Schema().structure(
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-        EngineType.gliner,
-    ),
+    InformationExtraction.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -77,7 +72,6 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
             )
 
     assert len(docs) == 2
-    print(batch_runtime.model.__class__)
     for doc in docs:
         assert doc.text
         assert "InformationExtraction" in doc.results
@@ -153,7 +147,7 @@ def test_serialization(information_extraction_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines],
+    InformationExtraction.supports(),
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:

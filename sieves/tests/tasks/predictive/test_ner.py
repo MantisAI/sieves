@@ -11,12 +11,7 @@ from sieves.tasks.predictive.ner.core import EntityWithContext
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-        EngineType.gliner,
-    ),
+    ner.NER.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -53,11 +48,8 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
     docs = list(pipe(ner_docs))
 
     assert len(docs) == 2
-    print("***")
-    print(batch_runtime.model.__class__)
     for doc in docs:
         assert "NER" in doc.results
-        print(doc.results["NER"])
 
     with pytest.raises(NotImplementedError):
         pipe["NER"].distill(None, None, None, None, None, None, None, None)
@@ -156,12 +148,7 @@ def test_inference_mode_override(batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-        EngineType.gliner,
-    ),
+    ner.NER.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_dict_entities(ner_docs, batch_runtime) -> None:
@@ -189,12 +176,7 @@ def test_run_with_dict_entities(ner_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-        EngineType.gliner,
-    ),
+    ner.NER.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_list_entities(ner_docs, batch_runtime) -> None:

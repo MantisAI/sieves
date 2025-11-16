@@ -151,9 +151,9 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
 
-    @property
+    @staticmethod
     @override
-    def supports(self) -> set[EngineType]:
+    def supports() -> set[EngineType]:
         return {
             EngineType.dspy,
             EngineType.langchain,

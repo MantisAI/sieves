@@ -4,18 +4,13 @@ import pytest
 from sieves import Doc, Pipeline
 from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask
+from sieves.tasks import PredictiveTask, SentimentAnalysis
 from sieves.tasks.predictive import sentiment_analysis
 
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-        EngineType.gliner,
-    ),
+    SentimentAnalysis.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -129,7 +124,7 @@ def test_serialization(dummy_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines],
+    SentimentAnalysis.supports(),
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:

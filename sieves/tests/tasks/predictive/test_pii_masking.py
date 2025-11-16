@@ -4,17 +4,13 @@ import pytest
 from sieves import Doc, Pipeline, tasks
 from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask
+from sieves.tasks import PredictiveTask, PIIMasking
 from sieves.tasks.predictive import pii_masking
 
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -117,7 +113,7 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines],
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:
@@ -135,11 +131,7 @@ def test_inference_mode_override(batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_dict_pii_types(pii_masking_docs, batch_runtime) -> None:
@@ -169,11 +161,7 @@ def test_run_with_dict_pii_types(pii_masking_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_list_pii_types(pii_masking_docs, batch_runtime) -> None:
@@ -198,11 +186,7 @@ def test_run_with_list_pii_types(pii_masking_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_none_pii_types(pii_masking_docs, batch_runtime) -> None:

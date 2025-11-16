@@ -141,9 +141,9 @@ class PredictiveTask(
         :return _TaskBridge: Engine task bridge.
         """
 
-    @property
+    @staticmethod
     @abc.abstractmethod
-    def supports(self) -> set[EngineType]:
+    def supports() -> set[EngineType]:
         """Return supported engine types.
 
         :return set[EngineType]: Supported engine types.

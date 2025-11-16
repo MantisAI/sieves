@@ -4,17 +4,13 @@ import pytest
 from sieves import Doc, Pipeline
 from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask
+from sieves.tasks import PredictiveTask, QuestionAnswering
 from sieves.tasks.predictive import question_answering
 
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    QuestionAnswering.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -148,7 +144,7 @@ def test_serialization(qa_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines],
+    QuestionAnswering.supports(),
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:

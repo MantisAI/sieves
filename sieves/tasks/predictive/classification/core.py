@@ -199,9 +199,9 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         except KeyError as err:
             raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
 
+    @staticmethod
     @override
-    @property
-    def supports(self) -> set[EngineType]:
+    def supports() -> set[EngineType]:
         return {
             EngineType.dspy,
             EngineType.gliner,
