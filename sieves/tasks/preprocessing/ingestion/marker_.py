@@ -1,8 +1,17 @@
 """Marker task for converting PDF documents to text."""
+# ruff: noqa: E402
 
+import warnings
 from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
+
+# `marker` is using outdated Pydantic config approach, suppress these warnings.
+warnings.filterwarnings(
+    "ignore",
+    message="Support for class-based `config` is deprecated.*ConfigDict instead",
+    category=DeprecationWarning,
+)
 
 from marker.converters.pdf import PdfConverter
 from marker.converters.table import TableConverter
