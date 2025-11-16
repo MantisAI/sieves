@@ -149,7 +149,7 @@ def test_serialization(batch_runtime) -> None:
                                                         'strict_mode': False,
                                                         'inference_mode': None,}},
                       'include_meta': {'is_placeholder': False, 'value': True},
-                      'label': {'is_placeholder': False,
+                      'labels': {'is_placeholder': False,
                                              'value': {'politics': 'Topics '
                                                                    'related to '
                                                                    'government, '

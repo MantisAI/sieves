@@ -71,7 +71,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
                     "include_meta": {"is_placeholder": False, "value": True},
                     'batch_size': {'is_placeholder': False, 'value': -1},
-                    "label": {
+                    "labels": {
                         "is_placeholder": False,
                         "value": {"science": "Everything about science.", "politics": "Everything about politics."},
                     },
