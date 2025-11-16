@@ -11,12 +11,7 @@ from sieves.tasks.predictive.ner.core import EntityWithContext
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-        EngineType.gliner,
-    ),
+    ner.NER.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -41,26 +36,25 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
     ]
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
-    pipe = Pipeline(
-        ner.NER(
-            entities=["PERSON", "LOCATION", "COMPANY"],
-            model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
-            batch_size=batch_runtime.batch_size,
-            **fewshot_args
-        )
+    task = ner.NER(
+        entities=["PERSON", "LOCATION", "COMPANY"],
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
+        **fewshot_args
     )
+    pipe = Pipeline(task)
     docs = list(pipe(ner_docs))
 
     assert len(docs) == 2
-    print("***")
-    print(batch_runtime.model.__class__)
     for doc in docs:
         assert "NER" in doc.results
-        print(doc.results["NER"])
 
     with pytest.raises(NotImplementedError):
         pipe["NER"].distill(None, None, None, None, None, None, None, None)
+
+    if fewshot:
+        _to_hf_dataset(task, docs)
 
 
 @pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
@@ -106,18 +100,13 @@ def test_serialization(ner_docs, batch_runtime) -> None:
     )
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.gliner], indirect=["batch_runtime"])
-def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
-    task = ner.NER(
-        entities=["PERSON", "LOCATION", "COMPANY"],
-        model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
-        batch_size=batch_runtime.batch_size,
-    )
-    pipe = Pipeline(task)
+def _to_hf_dataset(task: ner.NER, docs: list[Doc]) -> None:
+    """Tests whether conversion to HF dataset works as expected.
 
-    assert isinstance(task, PredictiveTask)
-    dataset = task.to_hf_dataset(pipe(ner_docs))
+    :param task: NER task instance.
+    :param docs: List of documents to convert.
+    """
+    dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "entities")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -156,12 +145,7 @@ def test_inference_mode_override(batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-        EngineType.gliner,
-    ),
+    ner.NER.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_dict_entities(ner_docs, batch_runtime) -> None:
@@ -189,12 +173,7 @@ def test_run_with_dict_entities(ner_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-        EngineType.gliner,
-    ),
+    ner.NER.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_list_entities(ner_docs, batch_runtime) -> None:

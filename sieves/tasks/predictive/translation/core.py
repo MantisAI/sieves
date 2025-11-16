@@ -112,9 +112,9 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
 
         return bridge
 
+    @staticmethod
     @override
-    @property
-    def supports(self) -> set[EngineType]:
+    def supports() -> set[EngineType]:
         return {EngineType.dspy, EngineType.langchain, EngineType.outlines}
 
     @override

@@ -7,12 +7,15 @@ import pytest
 from sieves import Doc, Pipeline, engines
 from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_, huggingface_, gliner_
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask
+from sieves.tasks import PredictiveTask, Classification
 from sieves.tasks.predictive import classification
 from sieves.tests.conftest import Runtime
 
 
-def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = True) -> None:
+def _run(
+    runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = True, test_hf_conversion: bool = False
+) -> None:
+    """Tests whether the classification task works as expected."""
     if multilabel:
         fewshot_examples = [
             classification.FewshotExampleMultiLabel(
@@ -44,55 +47,48 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
         "politics": "Topics related to government, elections, and political systems",
     }
 
-    pipe = Pipeline(
-        [
-            classification.Classification(
-                task_id="classifier",
-                labels=labels,
-                model=runtime.model,
-                generation_settings=runtime.generation_settings,
-                batch_size=runtime.batch_size,
-                multi_label=multilabel,
-                **fewshot_args,
-            ),
-        ]
+    task = classification.Classification(
+        task_id="classifier",
+        labels=labels,
+        model=runtime.model,
+        generation_settings=runtime.generation_settings,
+        batch_size=runtime.batch_size,
+        multi_label=multilabel,
+        **fewshot_args,
     )
+    pipe = Pipeline(task)
     docs = list(pipe(docs))
 
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
         assert doc
+        assert "classifier" in doc.results
+
+    if test_hf_conversion:
+        _to_hf_dataset(task, docs, multilabel)
 
 
-@pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
-@pytest.mark.parametrize("multilabel", [True])
+@pytest.mark.parametrize("multilabel", [True, False])
 def test_run(classification_docs, batch_runtime, fewshot, multilabel):
-    _run(batch_runtime, classification_docs, fewshot, multilabel)
+    _run(batch_runtime, classification_docs, fewshot, multilabel, test_hf_conversion=fewshot is True)
 
-
-@pytest.mark.parametrize("runtime", EngineType.all(), indirect=["runtime"])
+@pytest.mark.parametrize("runtime", Classification.supports(), indirect=["runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run_nonbatched(classification_docs, runtime, fewshot):
-    _run(runtime, classification_docs, fewshot)
+    _run(runtime, classification_docs, fewshot, test_hf_conversion=False)
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
-@pytest.mark.parametrize("multi_label", [True, False])
-def test_to_hf_dataset(classification_docs, batch_runtime, multi_label) -> None:
-    task = classification.Classification(
-        task_id="classifier",
-        multi_label=multi_label,
-        labels=["science", "politics"],
-        model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
-        batch_size=batch_runtime.batch_size,
-    )
-    pipe = Pipeline(task)
+def _to_hf_dataset(task: Classification, docs: list[Doc], multi_label: bool) -> None:
+    """Tests whether conversion to HF dataset works as expected.
 
-    assert isinstance(task, PredictiveTask)
-    dataset = task.to_hf_dataset(pipe(classification_docs))
+    :param task: Classification task instance.
+    :param docs: List of documents to convert.
+    :param multi_label: Whether the task is multi-label.
+    """
+    dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "labels")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
@@ -275,7 +271,7 @@ def test_result_to_scores() -> None:
         classification.Classification._result_to_scores(BadPRes(not_label="x"))
 
 
-@pytest.mark.parametrize("batch_runtime", EngineType.all(), indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
 def test_inference_mode_override(batch_runtime) -> None:
     """Test that inference_mode parameter overrides the default value."""
     dummy = "dummy_inference_mode"

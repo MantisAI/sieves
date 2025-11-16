@@ -4,17 +4,13 @@ import pytest
 from sieves import Doc, Pipeline, tasks
 from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask
+from sieves.tasks import PredictiveTask, PIIMasking
 from sieves.tasks.predictive import pii_masking
 
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -33,14 +29,13 @@ def test_run(pii_masking_docs, batch_runtime, fewshot) -> None:
     ]
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
-    pipe = Pipeline([
-        tasks.predictive.PIIMasking(
-            model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
-            batch_size=batch_runtime.batch_size,
-            **fewshot_args,
-        )
-    ])
+    task = tasks.predictive.PIIMasking(
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
+        **fewshot_args,
+    )
+    pipe = Pipeline(task)
     docs = list(pipe(pii_masking_docs))
 
     assert len(docs) == 2
@@ -51,18 +46,16 @@ def test_run(pii_masking_docs, batch_runtime, fewshot) -> None:
     with pytest.raises(NotImplementedError):
         pipe["PIIMasking"].distill(None, None, None, None, None, None, None, None)
 
+    if fewshot:
+        _to_hf_dataset(task, docs)
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
-def test_to_hf_dataset(pii_masking_docs, batch_runtime) -> None:
-    task = tasks.predictive.PIIMasking(
-        model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
-        batch_size=batch_runtime.batch_size,
-    )
-    pipe = Pipeline(task)
-    docs = pipe(pii_masking_docs)
 
-    assert isinstance(task, PredictiveTask)
+def _to_hf_dataset(task: PIIMasking, docs: list[Doc]) -> None:
+    """Tests whether conversion to HF dataset works as expected.
+
+    :param task: PIIMasking task instance.
+    :param docs: List of documents to convert.
+    """
     dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "masked_text")])
     assert len(dataset) == 2
@@ -117,7 +110,7 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines],
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:
@@ -135,11 +128,7 @@ def test_inference_mode_override(batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_dict_pii_types(pii_masking_docs, batch_runtime) -> None:
@@ -169,11 +158,7 @@ def test_run_with_dict_pii_types(pii_masking_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_list_pii_types(pii_masking_docs, batch_runtime) -> None:
@@ -198,11 +183,7 @@ def test_run_with_list_pii_types(pii_masking_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    (
-        EngineType.dspy,
-        EngineType.langchain,
-        EngineType.outlines,
-    ),
+    PIIMasking.supports(),
     indirect=["batch_runtime"],
 )
 def test_run_with_none_pii_types(pii_masking_docs, batch_runtime) -> None:
