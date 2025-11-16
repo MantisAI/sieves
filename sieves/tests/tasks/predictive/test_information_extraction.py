@@ -155,7 +155,7 @@ def test_inference_mode_override(batch_runtime) -> None:
     dummy = "dummy_inference_mode"
 
     task = tasks.predictive.InformationExtraction(
-        entity_type=Person,
+        entity_type=PersonGliner if isinstance(batch_runtime.model, gliner2.GLiNER2) else Person,
         model=batch_runtime.model,
         generation_settings=GenerationSettings(inference_mode=dummy),
         batch_size=batch_runtime.batch_size,
