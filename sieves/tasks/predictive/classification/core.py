@@ -425,7 +425,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 # If multi-label: store one-hot representation.
                 if self._multi_label:
                     result_normalized = [int(scores.get(label, 0.0) >= threshold) for label in self._labels]  # type: ignore[no-matching-overload]
-                # If single-label: get single-label result as is
+                # If single-label: get single-label result as is.
                 else:
                     keys = list(scores.keys())
                     assert len(keys) == 1
