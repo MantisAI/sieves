@@ -44,6 +44,32 @@ for doc in pipeline([doc]):
 # Note: set additional Pipeline params (e.g., use_cache=False) only via verbose init.
 ```
 
+### Using Label Descriptions
+
+You can improve classification accuracy by providing descriptions for each label. This is especially helpful when label names alone might be ambiguous:
+
+```python
+import outlines
+from sieves import Pipeline, tasks, Doc
+
+doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
+model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+
+# Use dict format to provide descriptions
+pipeline = Pipeline([
+    tasks.predictive.Classification(
+        labels={
+            "science": "Scientific topics including physics, biology, chemistry, and natural sciences",
+            "politics": "Political news, government affairs, elections, and policy discussions"
+        },
+        model=model,
+    )
+])
+
+for doc in pipeline([doc]):
+    print(doc.results)
+```
+
 ## Working with Documents
 
 Documents can be created in several ways:
@@ -156,7 +182,10 @@ Example:
 ```python
 from sieves.engines.utils import GenerationSettings
 classifier = tasks.predictive.Classification(
-    labels=["science", "politics"],
+    labels={
+        "science": "Scientific topics and research",
+        "politics": "Political news and government"
+    },
     model=model,
     generation_settings=GenerationSettings(strict_mode=True),
     batch_size=8,

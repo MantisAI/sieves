@@ -33,7 +33,10 @@ from sieves import tasks, Pipeline, Doc
 
 # Only process documents longer than 100 characters
 task = tasks.Classification(
-    labels=["positive", "negative"],
+    labels={
+        "positive": "Positive sentiment or favorable opinion",
+        "negative": "Negative sentiment or unfavorable opinion"
+    },
     model=model,
     condition=lambda doc: len(doc.text or "") > 100
 )
@@ -54,7 +57,10 @@ def should_process(doc: Doc) -> bool:
     return doc.meta.get("source") in ["source_a", "source_b"]
 
 task = tasks.NER(
-    entities=["PERSON", "LOCATION"],
+    entities={
+        "PERSON": "Names of people, including first and last names",
+        "LOCATION": "Geographic locations like cities, countries, and landmarks"
+    },
     model=model,
     condition=should_process
 )
@@ -74,7 +80,10 @@ chunking_task = tasks.Chunking(
 
 # Only classify chunked documents
 classification_task = tasks.Classification(
-    labels=["science", "fiction"],
+    labels={
+        "science": "Scientific content including research and facts",
+        "fiction": "Fictional stories and creative writing"
+    },
     model=model,
     condition=lambda doc: len(doc.text or "") > 500
 )

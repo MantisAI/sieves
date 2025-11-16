@@ -46,11 +46,10 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
     with TemporaryDirectory() as tmp_dir:
         classifier = classification.Classification(
             task_id="classifier",
-            labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
             batch_size=batch_runtime.batch_size,
-            label_descriptions={
+            labels={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
             },
@@ -114,11 +113,10 @@ def test_serialization(batch_runtime) -> None:
     with TemporaryDirectory() as tmp_dir:
         classifier = classification.Classification(
             task_id="classifier",
-            labels=["science", "politics"],
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
             batch_size=batch_runtime.batch_size,
-            label_descriptions={
+            labels={
                 "science": "Topics related to scientific disciplines and research",
                 "politics": "Topics related to government, elections, and political systems",
             },
@@ -151,7 +149,7 @@ def test_serialization(batch_runtime) -> None:
                                                         'strict_mode': False,
                                                         'inference_mode': None,}},
                       'include_meta': {'is_placeholder': False, 'value': True},
-                      'label_descriptions': {'is_placeholder': False,
+                      'labels': {'is_placeholder': False,
                                              'value': {'politics': 'Topics '
                                                                    'related to '
                                                                    'government, '
@@ -165,8 +163,6 @@ def test_serialization(batch_runtime) -> None:
                                                                   'disciplines '
                                                                   'and '
                                                                   'research'}},
-                      'labels': {'is_placeholder': False,
-                                 'value': ['science', 'politics']},
                       'model': {'is_placeholder': True,
                                 'value': 'transformers.pipelines.zero_shot_classification.ZeroShotClassificationPipeline'},
                       'prompt_instructions': {'is_placeholder': False,

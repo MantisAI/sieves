@@ -72,13 +72,15 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
 
     def __init__(
         self,
-        entities: list[str],
+        entities: list[str] | dict[str, str],
         task_id: str,
         prompt_instructions: str | None,
         generation_settings: GenerationSettings,
     ):
         """Initialize NERBridge.
 
+        :param entities: Entity types to extract. Can be a list of entity type strings, or a dict mapping entity types
+            to descriptions.
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param generation_settings: Generation settings including inference_mode.
@@ -89,7 +91,31 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             overwrite=False,
             generation_settings=generation_settings,
         )
-        self._entities = entities
+        if isinstance(entities, dict):
+            self._entities = list(entities.keys())
+            self._entity_descriptions = entities
+        else:
+            self._entities = entities
+            self._entity_descriptions = {}
+
+    def _get_entity_descriptions(self) -> str:
+        """Return a string with the entity descriptions.
+
+        :return: A string with the entity descriptions.
+        """
+        entities_with_descriptions: list[str] = []
+        for entity in self._entities:
+            if entity in self._entity_descriptions:
+                entities_with_descriptions.append(
+                    f"<entity_description><entity>{entity}</entity><description>"
+                    f"{self._entity_descriptions[entity]}</description></entity_description>"
+                )
+            else:
+                entities_with_descriptions.append(entity)
+
+        crlf = "\n\t\t\t"
+        entity_desc_string = crlf + "\t" + (crlf + "\t").join(entities_with_descriptions)
+        return f"{crlf}<entity_descriptions>{entity_desc_string}{crlf}</entity_descriptions>\n\t\t"
 
     @override
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
@@ -208,7 +234,8 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return """
+        entity_info = self._get_entity_descriptions() if self._entity_descriptions else ""
+        return f"""
         A named entity recognition result that represents named entities from the provided text.
         For each entity found it includes:
         - exact text of the entity
@@ -217,6 +244,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         - if the same entity appears multiple times in the text, each occurrence is listed separately with its
         own context
         - the entity type from the provided list of entity types. Only entities of the specified types are included.
+        {entity_info}
         """
 
     @override
@@ -299,9 +327,11 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return """
+        entity_info = self._get_entity_descriptions() if self._entity_descriptions else ""
+        return f"""
         Your goal is to extract named entities from the text. Only extract entities of the specified types:
-        {{ entity_types }}.
+        {{{{ entity_types }}}}.
+        {entity_info}
 
         For each entity:
         - Extract the exact text of the entity
@@ -421,14 +451,15 @@ class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
     def __init__(
         self,
-        entities: list[str],
+        entities: list[str] | dict[str, str],
         task_id: str,
         prompt_instructions: str | None,
         generation_settings: GenerationSettings,
     ):
         """Initialize GLiNER2 NER bridge.
 
-        :param entities: List of entity types to extract.
+        :param entities: Entity types to extract. Can be a list of entity type strings, or a dict mapping entity types
+            to descriptions.
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param generation_settings: Generation settings including inference_mode.

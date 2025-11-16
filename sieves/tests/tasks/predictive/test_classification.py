@@ -39,7 +39,7 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
         ]
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
-    label_descriptions = {
+    labels = {
         "science": "Topics related to scientific disciplines and research",
         "politics": "Topics related to government, elections, and political systems",
     }
@@ -48,11 +48,10 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
         [
             classification.Classification(
                 task_id="classifier",
-                labels=["science", "politics"],
+                labels=labels,
                 model=runtime.model,
                 generation_settings=runtime.generation_settings,
                 batch_size=runtime.batch_size,
-                label_descriptions=label_descriptions,
                 multi_label=multilabel,
                 **fewshot_args,
             ),
@@ -115,7 +114,7 @@ def test_to_hf_dataset(classification_docs, batch_runtime, multi_label) -> None:
 
 @pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
 def test_serialization(classification_docs, batch_runtime) -> None:
-    label_descriptions = {
+    labels = {
         "science": "Topics related to scientific disciplines and research",
         "politics": "Topics related to government, elections, and political systems",
     }
@@ -123,11 +122,10 @@ def test_serialization(classification_docs, batch_runtime) -> None:
     pipe = Pipeline(
         classification.Classification(
             task_id="classifier",
-            labels=["science", "politics"],
+            labels=labels,
             model=batch_runtime.model,
             generation_settings=batch_runtime.generation_settings,
             batch_size=batch_runtime.batch_size,
-            label_descriptions=label_descriptions,
         )
     )
 
@@ -147,8 +145,8 @@ def test_serialization(classification_docs, batch_runtime) -> None:
                                                                                        'strict_mode': False,
                                                                                        'inference_mode': None}},
                                                            'include_meta': {'is_placeholder': False, 'value': True},
-                                                           'label_descriptions': {'is_placeholder': False,
-                                                                                  'value': {'politics': 'Topics '
+                                                           'labels': {'is_placeholder': False,
+                                                                      'value': {'politics': 'Topics '
                                                                                                         'related to '
                                                                                                         'government, '
                                                                                                         'elections, '
@@ -161,8 +159,6 @@ def test_serialization(classification_docs, batch_runtime) -> None:
                                                                                                        'disciplines '
                                                                                                        'and '
                                                                                                        'research'}},
-                                                           'labels': {'is_placeholder': False,
-                                                                      'value': ['science', 'politics']},
                                                            'model': {'is_placeholder': True,
                                                                      'value': 'transformers.pipelines.zero_shot_classification.ZeroShotClassificationPipeline'},
                                                            'prompt_instructions': {'is_placeholder': False,
@@ -178,9 +174,9 @@ def test_serialization(classification_docs, batch_runtime) -> None:
 
 
 @pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
-def test_label_descriptions_validation(batch_runtime) -> None:
-    """Test that invalid label descriptions raise a ValueError."""
-    # Valid case - no label descriptions
+def test_labels_validation(batch_runtime) -> None:
+    """Test that labels parameter accepts both list and dict formats."""
+    # Valid case - list format (no descriptions)
     classification.Classification(
         labels=["science", "politics"],
         model=batch_runtime.model,
@@ -188,36 +184,23 @@ def test_label_descriptions_validation(batch_runtime) -> None:
         batch_size=batch_runtime.batch_size,
     )
 
-    # Valid case - all labels have descriptions
-    valid_descriptions = {"science": "Science related", "politics": "Politics related"}
+    # Valid case - dict format with all labels having descriptions
+    labels_with_descriptions = {"science": "Science related", "politics": "Politics related"}
     classification.Classification(
-        labels=["science", "politics"],
+        labels=labels_with_descriptions,
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
         batch_size=batch_runtime.batch_size,
-        label_descriptions=valid_descriptions
     )
 
-    # Valid case - some labels have descriptions
-    partial_descriptions = {"science": "Science related"}
+    # Valid case - dict format with some labels having descriptions (empty strings)
+    partial_descriptions = {"science": "Science related", "politics": ""}
     classification.Classification(
-        labels=["science", "politics"],
+        labels=partial_descriptions,
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
         batch_size=batch_runtime.batch_size,
-        label_descriptions=partial_descriptions
     )
-
-    # Invalid case - description for non-existent label
-    invalid_descriptions = {"science": "Science related", "economics": "Economics related"}
-    with pytest.raises(ValueError, match="Label descriptions contain invalid labels"):
-        classification.Classification(
-            labels=["science", "politics"],
-            model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
-            batch_size=batch_runtime.batch_size,
-            label_descriptions=invalid_descriptions
-        )
 
 
 def test_fewshot_example_singlelabel_confidence() -> None:
