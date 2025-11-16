@@ -17,14 +17,10 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
         fewshot_examples = [
             classification.FewshotExampleMultiLabel(
                 text="On the properties of hydrogen atoms and red dwarfs.",
-                reasoning="Atoms, hydrogen and red dwarfs are terms from physics. There is no mention of any "
-                "politics-related terms.",
                 confidence_per_label={"science": 1.0, "politics": 0.0},
             ),
             classification.FewshotExampleMultiLabel(
                 text="A parliament is elected by casting votes.",
-                reasoning="The election of a parliament by the casting of votes is a component of a democratic "
-                "political system.",
                 confidence_per_label={"science": 0, "politics": 1.0},
             ),
         ]
@@ -32,15 +28,11 @@ def _run(runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = Tr
         fewshot_examples = [
             classification.FewshotExampleSingleLabel(
                 text="On the properties of hydrogen atoms and red dwarfs.",
-                reasoning="Atoms, hydrogen and red dwarfs are terms from physics. There is no mention of any "
-                "politics-related terms. This is about science - scientists, papers, experiments, laws of nature.",
                 label="science",
                 confidence=1.0,
             ),
             classification.FewshotExampleSingleLabel(
                 text="A parliament is elected by casting votes.",
-                reasoning="The election of a parliament by the casting of votes is a component of a democratic "
-                "political system. This is about politics - parliament, laws, parties, politicians.",
                 label="politics",
                 confidence=1.0,
             ),
@@ -232,7 +224,6 @@ def test_fewshot_example_singlelabel_confidence() -> None:
     """Test that the confidence of a fewshot example is correctly validated."""
     classification.FewshotExampleSingleLabel(
         text="...",
-        reasoning="...",
         label="science",
         confidence=1.0,
     )
@@ -240,7 +231,6 @@ def test_fewshot_example_singlelabel_confidence() -> None:
     with pytest.raises(ValueError):
         classification.FewshotExampleSingleLabel(
             text="...",
-            reasoning="...",
             label="science",
             confidence=2.0,
         )
@@ -248,7 +238,6 @@ def test_fewshot_example_singlelabel_confidence() -> None:
     with pytest.raises(ValueError):
         classification.FewshotExampleSingleLabel(
             text="...",
-            reasoning="...",
             label="science",
             confidence=-2.0,
         )

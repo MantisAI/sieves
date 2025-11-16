@@ -72,9 +72,6 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
         class Entities(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to extract entities from.")
-            reasoning: str | None = dspy.OutputField(
-                default=None, description="Provide reasoning for complex extraction cases."
-            )
             entities: list[extraction_type] = dspy.OutputField(description="Entities to extract from text.")  # type: ignore[valid-type]
 
         Entities.__doc__ = jinja2.Template(self._prompt_instructions).render()
@@ -103,14 +100,12 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
         # Merge all found entities.
         for doc_offset in docs_offsets:
-            reasonings: list[str] = []
             entities: list[entity_type] = []  # type: ignore[valid-type]
             seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
                     continue
-                reasonings.append(res.reasoning or "")
                 assert len(res.completions.entities) == 1
                 if entity_type_is_frozen:
                     # Ensure not to add duplicate entities.
@@ -122,7 +117,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
                     entities.extend(res.completions.entities[0])
 
             yield dspy.Prediction.from_completions(
-                {"entities": [entities], "reasoning": [str(reasonings)]},
+                {"entities": [entities]},
                 signature=self.prompt_signature,
             )
 
@@ -137,8 +132,7 @@ class PydanticBasedInformationExtraction(
     @property
     def _default_prompt_instructions(self) -> str:
         return """
-        Find all occurences of this kind of entitity within the text. Keep your reasoning concise - don't
-        exhaustively list all identified entities in your reasoning.
+        Find all occurences of this kind of entitity within the text.
         """
 
     @override
@@ -151,7 +145,6 @@ class PydanticBasedInformationExtraction(
                 <example>
                     <text>{{ example.text }}</text>
                     <output>
-                        <reasoning>{{ example.reasoning }}</reasoning>
                         <entities>{{ example.entities }}</entities>
                     </output>
                 </example>
@@ -178,9 +171,6 @@ class PydanticBasedInformationExtraction(
         class Entity(pydantic.BaseModel, frozen=True):
             """Entity to extract from text."""
 
-            reasoning: str | None = pydantic.Field(
-                default=None, description="Provide reasoning for complex extraction cases."
-            )
             entities: list[entity_type]  # type: ignore[valid-type]
 
         return Entity
@@ -202,16 +192,12 @@ class PydanticBasedInformationExtraction(
 
         # Determine label scores for chunks per document.
         for doc_offset in docs_offsets:
-            reasonings: list[str] = []
             entities: list[entity_type] = []  # type: ignore[valid-type]
             seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
                     continue  # type: ignore[unreachable]
-
-                assert hasattr(res, "reasoning")
-                reasonings.append(res.reasoning or "")
 
                 assert hasattr(res, "entities")
                 if entity_type_is_frozen:
@@ -223,7 +209,7 @@ class PydanticBasedInformationExtraction(
                 else:
                     entities.extend(res.entities)
 
-            yield self.prompt_signature(entities=entities, reasoning=str(reasonings))
+            yield self.prompt_signature(entities=entities)
 
 
 class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_.InferenceMode]):

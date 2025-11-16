@@ -22,13 +22,11 @@ def test_run(pii_masking_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         pii_masking.FewshotExample(
             text="Jane Smith works at NASA.",
-            reasoning="Jane Smith is a person's name and should be masked.",
             masked_text="[MASKED] works at NASA.",
             pii_entities=[pii_masking.PIIEntity(entity_type="PERSON", text="Jane Smith")],
         ),
         pii_masking.FewshotExample(
             text="He lives at Diagon Alley 37.",
-            reasoning="Diagon Alley 37 is a residential address and should be masked.",
             masked_text="He lives at [MASKED].",
             pii_entities=[pii_masking.PIIEntity(entity_type="ADDRESS", text="Diagon Alley 37")],
         ),

@@ -31,7 +31,6 @@ _TaskBridge = DSPyQA | LangChainQA | OutlinesQA
 class FewshotExample(BaseFewshotExample):
     """Few-shot example with questions and answers for a context."""
 
-    reasoning: str | None = None
     questions: tuple[str, ...] | list[str]
     answers: tuple[str, ...] | list[str]
 

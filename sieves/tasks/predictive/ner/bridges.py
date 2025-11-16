@@ -251,9 +251,6 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
             text: str = dspy.InputField(description="Text to extract entities from")
             entity_types: list[str] = dspy.InputField(description="List of entity types to extract")
 
-            reasoning: str | None = dspy.OutputField(
-                default=None, description="Provide reasoning for complex entity extraction decisions."
-            )
             entities: list[Entity] = dspy.OutputField(
                 description="List of entities found in the text. If the same entity appears multiple times "
                 "in different contexts, include each occurrence separately."
@@ -367,9 +364,6 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineI
         class Prediction(pydantic.BaseModel):
             """NER prediction."""
 
-            reasoning: str | None = pydantic.Field(
-                default=None, description="Provide reasoning for complex entity extraction decisions."
-            )
             entities: list[EntityWithContext] = []
 
         return Prediction

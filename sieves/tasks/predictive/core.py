@@ -35,10 +35,6 @@ class EvaluationSignature(dspy.Signature):
     ground_truth: str = dspy.InputField(desc="Ground truth output values.")
     prediction: str = dspy.InputField(desc="Predicted output values.")
 
-    reasoning: str | None = dspy.OutputField(
-        desc="Step-by-step reasoning for the similarity assessment. Provide this when the assessment is non-trivial.",
-        default=None,
-    )
     similarity_score: float = dspy.OutputField(
         desc="Similarity score between 0.0 and 1.0, where 1.0 means identical and 0.0 means completely different."
     )
@@ -412,7 +408,7 @@ class PredictiveTask(
         dspy_examples = [ex.to_dspy() for ex in self._fewshot_examples]
 
         def _pred_eval(truth: dspy.Example, pred: dspy.Prediction, trace: Any | None = None) -> float:
-            """Wraps optimization evaluator, injects model.
+            """Wraps optimization evaluation, injects model.
 
             :param truth: Ground truth.
             :param pred: Predicted value.

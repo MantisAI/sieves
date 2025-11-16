@@ -42,59 +42,49 @@ def optimizer(request) -> Optimizer:
 
 def test_optimization_classification(optimizer) -> None:
     """Tests optimization for classification tasks."""
-    rf = 'Is a fruit.'
-    rv = 'Is a vegetable.'
     examples_single_label = [
-        classification.FewshotExampleSingleLabel(text='Apple', reasoning=rf, label='fruit', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Broccoli', reasoning=rv, label='vegetable', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Melon', reasoning=rf, label='fruit', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Carrot', reasoning=rv, label='vegetable', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Tomato', reasoning=rf, label='fruit', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Pepper', reasoning=rv, label='vegetable',
+        classification.FewshotExampleSingleLabel(text='Apple', label='fruit', confidence=1.),
+        classification.FewshotExampleSingleLabel(text='Broccoli', label='vegetable', confidence=1.),
+        classification.FewshotExampleSingleLabel(text='Melon', label='fruit', confidence=1.),
+        classification.FewshotExampleSingleLabel(text='Carrot', label='vegetable', confidence=1.),
+        classification.FewshotExampleSingleLabel(text='Tomato', label='fruit', confidence=1.),
+        classification.FewshotExampleSingleLabel(text='Pepper', label='vegetable',
                                                  confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Kiwi', reasoning=rf, label='fruit', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Onion', reasoning=rv, label='vegetable',
+        classification.FewshotExampleSingleLabel(text='Kiwi', label='fruit', confidence=1.),
+        classification.FewshotExampleSingleLabel(text='Onion', label='vegetable',
                                                  confidence=1.),
     ]
     examples_multi_label = [
         classification.FewshotExampleMultiLabel(
             text='Ghostbusters',
-            reasoning='A group of scientists battle paranormal entities with humor and sci-fi equipment.',
             confidence_per_label={'comedy': 0.9, 'scifi': 0.8}
         ),
         classification.FewshotExampleMultiLabel(
             text='The Martian',
-            reasoning='A stranded astronaut uses science and wit to survive on Mars with comedic moments.',
             confidence_per_label={'comedy': 0.4, 'scifi': 1.0}
         ),
         classification.FewshotExampleMultiLabel(
             text='Galaxy Quest',
-            reasoning='A comedy about actors from a sci-fi show who encounter real aliens.',
             confidence_per_label={'comedy': 1.0, 'scifi': 0.9}
         ),
         classification.FewshotExampleMultiLabel(
             text='Back to the Future',
-            reasoning='Time travel adventure with comedic family dynamics and sci-fi concepts.',
             confidence_per_label={'comedy': 0.8, 'scifi': 0.9}
         ),
         classification.FewshotExampleMultiLabel(
             text='Superbad',
-            reasoning='A pure comedy about high school friends, no science fiction elements.',
             confidence_per_label={'comedy': 1.0, 'scifi': 0.0}
         ),
         classification.FewshotExampleMultiLabel(
             text='Blade Runner 2049',
-            reasoning='A serious dystopian sci-fi film with minimal comedic elements.',
             confidence_per_label={'comedy': 0.05, 'scifi': 1.0}
         ),
         classification.FewshotExampleMultiLabel(
             text='Guardians of the Galaxy',
-            reasoning='Space adventure with humor, aliens, and sci-fi action.',
             confidence_per_label={'comedy': 0.75, 'scifi': 0.9}
         ),
         classification.FewshotExampleMultiLabel(
             text='Interstellar',
-            reasoning='Hard science fiction about space exploration with emotional but not comedic tone.',
             confidence_per_label={'comedy': 0.05, 'scifi': 1.0}
         ),
     ]
@@ -157,32 +147,26 @@ def test_optimization_sentiment_analysis(optimizer) -> None:
     examples = [
         sentiment_analysis.FewshotExample(
             text='Great product, excellent quality and fast shipping!',
-            reasoning='Very positive review praising both product and service.',
             sentiment_per_aspect={'overall': 0.95, 'quality': 0.9, 'delivery': 0.95}
         ),
         sentiment_analysis.FewshotExample(
             text='Terrible quality, arrived damaged and late.',
-            reasoning='Very negative review criticizing quality and delivery.',
             sentiment_per_aspect={'overall': 0.1, 'quality': 0.05, 'delivery': 0.15}
         ),
         sentiment_analysis.FewshotExample(
             text='Decent product but shipping was slow.',
-            reasoning='Mixed review with average product quality and poor delivery.',
             sentiment_per_aspect={'overall': 0.5, 'quality': 0.6, 'delivery': 0.3}
         ),
         sentiment_analysis.FewshotExample(
             text='Amazing quality! Worth every penny.',
-            reasoning='Very positive review focused on quality.',
             sentiment_per_aspect={'overall': 0.95, 'quality': 1.0, 'delivery': 0.5}
         ),
         sentiment_analysis.FewshotExample(
             text='Not great, not terrible. Just okay.',
-            reasoning='Neutral review with average sentiment.',
             sentiment_per_aspect={'overall': 0.5, 'quality': 0.5, 'delivery': 0.5}
         ),
         sentiment_analysis.FewshotExample(
             text='Quick delivery but product quality is poor.',
-            reasoning='Mixed review with good delivery but bad quality.',
             sentiment_per_aspect={'overall': 0.4, 'quality': 0.2, 'delivery': 0.8}
         ),
     ]
@@ -324,7 +308,6 @@ def test_optimization_pii_masking(optimizer) -> None:
     examples = [
         pii_masking.FewshotExample(
             text='Please contact John Doe at john.doe@email.com for more information.',
-            reasoning='Contains a person name and email address that should be masked.',
             masked_text='Please contact [MASKED] at [MASKED] for more information.',
             pii_entities=[
                 pii_masking.PIIEntity(entity_type='NAME', text='John Doe'),
@@ -333,7 +316,6 @@ def test_optimization_pii_masking(optimizer) -> None:
         ),
         pii_masking.FewshotExample(
             text='Send the report to alice.smith@company.com by Friday.',
-            reasoning='Contains an email address.',
             masked_text='Send the report to [MASKED] by Friday.',
             pii_entities=[
                 pii_masking.PIIEntity(entity_type='EMAIL', text='alice.smith@company.com'),
@@ -341,7 +323,6 @@ def test_optimization_pii_masking(optimizer) -> None:
         ),
         pii_masking.FewshotExample(
             text='Call Bob Johnson at the office tomorrow.',
-            reasoning='Contains a person name.',
             masked_text='Call [MASKED] at the office tomorrow.',
             pii_entities=[
                 pii_masking.PIIEntity(entity_type='NAME', text='Bob Johnson'),
@@ -349,7 +330,6 @@ def test_optimization_pii_masking(optimizer) -> None:
         ),
         pii_masking.FewshotExample(
             text='Sarah Miller will attend the meeting.',
-            reasoning='Contains a person name.',
             masked_text='[MASKED] will attend the meeting.',
             pii_entities=[
                 pii_masking.PIIEntity(entity_type='NAME', text='Sarah Miller'),
@@ -357,7 +337,6 @@ def test_optimization_pii_masking(optimizer) -> None:
         ),
         pii_masking.FewshotExample(
             text='Email the document to michael.brown@org.net and copy jane.white@org.net.',
-            reasoning='Contains two email addresses.',
             masked_text='Email the document to [MASKED] and copy [MASKED].',
             pii_entities=[
                 pii_masking.PIIEntity(entity_type='EMAIL', text='michael.brown@org.net'),
@@ -366,7 +345,6 @@ def test_optimization_pii_masking(optimizer) -> None:
         ),
         pii_masking.FewshotExample(
             text='The meeting is scheduled for 2pm.',
-            reasoning='No PII present in this text.',
             masked_text='The meeting is scheduled for 2pm.',
             pii_entities=[]
         ),
@@ -438,17 +416,14 @@ def test_optimization_information_extraction(optimizer) -> None:
     examples = [
         information_extraction.FewshotExample(
             text='Alice Johnson is a 28-year-old software engineer.',
-            reasoning='Extract person information from bio.',
             entities=[Person(name='Alice Johnson', age=28, occupation='software engineer')]
         ),
         information_extraction.FewshotExample(
             text='Bob Smith, age 35, works as a teacher.',
-            reasoning='Extract person information from bio.',
             entities=[Person(name='Bob Smith', age=35, occupation='teacher')]
         ),
         information_extraction.FewshotExample(
             text='The team includes Sarah Lee (42, doctor) and Mike Brown (30, lawyer).',
-            reasoning='Extract multiple people from text.',
             entities=[
                 Person(name='Sarah Lee', age=42, occupation='doctor'),
                 Person(name='Mike Brown', age=30, occupation='lawyer'),
@@ -456,17 +431,14 @@ def test_optimization_information_extraction(optimizer) -> None:
         ),
         information_extraction.FewshotExample(
             text='Emma Davis is 25 and works as a designer.',
-            reasoning='Extract person information.',
             entities=[Person(name='Emma Davis', age=25, occupation='designer')]
         ),
         information_extraction.FewshotExample(
             text='Dr. John Williams, a 50-year-old researcher, published a new paper.',
-            reasoning='Extract person with title.',
             entities=[Person(name='Dr. John Williams', age=50, occupation='researcher')]
         ),
         information_extraction.FewshotExample(
             text='The company hired Lisa Chen (27) as an analyst.',
-            reasoning='Extract person information.',
             entities=[Person(name='Lisa Chen', age=27, occupation='analyst')]
         ),
     ]
@@ -658,39 +630,33 @@ def test_optimization_question_answering(optimizer) -> None:
     examples = [
         question_answering.FewshotExample(
             text='Albert Einstein developed the theory of relativity in 1915. His work revolutionized modern physics.',
-            reasoning='Extract information about Einstein and relativity.',
             questions=questions,
             answers=['The theory of relativity', 'Albert Einstein']
         ),
         question_answering.FewshotExample(
             text='Marie Curie won two Nobel Prizes for her research on radioactivity. She was the first woman to win a Nobel Prize.',
-            reasoning='Extract information about Curie and her achievements.',
             questions=questions,
             answers=['Research on radioactivity and Nobel Prizes', 'Marie Curie']
         ),
         question_answering.FewshotExample(
             text='Shakespeare wrote Romeo and Juliet in 1597. The play is one of the most famous love stories in '
                  'literature.',
-            reasoning='Extract information about Shakespeare and Romeo and Juliet.',
             questions=questions,
             answers=['Romeo and Juliet play', 'Shakespeare']
         ),
         question_answering.FewshotExample(
             text='The Amazon rainforest is home to millions of species. Deforestation threatens this biodiversity.',
-            reasoning='Extract information about Amazon and biodiversity.',
             questions=questions,
             answers=['Amazon rainforest biodiversity and deforestation', 'No specific people mentioned']
         ),
         question_answering.FewshotExample(
             text='Neil Armstrong became the first person to walk on the moon in 1969. This historic event was part of '
                  'the Apollo 11 mission.',
-            reasoning='Extract information about moon landing and Armstrong.',
             questions=questions,
             answers=['First moon landing', 'Neil Armstrong']
         ),
         question_answering.FewshotExample(
             text='Leonardo da Vinci painted the Mona Lisa during the Renaissance. He was also an inventor and scientist.',
-            reasoning='Extract information about da Vinci and his work.',
             questions=questions,
             answers=['The Mona Lisa painting', 'Leonardo da Vinci']
         ),

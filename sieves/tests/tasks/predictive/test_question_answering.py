@@ -26,7 +26,6 @@ def test_run(qa_docs, batch_runtime, fewshot):
             space and time, and the related entities of energy and force. Physics is one of the most fundamental
             scientific disciplines. A scientist who specializes in the field of physics is called a physicist.
             """,
-            reasoning="The text states ad verbatim what a scientist specializing in physics is called.",
             questions=("What's a scientist called who specializes in the field of physics?",),
             answers=("A physicist.",),
         ),
@@ -37,7 +36,6 @@ def test_run(qa_docs, batch_runtime, fewshot):
             populations. They usually specialize in a particular branch (e.g., molecular biology, zoology, and
             evolutionary biology) of biology and have a specific research focus (e.g., studying malaria or cancer).
             """,
-            reasoning="The states ad verbatim that biologists are interested in studying life on earth.",
             questions=("What are biologists interested in?",),
             answers=("Studying life on earth.",),
         ),

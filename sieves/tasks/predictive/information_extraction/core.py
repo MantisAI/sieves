@@ -36,7 +36,6 @@ _TaskBridge = GliNERBridge | DSPyInformationExtraction | LangChainInformationExt
 class FewshotExample(BaseFewshotExample):
     """Few-shot example."""
 
-    reasoning: str | None = None
     entities: list[pydantic.BaseModel]
 
     @override
