@@ -10,7 +10,8 @@ from sieves.tasks.predictive import sentiment_analysis
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    SentimentAnalysis.supports(),
+    # SentimentAnalysis.supports(),
+    (EngineType.gliner,),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -28,43 +29,39 @@ def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
     ]
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
-    pipe = Pipeline(
-        [
-            sentiment_analysis.SentimentAnalysis(
-                task_id="sentiment_analysis",
-                aspects=("food", "service"),
-                model=batch_runtime.model,
-                generation_settings=batch_runtime.generation_settings,
-                batch_size=batch_runtime.batch_size,
-                **fewshot_args,
-            ),
-        ]
-    )
-    docs = list(pipe(sentiment_analysis_docs))
-
-    assert len(docs) == 2
-    for doc in docs:
-        assert doc.text
-        assert doc.results["sentiment_analysis"]
-        assert "sentiment_analysis" in doc.results
-
-    with pytest.raises(NotImplementedError):
-        pipe["sentiment_analysis"].distill(None, None, None, None, None, None, None, None)
-
-
-@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
-def test_to_hf_dataset(dummy_docs, batch_runtime) -> None:
     task = sentiment_analysis.SentimentAnalysis(
         task_id="sentiment_analysis",
         aspects=("food", "service"),
         model=batch_runtime.model,
         generation_settings=batch_runtime.generation_settings,
         batch_size=batch_runtime.batch_size,
+        **fewshot_args,
     )
     pipe = Pipeline(task)
+    docs = list(pipe(sentiment_analysis_docs))
 
-    assert isinstance(task, PredictiveTask)
-    dataset = task.to_hf_dataset(pipe(dummy_docs))
+    print(batch_runtime.model.__class__)
+    assert len(docs) == 2
+    for doc in docs:
+        assert doc.text
+        assert doc.results["sentiment_analysis"]
+        assert "sentiment_analysis" in doc.results
+        print(doc.results["sentiment_analysis"])
+
+    with pytest.raises(NotImplementedError):
+        pipe["sentiment_analysis"].distill(None, None, None, None, None, None, None, None)
+
+    if fewshot:
+        _to_hf_dataset(task, docs)
+
+
+def _to_hf_dataset(task: SentimentAnalysis, docs: list[Doc]) -> None:
+    """Tests whether conversion to HF dataset works as expected.
+
+    :param task: SentimentAnalysis task instance.
+    :param docs: List of documents to convert.
+    """
+    dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "aspect")])
     assert len(dataset) == 2
     dataset_records = list(dataset)

@@ -36,15 +36,14 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
     ]
 
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
-    pipe = Pipeline(
-        ner.NER(
-            entities=["PERSON", "LOCATION", "COMPANY"],
-            model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
-            batch_size=batch_runtime.batch_size,
-            **fewshot_args
-        )
+    task = ner.NER(
+        entities=["PERSON", "LOCATION", "COMPANY"],
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
+        **fewshot_args
     )
+    pipe = Pipeline(task)
     docs = list(pipe(ner_docs))
 
     assert len(docs) == 2
@@ -53,6 +52,9 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
 
     with pytest.raises(NotImplementedError):
         pipe["NER"].distill(None, None, None, None, None, None, None, None)
+
+    if fewshot:
+        _to_hf_dataset(task, docs)
 
 
 @pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
@@ -98,18 +100,13 @@ def test_serialization(ner_docs, batch_runtime) -> None:
     )
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.gliner], indirect=["batch_runtime"])
-def test_to_hf_dataset(ner_docs, batch_runtime) -> None:
-    task = ner.NER(
-        entities=["PERSON", "LOCATION", "COMPANY"],
-        model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
-        batch_size=batch_runtime.batch_size,
-    )
-    pipe = Pipeline(task)
+def _to_hf_dataset(task: ner.NER, docs: list[Doc]) -> None:
+    """Tests whether conversion to HF dataset works as expected.
 
-    assert isinstance(task, PredictiveTask)
-    dataset = task.to_hf_dataset(pipe(ner_docs))
+    :param task: NER task instance.
+    :param docs: List of documents to convert.
+    """
+    dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "entities")])
     assert len(dataset) == 2
     dataset_records = list(dataset)

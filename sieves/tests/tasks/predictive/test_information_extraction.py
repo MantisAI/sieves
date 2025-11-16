@@ -38,17 +38,14 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
 
     entity_type = PersonGliner if isinstance(batch_runtime.model, gliner2.GLiNER2) else Person
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
-    pipe = Pipeline(
-        [
-            tasks.predictive.InformationExtraction(
-                entity_type=entity_type,
-                model=batch_runtime.model,
-                generation_settings=batch_runtime.generation_settings,
-                batch_size=batch_runtime.batch_size,
-                **fewshot_args
-            ),
-        ]
+    task = tasks.predictive.InformationExtraction(
+        entity_type=entity_type,
+        model=batch_runtime.model,
+        generation_settings=batch_runtime.generation_settings,
+        batch_size=batch_runtime.batch_size,
+        **fewshot_args
     )
+    pipe = Pipeline(task)
     docs = list(pipe(information_extraction_docs))
 
     # Ensure entity type checks work as expected.
@@ -79,18 +76,16 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
     with pytest.raises(NotImplementedError):
         pipe["InformationExtraction"].distill(None, None, None, None, None, None, None, None)
 
+    if fewshot_examples:
+        _to_hf_dataset(task, docs)
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.gliner], indirect=["batch_runtime"])
-def test_to_hf_dataset(information_extraction_docs, batch_runtime) -> None:
-    task = tasks.predictive.InformationExtraction(
-        entity_type=PersonGliner,
-        model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
-        batch_size=batch_runtime.batch_size
-    )
-    pipe = Pipeline(task)
-    docs = list(pipe(information_extraction_docs))
 
+def _to_hf_dataset(task: InformationExtraction, docs: list[Doc]) -> None:
+    """Tests whether conversion to HF dataset works as expected.
+
+    :param task: InformationExtraction task instance.
+    :param docs: List of documents to convert.
+    """
     assert isinstance(task, PredictiveTask)
     dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "entities")])

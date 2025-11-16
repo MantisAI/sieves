@@ -303,7 +303,13 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     case gliner_.InferenceMode.classification:
                         keys = list(res.keys())
                         assert len(keys) == 1, "Composite GliNER2 schemas are not supported."
-                        for entry in res[keys[0]]:
+                        extracted_res = res[keys[0]]
+
+                        # In case of single-label: pad to list so that .
+                        if isinstance(extracted_res, dict):
+                            extracted_res = [extracted_res]
+
+                        for entry in extracted_res:
                             scores[entry["label"]] += entry["confidence"]
 
                     case gliner_.InferenceMode.entities:
@@ -323,6 +329,11 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
             match self._inference_mode:
                 case gliner_.InferenceMode.classification:
+                    # Ensure that all labels have been assigned - GLiNER2 is somtimes negligent about this.
+                    for label in self._prompt_signature.schema["classifications"][0]["labels"]:
+                        if label not in scores:
+                            scores[label] = 0.0
+
                     # Average score, sort in descending order.
                     sorted_scores: list[dict[str, str | float]] = sorted(
                         (
