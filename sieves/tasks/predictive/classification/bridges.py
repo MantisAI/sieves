@@ -32,21 +32,19 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
         self,
         task_id: str,
         prompt_instructions: str | None,
-        labels: list[str],
+        labels: list[str] | dict[str, str],
         multi_label: bool,
         generation_settings: GenerationSettings,
-        label_descriptions: dict[str, str] | None = None,
     ):
-        """Initialize InformationExtractionBridge.
+        """Initialize ClassificationBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param labels: Labels to classify.
+        :param labels: Labels to classify. Can be a list of label strings, or a dict mapping labels to descriptions.
         :param multi_label: If True, task returns confidence scores for all specified labels. If False, task returns
             most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
             accuracy.
         :param generation_settings: Generation settings.
-        :param label_descriptions: Optional descriptions for each label.
         """
         super().__init__(
             task_id=task_id,
@@ -54,9 +52,13 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineI
             overwrite=False,
             generation_settings=generation_settings,
         )
-        self._labels = labels
+        if isinstance(labels, dict):
+            self._labels = list(labels.keys())
+            self._label_descriptions = labels
+        else:
+            self._labels = labels
+            self._label_descriptions = {}
         self._multi_label = multi_label
-        self._label_descriptions = label_descriptions or {}
 
     def _get_label_descriptions(self) -> str:
         """Return a string with the label descriptions.

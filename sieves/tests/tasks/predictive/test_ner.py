@@ -152,3 +152,65 @@ def test_inference_mode_override(batch_runtime) -> None:
     )
 
     assert task._bridge.inference_mode == dummy
+
+
+@pytest.mark.parametrize(
+    "batch_runtime",
+    (
+        EngineType.dspy,
+        EngineType.langchain,
+        EngineType.outlines,
+        EngineType.gliner,
+    ),
+    indirect=["batch_runtime"],
+)
+def test_run_with_dict_entities(ner_docs, batch_runtime) -> None:
+    """Test NER with dict format entities (labels with descriptions)."""
+    entities_with_descriptions = {
+        "PERSON": "Names of people",
+        "LOCATION": "Geographic locations",
+        "COMPANY": "Names of companies and organizations"
+    }
+
+    pipe = Pipeline(
+        ner.NER(
+            entities=entities_with_descriptions,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
+        )
+    )
+    docs = list(pipe(ner_docs))
+
+    assert len(docs) == 2
+    for doc in docs:
+        assert "NER" in doc.results
+
+
+@pytest.mark.parametrize(
+    "batch_runtime",
+    (
+        EngineType.dspy,
+        EngineType.langchain,
+        EngineType.outlines,
+        EngineType.gliner,
+    ),
+    indirect=["batch_runtime"],
+)
+def test_run_with_list_entities(ner_docs, batch_runtime) -> None:
+    """Test NER with list format entities (backward compatibility)."""
+    entities_list = ["PERSON", "LOCATION", "COMPANY"]
+
+    pipe = Pipeline(
+        ner.NER(
+            entities=entities_list,
+            model=batch_runtime.model,
+            generation_settings=batch_runtime.generation_settings,
+            batch_size=batch_runtime.batch_size,
+        )
+    )
+    docs = list(pipe(ner_docs))
+
+    assert len(docs) == 2
+    for doc in docs:
+        assert "NER" in doc.results

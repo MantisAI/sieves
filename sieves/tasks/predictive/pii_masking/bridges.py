@@ -27,7 +27,7 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         prompt_instructions: str | None,
         overwrite: bool,
         mask_placeholder: str,
-        pii_types: list[str] | None,
+        pii_types: list[str] | dict[str, str] | None,
         generation_settings: GenerationSettings,
     ):
         """
@@ -37,7 +37,8 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with masked text.
         :param mask_placeholder: String to replace PII with.
-        :param pii_types: Types of PII to mask. If None, all common PII types will be masked.
+        :param pii_types: Types of PII to mask. Can be a list of PII type strings, a dict mapping PII types to
+            descriptions, or None for all common PII types.
         :param generation_settings: Generation settings including inference_mode.
         """
         super().__init__(
@@ -47,8 +48,38 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMod
             generation_settings=generation_settings,
         )
         self._mask_placeholder = mask_placeholder
-        self._pii_types = pii_types
+        if isinstance(pii_types, dict):
+            self._pii_types = list(pii_types.keys())
+            self._pii_type_descriptions = pii_types
+        elif pii_types is not None:
+            self._pii_types = pii_types
+            self._pii_type_descriptions = {}
+        else:
+            self._pii_types = None
+            self._pii_type_descriptions = {}
         self._pii_entity_cls = self._create_pii_entity_cls()
+
+    def _get_pii_type_descriptions(self) -> str:
+        """Return a string with the PII type descriptions.
+
+        :return: A string with the PII type descriptions.
+        """
+        if not self._pii_types:
+            return ""
+
+        pii_types_with_descriptions: list[str] = []
+        for pii_type in self._pii_types:
+            if pii_type in self._pii_type_descriptions:
+                pii_types_with_descriptions.append(
+                    f"<pii_type_description><pii_type>{pii_type}</pii_type><description>"
+                    f"{self._pii_type_descriptions[pii_type]}</description></pii_type_description>"
+                )
+            else:
+                pii_types_with_descriptions.append(pii_type)
+
+        crlf = "\n\t\t\t"
+        pii_type_desc_string = crlf + "\t" + (crlf + "\t").join(pii_types_with_descriptions)
+        return f"{crlf}<pii_type_descriptions>{pii_type_desc_string}{crlf}</pii_type_descriptions>\n\t\t"
 
     def _create_pii_entity_cls(self) -> type[pydantic.BaseModel]:
         """Create PII entity class.
@@ -75,9 +106,10 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
     def _default_prompt_instructions(self) -> str:
         default_pii_types_desc = "all types of personally identifiable information"
         pii_types_desc = ", ".join(self._pii_types) if self._pii_types else default_pii_types_desc
+        pii_type_info = self._get_pii_type_descriptions() if self._pii_type_descriptions else ""
         return (
             f"Identify and mask {pii_types_desc} in the given text. Replace each PII instance with "
-            f"'{self._mask_placeholder}'."
+            f"'{self._mask_placeholder}'.\n{pii_type_info}"
         )
 
     @override
@@ -159,15 +191,17 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
 
     @property
     def _default_prompt_instructions(self) -> str:
-        return """
+        pii_type_info = self._get_pii_type_descriptions() if self._pii_type_descriptions else ""
+        return f"""
         Identify and mask Personally Identifiable Information (PII) in the given text.
-        {% if pii_types|length > 0 -%}
-            Focus on these specific PII types: {{ pii_types|join(', ') }}.
-        {% else -%}
+        {{%- if pii_types|length > 0 %}}
+            Focus on these specific PII types: {{{{ pii_types|join(', ') }}}}.
+        {{%- else %}}
             Mask all common types of PII such as names, addresses, phone numbers, emails, SSNs, credit
             card numbers, etc.
-        {% endif -%}
-        Replace each instance of PII with "{{ mask_placeholder }}".
+        {{%- endif %}}
+        {pii_type_info}
+        Replace each instance of PII with "{{{{ mask_placeholder }}}}".
         """
 
     @override

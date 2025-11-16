@@ -56,7 +56,11 @@ examples = [
 ]
 
 task = Classification(
-    labels=["technology", "politics", "sports"],
+    labels={
+        "technology": "Technology news, AI, software, and digital innovations",
+        "politics": "Political events, elections, and government affairs",
+        "sports": "Sports news, games, athletes, and competitions"
+    },
     model=model,
     fewshot_examples=examples,
     generation_settings=GenerationSettings(),
@@ -188,7 +192,11 @@ examples = [
 ]
 
 task = Classification(
-    labels=["technology", "healthcare", "finance"],
+    labels={
+        "technology": "Technology and software topics",
+        "healthcare": "Healthcare, medicine, and medical research",
+        "finance": "Financial markets, banking, and economics"
+    },
     model=model,
     multi_label=True,
     fewshot_examples=examples

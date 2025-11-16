@@ -28,8 +28,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
             preprocessing.Chunking(chonkie.TokenChunker(tokenizer)),
             classification.Classification(
                 task_id="classifier",
-                labels=["science", "politics"],
-                label_descriptions={"science": "Everything about science.", "politics": "Everything about politics."},
+                labels={"science": "Everything about science.", "politics": "Everything about politics."},
                 model=batch_runtime.model,
                 generation_settings=batch_runtime.generation_settings,
                 batch_size=batch_runtime.batch_size,
@@ -72,8 +71,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                     "fewshot_examples": {"is_placeholder": False, "value": ()},
                     "include_meta": {"is_placeholder": False, "value": True},
                     'batch_size': {'is_placeholder': False, 'value': -1},
-                    "labels": {"is_placeholder": False, "value": ["science", "politics"]},
-                    "label_descriptions": {
+                    "label": {
                         "is_placeholder": False,
                         "value": {"science": "Everything about science.", "politics": "Everything about politics."},
                     },

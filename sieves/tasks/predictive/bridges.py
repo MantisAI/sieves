@@ -280,6 +280,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                 case gliner_.InferenceMode.structure:
                     assert len(result) == 1
                     entity_type_name = list(result.keys())[0]
+                    assert isinstance(self._prompt_signature_pydantic, pydantic.BaseModel)
                     doc.results[self._task_id] = [
                         self._prompt_signature_pydantic.model_validate(entity) for entity in result[entity_type_name]
                     ]
@@ -310,13 +311,15 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             if len(res["entities"][entity_type]):
                                 if entity_type not in entities:
                                     entities[entity_type] = []
-                                entities[entity_type].extend(res["entities"][entity_type])
+                                relevant_entities: list[str] = entities[entity_type]
+                                relevant_entities.extend(res["entities"][entity_type])
 
                     case gliner_.InferenceMode.structure:
                         for entity_type in res:
                             if entity_type not in entities:
                                 entities[entity_type] = []
-                            entities[entity_type].extend(res[entity_type])
+                            relevant_entities: list[str] = entities[entity_type]
+                            relevant_entities.extend(res[entity_type])
 
             match self._inference_mode:
                 case gliner_.InferenceMode.classification:
