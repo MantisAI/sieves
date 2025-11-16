@@ -280,7 +280,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                 case gliner_.InferenceMode.structure:
                     assert len(result) == 1
                     entity_type_name = list(result.keys())[0]
-                    assert isinstance(self._prompt_signature_pydantic, pydantic.BaseModel)
+                    assert issubclass(self._prompt_signature_pydantic, pydantic.BaseModel)
                     doc.results[self._task_id] = [
                         self._prompt_signature_pydantic.model_validate(entity) for entity in result[entity_type_name]
                     ]
