@@ -39,7 +39,6 @@ _TaskBridge = (
 class FewshotExampleMultiLabel(BaseFewshotExample):
     """Few‑shot example for multi‑label classification with per‑label confidences."""
 
-    reasoning: str | None = None
     confidence_per_label: dict[str, float]
 
     @override
@@ -58,7 +57,6 @@ class FewshotExampleMultiLabel(BaseFewshotExample):
 class FewshotExampleSingleLabel(BaseFewshotExample):
     """Few‑shot example for single‑label classification with a global confidence."""
 
-    reasoning: str | None = None
     label: str
     confidence: float
 

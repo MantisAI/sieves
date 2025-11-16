@@ -122,9 +122,6 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
             class MultiLabelTextClassification(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to classify.")
-                reasoning: str | None = dspy.OutputField(
-                    default=None, description="Provide reasoning for complex or ambiguous classifications."
-                )
                 confidence_per_label: dict[LabelType, float] = dspy.OutputField(
                     description="Confidence per label that text should be classified with this label."
                 )
@@ -138,9 +135,6 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                 label: LabelType = dspy.OutputField(
                     description="Correct label for the provided text. You MUST NOT provide a list for this attribute. "
                     "This a single label. Do not wrap this label in []."
-                )
-                reasoning: str | None = dspy.OutputField(
-                    default=None, description="Provide reasoning for complex or ambiguous classifications."
                 )
                 confidence: float = dspy.OutputField(
                     description="Confidence that this label is correct as a float between 0 and 1."
@@ -209,7 +203,6 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             yield dspy.Prediction.from_completions(
                 {
                     "confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
-                    "reasoning": [str([getattr(res, "reasoning", "") for res in doc_results])],
                 },
                 signature=self.prompt_signature,
             )
@@ -239,7 +232,6 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
                     <example>
                         <text>{{ example.text }}</text>
                         <output>
-                            <reasoning>{{ example.reasoning }}</reasoning>
                             {%- for l, s in example.confidence_per_label.items() %}
                             <label_score>
                                 <label>{{ l }}</label><
@@ -259,7 +251,6 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
         {%- for example in examples %}
             <example>
                 <text>{{ example.text }}</text>
-                <reasoning>{{ example.reasoning }}</reasoning>
                 <output>
                     <label>{{ example.label }}</label><score>{{ example.confidence }}</score>
                 </output>
@@ -422,12 +413,6 @@ class PydanticBasedClassification(
                 "MultilabelClassification",
                 __base__=pydantic.BaseModel,
                 __doc__="Result of multi-label classification.",
-                reasoning=(
-                    str | None,
-                    pydantic.Field(
-                        default=None, description="Provide reasoning for complex or ambiguous classifications."
-                    ),
-                ),
                 **{label: (float, ...) for label in self._labels},
             )
         else:
@@ -437,9 +422,6 @@ class PydanticBasedClassification(
             class SingleLabelClassification(pydantic.BaseModel):
                 """Result of single-label classification."""
 
-                reasoning: str | None = pydantic.Field(
-                    default=None, description="Provide reasoning for complex or ambiguous classifications."
-                )
                 label: LabelType
                 score: float
 
@@ -453,7 +435,7 @@ class PydanticBasedClassification(
         for doc, result in zip(docs, results):
             if self._multi_label:
                 assert isinstance(result, pydantic.BaseModel)
-                label_scores = {k: v for k, v in result.model_dump().items() if k != "reasoning"}
+                label_scores = result.model_dump()
                 doc.results[self._task_id] = sorted(
                     ((label, score) for label, score in label_scores.items()), key=lambda x: x[1], reverse=True
                 )
@@ -470,7 +452,6 @@ class PydanticBasedClassification(
         results = list(results)
 
         # Determine label scores for chunks per document.
-        reasonings: list[str] = []
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
             doc_results = results[doc_offset[0] : doc_offset[1]]
@@ -479,8 +460,6 @@ class PydanticBasedClassification(
                 if res is None:
                     continue  # type: ignore[unreachable]
 
-                assert hasattr(res, "reasoning")
-                reasonings.append(res.reasoning or "")
                 # We clamp the score to 0 <= x <= 1. Alternatively we could force this in the prompt signature, but
                 # this fails occasionally with some models and feels too strict.
                 if self._multi_label:
@@ -495,11 +474,10 @@ class PydanticBasedClassification(
             assert callable(prompt_signature)
 
             if self._multi_label:
-                yield prompt_signature(reasoning=str(reasonings), **avg_label_scores)
+                yield prompt_signature(**avg_label_scores)
             else:
                 max_score_label = max(avg_label_scores, key=avg_label_scores.__getitem__)
                 yield prompt_signature(
-                    reasoning=str(reasonings),
                     label=max_score_label,
                     score=avg_label_scores[max_score_label],
                 )

@@ -98,11 +98,6 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
         class PIIMasking(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to mask PII from.")
-            reasoning: str | None = dspy.OutputField(
-                description="Reasoning about what PII was found and masked. Provide this for complex cases where "
-                "explanation would be helpful.",
-                default=None,
-            )
             masked_text: str = dspy.OutputField(description="Text with all PII masked.")
             pii_entities: list[PIIEntity] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
 
@@ -145,10 +140,8 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
             seen_entities: set[PIIEntity] = set()  # type: ignore[valid-type]
             entities: list[PIIEntity] = []  # type: ignore[valid-type]
             masked_texts: list[str] = []
-            reasonings: list[str] = []
 
             for res in doc_results:
-                reasonings.append(res.reasoning or "")
                 masked_texts.append(res.masked_text)
                 for entity in res.pii_entities:
                     if entity not in seen_entities:
@@ -156,7 +149,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
                         seen_entities.add(entity)
 
             yield dspy.Prediction.from_completions(
-                {"masked_text": [" ".join(masked_texts)], "pii_entities": [entities], "reasoning": [str(reasonings)]},
+                {"masked_text": [" ".join(masked_texts)], "pii_entities": [entities]},
                 signature=self.prompt_signature,
             )
 
@@ -187,7 +180,6 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                 <example>
                     <text>"{{ example.text }}"</text>
                     <output>
-                        <reasoning>{{ example.reasoning }}</reasoning>
                         <masked_test>{{ example.masked_text }}</masked_test>
                         <pii_entities_found>{{ example.pii_entities }}</pii_entities_found>
                     </output>
@@ -216,11 +208,6 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
         class PIIMasking(pydantic.BaseModel, frozen=True):
             """PII masking output."""
 
-            reasoning: str | None = pydantic.Field(
-                default=None,
-                description="Reasoning about what PII was found and masked. Provide this for complex cases where "
-                "explanation would be helpful.",
-            )
             masked_text: str
             pii_entities: list[PIIEntity]  # type: ignore[valid-type]
 
@@ -252,26 +239,21 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
             seen_entities: set[PIIEntity] = set()  # type: ignore[valid-type]
             entities: list[PIIEntity] = []  # type: ignore[valid-type]
             masked_texts: list[str] = []
-            reasonings: list[str] = []
 
             for res in doc_results:
                 if res is None:
                     continue  # type: ignore[unreachable]
 
-                assert hasattr(res, "reasoning")
                 assert hasattr(res, "masked_text")
                 assert hasattr(res, "pii_entities")
 
-                reasonings.append(res.reasoning or "")
                 masked_texts.append(res.masked_text)
                 for entity in res.pii_entities:
                     if entity not in seen_entities:
                         entities.extend(res.pii_entities)
                         seen_entities.add(entity)
 
-            yield self.prompt_signature(
-                reasoning=str(reasonings), masked_text=" ".join(masked_texts), pii_entities=entities
-            )
+            yield self.prompt_signature(masked_text=" ".join(masked_texts), pii_entities=entities)
 
 
 class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):

@@ -79,9 +79,6 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
 
         class SentimentAnalysis(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to determine sentiments for.")
-            reasoning: str | None = dspy.OutputField(
-                default=None, description="Provide reasoning for aspect-based sentiment assessments when beneficial."
-            )
             sentiment_per_aspect: dict[AspectType, float] = dspy.OutputField(
                 description="Sentiment in this text with respect to the corresponding aspect."
             )
@@ -141,7 +138,6 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
             yield dspy.Prediction.from_completions(
                 {
                     "sentiment_per_aspect": [{sls["aspect"]: sls["score"] for sls in sorted_aspect_scores}],
-                    "reasoning": [str([getattr(res, "reasoning", "") for res in doc_results if res is not None])],
                 },
                 signature=self.prompt_signature,
             )
@@ -164,11 +160,10 @@ class PydanticBasedSentAnalysis(
         The "overall" aspect should reflect the sentiment in the text overall.
         A score of 1.0 means that the sentiment in the text with respect to this aspect is extremely positive.
         0 means the opposite, 0.5 means neutral.
-        The sentiment score per aspect should ALWAYS be between 0 and 1. Provide the reasoning for your decision.
+        The sentiment score per aspect should ALWAYS be between 0 and 1.
 
         The output for two aspects ASPECT_1 and ASPECT_2 should look like this:
         <output>
-            <reasoning>REASONING</reasoning>
             <aspect_sentiments>
                 <aspect_sentiment>
                     <aspect>ASPECT_1</aspect>
@@ -193,7 +188,6 @@ class PydanticBasedSentAnalysis(
                 <example>
                     <text>{{ example.text }}</text>
                     <output>
-                        <reasoning>{{ example.reasoning }}</reasoning>
                         <aspect_sentiments>
                         {%- for a, s in example.sentiment_per_aspect.items() %}
                             <aspect_sentiment>
@@ -226,13 +220,6 @@ class PydanticBasedSentAnalysis(
             "SentimentAnalysis",
             __base__=pydantic.BaseModel,
             __doc__="Sentiment analysis of specified text.",
-            reasoning=(
-                str | None,
-                pydantic.Field(
-                    default=None,
-                    description="Provide reasoning for aspect-based sentiment assessments when beneficial.",
-                ),
-            ),
             **{aspect: (float, ...) for aspect in self._aspects},
         )
 
@@ -255,7 +242,6 @@ class PydanticBasedSentAnalysis(
         results = list(results)
 
         # Determine label scores for chunks per document.
-        reasonings: list[str] = []
         for doc_offset in docs_offsets:
             aspect_scores: dict[str, float] = {label: 0.0 for label in self._aspects}
             doc_results = results[doc_offset[0] : doc_offset[1]]
@@ -264,8 +250,6 @@ class PydanticBasedSentAnalysis(
                 if rec is None:
                     continue  # type: ignore[unreachable]
 
-                assert hasattr(rec, "reasoning")
-                reasonings.append(rec.reasoning or "")
                 for aspect in self._aspects:
                     # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
@@ -273,7 +257,6 @@ class PydanticBasedSentAnalysis(
                     aspect_scores[aspect] += max(0, min(getattr(rec, aspect), 1))
 
             yield self.prompt_signature(
-                reasoning=str(reasonings),
                 **{aspect: score / (doc_offset[1] - doc_offset[0]) for aspect, score in aspect_scores.items()},
             )
 

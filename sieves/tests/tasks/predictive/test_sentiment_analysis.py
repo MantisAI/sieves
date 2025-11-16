@@ -23,15 +23,11 @@ def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
     fewshot_examples = [
         sentiment_analysis.FewshotExample(
             text="The food was perfect, the service only ok.",
-            reasoning="The text is very positive about the quality of the food, and neutral about the service quality."
-            " The overall sentiment is hence positive.",
             sentiment_per_aspect={"food": 1.0, "service": 0.5, "overall": 0.8},
         ),
         sentiment_analysis.FewshotExample(
             text="The service was amazing - they take excellent care of their customers. The food was despicable "
             "though, I strongly recommend not to go.",
-            reasoning="While the service is judged as amazing, hence very positive, the assessment of the food is very "
-            "negative. The overall sentiment is strongly negative.",
             sentiment_per_aspect={"food": 0.1, "service": 1.0, "overall": 0.3},
         ),
     ]

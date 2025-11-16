@@ -44,13 +44,11 @@ model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY
 examples = [
     Classification.FewshotExampleSingleLabel(
         text="The new AI model achieves state-of-the-art results",
-        reasoning="Discusses AI technology advancement",
         label="technology",
         confidence=1.0
     ),
     Classification.FewshotExampleSingleLabel(
         text="Election results show significant voter turnout",
-        reasoning="Focuses on electoral process and voting",
         label="politics",
         confidence=1.0
     ),
@@ -184,7 +182,6 @@ model = dspy.LM("claude-3-haiku-20240307", api_key="...")
 examples = [
     Classification.FewshotExampleMultiLabel(
         text="Quantum computing advances promise faster drug discovery",
-        reasoning="Combines technology (quantum computing) and healthcare (drug discovery)",
         confidence_per_label={"technology": 0.9, "healthcare": 0.7, "finance": 0.1}
     ),
     # ... more examples

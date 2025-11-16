@@ -76,9 +76,6 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
             questions: tuple[str, ...] = dspy.InputField(
                 description="Questions to answer based on the text.", min_length=n_questions, max_length=n_questions
             )
-            reasoning: str | None = dspy.OutputField(
-                default=None, description="Provide reasoning for complex or ambiguous answers."
-            )
             answers: tuple[str, ...] = dspy.OutputField(
                 description="Answers to questions, in the same sequence as the questions. Each answer corresponds to "
                 "exactly one of the specified questions. Answer 1 answers question 1, answer 2 answers "
@@ -132,7 +129,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
     def _default_prompt_instructions(self) -> str:
         return """
         Use the given text to answer the following questions. Ensure you answer each question exactly once. Prefix each
-        question with the number of the corresponding question. Provide a concise reasoning for your answers.
+        question with the number of the corresponding question.
         """
 
     @override
@@ -149,7 +146,6 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
                     {% endfor -%}
                     </questions>
                     <output>
-                        <reasoning>{{ example.reasoning }}</reasoning>
                         <answers>
                         {% for a in example.answers %}  <answer>{{ loop.index }}. {{ a }}</answer>
                         {% endfor -%}
@@ -182,10 +178,6 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
             "QuestionAnswering",
             __base__=pydantic.BaseModel,
             __doc__="Question answering of specified text.",
-            reasoning=(
-                str | None,
-                pydantic.Field(default=None, description="Provide reasoning for complex or ambiguous answers."),
-            ),
             answers=(pydantic.conlist(str, min_length=len(self._questions), max_length=len(self._questions)), ...),
         )
 
@@ -209,19 +201,16 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, EngineInf
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
             answers: list[str] = [""] * len(self._questions)
-            reasonings: list[str] = []
 
             for rec in doc_results:
                 if rec is None:
                     continue  # type: ignore[unreachable]
 
-                assert hasattr(rec, "reasoning")
                 assert hasattr(rec, "answers")
-                reasonings.append(rec.reasoning or "")
                 for i, answer in enumerate(rec.answers):
                     answers[i] += answer + " "
 
-            yield self.prompt_signature(reasoning=str(reasonings), answers=answers)
+            yield self.prompt_signature(answers=answers)
 
 
 class OutlinesQA(PydanticBasedQA[outlines_.InferenceMode]):

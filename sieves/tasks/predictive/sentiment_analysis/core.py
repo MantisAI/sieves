@@ -34,7 +34,6 @@ _TaskBridge = GliNERBridge | DSPySentimentAnalysis | LangChainSentimentAnalysis 
 class FewshotExample(BaseFewshotExample):
     """Few-shot example with per-aspect sentiment scores."""
 
-    reasoning: str | None = None
     sentiment_per_aspect: dict[str, float]
 
     @override
