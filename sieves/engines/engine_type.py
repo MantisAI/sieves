@@ -5,13 +5,11 @@ from __future__ import annotations
 import enum
 
 from sieves.engines.core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
-from sieves.engines.engine_import import (
-    DSPy,
-    GliNER,
-    HuggingFace,
-    LangChain,
-    Outlines,
-)
+from sieves.engines.dspy_ import DSPy
+from sieves.engines.gliner_ import GliNER
+from sieves.engines.huggingface_ import HuggingFace
+from sieves.engines.langchain_ import LangChain
+from sieves.engines.outlines_ import Outlines
 
 
 class EngineType(enum.Enum):

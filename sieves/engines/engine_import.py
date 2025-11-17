@@ -6,52 +6,12 @@ This allows us to import everything downstream without having to worry about opt
 an engine/model from a non-installed library, we terminate with an error.
 """
 
-from .missing import MissingEngine
-
-try:
-    from . import dspy_
-    from .dspy_ import DSPy
-except ModuleNotFoundError:
-    from . import missing as dspy_
-
-    DSPy = MissingEngine  # type: ignore[misc,assignment]
-
-
-try:
-    from . import gliner_
-    from .gliner_ import GliNER
-except ModuleNotFoundError:
-    from . import missing as gliner_
-
-    GliNER = MissingEngine  # type: ignore[misc,assignment]
-
-
-try:
-    from . import huggingface_
-    from .huggingface_ import HuggingFace
-except ModuleNotFoundError:
-    from . import missing as huggingface_
-
-    HuggingFace = MissingEngine  # type: ignore[misc,assignment]
-
-
-try:
-    from . import langchain_
-    from .langchain_ import LangChain
-except ModuleNotFoundError:
-    from . import missing as langchain_
-
-    LangChain = MissingEngine  # type: ignore[misc,assignment]
-
-
-try:
-    from . import outlines_
-    from .outlines_ import Outlines
-except ModuleNotFoundError:
-    from . import missing as outlines_
-
-    Outlines = MissingEngine  # type: ignore[misc,assignment]
-
+from sieves.engines import dspy_, gliner_, huggingface_, langchain_, outlines_
+from sieves.engines.dspy_ import DSPy
+from sieves.engines.gliner_ import GliNER
+from sieves.engines.huggingface_ import HuggingFace
+from sieves.engines.langchain_ import LangChain
+from sieves.engines.outlines_ import Outlines
 
 __all__ = [
     "dspy_",

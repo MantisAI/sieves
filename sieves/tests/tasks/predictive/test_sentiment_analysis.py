@@ -10,8 +10,7 @@ from sieves.tasks.predictive import sentiment_analysis
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    # SentimentAnalysis.supports(),
-    (EngineType.gliner,),
+    SentimentAnalysis.supports(),
     indirect=["batch_runtime"],
 )
 @pytest.mark.parametrize("fewshot", [True, False])
@@ -40,13 +39,11 @@ def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
     pipe = Pipeline(task)
     docs = list(pipe(sentiment_analysis_docs))
 
-    print(batch_runtime.model.__class__)
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
         assert doc.results["sentiment_analysis"]
         assert "sentiment_analysis" in doc.results
-        print(doc.results["sentiment_analysis"])
 
     with pytest.raises(NotImplementedError):
         pipe["sentiment_analysis"].distill(None, None, None, None, None, None, None, None)

@@ -53,7 +53,6 @@ CLAUDE.md                  # This file (Claude Code guidelines)
 
 ```bash
 uv sync                              # Base installation
-uv sync --extra engines              # Add engine backends (LangChain, GLiNER, etc.)
 uv sync --extra distill              # Add distillation (SetFit, Model2Vec)
 uv sync --extra ingestion            # Add document parsing (Docling, Marker)
 uv sync --all-extras                 # Everything (includes test tools)
@@ -63,7 +62,7 @@ uv sync --all-extras                 # Everything (includes test tools)
 
 ```bash
 pip install -e .                     # Base
-pip install -e ".[engines,distill]"  # With extras
+pip install -e ".[distill,ingestion]"  # With extras
 ```
 
 ### Environment Variables
@@ -86,8 +85,8 @@ All commands assume `uv` is available; adjust for `pip` + venv if needed.
 ### Verification & Quality
 
 ```bash
-# Install development dependencies
-uv sync --extra test
+# Install development dependencies (includes test tools)
+uv sync --all-extras
 
 # Run type checker (strict mode)
 uv run mypy sieves

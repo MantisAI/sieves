@@ -3,14 +3,14 @@
 import outlines
 import transformers
 
-from sieves.engines.core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
-from sieves.engines.engine_import import (
+from sieves.engines import (
     dspy_,
     gliner_,
     huggingface_,
     langchain_,
     outlines_,
 )
+from sieves.engines.core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
 from sieves.engines.types import GenerationSettings
 
 Model = dspy_.Model | gliner_.Model | huggingface_.Model | langchain_.Model | outlines_.Model
