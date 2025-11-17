@@ -15,7 +15,7 @@ authors:
 - family-names: "Maufe"
   given-names: "Matthew"
 title: "Sieves"
-version: 0.21.0
+version: 0.22.0
 doi: 10.5281/zenodo.17342348
-date-released: 2025-11-16
+date-released: 2025-11-17
 url: "https://github.com/MantisAI/sieves"
