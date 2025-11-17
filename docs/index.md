@@ -26,9 +26,9 @@ pip install "sieves[ingestion]"
 
 The minimal setup lets you add only what you need to keep the footprint small.
 
-All optional dependencies for every feature, including engines, distillation, and ingestion:
+All optional dependencies for every feature, including distillation and ingestion:
 ```bash
-pip install "sieves[engines,distill,ingestion]"
+pip install "sieves[distill,ingestion]"
 ```
 
 ### Specific Features
@@ -38,15 +38,15 @@ Document ingestion/parsing libraries (PDF/DOCX parsing, etc.):
 pip install "sieves[ingestion]"
 ```
 
-All supported engines:
+Distillation utilities for model fine-tuning:
 ```bash
-pip install "sieves[engines]"
+pip install "sieves[distill]"
 ```
 
 ### Development Setup
 
 1. Set up [`uv`](https://github.com/astral-sh/uv).
-2. Install all dependencies for development, testing, documentation generation with: `uv pip install --system .[engines,distill,ingestion,test]`.
+2. Install all dependencies for development, testing, documentation generation with: `uv pip install --system .[distill,ingestion,test]`.
 
 ## Core Concepts
 

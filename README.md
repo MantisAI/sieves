@@ -34,11 +34,10 @@ Install `sieves` with `pip install sieves` (or `uv add sieves`).
 The following extra groups exist:
 - `ingestion` for ingestion libraries (for converting documents into text/markdown), e.g. `docling`
 - `distill` for distillation utilities, e.g. training frameworks like `setfit`
-- `engines` for structured generation utilities beyond the default `outlines`
 
 If you want to install all dependencies by default
 ```
-pip install "sieves[engines,distill,ingestion]"
+pip install "sieves[distill,ingestion]"
 ```
 You can also choose to install individual dependencies as you see fit.
 </details>

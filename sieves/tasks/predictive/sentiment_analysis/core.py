@@ -8,15 +8,13 @@ from typing import Any, override
 
 import datasets
 import dspy
-import gliner2.inference.engine
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, gliner_, langchain_, outlines_
+from sieves.engines import EngineType, dspy_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import GliNERBridge
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.sentiment_analysis.bridges import (
@@ -25,10 +23,10 @@ from sieves.tasks.predictive.sentiment_analysis.bridges import (
     OutlinesSentimentAnalysis,
 )
 
-_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | gliner_.PromptSignature
-_TaskResult = str | gliner_.Result | pydantic.BaseModel | dspy_.Result
-_TaskBridge = GliNERBridge | DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSentimentAnalysis
+_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
+_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
+_TaskResult = str | pydantic.BaseModel | dspy_.Result
+_TaskBridge = DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSentimentAnalysis
 
 
 class FewshotExample(BaseFewshotExample):
@@ -97,17 +95,6 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
 
     @override
     def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
-        if engine_type == EngineType.gliner:
-            return GliNERBridge(
-                task_id=self._task_id,
-                prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=gliner2.inference.engine.Schema().classification(
-                    task=self._task_id, labels=list(self._aspects), multi_label=True
-                ),
-                generation_settings=self._generation_settings,
-                inference_mode=gliner_.InferenceMode.classification,
-            )
-
         bridge_types: dict[EngineType, type[_TaskBridge]] = {
             EngineType.dspy: DSPySentimentAnalysis,
             EngineType.outlines: OutlinesSentimentAnalysis,
@@ -131,7 +118,6 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
     def supports() -> set[EngineType]:
         return {
             EngineType.dspy,
-            EngineType.gliner,
             EngineType.langchain,
             EngineType.outlines,
         }
