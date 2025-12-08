@@ -323,6 +323,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             #     keys = list(entry.keys())  # noqa: ERA001
                             scores[entry["label"]] += entry["confidence"]
                             print("#############")
+                            print(res)
                             print(extracted_res)
                             print(entry)
                             print(entry.keys())
