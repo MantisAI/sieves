@@ -317,10 +317,11 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
                         for entry in extracted_res:
                             # GliNER might use two different structures here, depending on the version.
-                            if "label" in entry:
-                                scores[entry["label"]] += entry["confidence"]
-                            else:
-                                keys = list(entry.keys())
+                            # if "label" in entry:  # noqa: ERA001
+                            #     scores[entry["label"]] += entry["confidence"]  # noqa: ERA001
+                            # else:  # noqa: ERA001
+                            #     keys = list(entry.keys())  # noqa: ERA001
+                            scores[entry["label"]] += entry["confidence"]
                             print("#############")
                             print(extracted_res)
                             print(entry)
