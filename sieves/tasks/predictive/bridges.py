@@ -268,6 +268,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         for doc, result in zip(docs, results):
             match self._inference_mode:
                 case gliner_.InferenceMode.classification:
+                    assert hasattr(self._prompt_signature.schema, "__getitem__")
                     is_multilabel = self._prompt_signature.schema["classifications"][0]["multi_label"]
 
                     if is_multilabel:
@@ -335,6 +336,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
             match self._inference_mode:
                 case gliner_.InferenceMode.classification:
                     # Ensure that all labels have been assigned - GLiNER2 is somtimes negligent about this.
+                    assert hasattr(self._prompt_signature.schema, "__getitem__")
                     for label in self._prompt_signature.schema["classifications"][0]["labels"]:
                         if label not in scores:
                             scores[label] = 0.0

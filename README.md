@@ -119,13 +119,15 @@ Here's a simple classification example using [`outlines`](https://github.com/dot
 
 ```python
 from sieves import Pipeline, tasks, Doc
-import outlines
+import transformers
 
 # 1. Define documents by text or URI.
 docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
 
 # 2. Choose a model (Outlines in this example).
-model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
+model = transformers.pipeline(
+    "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
+)
 
 # 3. Create pipeline with tasks (verbose init).
 pipe = Pipeline(
