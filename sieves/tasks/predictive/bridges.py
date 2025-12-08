@@ -320,7 +320,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             if "label" in entry:
                                 scores[entry["label"]] += entry["confidence"]
                             else:
-                                keys = list(res.keys())
+                                keys = list(entry.keys())
                                 assert len(keys) == 1, "Composite GliNER2 schemas are not supported."
                                 extracted_entry = entry[keys[0]]
                                 for label, confidence in extracted_entry.items():
