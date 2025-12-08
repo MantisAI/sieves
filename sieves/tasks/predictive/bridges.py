@@ -317,18 +317,14 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
                         for entry in extracted_res:
                             # GliNER might use two different structures here, depending on the version.
-                            # if "label" in entry:  # noqa: ERA001
-                            #     scores[entry["label"]] += entry["confidence"]  # noqa: ERA001
-                            # else:  # noqa: ERA001
-                            #     keys = list(entry.keys())  # noqa: ERA001
-                            print("#############")
-                            print(res)
-                            print(extracted_res)
-                            print(entry)
-                            print(entry.keys())
-                            print(scores)
-                            print("#############")
-                            scores[entry["label"]] += entry["confidence"]
+                            if "label" in entry:
+                                scores[entry["label"]] += entry["confidence"]
+                            else:
+                                keys = list(res.keys())
+                                assert len(keys) == 1, "Composite GliNER2 schemas are not supported."
+                                extracted_entry = entry[keys[0]]
+                                for label, confidence in extracted_entry.items():
+                                    scores[label] += confidence
 
                     case gliner_.InferenceMode.entities:
                         for entity_type in res["entities"]:
