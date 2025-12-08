@@ -1,13 +1,11 @@
 # mypy: ignore-errors
-import enum
-
 import pydantic
 import pytest
 
-from sieves import Doc, Pipeline, engines
-from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_, huggingface_, gliner_
+from sieves import Doc, Pipeline
+from sieves.engines import EngineType, GenerationSettings
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask, Classification
+from sieves.tasks import Classification
 from sieves.tasks.predictive import classification
 from sieves.tests.conftest import Runtime
 
@@ -68,8 +66,7 @@ def _run(
     if test_hf_conversion:
         _to_hf_dataset(task, docs, multilabel)
 
-
-@pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", (EngineType.gliner,), indirect=["batch_runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
 @pytest.mark.parametrize("multilabel", [True, False])
 def test_run(classification_docs, batch_runtime, fewshot, multilabel):

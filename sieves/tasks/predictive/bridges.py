@@ -316,6 +316,9 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             extracted_res = [extracted_res]
 
                         for entry in extracted_res:
+                            print(entry)
+                            print(entry.keys())
+                            print(scores)
                             scores[entry["label"]] += entry["confidence"]
 
                     case gliner_.InferenceMode.entities:
