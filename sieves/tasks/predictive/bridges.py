@@ -316,7 +316,13 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             extracted_res = [extracted_res]
 
                         for entry in extracted_res:
+                            # GliNER might use two different structures here, depending on the version.
+                            if "label" in entry:
+                                scores[entry["label"]] += entry["confidence"]
+                            else:
+                                keys = list(entry.keys())
                             print("#############")
+                            print(extracted_res)
                             print(entry)
                             print(entry.keys())
                             print(scores)
