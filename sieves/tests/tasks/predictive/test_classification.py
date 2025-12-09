@@ -66,7 +66,7 @@ def _run(
     if test_hf_conversion:
         _to_hf_dataset(task, docs, multilabel)
 
-@pytest.mark.parametrize("batch_runtime", (EngineType.gliner,), indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
 @pytest.mark.parametrize("multilabel", [True, False])
 def test_run(classification_docs, batch_runtime, fewshot, multilabel):
