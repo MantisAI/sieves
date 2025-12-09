@@ -285,26 +285,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
                 case gliner_.InferenceMode.structure:
                     assert len(result) == 1
-                    """
-
-                    {
-                        'Person': [
-                            {
-                                'name': {'text': 'Mahatma Ghandi', 'confidence': 1.0, 'start': 0, 'end': 2},
-                                'age': {'text': '79', 'confidence': 0.9999470710754395, 'start': 4, 'end': 5}
-                            },
-                            {
-                                'name': {'text': 'Bugs Bunny', 'confidence': 1.0, 'start': 8, 'end': 10},
-                                'age': {'text': '85', 'confidence': 0.9988289475440979, 'start': 13, 'end': 14}
-                            }
-                        ]
-                    }
-                    """
                     entity_type_name = list(result.keys())[0]
-                    print("######")
-                    print(result)
-                    print(entity_type_name)
-                    print("######")
                     assert issubclass(self._prompt_signature_pydantic, pydantic.BaseModel)
                     doc.results[self._task_id] = [
                         self._prompt_signature_pydantic.model_validate(

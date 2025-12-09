@@ -503,45 +503,35 @@ class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         results = list(results)
 
         # Simply group results by document without trying to adjust positions
-        # Position adjustment will happen in the integrate function
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
             all_entities: list[dict[str, Any]] = []
 
-            # Keep track of which chunk each entity came from
-            for chunk_idx, chunk_result in enumerate(doc_results):
+            for chunk_result in doc_results:
                 if chunk_result is None:
                     continue
 
-                # Process entities in this chunk.
-                normalized_entities = [
-                    {"entity_type": entity_type, "text": entity_text}
-                    for entity_type in chunk_result["entities"]
-                    for entity_text in chunk_result["entities"][entity_type]
-                ]
-                for entity in normalized_entities:
-                    all_entities.append(entity)
+                all_entities.extend(
+                    [
+                        {"entity_type": entity_type, **entity_info}
+                        for entity_type in chunk_result["entities"]
+                        for entity_info in chunk_result["entities"][entity_type]
+                    ]
+                )
 
             yield all_entities
 
     @override
     def integrate(self, results: Iterable[gliner_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        class EntityWithoutContext(pydantic.BaseModel):
-            """Class for storing entities without context."""
-
-            text: str
-            entity_type: str
-
-        class Entities(pydantic.BaseModel):
-            """Class for storing entities."""
-
-            entities: list[EntityWithoutContext]
-            doc_text: str
-
-        entities = [
-            Entities(entities=[EntityWithoutContext.model_validate(res) for res in doc_results], doc_text=doc.text)
-            for doc_results, doc in zip(results, docs)
-        ]
-        docs = super().integrate(entities, docs)
+        for doc_results, doc in zip(results, docs):
+            doc.results[self._task_id] = [
+                Entities(
+                    entities=[
+                        Entity.model_validate({k: v for k, v in res.items() if k != "confidence"})
+                        for res in doc_results
+                    ],
+                    text=doc.text,
+                )
+            ]
 
         return docs

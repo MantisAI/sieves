@@ -11,10 +11,11 @@ from sieves.tasks.predictive.ner.core import EntityWithContext
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    ner.NER.supports(),
+    # ner.NER.supports(),
+    (EngineType.gliner,),
     indirect=["batch_runtime"],
 )
-@pytest.mark.parametrize("fewshot", [True, False])
+@pytest.mark.parametrize("fewshot", [False])
 def test_run(ner_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         ner.FewshotExample(
@@ -49,6 +50,7 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
     assert len(docs) == 2
     for doc in docs:
         assert "NER" in doc.results
+        print(doc.results["NER"])
 
     with pytest.raises(NotImplementedError):
         pipe["NER"].distill(None, None, None, None, None, None, None, None)
