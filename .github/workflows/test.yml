@@ -53,7 +53,7 @@ jobs:
         source .venv/bin/activate
         uv pip install ./dist/sieves-*.whl
         # Optional dependencies need to be installed in separate command.
-        uv pip install 'sieves[engines,ingestion,distill,test]'
+        uv pip install 'sieves[ingestion,distill,test]'
 
     - name: Create and enable 4 GB swap
       run: |

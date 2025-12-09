@@ -288,7 +288,10 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     entity_type_name = list(result.keys())[0]
                     assert issubclass(self._prompt_signature_pydantic, pydantic.BaseModel)
                     doc.results[self._task_id] = [
-                        self._prompt_signature_pydantic.model_validate(entity) for entity in result[entity_type_name]
+                        self._prompt_signature_pydantic.model_validate(
+                            {key: value["text"] for key, value in entity.items()}
+                        )
+                        for entity in result[entity_type_name]
                     ]
 
         return docs
@@ -316,7 +319,14 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             extracted_res = [extracted_res]
 
                         for entry in extracted_res:
-                            scores[entry["label"]] += entry["confidence"]
+                            # GliNER might use two different structures here, depending on the version.
+                            if "label" in entry:
+                                scores[entry["label"]] += entry["confidence"]
+                            else:
+                                keys = list(entry.keys())
+                                assert len(keys) == 1, "Composite GliNER2 schemas are not supported."
+                                for label, confidence in entry[keys[0]]:
+                                    scores[label] += confidence
 
                     case gliner_.InferenceMode.entities:
                         for entity_type in res["entities"]:
