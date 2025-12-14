@@ -31,63 +31,7 @@ Optimization is valuable when:
 Here's how to optimize a classification task:
 
 ```python
-import os
-import dspy
-from sieves.tasks import Classification
-from sieves.tasks.optimization import Optimizer
-from sieves import GenerationSettings
-
-# 1. Create model for optimization
-model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
-
-# 2. Create task with few-shot examples (at least 2 required)
-examples = [
-    Classification.FewshotExampleSingleLabel(
-        text="The new AI model achieves state-of-the-art results",
-        label="technology",
-        confidence=1.0
-    ),
-    Classification.FewshotExampleSingleLabel(
-        text="Election results show significant voter turnout",
-        label="politics",
-        confidence=1.0
-    ),
-    # ... add more examples (recommended: 6-20 examples)
-]
-
-task = Classification(
-    labels={
-        "technology": "Technology news, AI, software, and digital innovations",
-        "politics": "Political events, elections, and government affairs",
-        "sports": "Sports news, games, athletes, and competitions"
-    },
-    model=model,
-    fewshot_examples=examples,
-    generation_settings=GenerationSettings(),
-)
-
-# 3. Create optimizer
-optimizer = Optimizer(
-    model=model,                    # Model for optimization (can differ from task model)
-    val_frac=0.25,                  # Use 25% of examples for validation
-    seed=42,                        # For reproducibility
-    shuffle=True,                   # Shuffle data before splitting
-    dspy_init_kwargs=dict(
-        num_candidates=2,           # Number of prompt candidates to try
-        max_errors=3                # Max errors before stopping
-    ),
-    dspy_compile_kwargs=dict(
-        num_trials=1,               # Number of optimization trials
-        minibatch=False             # Use full batch (True for large datasets)
-    )
-)
-
-# 4. Run optimization
-best_prompt, best_examples = task.optimize(optimizer, verbose=True)
-
-# The task now uses the optimized prompt and examples automatically
-print(f"Optimized prompt: {best_prompt}")
-print(f"Number of selected examples: {len(best_examples)}")
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-classification-basic"
 ```
 
 ## Evaluation Metrics
@@ -143,26 +87,8 @@ Optimizer(
 - `minibatch` (default: True) - Use minibatch for large datasets
 - `minibatch_size` - Size of minibatches when `minibatch=True`
 
-### Cost Control
-
-To minimize costs during experimentation:
-
-```python
-# Use cheaper/smaller model for optimization
-optimizer = Optimizer(
-    model=dspy.LM("gpt-4o-mini"),  # Cheaper model
-    val_frac=0.3,                  # Larger validation set
-    dspy_init_kwargs=dict(
-        num_candidates=2,          # Fewer candidates (faster, cheaper)
-        max_errors=3
-    ),
-    dspy_compile_kwargs=dict(
-        num_trials=1,              # Single trial for testing
-        minibatch=True,            # Enable minibatching
-        minibatch_size=50          # Smaller batches
-    )
-)
-```
+> **💡 Cost Control Tip**
+> The example above uses minimal settings (`num_candidates=2`, `num_trials=1`) to reduce costs during experimentation. Increase these values for more thorough optimization once you've validated your setup.
 
 ## Best Practices
 
@@ -172,39 +98,6 @@ optimizer = Optimizer(
 4. **Split data wisely**: Use 20-30% for validation (`val_frac=0.25` is a good default)
 5. **Provide diverse examples**: Include examples covering different edge cases
 6. **Consider model choice**: You can use a cheaper model for optimization than for inference
-
-## Example: Multi-Label Classification
-
-```python
-import dspy
-from sieves.tasks import Classification
-from sieves.tasks.optimization import Optimizer
-
-model = dspy.LM("claude-3-haiku-20240307", api_key="...")
-
-# Multi-label examples with per-label confidence
-examples = [
-    Classification.FewshotExampleMultiLabel(
-        text="Quantum computing advances promise faster drug discovery",
-        confidence_per_label={"technology": 0.9, "healthcare": 0.7, "finance": 0.1}
-    ),
-    # ... more examples
-]
-
-task = Classification(
-    labels={
-        "technology": "Technology and software topics",
-        "healthcare": "Healthcare, medicine, and medical research",
-        "finance": "Financial markets, banking, and economics"
-    },
-    model=model,
-    multi_label=True,
-    fewshot_examples=examples
-)
-
-optimizer = Optimizer(model=model, val_frac=0.25)
-best_prompt, best_examples = task.optimize(optimizer)
-```
 
 ## Troubleshooting
 

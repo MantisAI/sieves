@@ -40,23 +40,25 @@ docs/                      # MkDocs documentation
 sieves/tests/              # Comprehensive test suite
 pyproject.toml             # Dependencies, metadata, tool config
 mkdocs.yml                 # Documentation build config
-CLAUDE.md                  # This file (Claude Code guidelines)
+AGENTS.md                  # This file (Claude Code guidelines)
 ```
 
 ---
 
 ## Installation & Setup
 
-**Python requirement:** 3.12+
+**Python requirement:** 3.12 (exact version required)
 
 ### Using `uv` (preferred)
 
 ```bash
-uv sync                              # Base installation
+uv sync                              # Base installation (includes all engines)
 uv sync --extra distill              # Add distillation (SetFit, Model2Vec)
-uv sync --extra ingestion            # Add document parsing (Docling, Marker)
+uv sync --extra ingestion            # Add document parsing (Docling, Marker, NLTK)
 uv sync --all-extras                 # Everything (includes test tools)
 ```
+
+**Note:** As of recent updates, all engines (Outlines, DSPy, LangChain, Transformers, GLiNER2) are now core dependencies included in the base installation.
 
 ### Using pip (editable)
 
@@ -147,9 +149,10 @@ uv run python -c "import sieves; print(sieves.__name__)"
 ### Core Abstractions
 
 1. **Doc** (`sieves.data.Doc`)
-   - Container for text, URI, chunks, and processing results
-   - Auto-chunks text on initialization
+   - Container for text, URI, chunks, images, and processing results
+   - Auto-chunks text on initialization using Chonkie
    - `results` dict stores task outputs keyed by task ID
+   - Supports image inputs via PIL (stored in `images` field)
 
 2. **Pipeline** (`sieves.pipeline.Pipeline`)
    - Orchestrates sequential task execution
@@ -161,11 +164,14 @@ uv run python -c "import sieves; print(sieves.__name__)"
    - Base class for all processing steps
    - Subclasses: `PredictiveTask`, `Ingestion`, `Chunking`, `Optimization`
    - Defines `__call__(docs)` for processing
+   - Supports conditional execution via `condition` parameter
+   - Configurable batching via `batch_size` parameter
 
 4. **Engine** (`sieves.engines.core.Engine`)
    - Generic interface to structured generation frameworks
-   - Implementations: DSPy, Outlines (default), LangChain, Transformers, GLiNER
+   - Implementations: DSPy (v3), Outlines (default), LangChain, Transformers, GLiNER2
    - Each engine implements `build_executable()` to compile prompts
+   - All engines are now core dependencies (no longer optional)
 
 5. **Bridge** (`sieves.tasks.predictive.bridges.Bridge`)
    - Connects tasks to engines
@@ -174,7 +180,8 @@ uv run python -c "import sieves; print(sieves.__name__)"
 
 6. **GenerationSettings** (`sieves.engines.types.GenerationSettings`)
    - Configures structured generation behavior
-   - Fields: `init_kwargs`, `inference_kwargs`, `strict_mode`, etc.
+   - Fields: `init_kwargs`, `inference_kwargs`, `inference_mode`, `strict_mode`, batch settings
+   - `strict_mode=True`: raises on inference failure; `False`: yields None for failed docs
 
 ### Data Flow
 
@@ -196,13 +203,13 @@ Return docs with populated results
 
 ### Supported Engines
 
-| Engine | Type | Notes |
-|---|---|---|
-| **Outlines** | Structured generation | Default; JSON schema constrained |
-| **DSPy** | Modular prompting | Few-shot, optimizer support (MIPROv2) |
-| **LangChain** | LLM wrapper | Chat models, tool calling |
-| **Transformers** | Direct inference | Zero-shot classification |
-| **GLiNER** | Specialized | Domain-specific NER |
+| Engine | Type | Inference Modes | Notes |
+|---|---|---|---|
+| **Outlines** | Structured generation | text, choice, regex, json | Default; JSON schema constrained |
+| **DSPy** (v3) | Modular prompting | predict, chain_of_thought, react, module | Few-shot, optimizer support (MIPROv2) |
+| **LangChain** | LLM wrapper | structured | Chat models, tool calling |
+| **Transformers** | Direct inference | zero_shot_classification | HuggingFace zero-shot classification pipeline |
+| **GLiNER2** | Specialized NER | (specialized) | Domain-specific NER, zero-shot entity recognition |
 
 ---
 
@@ -258,6 +265,8 @@ Enforced via CI pipeline:
 - Create under `sieves/tasks/preprocessing/<type_>/`
 - Subclass `Task` or specialized base (e.g., `Chunking`)
 - Examples: custom chunkers, PDF parsers, text normalizers
+- **Built-in chunking**: Uses Chonkie framework (token-based) or NaiveChunker (interval-based)
+- **Built-in ingestion**: Docling (default) and Marker converters for PDF/DOCX parsing
 
 ### Few-Shot Examples
 
@@ -272,19 +281,22 @@ Enforced via CI pipeline:
 
 ### Model Distillation
 
-- Call `task.to_hf_dataset(docs, threshold=...)` to export results
+- Call `task.to_hf_dataset(docs, threshold=...)` to export results to HuggingFace dataset format
 - Use `task.distill(dataset, framework="setfit", ...)` to train smaller model
 - Supported frameworks: SetFit, Model2Vec
+- Available for classification, NER, and other predictive tasks
 
 ---
 
 ## Caching & Performance
 
-- **Document-level caching:** Pipeline hashes documents by text or URI; cache stores results
+- **Document-level caching:** Pipeline hashes documents by `hash(doc.text or doc.uri)`; cache stores results
 - **Disable when needed:** `Pipeline(use_cache=False)`
-- **Batch processing:** Configure `_batch_size` in `GenerationSettings` (−1 = batch all)
+- **Batch processing:** Configure `batch_size` in task initialization or GenerationSettings (−1 = batch all)
 - **Streaming:** Tasks accept `Iterable[Doc]` for lazy evaluation on large corpora
+- **Conditional execution:** Use `condition` parameter on tasks to filter documents: `task(docs, condition=lambda d: len(d.text) > 100)`
 - **Observability:** Loguru logging during execution; access cache stats via pipeline
+- **Progress bars:** Configurable via task parameters (can be disabled)
 
 ---
 
@@ -307,9 +319,10 @@ Enforced via CI pipeline:
 
 - Adhere to typing and lint rules; run mypy/ruff/black before proposing changes
 - Keep patches minimal and focused; avoid unrelated refactors
-- Respect optional dependencies; gate engine-specific imports behind extras
+- Respect optional dependencies; gate ingestion/distillation imports behind extras (engines are now core)
 - Update docs (`docs/`) if you add public features
 - Write tests for new functionality
+- Consider conditional execution and error handling (`strict_mode`) for robust pipelines
 
 ### Don't
 
@@ -344,9 +357,11 @@ Before proposing changes, ensure:
 ## Known Constraints & Limitations
 
 - Some engines do not support batching or few-shotting uniformly; bridge logic handles compatibility
-- Optional extras gate heavy dependencies (transformers, Docling, SetFit, etc.)
+- Optional extras gate heavy dependencies (Docling, Marker for ingestion; SetFit, Model2Vec for distillation)
+- **All engines** (Outlines, DSPy, LangChain, Transformers, GLiNER2) are now **core dependencies**
 - Serialization excludes complex third-party objects (models, converters); must pass at load time
 - Ingestion tasks may require system packages (Tesseract for OCR, etc.)
+- Python 3.12 exact version required (not 3.12+)
 
 ---
 
@@ -400,6 +415,22 @@ Then run: `uv run pytest sieves/tests/test_my_feature.py -v`
 - **Versioning:** Dynamic via `setuptools-scm`; automated from git tags
 - **CI:** GitHub Actions (`.github/workflows/`) runs tests on all PRs
 - **Status badges:** See README for latest build/coverage status
+
+---
+
+## Recent Major Updates
+
+Key changes that affect development (last ~2-3 months):
+
+1. **All Engines as Core Dependencies** (#210) - Outlines, DSPy, LangChain, Transformers, and GLiNER2 are now included in base installation
+2. **DSPy v3 Migration** (#192) - Upgraded to DSPy v3 (breaking API changes from v2)
+3. **GliNER2 Migration** (#202) - Migrated from GliNER v1 to GLiNER2 for improved NER performance
+4. **GenerationSettings Refactoring** (#194) - `inference_mode` moved into GenerationSettings (simplified task init)
+5. **Conditional Task Execution** (#195) - Added `condition` parameter for filtering docs during execution
+6. **Non-strict Execution Support** (#196) - Better error handling; `strict_mode=False` allows graceful failures
+7. **Standardized Output Fields** (#206) - Normalized descriptive/ID attribute naming across tasks
+8. **Chonkie Integration** - Token-based chunking framework now primary chunking backend
+9. **Optional Progress Bars** (#197) - Progress display now configurable per task
 
 ---
 

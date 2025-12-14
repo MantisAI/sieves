@@ -10,70 +10,16 @@
 
 Here's a simple example of saving and loading a classification pipeline:
 
-```python
-import outlines
-from sieves import Pipeline, tasks, Doc
-from pathlib import Path
-
-# Create a basic classification pipeline
-model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-model = outlines.models.transformers(model_name)
-classifier = tasks.predictive.Classification(labels=["science", "politics"], model=model)
-pipeline = Pipeline([classifier])
-
-# Save the pipeline configuration
-config_path = Path("classification_pipeline.yml")
-pipeline.dump(config_path)
-
-# Load the pipeline configuration
-loaded_pipeline = Pipeline.load(config_path, [{"model": outlines.models.transformers(model_name)}])
-
-# Use the loaded pipeline
-doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
-results = list(loaded_pipeline([doc]))
-print(results[0].results["Classification"])
+```python title="Basic pipeline serialization"
+--8<-- "sieves/tests/docs/test_serialization.py:serialization-basic-pipeline"
 ```
 
 ## Dealing with complex third-party objects
 
 `sieves` doesn't serialize complex third-party objects. When loading pipelines, you need to provide initialization parameters for each task when loading:
 
-```python
-import chonkie
-import tokenizers
-import outlines
-import pydantic
-from sieves import Pipeline, tasks
-
-# Create a tokenizer for chunking
-tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
-chunker = tasks.preprocessing.Chonkie(
-    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
-)
-
-model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
-
-
-class PersonInfo(pydantic.BaseModel):
-    name: str
-    age: int | None = None
-    occupation: str | None = None
-
-
-extractor = tasks.predictive.InformationExtraction(entity_type=PersonInfo, model=model)
-
-# Create and save the pipeline
-pipeline = Pipeline([chunker, extractor])
-pipeline.dump("extraction_pipeline.yml")
-
-# Load the pipeline with initialization parameters for each task
-loaded_pipeline = Pipeline.load(
-    "extraction_pipeline.yml",
-    [
-        {"tokenizer": tokenizers.Tokenizer.from_pretrained("bert-base-uncased")},
-        {"model": outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")},
-    ]
-)
+```python title="Complex pipeline serialization"
+--8<-- "sieves/tests/docs/test_serialization.py:serialization-complex-pipeline"
 ```
 
 ## Understanding Pipeline Configuration Files

@@ -39,6 +39,10 @@ markdown_extensions:
   - admonition
   - codehilite
   - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: ['.']
+      check_paths: true
+      dedent_subsections: true
 
 nav:
   - Home:

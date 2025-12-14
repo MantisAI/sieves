@@ -7,31 +7,8 @@ Pipelines orchestrate sequential execution of tasks and support two ways to defi
 
 Examples
 
-```python
-from sieves import Pipeline, tasks
-
-# Verbose initialization (allows non-default configuration).
-t_ingest = tasks.preprocessing.Ingestion(export_format="markdown")
-t_chunk = tasks.preprocessing.Chunking(chunker)
-t_cls = tasks.predictive.Classification(labels=["science", "politics"], model=engine)
-pipe = Pipeline([t_ingest, t_chunk, t_cls], use_cache=True)
-
-# Succinct chaining (equivalent task order).
-pipe2 = t_ingest + t_chunk + t_cls
-
-# You can also chain pipelines and tasks.
-pipe_left = Pipeline([t_ingest])
-pipe_right = Pipeline([t_chunk, t_cls])
-pipe3 = pipe_left + pipe_right  # results in [t_ingest, t_chunk, t_cls]
-
-# In-place append (mutates the left pipeline).
-pipe_left += t_chunk
-pipe_left += pipe_right  # appends all tasks from right
-
-# Note:
-# - Additional Pipeline parameters (e.g., use_cache=False) are only settable via the verbose form
-# - Chaining never mutates existing tasks or pipelines; it creates a new Pipeline
-# - Using "+=" mutates the existing pipeline by appending tasks
+```python title="Pipeline creation patterns"
+--8<-- "sieves/tests/docs/test_pipeline_docs.py:pipeline-creation-patterns"
 ```
 
 Note: Ingestion libraries (e.g., `docling`) are optional and not installed by default. Install them manually or via the extra:
@@ -48,31 +25,8 @@ Tasks support optional conditional execution via the `condition` parameter. This
 
 Pass a callable `Condition[[Doc], bool]` to any task to conditionally process documents:
 
-```python
-from sieves import Pipeline, tasks, Doc
-
-docs = [
-    Doc(text="short"),
-    Doc(text="this is a much longer document that will be processed"),
-    Doc(text="med"),
-]
-
-# Define a condition function
-def is_long(doc: Doc) -> bool:
-    return len(doc.text or "") > 20
-
-# Create a task with a condition
-task = tasks.Classification(
-    labels=["science", "politics"],
-    model=model,
-    condition=is_long
-)
-
-# Run pipeline
-pipe = Pipeline([task])
-for doc in pipe(docs):
-    # doc.results[task.id] will be None for documents that failed the condition
-    print(doc.results[task.id])
+```python title="Basic conditional execution"
+--8<-- "sieves/tests/docs/test_pipeline_docs.py:conditional-execution-basic"
 ```
 
 ### Key Behaviors
@@ -87,31 +41,8 @@ for doc in pipe(docs):
 
 Different tasks in a pipeline can have different conditions:
 
-```python
-from sieves import Pipeline, tasks, Doc
-
-docs = [
-    Doc(text="short"),
-    Doc(text="this is a much longer document"),
-    Doc(text="medium text here"),
-]
-
-# Task 1: Process only documents longer than 10 characters
-task1 = tasks.Chunking(chunker, condition=lambda d: len(d.text or "") > 10)
-
-# Task 2: Process only documents longer than 20 characters
-task2 = tasks.Classification(
-    labels=["science", "politics"],
-    model=model,
-    condition=lambda d: len(d.text or "") > 20
-)
-
-# First doc: skipped by both tasks (too short)
-# Second doc: processed by both tasks (long enough)
-# Third doc: processed by task1, skipped by task2
-pipe = Pipeline([task1, task2])
-for doc in pipe(docs):
-    print(doc.results[task1.id], doc.results[task2.id])
+```python title="Multiple conditional tasks"
+--8<-- "sieves/tests/docs/test_pipeline_docs.py:conditional-execution-multiple"
 ```
 
 ### Use Cases

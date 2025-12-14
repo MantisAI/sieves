@@ -37,47 +37,7 @@ Distillation is valuable when:
 Here's how to distill a classification task using SetFit:
 
 ```python
-import os
-import dspy
-from sieves.tasks import Classification
-from sieves.tasks.distillation.types import DistillationFramework
-from sieves import Pipeline, Doc
-
-# 1. Run zero-shot classification task
-model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
-
-task = Classification(
-    labels=["technology", "politics", "sports"],
-    model=model,
-)
-
-docs = [
-    Doc(text="The new AI model achieves state-of-the-art results"),
-    Doc(text="Election results show significant voter turnout"),
-    Doc(text="The team won the championship in overtime"),
-    # ... add more documents
-]
-
-# Process documents with zero-shot model
-pipe = Pipeline([task])
-processed_docs = list(pipe(docs))
-
-# 2. Distill results into a smaller model
-task.distill(
-    base_model_id="sentence-transformers/all-MiniLM-L6-v2",
-    framework=DistillationFramework.setfit,
-    data=processed_docs,
-    output_path="./distilled_model",
-    val_frac=0.2,
-    seed=42,
-)
-
-# 3. Load and use the distilled model
-from setfit import SetFitModel
-distilled_model = SetFitModel.from_pretrained("./distilled_model")
-
-# Now you have a fast, specialized classifier
-predictions = distilled_model.predict(["New text about quantum computing"])
+--8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-basic"
 ```
 
 ## Distillation Parameters
@@ -143,26 +103,10 @@ task.distill(
 For tasks without built-in distillation support (or for custom training workflows), use `to_hf_dataset()` to export results:
 
 ```python
-from sieves.tasks import Summarization
-import datasets
-
-# Run summarization task
-task = Summarization(n_words=50, model=model)
-docs = list(Pipeline([task])(docs))
-
-# Export to Hugging Face dataset
-hf_dataset = task.to_hf_dataset(docs)
-
-# Now you can use this dataset with any training framework
-print(hf_dataset)
-# Dataset({
-#     features: ['text', 'summary'],
-#     num_rows: ...
-# })
-
-# Use with your own training code
-# trainer = Trainer(model=your_model, train_dataset=hf_dataset, ...)
+--8<-- "sieves/tests/docs/test_distillation.py:distillation-to-hf-dataset"
 ```
+
+You can then use this dataset with any training framework like Hugging Face Transformers, SetFit, or custom training loops.
 
 ### Threshold Parameter
 
@@ -195,7 +139,7 @@ The distillation process automatically handles both classification modes:
 task = Classification(
     labels=["technology", "politics", "sports"],
     model=model,
-    multi_label=False,  # Single-label mode
+    multi_label=False,
 )
 ```
 
@@ -213,27 +157,6 @@ output_path/
 **Metrics file** (`metrics.json`):
 - SetFit: Contains F1 score, precision, recall
 - Model2Vec: Contains classification metrics
-
-## Example: Model2Vec Distillation
-
-Model2Vec is ideal for extremely fast inference with minimal resource usage:
-
-```python
-from sieves.tasks.distillation.types import DistillationFramework
-
-task.distill(
-    base_model_id="minishlab/potion-base-8M",
-    framework=DistillationFramework.model2vec,
-    data=processed_docs,
-    output_path="./fast_classifier",
-    val_frac=0.2,
-)
-
-# Load and use
-from transformers import pipeline
-classifier = pipeline("text-classification", model="./fast_classifier")
-result = classifier("Quantum computers solve complex problems")
-```
 
 ## Best Practices
 

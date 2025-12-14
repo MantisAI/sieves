@@ -43,5 +43,5 @@ repos:
     hooks:
       - id: ty-check
         name: Type checking
-        entry: bash -c 'uvx ty check --config-file ty.toml'
+        entry: bash -c 'uvx ty==0.0.1a29 check --config-file ty.toml'
         language: system

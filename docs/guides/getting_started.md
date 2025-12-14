@@ -15,79 +15,32 @@ This guide will help you get started with using `sieves` for zero-shot and few-s
 
 Here's a simple example that performs text classification:
 
-```python
-import outlines
-from sieves import Pipeline, tasks, Doc
-
-# Create a document
-doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
-
-# Choose a model (using a small but capable model)
-model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
-
-# Create and run the pipeline (verbose init)
-pipeline = Pipeline([
-    tasks.predictive.Classification(
-        labels=["science", "politics"],
-        model=model,
-    )
-])
-
-# Print the classification result
-for doc in pipeline([doc]):
-    print(doc.results)
-
-# Alternatively: succinct chaining with +
-# (useful when you have multiple tasks)
-# classifier = tasks.predictive.Classification(labels=["science", "politics"], model=model)
-# pipeline = classifier  # single-task pipeline
-# Note: set additional Pipeline params (e.g., use_cache=False) only via verbose init.
+```python title="Basic text classification"
+--8<-- "sieves/tests/docs/test_getting_started.py:basic-classification"
 ```
 
 ### Using Label Descriptions
 
 You can improve classification accuracy by providing descriptions for each label. This is especially helpful when label names alone might be ambiguous:
 
-```python
-import outlines
-from sieves import Pipeline, tasks, Doc
-
-doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
-model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
-
-# Use dict format to provide descriptions
-pipeline = Pipeline([
-    tasks.predictive.Classification(
-        labels={
-            "science": "Scientific topics including physics, biology, chemistry, and natural sciences",
-            "politics": "Political news, government affairs, elections, and policy discussions"
-        },
-        model=model,
-    )
-])
-
-for doc in pipeline([doc]):
-    print(doc.results)
+```python title="Classification with label descriptions"
+--8<-- "sieves/tests/docs/test_getting_started.py:label-descriptions"
 ```
 
 ## Working with Documents
 
 Documents can be created in several ways:
 
-```python
-from sieves import Docs
+```python title="Creating documents from text"
+--8<-- "sieves/tests/docs/test_getting_started.py:doc-from-text"
+```
 
-# From text
-doc = Doc(text="Your text here")
+```python title="Creating documents from a file (requires ingestion extra)"
+--8<-- "sieves/tests/docs/test_getting_started.py:doc-from-uri"
+```
 
-# From a file (requires docling)
-doc = Doc(uri="path/to/your/file.pdf")
-
-# With metadata
-doc = Doc(
-    text="Your text here",
-    meta={"source": "example", "date": "2025-01-31"}
-)
+```python title="Creating documents with metadata"
+--8<-- "sieves/tests/docs/test_getting_started.py:doc-with-metadata"
 ```
 
 Note: File-based ingestion (Docling/Marker/...) is optional and not installed by default. To enable it, install the ingestion extra or the specific libraries you need:
@@ -104,53 +57,8 @@ Here's a more involved example that:
 2. Chunks it into smaller pieces
 3. Performs information extraction on each chunk
 
-```python
-import outlines
-import chonkie
-import tokenizers
-import pydantic
-from sieves import Pipeline, tasks, Doc
-
-# Create a tokenizer for chunking
-tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
-
-# Initialize components
-chunker = tasks.preprocessing.Chonkie(
-    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
-)
-
-# Choose a model for information extraction
-model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
-
-
-# Define the structure of information you want to extract
-class PersonInfo(pydantic.BaseModel):
-    name: str
-    age: int | None = None
-    occupation: str | None = None
-
-
-# Create an information extraction task
-extractor = tasks.predictive.InformationExtraction(
-    entity_type=PersonInfo,
-    model=model,
-)
-
-# Create the pipeline (verbose init)
-pipeline = Pipeline([chunker, extractor])
-
-# Alternatively: succinct chaining (+)
-# pipeline = chunker + extractor
-# Note: to change Pipeline parameters (e.g., use_cache), use the verbose form
-#   Pipeline([chunker, extractor], use_cache=False)
-
-# Process a PDF document
-doc = Doc(text="Marie Curie died at the age of 66 years.")
-results = list(pipeline([doc]))
-
-# Access the extracted information
-for result in results:
-    print(result.results["InformationExtraction"])
+```python title="Advanced pipeline with chunking and extraction"
+--8<-- "sieves/tests/docs/test_getting_started.py:advanced-pipeline"
 ```
 
 ## Supported Engines
@@ -179,34 +87,12 @@ Batching is configured on each task via `batch_size`:
 
 Example:
 
-```python
-from sieves.engines.utils import GenerationSettings
-classifier = tasks.predictive.Classification(
-    labels={
-        "science": "Scientific topics and research",
-        "politics": "Political news and government"
-    },
-    model=model,
-    generation_settings=GenerationSettings(strict_mode=True),
-    batch_size=8,
-)
+```python title="Configuring generation settings and batching"
+--8<-- "sieves/tests/docs/test_getting_started.py:generation-settings-config"
 ```
 
 To specify an inference mode (engine-specific):
 
-```python
-import outlines
-from sieves.engines import outlines_
-from sieves.engines.utils import GenerationSettings
-
-model = outlines.models.transformers("HuggingFaceTB/SmolLM-135M-Instruct")
-classifier = tasks.predictive.Classification(
-    labels=["science", "politics"],
-    model=model,
-    generation_settings=GenerationSettings(
-        strict_mode=True,
-        inference_mode=outlines_.InferenceMode.json  # Specifies how to parse results
-    ),
-    batch_size=8,
-)
+```python title="Engine-specific inference mode configuration"
+--8<-- "sieves/tests/docs/test_getting_started.py:inference-mode-config"
 ```

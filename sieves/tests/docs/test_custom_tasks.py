@@ -1,0 +1,379 @@
+"""
+Test file containing examples for the Custom Tasks guide.
+
+These code blocks are referenced in docs/guides/custom_tasks.md using snippet injection.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+
+def test_basic_custom_task():
+    """Test basic custom task example."""
+    # --8<-- [start:custom-task-basic]
+    from typing import Iterable
+    from sieves.tasks.core import Task
+    from sieves.data import Doc
+
+    class CharCountTask(Task):
+        def _call(self, docs: Iterable[Doc]) -> Iterable[Doc]:
+            """Counts characters in doc.text.
+
+            :param docs: Documents to process.
+            :return Iterable[Doc]: Processed documents.
+            """
+            for doc in docs:
+                doc.results[self.id] = len(doc.text)
+                yield doc
+    # --8<-- [end:custom-task-basic]
+
+    # Test the task
+    task = CharCountTask(task_id="CharCount", include_meta=False, batch_size=-1)
+    docs = [Doc(text="Hello"), Doc(text="World!")]
+    results = list(task(docs))
+    assert results[0].results[task.id] == 5
+    assert results[1].results[task.id] == 6
+
+
+def test_custom_bridge_example():
+    """Demonstrates custom bridge implementation (for docs only)."""
+    # --8<-- [start:custom-bridge-sentiment]
+    from collections.abc import Iterable
+    from functools import cached_property
+
+    import pydantic
+
+    from sieves.data import Doc
+    from sieves.engines import EngineInferenceMode, outlines_
+    from sieves.tasks.predictive.bridges import Bridge
+
+
+    # This is how we require our response to look like - we require not just the score, but also a reasoning/justification
+    # for why this model assigns this score. We also force the score to be between 0 and 1.
+    class SentimentEstimate(pydantic.BaseModel):
+       reasoning: str
+       score: pydantic.confloat(ge=0, le=1)
+
+
+    # This is the bridge class.
+    class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, outlines_.InferenceMode]):
+        # This defines the default prompt template as Jinja2 template string.
+        # We include an example block allowing us to include fewshot examples.
+        @property
+        def _default_prompt_instructions(self) -> str:
+            return """
+            Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. Provide your
+            reasoning for why you estimate this score before you output the score.
+
+            {% if examples|length > 0 -%}
+                Examples:
+                ----------
+                {%- for example in examples %}
+                    Text: "{{ example.text }}":
+                    Output:
+                        Reasoning: "{{ example.reasoning }}":
+                        Sentiment: "{{ example.sentiment }}"
+                {% endfor -%}
+                ----------
+            {% endif -%}
+
+            ========
+            Text: {{ text }}
+            Output:
+            """
+
+        @property
+        def _prompt_example_template(self) -> str | None:
+            return None
+
+        @property
+        def _prompt_conclusion(self) -> str | None:
+            return None
+
+        @property
+        def inference_mode(self) -> outlines_.InferenceMode:
+            return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+
+        # We return our SentimentEstimate as prompt signature.
+        @cached_property
+        def prompt_signature(self) -> type[pydantic.BaseModel]:
+            return SentimentEstimate
+
+        # We copy the result score into our doc's results attribute.
+        def integrate(self, results: Iterable[SentimentEstimate], docs: Iterable[Doc]) -> Iterable[Doc]:
+            for doc, result in zip(docs, results):
+                assert isinstance(result, SentimentEstimate)
+                # doc.results is a dict, with the task ID being the key to store our results under for the corresponding
+                # task.
+                doc.results[self._task_id] = result.score
+            return docs
+
+        # Consolidating multiple chunks for sentiment analysis can be pretty straightforward: we compute the average over
+        # all chunks and assume this to be the sentiment score for the doc.
+        def consolidate(
+            self, results: Iterable[SentimentEstimate], docs_offsets: list[tuple[int, int]]
+        ) -> Iterable[SentimentEstimate]:
+            results = list(results)
+
+            # Iterate over indices that determine which chunks belong to which documents.
+            for doc_offset in docs_offsets:
+                # Keep track of all reasonings and the total score.
+                reasonings: list[str] = []
+                scores = 0.
+
+                # Iterate over chunks' results.
+                for chunk_result in results[doc_offset[0] : doc_offset[1]]:
+                    # Engines may return None results if they encounter errors and run in permissive mode. We ignore such
+                    # results.
+                    if chunk_result:
+                        assert isinstance(chunk_result, SentimentEstimate)
+                        reasonings.append(chunk_result.reasoning)
+                        scores += chunk_result.score
+
+                yield SentimentEstimate(
+                   # Average the score.
+                   score=scores / (doc_offset[1] - doc_offset[0]),
+                   # Concatenate all reasonings.
+                   reasoning=str(reasonings)
+                )
+    # --8<-- [end:custom-bridge-sentiment]
+
+
+def test_custom_predictive_task_example():
+    """Demonstrates custom predictive task wrapper (for docs only)."""
+    # --8<-- [start:custom-task-predictive]
+    from collections.abc import Iterable
+    from typing import Any
+
+    import datasets
+    import pydantic
+
+    from sieves.data import Doc
+    from sieves.engines import EngineType
+    from sieves.serialization import Config
+    from sieves.tasks.predictive.core import PredictiveTask
+
+    # Need SentimentEstimate from previous example
+    class SentimentEstimate(pydantic.BaseModel):
+       reasoning: str
+       score: pydantic.confloat(ge=0, le=1)
+
+    # Assume OutlinesSentimentAnalysis bridge is defined (from previous example)
+    # For brevity, we're not repeating the full bridge implementation here
+    # This is a placeholder for type checking
+    from functools import cached_property
+    from sieves.engines import EngineInferenceMode, outlines_
+    from sieves.tasks.predictive.bridges import Bridge
+
+    class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, outlines_.InferenceMode]):
+        @property
+        def _default_prompt_instructions(self) -> str:
+            return ""
+        @property
+        def _prompt_example_template(self) -> str | None:
+            return None
+        @property
+        def _prompt_conclusion(self) -> str | None:
+            return None
+        @property
+        def inference_mode(self) -> outlines_.InferenceMode:
+            return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+        @cached_property
+        def prompt_signature(self) -> type[pydantic.BaseModel]:
+            return SentimentEstimate
+        def integrate(self, results, docs):
+            return docs
+        def consolidate(self, results, docs_offsets):
+            return results
+
+    # We'll define that class we require fewshot examples to be provided in. In our case we can just inherit from our
+    # prompt signature class and add a `text` property.
+    class FewshotExample(SentimentEstimate):
+        text: str
+
+
+    class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, OutlinesSentimentAnalysis]):
+        # For the initialization of the bridge. We raise an error if an engine has been specified that we don't support (due
+        # to us not having a bridge implemented that would support this engine type).
+        def _init_bridge(self, engine_type: EngineType) -> OutlinesSentimentAnalysis:
+            if engine_type == EngineType.outlines:
+                return OutlinesSentimentAnalysis(
+                    task_id=self._task_id,
+                    prompt_instructions=self._custom_prompt_instructions,
+                    overwrite=False,
+                    generation_settings=self._generation_settings,
+                )
+            else:
+                raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
+
+        # Represents set of supported engine types.
+        @property
+        def supports(self) -> set[EngineType]:
+            return {EngineType.outlines}
+
+        # This implements the conversion of a set of docs to a Hugging Face datasets.Dataset.
+        # You can implement this as `raise NotImplementedError` if you're not interested in generating a Hugging Face
+        # dataset from your result data.
+        def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+            # Define metadata.
+            info = datasets.DatasetInfo(
+                description=f"Sentiment estimation dataset. Generated with sieves"
+                            f"v{Config.get_version()}.",
+                features=datasets.Features({"text": datasets.Value("string"), "score": datasets.Value("float32")}),
+            )
+
+            def generate_data() -> Iterable[dict[str, Any]]:
+                """Yields results as dicts.
+                :return Iterable[dict[str, Any]]: Results as dicts.
+                """
+                for doc in docs:
+                    yield {"text": doc.text, "score": doc.results[self._task_id]}
+
+            # Create dataset.
+            return datasets.Dataset.from_generator(generate_data, features=info.features, info=info)
+
+        # Distillation not implemented for this example task
+        def distill(self, base_model_id, framework, data, output_path, val_frac, init_kwargs=None, train_kwargs=None, seed=None):
+            raise NotImplementedError("Distillation not implemented for this example task")
+    # --8<-- [end:custom-task-predictive]
+
+
+def test_using_custom_task_example(small_outlines_model):
+    """Demonstrates using the custom sentiment analysis task."""
+    # First define the classes (from previous tests)
+    from collections.abc import Iterable
+    from functools import cached_property
+    from typing import Any
+    import pydantic
+    import datasets
+    from sieves.data import Doc
+    from sieves.engines import EngineType, EngineInferenceMode, outlines_
+    from sieves.tasks.predictive.bridges import Bridge
+    from sieves.tasks.predictive.core import PredictiveTask
+    from sieves.serialization import Config
+
+    class SentimentEstimate(pydantic.BaseModel):
+       reasoning: str
+       score: pydantic.confloat(ge=0, le=1)
+
+    class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, outlines_.InferenceMode]):
+        @property
+        def _default_prompt_instructions(self) -> str:
+            return """
+            Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. Provide your
+            reasoning for why you estimate this score before you output the score.
+
+            {% if examples|length > 0 -%}
+                Examples:
+                ----------
+                {%- for example in examples %}
+                    Text: "{{ example.text }}":
+                    Output:
+                        Reasoning: "{{ example.reasoning }}":
+                        Sentiment: "{{ example.sentiment }}"
+                {% endfor -%}
+                ----------
+            {% endif -%}
+
+            ========
+            Text: {{ text }}
+            Output:
+            """
+
+        @property
+        def _prompt_example_template(self) -> str | None:
+            return None
+
+        @property
+        def _prompt_conclusion(self) -> str | None:
+            return None
+
+        @property
+        def inference_mode(self) -> outlines_.InferenceMode:
+            return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+
+        @cached_property
+        def prompt_signature(self) -> type[pydantic.BaseModel]:
+            return SentimentEstimate
+
+        def integrate(self, results: Iterable[SentimentEstimate], docs: Iterable[Doc]) -> Iterable[Doc]:
+            for doc, result in zip(docs, results):
+                if result:
+                    assert isinstance(result, SentimentEstimate)
+                    doc.results[self._task_id] = result.score
+            return docs
+
+        def consolidate(
+            self, results: Iterable[SentimentEstimate], docs_offsets: list[tuple[int, int]]
+        ) -> Iterable[SentimentEstimate]:
+            results = list(results)
+            for doc_offset in docs_offsets:
+                reasonings: list[str] = []
+                scores = 0.
+                for chunk_result in results[doc_offset[0] : doc_offset[1]]:
+                    if chunk_result:
+                        assert isinstance(chunk_result, SentimentEstimate)
+                        reasonings.append(chunk_result.reasoning)
+                        scores += chunk_result.score
+                yield SentimentEstimate(
+                   score=scores / (doc_offset[1] - doc_offset[0]),
+                   reasoning=str(reasonings)
+                )
+
+    class FewshotExample(SentimentEstimate):
+        text: str
+
+    class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, OutlinesSentimentAnalysis]):
+        def __init__(self, model, task_id: str = "SentimentAnalysis", include_meta: bool = True, batch_size: int = -1,
+                     prompt_instructions: str | None = None, fewshot_examples: Any = (),
+                     generation_settings=None):
+            if generation_settings is None:
+                from sieves.engines.types import GenerationSettings
+                generation_settings = GenerationSettings()
+            super().__init__(
+                model=model, task_id=task_id, include_meta=include_meta, batch_size=batch_size,
+                overwrite=False, prompt_instructions=prompt_instructions, fewshot_examples=fewshot_examples,
+                generation_settings=generation_settings, condition=None
+            )
+
+        def _init_bridge(self, engine_type: EngineType) -> OutlinesSentimentAnalysis:
+            if engine_type == EngineType.outlines:
+                return OutlinesSentimentAnalysis(
+                    task_id=self._task_id,
+                    prompt_instructions=self._custom_prompt_instructions,
+                    overwrite=False,
+                    generation_settings=self._generation_settings,
+                )
+            else:
+                raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
+
+        @property
+        def supports(self) -> set[EngineType]:
+            return {EngineType.outlines}
+
+        def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
+            info = datasets.DatasetInfo(
+                description=f"Sentiment estimation dataset. Generated with sieves v{Config.get_version()}.",
+                features=datasets.Features({"text": datasets.Value("string"), "score": datasets.Value("float32")}),
+            )
+            def generate_data() -> Iterable[dict[str, Any]]:
+                for doc in docs:
+                    yield {"text": doc.text, "score": doc.results[self._task_id]}
+            return datasets.Dataset.from_generator(generate_data, features=info.features, info=info)
+
+        def distill(self, base_model_id, framework, data, output_path, val_frac, init_kwargs=None, train_kwargs=None, seed=None):
+            raise NotImplementedError("Distillation not implemented for this example task")
+
+    # --8<-- [start:custom-task-usage]
+    from sieves import Doc, Pipeline
+    import outlines
+
+    model = small_outlines_model
+
+    docs = [Doc(text="I'm feeling happy today."), Doc(text="I was sad yesterday.")]
+    pipe = Pipeline([SentimentAnalysis(model=model)])
+
+    for doc in pipe(docs):
+        print(doc.text, doc.results["SentimentAnalysis"])
+    # --8<-- [end:custom-task-usage]

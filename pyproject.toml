@@ -91,8 +91,8 @@ exclude = [
     "venv",
     ".venv",
     "sieves/tests/**",
-    # Ignore examples.
-    "examples/**"
+    # Ignore demosd.
+    "demos/**"
 ]
 
 [tool.ruff.lint]

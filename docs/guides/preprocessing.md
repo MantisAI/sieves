@@ -19,110 +19,34 @@ You can also install individual libraries directly (e.g., `pip install docling`)
 
 The `Ingestion` task uses the [docling](https://github.com/DS4SD/docling) or alternatively the [marker](https://github.com/VikParuchuri/marker) libraries to parse various document formats:
 
-```python
-from sieves import Pipeline, tasks, Doc
-
-# Create a document parser
-parser = tasks.preprocessing.Ingestion()
-
-# Create a pipeline with the parser
-pipeline = Pipeline([parser])
-
-# Process documents
-docs = [
-    Doc(uri="path/to/document.pdf"),
-    Doc(uri="path/to/another.docx")
-]
-processed_docs = list(pipeline(docs))
-
-# Access the parsed text
-for doc in processed_docs:
-    print(doc.text)
+```python title="Basic document ingestion"
+--8<-- "sieves/tests/docs/test_preprocessing.py:ingestion-basic"
 ```
 
 It is possible to choose a specific output format between the supported (Markdown, HTML, JSON) and pass custom Docling or Marker converters in the `converter` parameter:
 
-```python
-from sieves import Pipeline, tasks, Doc
-
-from docling.document_converter import DocumentConverter
-
-# Create a document parser
-parser = tasks.preprocessing.Ingestion(converter=DocumentConverter(), export_format="html")
-
-# Create a pipeline with the parser
-pipeline = Pipeline([parser])
-
-# Process documents
-docs = [
-    Doc(uri="path/to/document.pdf"),
-    Doc(uri="path/to/another.docx")
-]
-processed_docs = list(pipeline(docs))
-
-# Access the parsed text
-for doc in processed_docs:
-    print(doc.text)
+```python title="Custom converter with export format"
+--8<-- "sieves/tests/docs/test_preprocessing.py:ingestion-custom-converter"
 ```
 
 ## Document Chunking
 
 Long documents often need to be split into smaller chunks for processing by language models. `sieves` provides two chunking options:
 
-### Using Chonkie
+### Using Chunking
 
-The `Chonkie` task uses the [chonkie](https://github.com/chonkie-ai/chonkie) library for intelligent document chunking:
+The `Chunking` task uses the [chonkie](https://github.com/chonkie-ai/chonkie) library for intelligent document chunking:
 
-```python
-import chonkie
-import tokenizers
-from sieves import Pipeline, tasks, Doc
-
-# Create a tokenizer for chunking
-tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
-
-# Create a token-based chunker
-chunker = tasks.preprocessing.Chonkie(
-    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
-)
-
-# Create and run the pipeline
-pipeline = Pipeline([chunker])
-doc = Doc(text="Your long document text here...")
-chunked_docs = list(pipeline([doc]))
-
-# Access the chunks
-for chunk in chunked_docs[0].chunks:
-    print(f"Chunk: {chunk}")
+```python title="Token-based chunking with Chonkie"
+--8<-- "sieves/tests/docs/test_preprocessing.py:chunking-chonkie-basic"
 ```
 
 ## Combining Preprocessing Tasks
 
-You can combine multiple preprocessing tasks in a pipeline. Here's an example that parses a PDF using the Ingestion task (using Docling as default) and then chunks it with Chonkie:
+You can combine multiple preprocessing tasks in a pipeline. Here's an example that parses a PDF using the Ingestion task (using Docling as default) and then chunks it:
 
-```python
-from sieves import Pipeline, tasks, Doc
-import chonkie
-import tokenizers
-
-# Create the preprocessing tasks
-parser = tasks.preprocessing.Ingestion()
-tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
-chunker = tasks.preprocessing.Chonkie(
-    chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
-)
-
-# Create a pipeline with both tasks
-pipeline = Pipeline([parser, chunker])
-
-# Process a document
-doc = Doc(uri="path/to/document.pdf")
-processed_doc = list(pipeline([doc]))[0]
-
-# Access the chunks
-print(f"Number of chunks: {len(processed_doc.chunks)}")
-for i, chunk in enumerate(processed_doc.chunks):
-    print(f"Chunk {i}: {chunk[:100]}...")  # Print first 100 chars of each chunk
+```python title="Combined preprocessing pipeline"
+--8<-- "sieves/tests/docs/test_preprocessing.py:preprocessing-combined-pipeline"
 ```
 
 ## Customizing Preprocessing
@@ -135,15 +59,13 @@ Progress bars are shown at the pipeline level. Tasks do not expose progress opti
 
 Tasks can include metadata about their processing. Enable this with `include_meta`:
 
-```python
-parser = tasks.preprocessing.Ingestion(include_meta=True)
+```python title="Enable metadata inclusion"
+--8<-- "sieves/tests/docs/test_preprocessing.py:metadata-inclusion"
 ```
 
 Access the metadata in the document's `meta` field:
-```python
-doc = processed_docs[0]
-print(doc.meta["Ingestion"])  # Access parser metadata
-print(doc.meta["Chunker"])  # Access chunker metadata
+```python title="Access preprocessing metadata"
+--8<-- "sieves/tests/docs/test_preprocessing.py:metadata-access"
 ```
 
 ## Best Practices

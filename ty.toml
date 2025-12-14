@@ -12,5 +12,5 @@ exclude = [
     ".venv/**",
     "build/**",
     "sieves/tests/**",
-    "examples/**"
+    "demos/**"
 ]

@@ -14,11 +14,12 @@ valuable for rapid prototyping scenarios where structured output is needed but t
 
 You can install `sieves` with different options depending on your needs
 
-Core package with minimal dependencies:
+Core package:
 ```bash
 pip install sieves
 ```
-Note: Ingestion libraries (document parsing such as `docling`) are not installed by default. Install them manually or use the ingestion extra:
+
+Ingestion libraries (document parsing such as `docling`) are optional. Install them manually or use the ingestion extra:
 
 ```bash
 pip install "sieves[ingestion]"

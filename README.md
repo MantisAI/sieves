@@ -31,11 +31,11 @@ Read our documentation [here](https://sieves.ai). An automatically generated ver
 
 Install `sieves` with `pip install sieves` (or `uv add sieves`).
 
-The following extra groups exist:
-- `ingestion` for ingestion libraries (for converting documents into text/markdown), e.g. `docling`
-- `distill` for distillation utilities, e.g. training frameworks like `setfit`
+The following optional extra groups exist:
+- `ingestion` for document parsing libraries (PDF/DOCX conversion), e.g. `docling`, `marker`
+- `distill` for model distillation utilities, e.g. training frameworks like `setfit`, `model2vec`
 
-If you want to install all dependencies by default
+If you want to install all dependencies including extras:
 ```
 pip install "sieves[distill,ingestion]"
 ```
@@ -84,7 +84,7 @@ build modern NLP applications. It provides:
   - [`gliner2`](https://github.com/fastino-ai/GLiNER2)
   - [`langchain`](https://github.com/langchain-ai/langchain)
   - [`outlines`](https://github.com/dottxt-ai/outlines)
-  - [`transformer`](https://github.com/huggingface/transformers)
+  - [`transformers`](https://github.com/huggingface/transformers)
 - :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring with conditional task execution
 - :hammer_and_wrench: **Integrated Tools:**
   - Document parsing (optional via `ingestion` extra): [`docling`](https://github.com/DS4SD/docling), [`marker`](https://github.com/VikParuchuri/marker)
@@ -106,10 +106,9 @@ build modern NLP applications. It provides:
 - :recycle: **Caching** to avoid unnecessary model calls
 
 > [!IMPORTANT]
-> `sieves` was built with and requires Python 3.12 or higher. Note however that some dependencies (such as `pyarrow`
-> via `datasets`) don't have prebuilt wheels for Python versions newer than 3.12 yet, in which case you'll need to
-> manually install those dependencies.
-> For the time being we recommend using `sieves` with Python 3.12.
+> `sieves` requires Python 3.12 (exact version). The project is configured to use `requires-python = "==3.12.*"` in `pyproject.toml`.
+> This is because some dependencies (such as `pyarrow` via `datasets`) don't have prebuilt wheels for Python versions newer than 3.12 yet,
+> which would require manual compilation.
 
 ---
 
