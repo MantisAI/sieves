@@ -19,11 +19,14 @@ def test_basic_setfit_distillation(small_dspy_model):
     model = small_dspy_model
 
     # --8<-- [start:distillation-setfit-basic]
+    # --8<-- [start:distillation-setfit-imports]
     import dspy
     from sieves import tasks, Doc, Pipeline
     from sieves.tasks import DistillationFramework
     from setfit import SetFitModel
+    # --8<-- [end:distillation-setfit-imports]
 
+    # --8<-- [start:distillation-setfit-data]
     # 1. Create MINIMAL training data (9 examples - 3 per label)
     docs = [
         Doc(text="New AI model released", meta={"label": "technology"}),
@@ -36,7 +39,9 @@ def test_basic_setfit_distillation(small_dspy_model):
         Doc(text="Championship final scores", meta={"label": "sports"}),
         Doc(text="Olympic athlete breaks record", meta={"label": "sports"}),
     ]
+    # --8<-- [end:distillation-setfit-data]
 
+    # --8<-- [start:distillation-setfit-teacher]
     # 2. Define teacher task
     teacher = tasks.Classification(
         labels=["technology", "politics", "sports"],
@@ -46,7 +51,9 @@ def test_basic_setfit_distillation(small_dspy_model):
     # 3. Process documents to generate labels
     pipeline = Pipeline([teacher])
     labeled_docs = list(pipeline(docs))
+    # --8<-- [end:distillation-setfit-teacher]
 
+    # --8<-- [start:distillation-setfit-distill]
     # 4. Distill with MINIMAL training settings
     with TemporaryDirectory() as tmp_dir:
         teacher.distill(
@@ -61,11 +68,14 @@ def test_basic_setfit_distillation(small_dspy_model):
                 "batch_size": 8,
             },
         )
+        # --8<-- [end:distillation-setfit-distill]
 
+        # --8<-- [start:distillation-setfit-load]
         # 5. Load and use distilled model
         distilled_model = SetFitModel.from_pretrained(tmp_dir)
         predictions = distilled_model.predict(["Smartphone announcement"])
         print(f"Predictions: {predictions}")
+        # --8<-- [end:distillation-setfit-load]
     # --8<-- [end:distillation-setfit-basic]
 
         assert predictions is not None

@@ -16,11 +16,43 @@ Here's a simple example of saving and loading a classification pipeline:
 
 ## Dealing with complex third-party objects
 
-`sieves` doesn't serialize complex third-party objects. When loading pipelines, you need to provide initialization parameters for each task when loading:
+`sieves` doesn't serialize complex third-party objects. When loading pipelines, you need to provide initialization parameters for tasks that use non-serializable components.
 
-```python title="Complex pipeline serialization"
---8<-- "sieves/tests/docs/test_serialization.py:serialization-complex-pipeline"
+### Set Up Pipeline Components
+
+First, create a pipeline with third-party objects like tokenizers and models:
+
+```python title="Setting up components"
+--8<-- "sieves/tests/docs/test_serialization.py:serialization-complex-setup"
 ```
+
+### Define Entity Schema and Task
+
+Define the schema for information extraction and create the task:
+
+```python title="Entity and task definition"
+--8<-- "sieves/tests/docs/test_serialization.py:serialization-complex-entity-task"
+```
+
+### Save the Pipeline
+
+Create and save the pipeline configuration:
+
+```python title="Saving the pipeline"
+--8<-- "sieves/tests/docs/test_serialization.py:serialization-complex-save"
+```
+
+The YAML file stores the pipeline structure but includes placeholders for non-serializable objects.
+
+### Load with Initialization Parameters
+
+When loading, provide the actual objects for each task's placeholders:
+
+```python title="Loading with init parameters"
+--8<-- "sieves/tests/docs/test_serialization.py:serialization-complex-load"
+```
+
+The `init_params` list corresponds to each task in the pipeline, providing the values needed to reconstruct non-serializable components.
 
 ## Understanding Pipeline Configuration Files
 

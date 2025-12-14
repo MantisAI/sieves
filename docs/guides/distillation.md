@@ -34,11 +34,53 @@ Distillation is valuable when:
 
 ## Quick Example
 
-Here's how to distill a classification task using SetFit:
+Here's a step-by-step guide to distilling a classification task using SetFit.
+
+### 1. Import Dependencies
+
+Import the required modules:
 
 ```python
---8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-basic"
+--8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-imports"
 ```
+
+### 2. Prepare Training Data
+
+Create labeled documents (at least 3 examples per label for SetFit):
+
+```python
+--8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-data"
+```
+
+### 3. Generate Predictions with Teacher Model
+
+Define a teacher task and process documents to generate predictions:
+
+```python
+--8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-teacher"
+```
+
+The teacher model's predictions will be used as training labels for the student model.
+
+### 4. Run Distillation
+
+Distill the teacher's knowledge into a smaller, faster model:
+
+```python
+--8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-distill"
+```
+
+This trains a lightweight SetFit model that mimics the teacher's behavior.
+
+### 5. Load and Use the Distilled Model
+
+Load the distilled model and use it for inference:
+
+```python
+--8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-load"
+```
+
+The distilled model is now ready for production use with faster inference and lower resource requirements.
 
 ## Distillation Parameters
 

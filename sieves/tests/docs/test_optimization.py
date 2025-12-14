@@ -17,12 +17,15 @@ def test_basic_optimization_example(small_dspy_model):
     model = small_dspy_model
 
     # --8<-- [start:optimization-classification-basic]
+    # --8<-- [start:optimization-imports]
     import dspy
     from sieves import tasks, Doc
     from sieves.engines.utils import GenerationSettings
     from sieves.tasks import Optimizer
     from sieves.tasks.predictive.classification import FewshotExampleSingleLabel
+    # --8<-- [end:optimization-imports]
 
+    # --8<-- [start:optimization-training-data]
     # 1. Create minimal training data (only 4 examples for speed)
     examples = [
         FewshotExampleSingleLabel(
@@ -46,7 +49,9 @@ def test_basic_optimization_example(small_dspy_model):
             confidence=1.0
         ),
     ]
+    # --8<-- [end:optimization-training-data]
 
+    # --8<-- [start:optimization-task-setup]
     # 2. Define task with few-shot examples
     task = tasks.Classification(
         labels={
@@ -59,7 +64,9 @@ def test_basic_optimization_example(small_dspy_model):
         multi_label=False,
         generation_settings=GenerationSettings(),
     )
+    # --8<-- [end:optimization-task-setup]
 
+    # --8<-- [start:optimization-optimizer-config]
     # 3. Create optimizer with MINIMAL settings for cost efficiency
     optimizer = Optimizer(
         model=model,
@@ -79,12 +86,15 @@ def test_basic_optimization_example(small_dspy_model):
             minibatch=False
         )
     )
+    # --8<-- [end:optimization-optimizer-config]
 
+    # --8<-- [start:optimization-run]
     # 4. Run optimization
     best_prompt, best_examples = task.optimize(optimizer, verbose=True)
 
     print(f"Optimized prompt: {best_prompt}")
     print(f"Number of selected examples: {len(best_examples)}")
+    # --8<-- [end:optimization-run]
     # --8<-- [end:optimization-classification-basic]
 
     assert best_prompt is not None

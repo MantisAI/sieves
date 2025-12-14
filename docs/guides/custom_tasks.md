@@ -55,23 +55,165 @@ The _inference mode_ (which defines how the engine queries the model and parses 
 
 We'll save this in `sentiment_analysis_bridges.py`.
 
+#### Import Dependencies
+
+First, import the required modules for building the bridge:
+
 ```python
---8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment"
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-imports"
 ```
 
-Our bridge takes care of most of the heavy lifting: it defines how we expect our results to look like,
-it consolidates the results we're getting back from the engine, and integrates them into our docs.
+#### Define the Output Schema
+
+Define the structure of results using Pydantic. This specifies both the sentiment score and reasoning:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-schema"
+```
+
+The schema requires a reasoning explanation and a score between 0 and 1.
+
+#### Create the Bridge Class
+
+Start by defining the bridge class that will handle sentiment analysis:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-class-def"
+```
+
+#### Define the Prompt Template
+
+The prompt template uses Jinja2 syntax to support few-shot examples:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-prompt"
+```
+
+This template instructs the model on how to estimate sentiment and allows for optional few-shot examples.
+
+#### Configure Bridge Properties
+
+Define the required properties that configure how the bridge behaves:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-properties"
+```
+
+These properties specify the prompt signature (output structure) and inference mode.
+
+#### Implement Result Integration
+
+The `integrate()` method stores results into documents:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-integrate"
+```
+
+This method extracts the sentiment score from each result and stores it in the document's results dictionary.
+
+#### Implement Result Consolidation
+
+The `consolidate()` method aggregates results from multiple document chunks:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-consolidate"
+```
+
+For sentiment analysis, we compute the average score across chunks and concatenate all reasoning strings.
+
+Our bridge now handles the complete workflow: prompting the model, parsing structured results, integrating them into documents, and consolidating multi-chunk results.
 
 ### 2. Build a `SentimentAnalysisTask`
 
-The task class itself is mostly glue code: we instantiate our bridge(s) and provide other auxiliary, engine-agnostic
-functionality. We'll save this in `sentiment_analysis_task.py`
+The task class wraps the bridge and provides engine-agnostic functionality. It handles bridge instantiation, few-shot examples, and dataset export. We'll save this in `sentiment_analysis_task.py`.
+
+Since the task needs a working bridge, we'll include the complete implementation here (the bridge from section 1 plus the task wrapper).
+
+#### Import Task Dependencies
+
+Start with the core imports needed for the task:
 
 ```python
---8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive"
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-imports"
 ```
 
-And that's it! Our sentiment analysis task is finished.
+#### Define the Output Schema
+
+Define the sentiment estimation schema:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-schema"
+```
+
+#### Include the Bridge Implementation
+
+Import additional dependencies for the bridge:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-imports"
+```
+
+Define the bridge class (as shown in section 1):
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-class"
+```
+
+With its prompt template:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-prompt"
+```
+
+Bridge properties:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-properties"
+```
+
+And bridge methods for integration and consolidation:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-methods"
+```
+
+#### Define Few-Shot Example Schema
+
+Define how few-shot examples should be structured:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-fewshot"
+```
+
+This allows users to provide training examples with text and expected sentiment.
+
+#### Create the Task Class
+
+Now create the main task class that uses the bridge:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-task-class"
+```
+
+#### Implement Bridge Initialization
+
+Define how to initialize the bridge for supported engines:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-init-supports"
+```
+
+The task raises an error if an unsupported engine is specified.
+
+#### Add Dataset Export (Optional)
+
+Implement HuggingFace dataset export for analysis or distillation:
+
+```python
+--8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-to-hf-dataset"
+```
+
+And that's it! Our sentiment analysis task is complete and ready to use.
 
 ### 3. Running our task
 

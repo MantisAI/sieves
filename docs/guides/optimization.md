@@ -28,11 +28,53 @@ Optimization is valuable when:
 
 ## Quick Example
 
-Here's how to optimize a classification task:
+Here's a step-by-step guide to optimizing a classification task.
+
+### 1. Import Dependencies
+
+First, import the required modules:
 
 ```python
---8<-- "sieves/tests/docs/test_optimization.py:optimization-classification-basic"
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-imports"
 ```
+
+### 2. Prepare Training Data
+
+Create labeled examples for optimization. Each example needs the text, expected label, and confidence score:
+
+```python
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-training-data"
+```
+
+The optimizer will use these examples to find the best prompt and example selection.
+
+### 3. Create the Task
+
+Define your classification task with label descriptions and few-shot examples:
+
+```python
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-task-setup"
+```
+
+### 4. Configure the Optimizer
+
+Set up the optimizer with cost-control settings. The example below uses minimal settings to reduce API costs during experimentation:
+
+```python
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-optimizer-config"
+```
+
+These minimal settings (`num_candidates=2`, `num_trials=1`) are for cost control during testing. Increase these values for more thorough optimization.
+
+### 5. Run Optimization
+
+Execute the optimization process to find the best prompt and examples:
+
+```python
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-run"
+```
+
+The optimizer returns the optimized prompt instructions and the selected few-shot examples that maximize performance on the validation set.
 
 ## Evaluation Metrics
 

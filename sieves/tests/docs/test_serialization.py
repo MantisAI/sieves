@@ -56,6 +56,7 @@ def test_complex_serialization(example_tokenizer, small_outlines_model, tmp_path
     model = small_outlines_model
 
     # --8<-- [start:serialization-complex-pipeline]
+    # --8<-- [start:serialization-complex-setup]
     import chonkie
     import tokenizers
     import outlines
@@ -74,8 +75,10 @@ def test_complex_serialization(example_tokenizer, small_outlines_model, tmp_path
         AutoModelForCausalLM.from_pretrained(model_name),
         AutoTokenizer.from_pretrained(model_name)
     )
+    # --8<-- [end:serialization-complex-setup]
 
 
+    # --8<-- [start:serialization-complex-entity-task]
     class PersonInfo(pydantic.BaseModel):
         name: str
         age: int | None = None
@@ -83,11 +86,15 @@ def test_complex_serialization(example_tokenizer, small_outlines_model, tmp_path
 
 
     extractor = tasks.predictive.InformationExtraction(entity_type=PersonInfo, model=model)
+    # --8<-- [end:serialization-complex-entity-task]
 
+    # --8<-- [start:serialization-complex-save]
     # Create and save the pipeline
     pipeline = chunker + extractor
     pipeline.dump("extraction_pipeline.yml")
+    # --8<-- [end:serialization-complex-save]
 
+    # --8<-- [start:serialization-complex-load]
     # Load the pipeline with initialization parameters for each task
     loaded_pipeline = Pipeline.load(
         "extraction_pipeline.yml",
@@ -106,6 +113,7 @@ def test_complex_serialization(example_tokenizer, small_outlines_model, tmp_path
             },
         ]
     )
+    # --8<-- [end:serialization-complex-load]
     # --8<-- [end:serialization-complex-pipeline]
 
     # Assertions
