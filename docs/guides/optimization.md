@@ -13,16 +13,50 @@ The process uses Bayesian optimization to find the best combination of prompt an
 
 ## When to Use Optimization
 
-Optimization is valuable when:
-- You have **labeled data** (few-shot examples with ground truth)
-- You want to **improve task accuracy** beyond zero-shot performance
-- You're willing to invest **time and API cost** for better results
+### Use optimization when:
+
+✅ **You have labeled training data** (10+ examples minimum, 50+ recommended)
+✅ **Zero-shot performance is suboptimal** (<70% accuracy on your task)
+✅ **You can invest in API costs** ($5-50 typical per optimization run)
+✅ **You want to systematically improve prompts** rather than manual trial-and-error
+✅ **Your task has clear evaluation metrics** (accuracy, F1, etc.)
+
+**Typical improvement**: 10-30% accuracy boost over zero-shot, depending on task complexity
+
+### Skip optimization when:
+
+❌ **You have <10 examples** - Not enough data for reliable optimization
+❌ **Zero-shot already works well** (>90% accuracy) - Diminishing returns
+❌ **Budget is tight** - Optimization requires many LLM calls
+❌ **You need quick prototyping** - Manual few-shot examples are faster initially
+❌ **Evaluation is subjective** - Hard to automatically measure improvement
+
+### Decision Tree
+
+```
+Do you have labeled examples?
+├─ No → Collect data first, use zero-shot for now
+└─ Yes → How many?
+   ├─ <10 examples → Use manual few-shot, don't optimize yet
+   ├─ 10-50 examples → Try optimization with minimal settings
+   └─ 50+ examples → Optimization recommended
+       └─ Is your zero-shot accuracy <70%?
+          ├─ Yes → Optimization will likely help significantly
+          └─ No (>70%) → Optimization may provide modest gains
+```
+
+### Cost Considerations
 
 > **⚠️ Cost Warning**
 > Optimization involves **multiple LLM calls** during the search process. Costs depend on:
 > - Dataset size (more examples = more evaluations)
 > - DSPy optimizer configuration (`num_candidates`, `num_trials`)
-> - Model pricing (larger models cost more per _call)
+> - Model pricing (larger models cost more per call)
+>
+> **Estimated costs**:
+> - Small dataset (20 examples), minimal settings: $2-5
+> - Medium dataset (100 examples), default settings: $20-50
+> - Large dataset (500+ examples), aggressive settings: $100-500
 >
 > Start with small datasets and conservative optimizer settings to control costs.
 
@@ -32,25 +66,27 @@ Here's a step-by-step guide to optimizing a classification task.
 
 ### 1. Import Dependencies
 
-First, import the required modules:
+First, import the required modules for optimization:
 
 ```python
 --8<-- "sieves/tests/docs/test_optimization.py:optimization-imports"
 ```
 
+These imports provide the DSPy model, task classes, and the few-shot example schema needed for optimization.
+
 ### 2. Prepare Training Data
 
-Create labeled examples for optimization. Each example needs the text, expected label, and confidence score:
+With our dependencies imported, we'll create labeled examples for the optimizer. Each example needs the input text, expected label, and a confidence score (1.0 for certain labels):
 
 ```python
 --8<-- "sieves/tests/docs/test_optimization.py:optimization-training-data"
 ```
 
-The optimizer will use these examples to find the best prompt and example selection.
+The optimizer will use these examples to evaluate different prompt and few-shot combinations. More examples generally lead to better optimization results, but also increase API costs.
 
 ### 3. Create the Task
 
-Define your classification task with label descriptions and few-shot examples:
+Now that we have training data, let's define the classification task we want to optimize. We'll include label descriptions to help guide the model:
 
 ```python
 --8<-- "sieves/tests/docs/test_optimization.py:optimization-task-setup"
@@ -58,23 +94,23 @@ Define your classification task with label descriptions and few-shot examples:
 
 ### 4. Configure the Optimizer
 
-Set up the optimizer with cost-control settings. The example below uses minimal settings to reduce API costs during experimentation:
+With our task defined, we need to set up the optimizer that will search for the best prompt and example combination. The example below uses minimal settings to control API costs during experimentation:
 
 ```python
 --8<-- "sieves/tests/docs/test_optimization.py:optimization-optimizer-config"
 ```
 
-These minimal settings (`num_candidates=2`, `num_trials=1`) are for cost control during testing. Increase these values for more thorough optimization.
+The optimizer splits your data into training and validation sets (25% validation here), then uses Bayesian optimization to explore the space of possible prompts and few-shot selections. The minimal settings (`num_candidates=2`, `num_trials=1`) are for cost control during testing - increase these values for more thorough optimization in production.
 
 ### 5. Run Optimization
 
-Execute the optimization process to find the best prompt and examples:
+Finally, we execute the optimization process. The optimizer will iteratively test different prompt and example combinations, evaluating each on the validation set:
 
 ```python
 --8<-- "sieves/tests/docs/test_optimization.py:optimization-run"
 ```
 
-The optimizer returns the optimized prompt instructions and the selected few-shot examples that maximize performance on the validation set.
+The optimizer returns two key outputs: the optimized prompt instructions (which may be significantly different from your original prompt) and the selected few-shot examples that were found to maximize performance. You can then use these in your production task for improved accuracy.
 
 ## Evaluation Metrics
 
@@ -158,6 +194,12 @@ Optimizer(
 - Check that examples have correct labels/annotations
 - Try different `val_frac` values (0.2-0.3 range)
 - Increase `num_trials` for more thorough search
+
+## Related Guides
+
+- **[Custom Tasks](custom_tasks.md)** - Create custom tasks that can also be optimized
+- **[Task Distillation](distillation.md)** - After optimizing, distill to faster models for production
+- **[Serialization](serialization.md)** - Save optimized prompts and examples for reuse
 
 ## Further Reading
 

@@ -23,14 +23,47 @@ Distillation is valuable when:
 > [!NOTE]
 > Currently, only the **Classification** task has full distillation support via `task.distill()`. Other tasks implement `to_hf_dataset()` for exporting results to Hugging Face datasets, allowing custom training workflows.
 
-## Supported Frameworks
+## Choosing a Distillation Framework
 
-`sieves` supports two distillation frameworks:
+`sieves` supports two distillation frameworks, each optimized for different scenarios:
 
-| Framework | Description | Best For |
-|-----------|-------------|----------|
-| **SetFit** | Few-shot learning with sentence transformers | General-purpose classification with limited data |
-| **Model2Vec** | Static embeddings with lightweight classifiers | Extremely fast inference, minimal memory footprint |
+### Use SetFit when:
+
+✅ **You need good accuracy with limited data** (50-500 examples)
+✅ **Inference speed is important but not critical** (10-100x faster than LLM)
+✅ **You can afford ~1GB model size**
+✅ **Your task is classification** (single-label or multi-label)
+✅ **You want mature, well-tested framework** (built on sentence-transformers)
+
+**Typical performance**: ~80-95% of teacher model accuracy, 50-100x faster inference
+
+### Use Model2Vec when:
+
+✅ **Inference speed is critical** (need 100x+ faster than LLM)
+✅ **Memory is constrained** (<100MB models preferred)
+✅ **You have sufficient training data** (500+ examples recommended)
+✅ **Slight accuracy loss is acceptable** (5-15% drop from teacher)
+✅ **You need extreme efficiency** (CPU-only deployment, edge devices)
+
+**Typical performance**: ~70-85% of teacher model accuracy, 200-500x faster inference
+
+### When to skip distillation:
+
+❌ **You have <50 training examples per class** - Not enough data for reliable student model
+❌ **Inference speed isn't a bottleneck** - Just use the teacher model directly
+❌ **Model accuracy is paramount** - Teacher model will always be more accurate
+❌ **Teacher model is already small** - Distillation overhead may not be worth it
+
+### Quick Comparison Table
+
+| Aspect | SetFit | Model2Vec |
+|--------|--------|-----------|
+| **Min data** | 50-100 examples | 500+ examples |
+| **Accuracy retention** | 80-95% | 70-85% |
+| **Speed vs LLM** | 50-100x | 200-500x |
+| **Model size** | ~400MB-1GB | ~50MB-100MB |
+| **Training time** | Minutes | Seconds |
+| **Best for** | General classification | Extreme speed/efficiency |
 
 ## Quick Example
 
@@ -38,49 +71,53 @@ Here's a step-by-step guide to distilling a classification task using SetFit.
 
 ### 1. Import Dependencies
 
-Import the required modules:
+Start by importing the required modules for distillation:
 
 ```python
 --8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-imports"
 ```
 
+These imports provide the task classes, distillation framework, and SetFit model loader needed for the complete distillation workflow.
+
 ### 2. Prepare Training Data
 
-Create labeled documents (at least 3 examples per label for SetFit):
+With our dependencies ready, let's create labeled training documents. SetFit requires at least 3 examples per label, but more examples (50-100+) will produce better results:
 
 ```python
 --8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-data"
 ```
 
+Each document includes the text and a ground truth label in its metadata. These will be used to train the student model to replicate the teacher's behavior.
+
 ### 3. Generate Predictions with Teacher Model
 
-Define a teacher task and process documents to generate predictions:
+Now we'll use a large, powerful teacher model to generate predictions for our training data. These predictions will serve as the training labels for our smaller student model:
 
 ```python
 --8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-teacher"
 ```
 
-The teacher model's predictions will be used as training labels for the student model.
+The teacher processes all documents and stores its predictions in `doc.results`. These predictions capture the teacher's "knowledge" about how to classify these texts.
 
 ### 4. Run Distillation
 
-Distill the teacher's knowledge into a smaller, faster model:
+With labeled data from the teacher model, we can now distill this knowledge into a smaller, faster SetFit model. The distillation process will fine-tune a lightweight sentence transformer to replicate the teacher's classification behavior:
 
 ```python
 --8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-distill"
 ```
 
-This trains a lightweight SetFit model that mimics the teacher's behavior.
+During distillation, SetFit learns to map text to the same classification decisions as the teacher, but using a much smaller model. The process splits data into train/validation sets (70%/30% here) and trains for the specified number of epochs. The resulting model will be 10-100x faster than the teacher with minimal accuracy loss.
 
 ### 5. Load and Use the Distilled Model
 
-Load the distilled model and use it for inference:
+Once distillation completes, we can load the student model and use it for fast inference:
 
 ```python
 --8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-load"
 ```
 
-The distilled model is now ready for production use with faster inference and lower resource requirements.
+The distilled model is now ready for production use! It provides much faster inference than the teacher model while maintaining most of its accuracy. You can deploy this model anywhere the SetFit library is available.
 
 ## Distillation Parameters
 
@@ -251,6 +288,15 @@ output_path/
 
 > [!IMPORTANT]
 > For tasks without `task.distill()` support, use `to_hf_dataset()` to export results, then train with your preferred framework. All tasks except Translation support dataset export.
+
+## Related Guides
+
+- **[Task Optimization](optimization.md)** - Optimize tasks before distillation for best student model performance
+- **[Custom Tasks](custom_tasks.md)** - Distillation works with custom tasks too (via `to_hf_dataset()`)
+- **[Serialization](serialization.md)** - Save distilled model paths in pipeline configurations
+
+!!! tip "Best Practice: Optimize Then Distill"
+    For best results, [optimize your task](optimization.md) first to improve the teacher model's accuracy, then distill. A better teacher produces a better student model.
 
 ## Further Reading
 

@@ -125,57 +125,25 @@ Our bridge now handles the complete workflow: prompting the model, parsing struc
 
 ### 2. Build a `SentimentAnalysisTask`
 
-The task class wraps the bridge and provides engine-agnostic functionality. It handles bridge instantiation, few-shot examples, and dataset export. We'll save this in `sentiment_analysis_task.py`.
+The task class wraps the bridge from Section 1 and provides engine-agnostic functionality. It handles bridge instantiation, few-shot examples, and dataset export. We'll save this in `sentiment_analysis_task.py`.
 
-Since the task needs a working bridge, we'll include the complete implementation here (the bridge from section 1 plus the task wrapper).
+!!! note "Bridge Implementation"
+    In a real project, you'd import the bridge from a separate module:
+    ```python
+    from sentiment_analysis_bridges import OutlinesSentimentAnalysis
+    ```
+
+    For this guide's test to be self-contained, the complete code includes both the bridge and task implementation. Below, we show only the task-specific code that's new in this section.
 
 #### Import Task Dependencies
 
-Start with the core imports needed for the task:
+Start with the core imports needed for the task wrapper:
 
 ```python
 --8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-imports"
 ```
 
-#### Define the Output Schema
-
-Define the sentiment estimation schema:
-
-```python
---8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-schema"
-```
-
-#### Include the Bridge Implementation
-
-Import additional dependencies for the bridge:
-
-```python
---8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-imports"
-```
-
-Define the bridge class (as shown in section 1):
-
-```python
---8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-class"
-```
-
-With its prompt template:
-
-```python
---8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-prompt"
-```
-
-Bridge properties:
-
-```python
---8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-properties"
-```
-
-And bridge methods for integration and consolidation:
-
-```python
---8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-bridge-methods"
-```
+These imports provide the base classes and types needed to create a predictive task wrapper.
 
 #### Define Few-Shot Example Schema
 
@@ -222,3 +190,107 @@ We can now use our sentiment analysis task like every built-in task:
 ```python
 --8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-usage"
 ```
+
+## Troubleshooting
+
+### Common Issues
+
+#### Results not appearing in `doc.results`
+
+**Symptom**: After running your task, `doc.results[task_id]` is empty or missing.
+
+**Possible causes**:
+1. **`integrate()` not called correctly**: Ensure your bridge's `integrate()` method stores results in `doc.results[self._task_id]`
+2. **Incorrect task_id**: Verify you're using the correct task ID (check `task._task_id`)
+3. **Engine returning None**: The engine may be returning None results (e.g., due to generation errors in permissive mode)
+
+**Debug steps**:
+```python
+# Add debug logging to your integrate() method
+def integrate(self, results, docs):
+    for doc, result in zip(docs, results):
+        if result is None:
+            print(f"WARNING: Got None result for doc: {doc.text[:50]}")
+        else:
+            print(f"Storing result: {result} for task {self._task_id}")
+            doc.results[self._task_id] = result
+    return docs
+```
+
+#### Type errors in `consolidate()`
+
+**Symptom**: `TypeError` or `AttributeError` in the consolidate method.
+
+**Possible causes**:
+1. **Mismatched types**: Results from integrate() don't match the type expected in consolidate()
+2. **None results not handled**: Some results may be None (from engine errors)
+3. **Incorrect doc_offsets slicing**: Check that you're using `results[doc_offset[0]:doc_offset[1]]` correctly
+
+**Solution**:
+```python
+def consolidate(self, results, docs_offsets):
+    results = list(results)
+    for doc_offset in docs_offsets:
+        chunk_results = results[doc_offset[0]:doc_offset[1]]
+        # Filter out None results
+        valid_results = [r for r in chunk_results if r is not None]
+
+        if not valid_results:
+            # No valid results for this document
+            yield None
+            continue
+
+        # Your consolidation logic here
+        ...
+```
+
+#### "Engine type X is not supported" error
+
+**Cause**: You're trying to use an engine that your bridge doesn't support.
+
+**Solution**: Either:
+1. Implement a bridge for that engine type
+2. Use a supported engine (check `task.supports`)
+3. Update `_init_bridge()` to handle the engine type
+
+```python
+# Check supported engines before creating task
+from sieves.engines import EngineType
+print(f"Supported engines: {task.supports}")  # e.g., {EngineType.outlines}
+```
+
+#### Prompt template not rendering correctly
+
+**Symptom**: Model outputs are unexpected or malformed.
+
+**Debug steps**:
+1. **Check Jinja2 syntax**: Ensure your template variables are correct
+2. **Validate few-shot examples**: Ensure examples match your template's expected structure
+3. **Print the rendered prompt**: Add debug logging to see what's actually sent to the model
+
+```python
+# In your bridge, add this to see the rendered prompt:
+@cached_property
+def _prompt_template(self) -> str:
+    template = """..."""
+    print(f"Template: {template}")
+    return template
+```
+
+### Best Practices
+
+1. **Start simple**: Begin with a basic bridge, test it, then add complexity
+2. **Test consolidate() separately**: Write unit tests with mock data to verify consolidation logic
+3. **Handle None results**: Always check for None in integrate() and consolidate()
+4. **Use type hints**: Proper typing helps catch errors early
+5. **Add assertions**: Use `assert isinstance(result, YourType)` to catch type mismatches
+6. **Log generously**: Add debug logging during development to track data flow
+
+## Related Guides
+
+- **[Task Optimization](optimization.md)** - Optimize your custom tasks for better performance
+- **[Task Distillation](distillation.md)** - Distill custom tasks using `to_hf_dataset()`
+- **[Serialization](serialization.md)** - Save custom tasks (requires providing init_params for complex objects)
+
+!!! tip "Custom Task Serialization"
+    When [saving pipelines with custom tasks](serialization.md), you'll need to provide initialization parameters for any complex objects (models, tokenizers, etc.) in `init_params` during load.

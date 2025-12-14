@@ -103,3 +103,123 @@ The configuration file contains:
       - Model weights are not saved in the configuration files
       - Complex third-party objects (everything beyond primitives or collections thereof) may not be serializable
       - API keys and credentials must be managed separately
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Missing required placeholder" error during load
+
+**Symptom**: `KeyError` or error about missing placeholders when loading a pipeline.
+
+**Cause**: You didn't provide initialization parameters for all placeholders in the saved configuration.
+
+**Solution**: Check the YAML file to see which parameters are marked as placeholders:
+
+```python
+# Read the config to see what placeholders exist
+import yaml
+with open("pipeline.yml", "r") as f:
+    config = yaml.safe_load(f)
+    print(config)  # Look for "is_placeholder: true" entries
+```
+
+Provide `init_params` for each task that has placeholders:
+
+```python
+loaded_pipeline = Pipeline.load(
+    "pipeline.yml",
+    [
+        {"model": your_model},           # Task 0 placeholders
+        {"tokenizer": your_tokenizer},   # Task 1 placeholders
+    ]
+)
+```
+
+#### Version compatibility warnings
+
+**Symptom**: Warning about sieves version mismatch when loading pipelines.
+
+**Cause**: The pipeline was saved with a different version of sieves than you're currently using.
+
+**Impact**:
+- Minor version differences (0.11.1 vs 0.11.2): Usually safe
+- Major version differences (0.11.x vs 0.12.x): May have breaking changes
+
+**Solution**:
+```bash
+# Install the version that was used to create the pipeline
+pip install sieves==0.11.1  # Match the version in the YAML
+
+# Or: Update the pipeline by re-saving it with the current version
+pipeline.dump("pipeline_updated.yml")
+```
+
+#### Serialization fails for custom objects
+
+**Symptom**: Error when calling `pipeline.dump()` with custom tasks or parameters.
+
+**Cause**: Custom objects that aren't primitive types (str, int, float, bool, list, dict) can't be automatically serialized.
+
+**Solution**: Mark these as placeholders by ensuring they're provided during pipeline creation, then supply them again during load:
+
+```python
+# When creating the pipeline
+custom_task = MyCustomTask(complex_object=my_object)
+pipeline = Pipeline([custom_task])
+pipeline.dump("pipeline.yml")  # complex_object becomes a placeholder
+
+# When loading
+loaded = Pipeline.load("pipeline.yml", [{"complex_object": my_object}])
+```
+
+#### Model weights not loading
+
+**Symptom**: Loaded pipeline doesn't have model weights.
+
+**Cause**: sieves doesn't save model weights in configuration files (they're too large).
+
+**Solution**: Always provide fresh model instances in `init_params`:
+
+```python
+# Load the model separately (weights will be downloaded/loaded)
+model = outlines.models.transformers(
+    "HuggingFaceTB/SmolLM-135M-Instruct"
+)
+
+# Then load the pipeline with the model
+loaded = Pipeline.load("pipeline.yml", [{"model": model}])
+```
+
+#### Task ID mismatches after loading
+
+**Symptom**: Results are stored under different keys than expected.
+
+**Cause**: Task IDs changed between save and load.
+
+**Solution**: Specify explicit task IDs when creating tasks:
+
+```python
+# When creating
+classifier = tasks.Classification(
+    labels=["science", "politics"],
+    model=model,
+    task_id="my_classifier"  # Explicit ID
+)
+
+# The results will always be in doc.results["my_classifier"]
+```
+
+### Best Practices
+
+1. **Version control configurations**: Store YAML files in git alongside code
+2. **Document init_params**: Add comments explaining what placeholders need
+3. **Test load immediately**: After saving, try loading to catch serialization issues
+4. **Separate model loading**: Keep model initialization code separate from pipeline config
+5. **Use version pinning**: Pin sieves version in requirements.txt for reproducibility
+
+## Related Guides
+
+- **[Custom Tasks](custom_tasks.md)** - Custom tasks often require init_params during load
+- **[Task Optimization](optimization.md)** - Save optimized prompts in pipeline configs
+- **[Task Distillation](distillation.md)** - Save distilled model paths in configurations
