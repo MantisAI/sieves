@@ -201,8 +201,30 @@ Optimizer(
 - **[Task Distillation](distillation.md)** - After optimizing, distill to faster models for production
 - **[Serialization](serialization.md)** - Save optimized prompts and examples for reuse
 
-## Further Reading
+## Learning More About Optimization
 
-- [DSPy MIPROv2 Documentation](https://dspy-docs.vercel.app/api/optimizers/MIPROv2)
-- [DSPy Optimization Guide](https://dspy-docs.vercel.app/docs/building-blocks/optimizers)
-- [Task-specific documentation](../tasks/predictive/classification.md) for details on each task's evaluation metric
+Sieves optimization is built on [DSPy's MIPROv2 optimizer](https://dspy-docs.vercel.app/api/optimizers/MIPROv2). For in-depth guidance on optimization techniques, training data quality, and interpreting results, we recommend exploring these external resources:
+
+### Understanding MIPROv2
+
+- 📖 **[MIPROv2 API Reference](https://dspy-docs.vercel.app/api/optimizers/MIPROv2)** - Core concepts, parameters, and API documentation
+- 📖 **[DSPy Optimizers Overview](https://dspy-docs.vercel.app/docs/building-blocks/optimizers)** - Comprehensive guide to DSPy's optimization framework
+- 🎓 **[DSPy Optimization Tutorial](https://dspy-docs.vercel.app/docs/tutorials)** - Step-by-step walkthroughs and examples
+
+### Best Practices & Advanced Topics
+
+- 📊 **Training Data Quality** - What makes good training data for optimization (see [DSPy documentation](https://dspy-docs.vercel.app/docs/building-blocks/optimizers#preparing-data))
+- 🔍 **Interpreting Results** - Understanding optimizer outputs and evaluating improvements (covered in [DSPy guides](https://dspy-docs.vercel.app/docs/building-blocks/optimizers))
+- ⚙️ **Hyperparameter Tuning** - Adjusting `num_trials`, `num_candidates`, and other optimizer settings for better results
+- 🎯 **Evaluation Metrics** - Choosing the right metrics for your task (see Evaluation Metrics section above)
+
+### Sieves-Specific Integration
+
+The main differences when using optimization in Sieves:
+
+- **Simplified API**: Use `task.optimize(optimizer)` instead of calling DSPy optimizers directly
+- **Automatic integration**: Optimized prompts and few-shot examples are automatically integrated into the task
+- **Task compatibility**: Works with all `PredictiveTask` subclasses (Classification, NER, InformationExtraction, etc.)
+- **Full parameter access**: All DSPy optimizer parameters are available via the `Optimizer` class constructor
+
+For questions specific to Sieves optimization integration, see the [Troubleshooting](#troubleshooting) section above or consult the [task-specific documentation](../tasks/predictive/classification.md) for evaluation metrics.

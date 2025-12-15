@@ -12,6 +12,83 @@ Distillation in `sieves`:
 
 The typical workflow is: run a task with a zero-shot LLM → export results → distill to a smaller model → deploy the distilled model for production inference.
 
+## Distillation Workflow
+
+Here's how distillation works in `sieves`:
+
+```
+┌────────────────────────────────────────────────────┐
+│              DISTILLATION WORKFLOW                  │
+└────────────────────────────────────────────────────┘
+
+Step 1: Zero-Shot Inference with Teacher Model
+┌────────────────────┐
+│   Teacher Model    │  (Large, expensive, accurate)
+│ (GPT-4, Claude,    │
+│  Llama 70B, etc.)  │
+└─────────┬──────────┘
+          │
+          │ Inference: Classify/Extract/Analyze
+          │
+          ▼
+   ┌──────────────────────┐
+   │ Training Documents   │
+   │ with Model Outputs   │
+   │                      │
+   │ Doc 1: "AI news"     │
+   │   → label: "tech"    │
+   │ Doc 2: "Election"    │
+   │   → label: "politics"│
+   │ ...                  │
+   └──────────┬───────────┘
+              │
+              │ Export to HuggingFace Dataset
+              │
+              ▼
+
+Step 2: Fine-Tuning Student Model
+┌────────────────────────────┐
+│   HuggingFace Dataset      │
+│ (Text + Teacher Labels)    │
+└─────────┬──────────────────┘
+          │
+          │ Fine-tune with SetFit/Model2Vec
+          │
+          ▼
+   ┌────────────────────┐
+   │  Student Model     │  (Small, fast, specialized)
+   │ (SetFit/Model2Vec) │
+   └─────────┬──────────┘
+             │
+             │ Inference: Same task, 10-100x faster
+             │
+             ▼
+   ┌────────────────────┐
+   │  Production Use    │
+   │ (Fast predictions) │
+   └────────────────────┘
+```
+
+### Performance Characteristics
+
+| Metric | Teacher (LLM) | SetFit Student | Model2Vec Student |
+|--------|---------------|----------------|-------------------|
+| **Inference Speed** | 1x (baseline) | 50-100x faster | 200-500x faster |
+| **Typical Accuracy** | 100% (baseline) | 80-95% retained | 70-85% retained |
+| **Model Size** | 10-100GB | 400MB-1GB | 50-100MB |
+| **Training Time** | N/A | Minutes | Seconds |
+| **Cost per 1K docs** | $5-50 | $0.01-0.10 | <$0.01 |
+
+### Why Distillation Works
+
+1. **Teacher provides rich supervision**: The zero-shot model's predictions capture nuanced patterns and edge cases that would be hard to label manually.
+
+2. **Student learns task-specific patterns**: Fine-tuning focuses the smaller model on your exact task, rather than general-purpose language understanding.
+
+3. **Knowledge compression**: The essential decision boundaries are captured in a much smaller parameter space.
+
+4. **Task specialization beats general capability**: A 100M parameter model fine-tuned for sentiment analysis can outperform a 7B parameter general model on that specific task.
+
 ## When to Use Distillation
 
 Distillation is valuable when:

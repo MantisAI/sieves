@@ -122,32 +122,38 @@ def test_custom_bridge_example():
         # --8<-- [end:custom-bridge-sentiment-integrate]
 
         # --8<-- [start:custom-bridge-sentiment-consolidate]
-        # Consolidating multiple chunks for sentiment analysis can be pretty straightforward: we compute the average over
-        # all chunks and assume this to be the sentiment score for the doc.
+        # Consolidating multiple chunks for sentiment analysis: we compute the average score over
+        # all chunks and assume this to be the sentiment score for the entire document.
         def consolidate(
             self, results: Iterable[SentimentEstimate], docs_offsets: list[tuple[int, int]]
         ) -> Iterable[SentimentEstimate]:
             results = list(results)
 
-            # Iterate over indices that determine which chunks belong to which documents.
+            # docs_offsets contains (start, end) tuples indicating which result indices belong to which document.
+            # Example: [(0, 3), (3, 5)] means doc1 uses results[0:3], doc2 uses results[3:5]
+            # This mapping is necessary because long documents are split into multiple chunks for processing.
             for doc_offset in docs_offsets:
-                # Keep track of all reasonings and the total score.
+                # Accumulate reasonings and scores from all chunks of this document
                 reasonings: list[str] = []
                 scores = 0.
 
-                # Iterate over chunks' results.
+                # Process each chunk's result for this document
                 for chunk_result in results[doc_offset[0] : doc_offset[1]]:
-                    # Engines may return None results if they encounter errors and run in permissive mode. We ignore such
-                    # results.
+                    # Engines may return None results if they encounter errors in permissive mode.
+                    # Skip None results to avoid crashes while still processing valid chunks.
                     if chunk_result:
                         assert isinstance(chunk_result, SentimentEstimate)
                         reasonings.append(chunk_result.reasoning)
                         scores += chunk_result.score
 
+                # Calculate how many chunks this document has
+                num_chunks = doc_offset[1] - doc_offset[0]
+
                 yield SentimentEstimate(
-                   # Average the score.
-                   score=scores / (doc_offset[1] - doc_offset[0]),
-                   # Concatenate all reasonings.
+                   # Average the sentiment score across all chunks of this document
+                   score=scores / num_chunks,
+                   # Concatenate all chunk reasonings into a single string for the document
+                   # (in production, you might want more sophisticated reasoning aggregation)
                    reasoning=str(reasonings)
                 )
         # --8<-- [end:custom-bridge-sentiment-consolidate]

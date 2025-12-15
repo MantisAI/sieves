@@ -38,6 +38,161 @@ few-shot examples are expected to look like, which prompt to use etc.
 We'll break down how to create a predictive task step by step. For this example, let's implement a sentiment analysis
 task using `outlines`.
 
+## Understanding the Architecture
+
+Before diving into implementation, let's understand why `sieves` uses the Bridge pattern and how components fit together.
+
+### The Problem: Engine Diversity
+
+Different NLP frameworks have vastly different APIs:
+
+- **Outlines**: Uses Jinja2 templates + JSON schemas for structured generation
+- **DSPy**: Uses signatures + optimizers with Python-native schemas
+- **Transformers**: Uses `pipeline()` API with classification/generation modes
+- **LangChain**: Uses chains + prompts with custom parsers
+
+Without abstraction, each task would need separate implementations for each engine - a maintenance nightmare as the library grows.
+
+### The Solution: Bridge Pattern
+
+The Bridge pattern decouples task logic (what to compute) from engine-specific implementation (how to compute):
+
+```
+┌─────────────────────────────────────────────────────┐
+│                     Pipeline                        │
+│  (Orchestration: caching, batching, serialization)  │
+└──────────────────────┬──────────────────────────────┘
+                       │
+                       ▼
+            ┌──────────────────────┐
+            │        Task          │ ◄── User-facing API
+            │  (What to compute)   │     Classification, NER, etc.
+            └──────────┬───────────┘
+                       │
+                       ▼
+            ┌──────────────────────┐
+            │       Bridge         │ ◄── Engine-specific adapter
+            │  (How to compute)    │     DSPyClassification, OutlinesNER
+            └──────────┬───────────┘
+                       │
+                       ▼
+            ┌──────────────────────┐
+            │       Engine         │ ◄── Internal inference handler
+            │  (Inference logic)   │     Auto-detected from model type
+            └──────────┬───────────┘
+                       │
+                       ▼
+            ┌──────────────────────┐
+            │        Model         │ ◄── User-provided
+            │   (Neural network)   │     Any supported model
+            └──────────────────────┘
+```
+
+### Responsibilities
+
+Each layer has clear, focused responsibilities:
+
+**Task** (User creates this for custom functionality):
+
+- Defines **what** problem to solve (e.g., "classify text into sentiment categories")
+- Provides task-specific configuration (labels, entity types, prompt instructions)
+- Manages few-shot examples for in-context learning
+- Handles optimization (prompt tuning) and distillation (model compression)
+- **Engine-agnostic**: Same task API works with any backend (DSPy, Outlines, etc.)
+
+**Bridge** (User implements this for custom tasks):
+
+- Defines **how** to solve the problem for a specific engine
+- Creates prompts (Jinja2 templates for Outlines, signatures for DSPy)
+- Parses model outputs into structured results (Pydantic models)
+- Integrates results into documents (`integrate()` method)
+- Consolidates multi-chunk results into document-level results (`consolidate()` method)
+- **Engine-specific**: Each engine needs its own Bridge implementation
+
+**Engine** (Internal, automatically detected):
+
+- Handles low-level inference mechanics (batching, generation, error handling)
+- Manages model calls and streaming
+- Applies generation settings (temperature, max_tokens, top_p)
+- **Users never interact with this directly** - it's an implementation detail
+
+### Key Methods: integrate() vs consolidate()
+
+These two methods serve different but complementary purposes in the processing pipeline:
+
+**integrate()** - Stores raw results immediately after inference:
+
+```python
+def integrate(self, results, docs):
+    # Called once per batch of chunks
+    # results = [Result1, Result2, Result3]  # One per chunk
+    # docs = [Chunk1, Chunk2, Chunk3]        # Corresponding chunks
+
+    for doc, result in zip(docs, results):
+        doc.results[self._task_id] = result.score  # Store per-chunk
+    return docs
+```
+
+**consolidate()** - Merges chunk-level results into document-level results:
+
+```python
+def consolidate(self, results, docs_offsets):
+    # Called after integrate(), once per original document
+    # results = [Result1, Result2, Result3]    # All chunk results
+    # docs_offsets = [(0, 2), (2, 3)]          # Chunk ranges per doc
+
+    for start, end in docs_offsets:
+        chunk_results = results[start:end]     # Get chunks for this doc
+        avg_score = sum(r.score for r in chunk_results) / len(chunk_results)
+        yield ConsolidatedResult(score=avg_score)  # One result per document
+```
+
+**Why separate methods?**
+
+- Documents may exceed model context limits (e.g., 100-page PDFs vs 8K token limit)
+- Sieves automatically splits long documents into chunks for processing
+- `integrate()` handles per-chunk results (stores immediately, no processing)
+- `consolidate()` aggregates chunks back into per-document results (averaging, voting, etc.)
+
+### When to Create Custom Tasks
+
+Use built-in tasks (`Classification`, `NER`, `InformationExtraction`, etc.) whenever possible. Only create custom tasks when:
+
+✅ **Novel task type**: Your task doesn't fit any existing task (e.g., custom scoring, specialized extraction)
+
+✅ **Custom output schema**: You need a specific, complex result structure beyond simple labels or entities
+
+✅ **Specialized consolidation**: Your task requires unique logic for merging multi-chunk results (e.g., weighted averaging, consensus voting)
+
+✅ **Research/experimentation**: You're prototyping new NLP approaches or evaluation methods
+
+**Don't create custom tasks for:**
+
+❌ **Different prompts**: Use `prompt_instructions` parameter on built-in tasks instead
+
+❌ **Different labels**: Use task configuration (e.g., `labels` parameter in `Classification`)
+
+❌ **Different models**: Just pass a different model instance to the existing task
+
+**Example - When you DON'T need a custom task:**
+
+```python
+# ❌ Bad: Creating entire custom task just to change the prompt
+class MyCustomClassifier(Classification):
+    # 100+ lines of bridge implementation...
+    pass
+
+# ✅ Good: Use built-in task with custom prompt
+task = Classification(
+    labels=["positive", "negative", "neutral"],
+    model=model,
+    prompt_instructions="Analyze the text's sentiment carefully, "
+                        "considering both explicit and implicit cues..."  # Custom!
+)
+```
+
+Now let's implement a custom task that actually needs custom logic: sentiment analysis with continuous scoring and reasoning.
+
 ### 1. Implement a `Bridge`
 
 A `Bridge` defines how to solve a task for a certain engine. We decided to go with `outlines` as our engine (you can
