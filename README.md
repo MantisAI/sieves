@@ -74,9 +74,9 @@ print(results[0].results)  # "technology"
   <summary><b>Advanced Example: Information Extraction from PDFs</b></summary>
 
 This example shows how to extract structured information from a scientific paper as PDF using
-- a remote model via DSPy and OpenRouter
+- a remote LLM with DSPy via OpenRouter
 - chunking
-- the `InformationExtraction` task
+- the `sieves.tasks.InformationExtraction` task
 
 We're using this setup to extract mathematical equations from the paper.
 ```python
@@ -208,7 +208,6 @@ Inspired by [spaCy](https://spacy.io/) and [spacy-llm](https://github.com/explos
 | **Prompt optimization**    | ✅ DSPy wrapper | ❌ No         | ✅ Core feature | ❌ No           | ❌ No         |
 | **Model distillation**     | ✅ SetFit/M2V   | ❌ No         | ✅ Yes          | ❌ No           | ⚠️ Manual    |
 | **Learning curve**         | Low            | Medium       | High           | Low            | Low          |
-| **Best for**               | Prototyping    | Production   | Research       | Structured gen | General ML   |
 
 **When to choose sieves:**
 
@@ -253,7 +252,6 @@ model = dspy.LM(
     api_key=os.environ["ANTHROPIC_API_KEY"]
 )
 ```
----
 
 #### Outlines
 
@@ -270,8 +268,6 @@ model = outlines.models.from_transformers(
 )
 ```
 
----
-
 #### Transformers (Zero-Shot Classification Pipelines)
 
 See [docs](https://huggingface.co/tasks/zero-shot-classification).
@@ -286,8 +282,6 @@ model = transformers.pipeline(
 )
 ```
 
----
-
 #### LangChain
 
 See [docs](https://docs.langchain.com/). E.g. with an OpenAI model:
@@ -301,7 +295,6 @@ model = ChatOpenAI(
     temperature=0
 )
 ```
----
 
 #### GLiNER2
 
