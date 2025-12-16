@@ -23,8 +23,7 @@
 
 ## Zero-shot document processing made easy.
 
-`sieves` is a library for zero-shot document AI with structured generation.
-It supports you to build document AI pipelines quickly, with validated output formats. No training required.
+`sieves` is a library for zero-shot document AI with structured generation. It facilitates building document AI pipelines quickly, with validated output. No training required.
 
 Read our documentation at [sieves.ai](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
 
