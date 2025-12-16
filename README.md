@@ -169,17 +169,18 @@ pip install "sieves[ingestion]"  # PDF/DOCX parsing (docling, marker)
 pip install "sieves[distill]"     # Model distillation (setfit, model2vec)
 ```
 
-> ⚠️ **Important**: sieves requires Python 3.12.x (not 3.13+). Some dependencies like `pyarrow`
+> ⚠️ **Important**: sieves requires Python 3.12.x. This is because some dependencies like `pyarrow`
 > don't have prebuilt wheels for Python 3.13+ yet, which would require manual compilation.
 > Support for newer Python libraries is on the roadmap.
 
 ## Why `sieves`?
 
-**The challenge**: Building NLP prototypes with LLMs means juggling multiple tools - one for
+Building document AI prototypes means juggling multiple tools: one for
 structured output, another for parsing, one for chunking, another for optimization. There are many options for structured output,
-each with its own pros and cons - and very different APIs.
+each with its own pros and cons - and very different APIs. This can be arduous when what you're actually want to focus on
+is to hit the ground running and build a prototype quickly.
 
-**The solution**: `sieves` provides a unified pipeline for the entire workflow, from document
+To address this, `sieves` provides a unified pipeline for the entire workflow, from document
 ingestion to model distillation, with validated structured outputs across multiple backends.
 
 **Best for:**
@@ -224,6 +225,16 @@ Inspired by [spaCy](https://spacy.io/) and [spacy-llm](https://github.com/explos
 - **DSPy**: Research projects requiring custom optimization algorithms
 - **Outlines**: Simple structured generation without pipeline needs
 - **Transformers**: Maximum flexibility and fine-grained control
+
+## Core Concepts
+
+sieves is built on three key abstractions:
+
+- **`Doc`**: Represents a document with text, metadata, and processing results
+- **`Task`**: A processing step (classification, extraction, summarization, etc.)
+- **`Pipeline`**: Orchestrates tasks with caching, serialization, and observability
+
+[→ Read the architecture guide](https://sieves.ai/guides/custom_tasks#understanding-the-architecture) for details on bridges, engines, and internals.
 
 ## Supported Models
 
@@ -306,31 +317,19 @@ model = gliner2.GLiNER2.from_pretrained("fastino/gliner2-base-v1")
 
 See the [Model Setup Guide](https://sieves.ai/guides/models) for more details and troubleshooting.
 
-## Core Concepts
-
-sieves is built on three key abstractions:
-
-- **`Doc`**: Represents a document with text, metadata, and processing results
-- **`Task`**: A processing step (classification, extraction, summarization, etc.)
-- **`Pipeline`**: Orchestrates tasks with caching, serialization, and observability
-
-[→ Read the architecture guide](https://sieves.ai/guides/custom_tasks#understanding-the-architecture) for details on bridges, engines, and internals.
-
 ## Get Started
 
 <div align="center">
 
-📖 **[Read the guides →](https://sieves.ai/guides/getting_started)**
+📖 **[Read the guides](https://sieves.ai/guides/getting_started)**<br>
 Start with the 5-minute tutorial
 
-🎯 **[Browse examples →](https://sieves.ai/examples)**
-Real-world use cases and patterns
+🎯 **[Browse examples](https://sieves.ai/examples)**<br>
+Explore what you can do with Sieves
 
-🤝 **[Join discussions →](https://github.com/mantisai/sieves/discussions)**
+🤝 **[Join discussions](https://github.com/mantisai/sieves/discussions)**<br>
 Ask questions, share projects
 
-⭐ **[Star on GitHub](https://github.com/mantisai/sieves)**
-Stay updated with new features
 
 </div>
 
