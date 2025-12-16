@@ -135,6 +135,8 @@ See [Ingestion Guide](https://sieves.ai/guides/ingestion) for more PDF parsing o
 
 </details>
 
+---
+
 ### Key Features
 
 **Zero-shot NLP, ready to use**
@@ -174,20 +176,22 @@ pip install "sieves[distill]"     # Model distillation (setfit, model2vec)
 ## Why `sieves`?
 
 **The challenge**: Building NLP prototypes with LLMs means juggling multiple tools - one for
-structured output, another for parsing, another for optimization. There are many options for structured output,
+structured output, another for parsing, one for chunking, another for optimization. There are many options for structured output,
 each with its own pros and cons - and very different APIs.
 
-**The solution**: sieves provides a unified pipeline for the entire workflow, from document
+**The solution**: `sieves` provides a unified pipeline for the entire workflow, from document
 ingestion to model distillation, with validated structured outputs across multiple backends.
 
 **Best for:**
 
+- ✅ Use case: document AI/processing
 - ✅ Rapid prototyping with zero training
 - ✅ Switching between language model backends without rewriting code
 - ✅ Building document AI pipelines with observability
 
 **Not for:**
 
+- ❌ Use case: chat bot, RAG
 - ❌ Applications deeply coupled to LangChain/DSPy ecosystems
 - ❌ Simple one-off LLM calls without pipeline needs
 
@@ -198,7 +202,6 @@ Inspired by [spaCy](https://spacy.io/) and [spacy-llm](https://github.com/explos
 | Feature                    | sieves         | LangChain    | DSPy           | Outlines       | Transformers |
 |----------------------------|----------------|--------------|----------------|----------------|--------------|
 | **Multi-backend support**  | ✅ All          | ❌ Own only   | ❌ Own only     | ❌ Own only     | ❌ Own only   |
-| **Pipeline system**        | ✅ Observable   | ✅ LCEL       | ❌ No           | ❌ No           | ❌ No         |
 | **Document parsing**       | ✅ Built-in     | ✅ Via tools  | ❌ No           | ❌ No           | ❌ No         |
 | **Structured output**      | ✅ Unified      | ✅ Yes        | ✅ Yes          | ✅ Core feature | ⚠️ Limited   |
 | **Prompt optimization**    | ✅ DSPy wrapper | ❌ No         | ✅ Core feature | ❌ No           | ❌ No         |
@@ -224,7 +227,7 @@ Inspired by [spaCy](https://spacy.io/) and [spacy-llm](https://github.com/explos
 
 ## Supported Models
 
-sieves works with multiple NLP frameworks. Here's how to create models for each:
+`sieves` works with multiple NLP frameworks. Here's how to create models for each:
 
 #### DSPy
 

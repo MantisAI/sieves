@@ -66,9 +66,8 @@ def test_complex_serialization(example_tokenizer, small_outlines_model, tmp_path
 
     # Create a tokenizer for chunking
     tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
-    chunker = tasks.Chunking(
-        chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
-    )
+    chonkie_chunker = chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
+    chunker = tasks.Chunking(chunker=chonkie_chunker)
 
     model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
     model = outlines.models.from_transformers(
@@ -99,7 +98,7 @@ def test_complex_serialization(example_tokenizer, small_outlines_model, tmp_path
     loaded_pipeline = Pipeline.load(
         "extraction_pipeline.yml",
         [
-            {"chunker": chunker},
+            {"chunker": chonkie_chunker},
             {
                 "entity_type": PersonInfo,
                 "model": model
