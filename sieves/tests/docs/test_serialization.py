@@ -99,17 +99,10 @@ def test_complex_serialization(example_tokenizer, small_outlines_model, tmp_path
     loaded_pipeline = Pipeline.load(
         "extraction_pipeline.yml",
         [
-            {"chunker": chonkie.TokenChunker(
-                tokenizers.Tokenizer.from_pretrained("bert-base-uncased"),
-                chunk_size=512,
-                chunk_overlap=50
-            )},
+            {"chunker": chunker},
             {
                 "entity_type": PersonInfo,
-                "model": outlines.models.from_transformers(
-                    AutoModelForCausalLM.from_pretrained(model_name),
-                    AutoTokenizer.from_pretrained(model_name)
-                )
+                "model": model
             },
         ]
     )

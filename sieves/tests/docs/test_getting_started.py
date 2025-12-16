@@ -8,10 +8,19 @@ Usage in markdown:
     --8<-- "sieves/tests/docs/test_getting_started.py:basic-classification"
     ```
 """
+import os
 
+import chonkie
+import dspy
 import pytest
 import outlines
+import pydantic
+from pathlib import Path
+
+import tokenizers
+
 from sieves import Doc, Pipeline, tasks
+from sieves.engines import EngineType
 
 
 def test_basic_classification_example(small_outlines_model):
@@ -33,13 +42,13 @@ def test_basic_classification_example(small_outlines_model):
         AutoTokenizer.from_pretrained(model_name)
     )
 
-    # Create and run the pipeline (verbose init)
-    pipeline = Pipeline([
+    # Create and run the pipeline
+    pipeline = Pipeline(
         tasks.predictive.Classification(
             labels=["science", "politics"],
             model=model,
         )
-    ])
+    )
 
     # Print the classification result
     for doc in pipeline([doc]):
@@ -222,3 +231,80 @@ def test_inference_mode_example(small_outlines_model):
     # Assertions for testing
     assert classifier is not None
     assert classifier._generation_settings.inference_mode == outlines_.InferenceMode.json
+
+
+def test_readme_quick_start_basic(small_outlines_model):
+    """Test the Quick Start Classification example from README."""
+    # Use fixture for actual test
+    model = small_outlines_model
+
+    # --8<-- [start:readme-quick-start]
+    import outlines
+    import transformers
+    from sieves import Pipeline, tasks, Doc
+
+    # Create model and pipeline
+    model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+    model = outlines.models.from_transformers(
+        transformers.AutoModelForCausalLM.from_pretrained(model_name),
+        transformers.AutoTokenizer.from_pretrained(model_name)
+    )
+
+    pipeline = Pipeline(
+        tasks.Classification(
+            labels=["technology", "sports", "politics"],
+            model=model
+        )
+    )
+
+    # Process text
+    doc = Doc(text="The new smartphone features advanced AI capabilities.")
+    results = list(pipeline([doc]))
+    # --8<-- [end:readme-quick-start]
+
+    # Assertions for testing (not shown in docs)
+    assert results[0].results is not None
+    # Verify it returned classification results
+    assert "Classification" in results[0].results
+    classification_result = results[0].results["Classification"]
+    assert classification_result is not None
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("runtime", [EngineType.dspy], indirect=True)
+def test_readme_advanced_example(runtime):
+    """Test the Advanced IE + PDF example from README."""
+    model = runtime.model
+
+    # Define schema for extraction.
+    class Equation(pydantic.BaseModel, frozen=True):
+        id: str = pydantic.Field(description="ID/index of equation in paper.")
+        equation: str = pydantic.Field(description="Equation as shown in paper.")
+
+    # Create model instance using OpenRouter.
+    model = dspy.LM(
+        "openrouter/google/gemini-2.5-flash-lite-preview-09-2025",
+        api_base="https://openrouter.ai/api/v1/",
+        api_key=os.environ["OPENROUTER_API_KEY"]
+    )
+
+    # Create pipeline with PDF ingestion, chunking, and extraction.
+    pipeline = (
+        tasks.Ingestion(export_format="markdown") +
+        tasks.Chunking(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))) +
+        tasks.InformationExtraction(entity_type=Equation, model=model)
+    )
+
+    # Process a paper with equations as PDF.
+    pdf_path = "https://arxiv.org/pdf/1204.0162"
+    doc = Doc(uri=pdf_path)
+    results = list(pipeline([doc]))
+
+    # Access extracted entities.
+    if results[0].results.get("InformationExtraction"):
+        for equation in results[0].results["InformationExtraction"]:
+            print(equation)
+
+    # Assertions for testing (not shown in docs)
+    assert results[0].results is not None
+    assert "InformationExtraction" in results[0].results
