@@ -18,367 +18,364 @@
 ![PyPI - Status](https://img.shields.io/pypi/status/sieves)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
-<a href="https://doi.org/10.5281/zenodo.17342348"><img src="https://zenodo.org/badge/902811666.svg" alt="DOI"></a>
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17633730.svg)](https://doi.org/10.5281/zenodo.17633730)
+
 
 ## Zero-shot document processing made easy.
 
-`sieves` is a library for zero- and few-shot NLP tasks with structured generation. Build production-ready NLP prototypes quickly, with guaranteed output formats and no training required.
+`sieves` is a library for zero-shot document AI with structured generation.
+It supports you to build document AI pipelines quickly, with validated output formats. No training required.
 
-Read our documentation [here](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
-
-<details>
-  <summary><b>Installation</b></summary>
-
-Install `sieves` with `pip install sieves` (or `uv add sieves`).
-
-The following optional extra groups exist:
-- `ingestion` for document parsing libraries (PDF/DOCX conversion), e.g. `docling`, `marker`
-- `distill` for model distillation utilities, e.g. training frameworks like `setfit`, `model2vec`
-
-If you want to install all dependencies including extras:
-```
-pip install "sieves[distill,ingestion]"
-```
-You can also choose to install individual dependencies as you see fit.
-</details>
-
+Read our documentation at [sieves.ai](https://sieves.ai). An automatically generated version (courtesy of Devin via [DeepWiki](https://deepwiki.com/)) is available [here](https://deepwiki.com/MantisAI/sieves).
 
 > [!WARNING]
 > `sieves` is in active development and currently in beta. Be advised that the API might change in between minor version
 > updates.
 
-### Why `sieves`?
+## Quick Start
 
-Even in the era of generative AI, structured outputs and observability remain crucial.
+**1. Install**
+```bash
+pip install sieves
+```
 
-Many real-world scenarios require rapid prototyping with minimal data. Generative language models excel here, but
-producing clean, structured output can be challenging. Various tools address this need for structured/guided language
-model output, including [`outlines`](https://github.com/dottxt-ai/outlines), [`dspy`](https://github.com/stanfordnlp/dspy),
-[`langchain`](https://github.com/langchain-ai/langchain), and others. Each has different design patterns, pros and cons. `sieves` wraps these tools and provides
-a unified interface for input, processing, and output.
-
-Developing NLP prototypes often involves repetitive steps: parsing and chunking documents, exporting results for
-model fine-tuning, and experimenting with different prompting techniques. All these needs are addressed by existing
-libraries in the NLP ecosystem address (e.g. [`docling`](https://github.com/DS4SD/docling) for file parsing, or [`datasets`](https://github.com/huggingface/datasets) for transforming
-data into a unified format for model training).
-
-`sieves`  **simplifies NLP prototyping** by bundling these capabilities into a single library, allowing you to quickly
-build modern NLP applications. It provides:
-- Zero- and few-shot model support for immediate inference
-- A bundle of utilities addressing common requirements in NLP applications
-- A unified interface for structured generation across multiple libraries
-- Built-in tasks for common NLP operations
-- Easy extendability
-- A document-based pipeline architecture for easy observability and debugging
-- Caching - pipelines cache processed documents to prevent costly redundant model calls
-
-`sieves` draws a lot of inspiration from [`spaCy`](https://spacy.io/) and particularly [`spacy-llm`](https://github.com/explosion/spacy-llm).
-
----
-
-### Features
-
-- :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models
-- :robot: **Unified Generation Interface:** Seamlessly use multiple libraries
-  - [`dspy`](https://github.com/stanfordnlp/dspy)
-  - [`gliner2`](https://github.com/fastino-ai/GLiNER2)
-  - [`langchain`](https://github.com/langchain-ai/langchain)
-  - [`outlines`](https://github.com/dottxt-ai/outlines)
-  - [`transformers`](https://github.com/huggingface/transformers)
-- :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring with conditional task execution
-- :hammer_and_wrench: **Integrated Tools:**
-  - Document parsing (optional via `ingestion` extra): [`docling`](https://github.com/DS4SD/docling), [`marker`](https://github.com/VikParuchuri/marker)
-  - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
-- :label: **Ready-to-Use Tasks:**
-  - Multi-label classification
-  - Information extraction
-  - Summarization
-  - Translation
-  - Multi-question answering
-  - Aspect-based sentiment analysis
-  - PII (personally identifiable information) anonymization
-  - Named entity recognition
-  - Coming soon: entity linking, knowledge graph creation, ...
-- :floppy_disk: **Persistence:** Save and load pipelines with configurations
-- :rocket: **Optimization:** Improve task performance by optimizing prompts and few-shot examples using [DSPy's MIPROv2](https://dspy-docs.vercel.app/api/optimizers/MIPROv2)
-- :teacher: **Distillation:** Fine-tune smaller, specialized models using your zero-shot results with frameworks like SetFit and Model2Vec.
-  Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for custom training.
-- :recycle: **Caching** to avoid unnecessary model calls
-
-> [!IMPORTANT]
-> `sieves` requires Python 3.12 (exact version). The project is configured to use `requires-python = "==3.12.*"` in `pyproject.toml`.
-> This is because some dependencies (such as `pyarrow` via `datasets`) don't have prebuilt wheels for Python versions newer than 3.12 yet,
-> which would require manual compilation.
-
----
-
-### Getting Started
-
-Here's a simple classification example using [`outlines`](https://github.com/dottxt-ai/outlines):
+**2. Run this example** - Text classification with local models:
 
 ```python
-from sieves import Pipeline, tasks, Doc
+import outlines
 import transformers
+from sieves import Pipeline, tasks, Doc
 
-# 1. Define documents by text or URI.
-docs = [Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")]
-
-# 2. Choose a model (Outlines in this example).
-model = transformers.pipeline(
-    "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
+# Create model and pipeline
+model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+model = outlines.models.from_transformers(
+    transformers.AutoModelForCausalLM.from_pretrained(model_name),
+    transformers.AutoTokenizer.from_pretrained(model_name)
 )
 
-# 3. Create pipeline with tasks (verbose init).
-pipe = Pipeline(
-  # Add classification task to pipeline.
-  tasks.Classification(labels=["science", "politics"], model=model)
+pipeline = Pipeline(
+    tasks.Classification(
+        labels=["technology", "sports", "politics"],
+        model=model
+    )
 )
 
-# 4. Run pipe and output results.
-for doc in pipe(docs):
-  print(doc.results)
-
-# Tip: Pipelines can also be composed succinctly via chaining (+).
-# For multi-step pipelines, you can write:
-#   pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(labels=[...], model=model)
-# Note: Ingestion libraries are optional and not installed by default.
-#       Install with: pip install "sieves[ingestion]" or install the specific libraries directly (e.g., `docling`, `marker`).
-# Note: additional Pipeline parameters (e.g., use_cache=False) are only available via the verbose init,
-# e.g., Pipeline([t1, t2], use_cache=False).
+# Process text
+doc = Doc(text="The new smartphone features advanced AI capabilities.")
+results = list(pipeline([doc]))
+print(results[0].results)  # "technology"
 ```
+
+**3. Explore the docs**
+
+[Read the guides](https://sieves.ai/guides/getting_started) • [Browse examples](https://sieves.ai/examples)
 
 <details>
-  <summary><b>Advanced Example</b></summary>
+  <summary><b>Advanced Example: Information Extraction from PDFs</b></summary>
 
-This example demonstrates PDF parsing, text chunking, and classification.
+This example shows how to extract structured information from a scientific paper as PDF using
+- a remote model via DSPy and OpenRouter
+- chunking
+- the `InformationExtraction` task
 
-Note: Ingestion libraries are optional and not installed by default. To run the ingestion step, install with the extra or install the libraries directly:
-
-```
-pip install "sieves[ingestion]"   # or install ingestion libraries directly
-```
-
+We're using this setup to extract mathematical equations from the paper.
 ```python
-import pickle
+    import dspy
+    import os
+    from sieves import tasks, Doc
+    import pydantic
+    import chonkie
 
-import gliner2
-import chonkie
-import tokenizers
-import docling.document_converter
+    # Define schema for extraction.
+    class Equation(pydantic.BaseModel, frozen=True):
+        id: str = pydantic.Field(description="ID/index of equation in paper.")
+        equation: str = pydantic.Field(description="Equation as shown in paper.")
 
-from sieves import Pipeline, tasks, Doc
+    # Create model instance using OpenRouter.
+    model = dspy.LM(
+        "openrouter/google/gemini-2.5-flash-lite-preview-09-2025",
+        api_base="https://openrouter.ai/api/v1/",
+        api_key=os.environ["OPENROUTER_API_KEY"]
+    )
 
-# 1. Define documents by text or URI.
-docs = [Doc(uri="https://arxiv.org/pdf/2408.09869")]
+    # Create pipeline with PDF ingestion, chunking, and extraction.
+    pipeline = (
+        tasks.Ingestion(export_format="markdown") +
+        tasks.Chunking(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))) +
+        tasks.InformationExtraction(entity_type=Equation, model=model)
+    )
 
-# 2. Choose a model for structured generation.
-model = gliner2.GLiNER2.from_pretrained("fastino/gliner2-base-v1")
+    # Process a paper with equations as PDF.
+    pdf_path = "https://arxiv.org/pdf/1204.0162"
+    doc = Doc(uri=pdf_path)
+    results = list(pipeline([doc]))
 
-# 3. Create chunker object.
-chunker = chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))
-
-# 3. Create pipeline with tasks.
-pipe = Pipeline(
-  [
-    # 4. Add document parsing task.
-    tasks.Ingestion(export_format="markdown"),
-    # 5. Add chunking task to ensure we don't exceed our model's context window.
-    tasks.Chunking(chunker),
-    # 6. Add classification task to pipeline.
-    tasks.Classification(
-        task_id="classifier",
-        labels=["science", "politics"],
-        model=model,
-    ),
-  ]
-)
-# Alternatively you can also construct a pipeline by using the + operators:
-# pipe = tasks.Ingestion(export_format="markdown") + tasks.Chunking(chunker) + tasks.Classification(
-#     task_id="classifier", labels=["science", "politics"], model=model
-# )
-
-# 7. Run pipe and output results.
-docs = list(pipe(docs))
-for doc in docs:
-  print(doc.results["classifier"])
-
-# 8. Serialize pipeline and docs.
-pipe.dump("pipeline.yml")
-with open("docs.pkl", "wb") as f:
-  pickle.dump(docs, f)
-
-# 9. Load pipeline and docs from disk. Note: we don't serialize complex third-party objects, so you'll have
-#    to pass those in at load time.
-loaded_pipe = Pipeline.load(
-  "pipeline.yml",
-  (
-    {"converter": docling.document_converter.DocumentConverter(), "export_format": "markdown"},
-    {"chunker": chunker},
-    {"model": model},
-  ),
-)
-with open("docs.pkl", "rb") as f:
-  loaded_docs = pickle.load(f)
+    # Access extracted entities.
+    if results[0].results.get("InformationExtraction"):
+        for equation in results[0].results["InformationExtraction"]:
+            print(equation)
 ```
+The output will look similar to this:
+```
+id='(1)' equation="the observer measures not the linear but angular ... both cars are near the stop sign."
+id='(3)' equation='\\omega(t) = \\frac{r_0 v(t)}{r_0^2 + x(t)^2}'
+id='(4)' equation='\\tan \\alpha(t) = \\frac{x(t)}{r_0}'
+id='(5)' equation='x(t) = \\frac{a_0 t^2}{2}'
+id='(6)' equation="\\frac{d}{dt} f(t) = f'(t)"
+id='(7)' equation='\\omega(t) = \\frac{a_0 t}{r_0} \\left( 1 + \\frac{a_0^2 t^4}{4 r_0^2} \\right)^{-1}'
+id='(8)' equation='x(t) = x_0 + v_0 t + \\frac{1}{2} a t^2'
+```
+
+**Requirements**: Install PDF parsing support:
+```bash
+pip install "sieves[ingestion]"
+```
+
+See [Ingestion Guide](https://sieves.ai/guides/ingestion) for more PDF parsing options.
+
 </details>
 
+### Key Features
+
+**Zero-shot NLP, ready to use**
+- 🎯 No training required - immediate inference with zero-shot models (LLMs and local models)
+- 📋 Built-in tasks: classification, extraction, NER, summarization, sentiment analysis, PII masking, QA
+- 🔄 Unified interface for DSPy, Outlines, LangChain, GLiNER2, Transformers
+
+**Production-ready pipelines**
+- 🔍 Observable execution with conditional task logic
+- 💾 Caching to avoid redundant model calls
+- 📦 Pipeline serialization and configuration management
+
+**Full NLP workflow**
+- 📄 Document parsing: Docling, Marker (optional)
+- ✂️ Text chunking: Chonkie integration
+- 🚀 Prompt optimization: DSPy MIPROv2
+- 👨‍🏫 Model distillation: SetFit, Model2Vec
+
+## Installation
+
+**Requirements**: Python 3.12 (exact version)
+
+```bash
+pip install sieves
+```
+
+**Optional extras:**
+```bash
+pip install "sieves[ingestion]"  # PDF/DOCX parsing (docling, marker)
+pip install "sieves[distill]"     # Model distillation (setfit, model2vec)
+```
+
+> ⚠️ **Important**: sieves requires Python 3.12.x (not 3.13+). Some dependencies like `pyarrow`
+> don't have prebuilt wheels for Python 3.13+ yet, which would require manual compilation.
+> Support for newer Python libraries is on the roadmap.
+
+## Why `sieves`?
+
+**The challenge**: Building NLP prototypes with LLMs means juggling multiple tools - one for
+structured output, another for parsing, another for optimization. There are many options for structured output,
+each with its own pros and cons - and very different APIs.
+
+**The solution**: sieves provides a unified pipeline for the entire workflow, from document
+ingestion to model distillation, with validated structured outputs across multiple backends.
+
+**Best for:**
+
+- ✅ Rapid prototyping with zero training
+- ✅ Switching between language model backends without rewriting code
+- ✅ Building document AI pipelines with observability
+
+**Not for:**
+
+- ❌ Applications deeply coupled to LangChain/DSPy ecosystems
+- ❌ Simple one-off LLM calls without pipeline needs
+
+Inspired by [spaCy](https://spacy.io/) and [spacy-llm](https://github.com/explosion/spacy-llm).
+
+## How does sieves compare?
+
+| Feature                    | sieves         | LangChain    | DSPy           | Outlines       | Transformers |
+|----------------------------|----------------|--------------|----------------|----------------|--------------|
+| **Multi-backend support**  | ✅ All          | ❌ Own only   | ❌ Own only     | ❌ Own only     | ❌ Own only   |
+| **Pipeline system**        | ✅ Observable   | ✅ LCEL       | ❌ No           | ❌ No           | ❌ No         |
+| **Document parsing**       | ✅ Built-in     | ✅ Via tools  | ❌ No           | ❌ No           | ❌ No         |
+| **Structured output**      | ✅ Unified      | ✅ Yes        | ✅ Yes          | ✅ Core feature | ⚠️ Limited   |
+| **Prompt optimization**    | ✅ DSPy wrapper | ❌ No         | ✅ Core feature | ❌ No           | ❌ No         |
+| **Model distillation**     | ✅ SetFit/M2V   | ❌ No         | ✅ Yes          | ❌ No           | ⚠️ Manual    |
+| **Learning curve**         | Low            | Medium       | High           | Low            | Low          |
+| **Best for**               | Prototyping    | Production   | Research       | Structured gen | General ML   |
+
+**When to choose sieves:**
+
+- You want to implement a document processing/AI use case
+- You want to prototype quickly without committing to a specific backend
+- You need end-to-end document AI workflow (parsing → processing → distillation)
+- You value a unified interface over framework-specific features
+
+**When to choose alternatives:**
+
+- You're looking for a fully featured LLM framework
+- You want to implement a chat bot or RAG use case
+- **LangChain**: Already deeply integrated in your production stack
+- **DSPy**: Research projects requiring custom optimization algorithms
+- **Outlines**: Simple structured generation without pipeline needs
+- **Transformers**: Maximum flexibility and fine-grained control
+
+## Supported Models
+
+sieves works with multiple NLP frameworks. Here's how to create models for each:
+
+#### DSPy
+
+See [docs](https://dspy.ai/).
+
+```python
+import dspy
+import os
+
+model = dspy.LM(
+    "anthropic/claude-4-5-haiku",
+    api_key=os.environ["ANTHROPIC_API_KEY"]
+)
+```
 ---
 
-### Core Concepts
+#### Outlines
 
-`sieves` is built on six key abstractions.
+See [docs](https://dottxt-ai.github.io/outlines/welcome/).
 
-#### **`Pipeline`**
-Orchestrates task execution with features for.
-- Task configuration and sequencing
-- Pipeline execution
-- Configuration management and serialization
+```python
+import outlines
+import transformers
 
-#### **`Doc`**
-Represents a document in the pipeline.
-- Contains text content and metadata
-- Tracks document URI and processing results
-- Passes information between pipeline tasks
-
-#### **`Task`**
-Encapsulates a single processing step in a pipeline.
-- Defines input arguments
-- Wraps and initializes `Bridge` instances handling task-engine-specific logic
-- Implements task-specific dataset export
-- Supports **conditional execution**: skip documents based on custom logic without materializing all docs upfront
-
-#### `GenerationSettings`
-Controls behavior of structured generation across tasks.
-- Batch size
-- Strict mode (whether errors in parsing individual documents should terminate execution)
-- Arbitrary arguments passed on to structured generation tool (which one that is depends on the model you specified - Outlines, DSPy, LangChain, ...).
-
-#### **`Engine`** (internals only)
-Provides a unified interface to structured generation libraries (internal). You pass a backend model into tasks;
-`Engine` is used under the hood.
-- Manages model interactions
-- Handles prompt execution
-- Standardizes output formats
-
-#### **`Bridge`** (internals only)
-Connects `Task` with `Engine`.
-- Implements engine-specific prompt templates
-- Manages output type specifications
-- Ensures compatibility between tasks and engine
+model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+model = outlines.models.from_transformers(
+    transformers.AutoModelForCausalLM.from_pretrained(model_name),
+    transformers.AutoTokenizer.from_pretrained(model_name)
+)
+```
 
 ---
+
+#### Transformers (Zero-Shot Classification Pipelines)
+
+See [docs](https://huggingface.co/tasks/zero-shot-classification).
+
+```python
+import transformers
+
+model = transformers.pipeline(
+    "zero-shot-classification",
+    model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33",
+    device=0
+)
+```
+
+---
+
+#### LangChain
+
+See [docs](https://docs.langchain.com/). E.g. with an OpenAI model:
+```python
+from langchain_openai import ChatOpenAI
+import os
+
+model = ChatOpenAI(
+    api_key=os.environ["OPENAI_API_KEY"],
+    model="gpt-5-mini",
+    temperature=0
+)
+```
+---
+
+#### GLiNER2
+
+See [docs](https://fastino.ai/docs/gliner-2-overview).
+
+
+**Basic usage:**
+```python
+import gliner2
+
+model = gliner2.GLiNER2.from_pretrained("fastino/gliner2-base-v1")
+```
+
+See the [Model Setup Guide](https://sieves.ai/guides/models) for more details and troubleshooting.
+
+## Core Concepts
+
+sieves is built on three key abstractions:
+
+- **`Doc`**: Represents a document with text, metadata, and processing results
+- **`Task`**: A processing step (classification, extraction, summarization, etc.)
+- **`Pipeline`**: Orchestrates tasks with caching, serialization, and observability
+
+[→ Read the architecture guide](https://sieves.ai/guides/custom_tasks#understanding-the-architecture) for details on bridges, engines, and internals.
+
+## Get Started
+
+<div align="center">
+
+📖 **[Read the guides →](https://sieves.ai/guides/getting_started)**
+Start with the 5-minute tutorial
+
+🎯 **[Browse examples →](https://sieves.ai/examples)**
+Real-world use cases and patterns
+
+🤝 **[Join discussions →](https://github.com/mantisai/sieves/discussions)**
+Ask questions, share projects
+
+⭐ **[Star on GitHub](https://github.com/mantisai/sieves)**
+Stay updated with new features
+
+</div>
 
 ## Frequently Asked Questions
 
 <details>
-  <summary><b>Show FAQs</b></summary>
+  <summary><b>Why "sieves"?</b></summary>
 
-### Why "sieves"?
-
-`sieves` was originally motivated by the want to use generative models for structured information extraction. Coming
-from this angle, there are two ways to explain why we settled on this name (pick the one you like better):
-- An analogy to [gold panning](https://en.wikipedia.org/wiki/Gold_panning): run your raw data through a sieve to obtain structured, refined "gold."
-- An acronym - "sieves" can be read as "Structured Information Extraction and VErification System" (but that's a mouthful).
-
-### Why not just prompt an LLM directly?
-
-Asked differently: what are the benefits of using `sieves` over directly interacting with an LLM?
-- Validated, structured data output - also for LLMs that don't offer structured outputs natively.  Zero-/few-shot language models can be finicky without guardrails or parsing.
-- A step-by-step pipeline, making it easier to debug and track each stage.
-- The flexibility to switch between different models and ways to ensure structured and validated output.
-
-### How do I create models?
-
-Below are minimal examples for creating model objects for each supported structured‑generation tool. Pass these `model` objects directly to tasks, optionally with `GenerationSettings`.
-
-- DSPy
-
-  ```python
-  import os
-  import dspy
-
-  # Anthropic example (set ANTHROPIC_API_KEY in your environment)
-  model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
-
-  # Tip: DSPy can integrate with Ollama and vLLM backends for local model serving.
-  # For Ollama, configure api_base and blank api_key:
-  # model = dspy.LM("smollm:135m-instruct-v0.2-q8_0", api_base="http://localhost:11434", api_key="")
-  # For vLLM, use the OpenAI-compatible server:
-  # model = dspy.LM("meta-llama/Llama-3.2-1B-Instruct", api_base="http://localhost:8000/v1", api_key="")
-  ```
-
-- GLiNER2
-
-  ```python
-  import gliner2
-  model = gliner2.GLiNER2.from_pretrained("fastino/gliner2-base-v1")
-  ```
-
-- LangChain
-
-  ```python
-  from langchain.chat_models import init_chat_model
-  import os
-
-  model = init_chat_model(
-      model="claude-3-haiku-20240307",
-      api_key=os.environ["ANTHROPIC_API_KEY"],
-      model_provider="anthropic",
-  )
-  ```
-
-- Hugging Face Transformers (zero‑shot classification)
-
-  ```python
-  from transformers import pipeline
-
-  model = pipeline(
-      "zero-shot-classification",
-      model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33",
-  )
-  ```
-
-- Outlines
-
-  ```python
-  import outlines
-  from transformers import AutoModelForCausalLM, AutoTokenizer
-
-  model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-  # Outlines supports different backends, also remote ones. We use a local `transformers` model here.
-  model = outlines.models.from_transformers(
-      AutoModelForCausalLM.from_pretrained(model_name),
-      AutoTokenizer.from_pretrained(model_name),
-  )
-  ```
-
-**Notes**
-- Provide provider API keys via environment variables (e.g., `ANTHROPIC_API_KEY`).
-- **Local model serving:** DSPy can integrate with Ollama and vLLM for local model serving (see DSPy examples above).
-- After you have a `model`, use it in tasks like: `tasks.predictive.Classification(labels=[...], model=model)`.
-- A bunch of useful utilities for pre- and post-processing you might need.
-- An array of useful tasks you can right of the bat without having to roll your own.
-- Look up the respective tool's documentation for more information.
-
-### Why use `sieves` and not a structured generation library, like `outlines`, directly?
-
-Which library makes the most sense to you depends strongly on your use-case. `outlines` provides structured generation
-abilities, but not the pipeline system, utilities and pre-built tasks that `sieves` has to offer (and of course not the
-flexibility to switch between different structured generation libraries). Then again, maybe you don't need all that -
-in which case we recommend using `outlines` (or any other structured generation libray) directly.
-
-Similarly, maybe you already have an existing tech stack in your project that uses exclusively `langchain` or
-`dspy`? All of these libraries (and more) are supported by `sieves` - but they are not _just_ structured generation
-libraries, they come with a plethora of features that are out of scope for `sieves`. If your application deeply
-integrates with a framework like LangChain or DSPy, it may be reasonable to stick to those libraries directly.
-
-As many things in engineering, this is a trade-off. The way we see it: the less tightly coupled your existing
-application is with a particular language model framework, the more mileage you'll get out of `sieves`. This means that
-it's ideal for prototyping (there's no reason you can't use it in production too, of course).
+  Filtering an LLM's potentially endless stream of unstructured text into a structured format is like sieving water to capture gold nuggets. That's where the name comes from.
 
 </details>
 
----
+<details>
+  <summary><b>Why not just prompt an LLM directly?</b></summary>
 
-> Source for `sieves` icon:
+  - Validated outputs: Structured results with type checking
+  - Observable pipelines: Debug each stage
+  - Backend flexibility: Switch models without rewriting
+  - Built-in tooling: Caching, serialization, optimization
+
+</details>
+
+<details>
+  <summary><b>How do I set up models?</b></summary>
+
+  See the [Model Setup Guide](https://sieves.ai/guides/models) for framework-specific examples.
+
+  Quick example: `model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])`
+
+</details>
+
+<details>
+  <summary><b>Can I use local models?</b></summary>
+
+  Yes! Via Ollama, vLLM, or Transformers directly. [See guide](https://sieves.ai/guides/models#local-models).
+
+</details>
+
+<details>
+  <summary><b>Is sieves production-ready?</b></summary>
+
+  Beta status: API stable within minor versions, well-tested, used in real projects.
+  Pin your version: `pip install "sieves==0.x.*"`
+
+</details>
+
+## Attribution
+
+`sieves` is inspired by [spaCy](https://spacy.io/) and [spacy-llm](https://github.com/explosion/spacy-llm).
+
 > <a href="https://www.flaticon.com/free-icons/sieve" title="sieve icons">Sieve icons created by Freepik - Flaticon</a>.
