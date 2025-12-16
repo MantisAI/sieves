@@ -5,10 +5,11 @@
 ## Overview
 
 Distillation in `sieves`:
+
 - **Fine-tunes smaller models** using outputs from zero-shot task execution
 - **Reduces inference costs** by replacing expensive LLM calls with lightweight models
 - **Maintains performance** while significantly improving speed and reducing resource usage
-- **Integrates with popular frameworks** like SetFit and Model2Vec
+- **Integrates with popular frameworks**: trains using `setfit` or `model2vec`
 
 The typical workflow is: run a task with a zero-shot LLM → export results → distill to a smaller model → deploy the distilled model for production inference.
 
@@ -24,8 +25,7 @@ Here's how distillation works in `sieves`:
 Step 1: Zero-Shot Inference with Teacher Model
 ┌────────────────────┐
 │   Teacher Model    │  (Large, expensive, accurate)
-│ (GPT-4, Claude,    │
-│  Llama 70B, etc.)  │
+│   (E.g. big LLM.)  │
 └─────────┬──────────┘
           │
           │ Inference: Classify/Extract/Analyze
@@ -77,7 +77,6 @@ Step 2: Fine-Tuning Student Model
 | **Typical Accuracy** | 100% (baseline) | 80-95% retained | 70-85% retained |
 | **Model Size** | 10-100GB | 400MB-1GB | 50-100MB |
 | **Training Time** | N/A | Minutes | Seconds |
-| **Cost per 1K docs** | $5-50 | $0.01-0.10 | <$0.01 |
 
 ### Why Distillation Works
 
@@ -92,12 +91,14 @@ Step 2: Fine-Tuning Student Model
 ## When to Use Distillation
 
 Distillation is valuable when:
+
 - You have **processed documents** with task results from zero-shot models
 - You need **faster inference** for production deployment
 - You want to **reduce API costs** by avoiding repeated LLM calls
 - You're willing to **fine-tune a model** for your specific task
 
-> [!NOTE]
+
+> !!! warning
 > Currently, only the **Classification** task has full distillation support via `task.distill()`. Other tasks implement `to_hf_dataset()` for exporting results to Hugging Face datasets, allowing custom training workflows.
 
 ## Choosing a Distillation Framework
@@ -106,45 +107,38 @@ Distillation is valuable when:
 
 ### Use SetFit when:
 
-✅ **You need good accuracy with limited data** (50-500 examples)
-✅ **Inference speed is important but not critical** (10-100x faster than LLM)
-✅ **You can afford ~1GB model size**
-✅ **Your task is classification** (single-label or multi-label)
-✅ **You want mature, well-tested framework** (built on sentence-transformers)
-
-**Typical performance**: ~80-95% of teacher model accuracy, 50-100x faster inference
+- ✅ **You need good accuracy with limited data** (50-500 examples)
+- ✅ **Inference speed is important but not critical** (10-100x faster than LLM)
+- ✅ **You can afford ~1GB model size**
+- ✅ **You want mature, well-tested framework** (built on sentence-transformers)
 
 ### Use Model2Vec when:
 
-✅ **Inference speed is critical** (need 100x+ faster than LLM)
-✅ **Memory is constrained** (<100MB models preferred)
-✅ **You have sufficient training data** (500+ examples recommended)
-✅ **Slight accuracy loss is acceptable** (5-15% drop from teacher)
-✅ **You need extreme efficiency** (CPU-only deployment, edge devices)
-
-**Typical performance**: ~70-85% of teacher model accuracy, 200-500x faster inference
+- ✅ **Inference speed is critical** (need 100x+ faster than LLM)
+- ✅ **Memory is constrained** (<100MB models preferred)
+- ✅ **You have sufficient training data** (500+ examples recommended)
+- ✅ **Slight accuracy loss is acceptable**
+- ✅ **You need extreme efficiency** (CPU-only deployment, edge devices)
 
 ### When to skip distillation:
 
-❌ **You have <50 training examples per class** - Not enough data for reliable student model
-❌ **Inference speed isn't a bottleneck** - Just use the teacher model directly
-❌ **Model accuracy is paramount** - Teacher model will always be more accurate
-❌ **Teacher model is already small** - Distillation overhead may not be worth it
+- ❌ **You have <50 training examples per class** - Not enough data for reliable student model
+- ❌ **Inference speed isn't a bottleneck** - Just use the teacher model directly
+- ❌ **Model accuracy is paramount** - Teacher model will always be more accurate
+- ❌ **Teacher model is already small** - Distillation overhead may not be worth it
 
 ### Quick Comparison Table
 
-| Aspect | SetFit | Model2Vec |
-|--------|--------|-----------|
-| **Min data** | 50-100 examples | 500+ examples |
-| **Accuracy retention** | 80-95% | 70-85% |
-| **Speed vs LLM** | 50-100x | 200-500x |
-| **Model size** | ~400MB-1GB | ~50MB-100MB |
-| **Training time** | Minutes | Seconds |
-| **Best for** | General classification | Extreme speed/efficiency |
+| Aspect                 | SetFit                 | Model2Vec                |
+|------------------------|------------------------|--------------------------|
+| **Min data**           | 50-100 examples        | 500+ examples            |
+| **Model size**         | ~400MB-1GB             | ~50MB-100MB              |
+| **Training time**      | Minutes                | Seconds                  |
+| **Best for**           | General classification | Extreme speed/efficiency |
 
 ## Quick Example
 
-Here's a step-by-step guide to distilling a classification task using SetFit.
+Here's a step-by-step guide to distilling a classification task using `setfit`.
 
 ### 1. Import Dependencies
 
@@ -154,7 +148,7 @@ Start by importing the required modules for distillation:
 --8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-imports"
 ```
 
-These imports provide the task classes, distillation framework, and SetFit model loader needed for the complete distillation workflow.
+These imports provide the task classes, distillation framework, and `setfit` model loader needed for the complete distillation workflow.
 
 ### 2. Prepare Training Data
 
@@ -194,7 +188,7 @@ Once distillation completes, we can load the student model and use it for fast i
 --8<-- "sieves/tests/docs/test_distillation.py:distillation-setfit-load"
 ```
 
-The distilled model is now ready for production use! It provides much faster inference than the teacher model while maintaining most of its accuracy. You can deploy this model anywhere the SetFit library is available.
+The distilled model is now ready for production use! It provides much faster inference than the teacher model while maintaining most of its accuracy. You can deploy this model anywhere `setfit` is available.
 
 ## Distillation Parameters
 
@@ -281,11 +275,13 @@ hf_dataset = classification_task.to_hf_dataset(
 The distillation process automatically handles both classification modes:
 
 **Multi-Label** (default):
+
 - Outputs multi-hot boolean vectors
 - Each document can have multiple labels
 - Uses `multi_target_strategy="multi-output"` for SetFit
 
 **Single-Label**:
+
 - Outputs a single class label
 - Each document has exactly one label
 - Uses standard classification setup
@@ -311,22 +307,20 @@ output_path/
 ```
 
 **Metrics file** (`metrics.json`):
-- SetFit: Contains F1 score, precision, recall
-- Model2Vec: Contains classification metrics
+- `setfit`: Contains F1 score, precision, recall
+- `model2vec`: Contains classification metrics
 
 ## Best Practices
 
 1. **Use quality zero-shot results**: Distillation quality depends on the quality of your zero-shot predictions
 2. **Sufficient data**: Aim for at least 100-500 examples per label for good performance
 3. **Validate carefully**: Always check `metrics.json` to ensure distilled model performance is acceptable
-4. **Choose appropriate base models**:
-   - SetFit: Use sentence transformer models (e.g., `sentence-transformers/all-MiniLM-L6-v2`)
-   - Model2Vec: Use static embedding models (e.g., `minishlab/potion-base-8M`)
+4. **Choose appropriate base models**
 5. **Split data wisely**: Reserve 20-30% for validation (`val_frac=0.2` is a good default)
 6. **Iterate**: If distilled performance is poor, try collecting more diverse examples or using a larger base model
 
-> [!TIP]
-> Start with a small dataset (50-100 examples) to validate your distillation workflow before scaling up. This helps catch configuration issues early without wasting computational resources.
+!!! tip "Best Practice: Optimize, Then Distill"
+    Start with a small dataset (50-100 examples) to validate your distillation workflow before scaling up. This helps catch configuration issues early without wasting computational resources.
 
 ## Troubleshooting
 
@@ -352,19 +346,16 @@ output_path/
 
 ## Task Support
 
-| Task | `task.distill()` | `to_hf_dataset()` |
-|------|------------------|-------------------|
-| **Classification** | ✅ SetFit, Model2Vec | ✅ |
-| **Sentiment Analysis** | ❌ | ✅ |
-| **NER** | ❌ | ✅ |
-| **PII Masking** | ❌ | ✅ |
-| **Information Extraction** | ❌ | ✅ |
-| **Summarization** | ❌ | ✅ |
-| **Translation** | ❌ | ❌ (NotImplementedError) |
-| **Question Answering** | ❌ | ✅ |
-
-> [!IMPORTANT]
-> For tasks without `task.distill()` support, use `to_hf_dataset()` to export results, then train with your preferred framework. All tasks except Translation support dataset export.
+| Task                       | `task.distill()`    |
+|----------------------------|---------------------|
+| **Classification**         | ✅ SetFit, Model2Vec |
+| **Sentiment Analysis**     | ❌                   |
+| **NER**                    | ❌                   |
+| **PII Masking**            | ❌                   |
+| **Information Extraction** | ❌                   |
+| **Summarization**          | ❌                   |
+| **Translation**            | ❌                   |
+| **Question Answering**     | ❌                   |
 
 ## Related Guides
 

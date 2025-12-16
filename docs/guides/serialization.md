@@ -101,7 +101,7 @@ The configuration file contains:
 !!! warning Limitations
 
       - Model weights are not saved in the configuration files
-      - Complex third-party objects (everything beyond primitives or collections thereof) may not be serializable
+      - Complex third-party objects (everything beyond primitives or collections thereof) are not serializable
       - API keys and credentials must be managed separately
 
 ## Troubleshooting
@@ -143,8 +143,9 @@ loaded_pipeline = Pipeline.load(
 **Cause**: The pipeline was saved with a different version of sieves than you're currently using.
 
 **Impact**:
-- Minor version differences (0.11.1 vs 0.11.2): Usually safe
-- Major version differences (0.11.x vs 0.12.x): May have breaking changes
+
+- Path version differences (0.11.1 vs. 0.11.2): Usually safe
+- Major version differences (e.g. 0.22.0 vs. 1.0.1) and minor version differences with major < 1 (e.g. 0.11.x vs. 0.12.x): May have breaking changes
 
 **Solution**:
 ```bash

@@ -1,9 +1,9 @@
 # Preprocessing Documents
 
 `sieves` provides several preprocessing tasks to prepare your documents for downstream processing. These tasks handle common operations like:
+
 - Parsing various document formats (PDF, DOCX, etc.)
 - Chunking long documents into manageable pieces
-- Cleaning and standardizing text
 
 ## Document Parsing
 
@@ -67,25 +67,3 @@ Access the metadata in the document's `meta` field:
 ```python title="Access preprocessing metadata"
 --8<-- "sieves/tests/docs/test_preprocessing.py:metadata-access"
 ```
-
-## Best Practices
-
-1. **Document Size**: When working with large documents:
-   - Always use chunking to break them into manageable pieces
-   - Consider the chunk size based on your model's context window
-   - Use appropriate chunk overlap to maintain context across chunks
-
-2. **Error Handling**: When parsing documents:
-   - Handle potential parsing errors gracefully
-   - Verify that documents were parsed successfully before chunking
-   - Check that the chunked text maintains document integrity
-
-3. **Pipeline Order**: When combining tasks:
-   - Always parse documents before chunking
-   - Consider adding cleaning steps between parsing and chunking
-   - Validate the output of each step before proceeding
-
-4. **Text Cleaning**:
-   - Choose cleaning functions based on your document types
-   - Apply cleaning functions in a logical order (e.g., remove bullets before normalizing whitespace)
-   - Test cleaning functions on sample documents to ensure they don't remove important content

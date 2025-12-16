@@ -61,29 +61,26 @@ Here's a more involved example that:
 --8<-- "sieves/tests/docs/test_getting_started.py:advanced-pipeline"
 ```
 
-## Supported Engines
+## Supported Models
 
-`sieves` supports multiple libraries for structured generation:
+`sieves` supports multiple frameworks for interacting with zero-shot language models - see
+https://sieves.ai/guides/models/ for an overview.
 
-- [`outlines`](https://github.com/outlines-dev/outlines)
-- [`dspy`](https://github.com/stanfordnlp/dspy) - also supports Ollama and vLLM integration via `api_base`
-- [`langchain`](https://github.com/langchain-ai/langchain)
-- [`gliner2`](https://github.com/fastino-ai/GLiNER2)
-- [`transformers`](https://github.com/huggingface/transformers)
-
-You pass models from these libraries directly to `PredictiveTask`. Optionally, you can include `GenerationSettings` to
-override defaults. Batching is controlled per task via the `batch_size` argument (see below).
-
-### GenerationSettings (optional)
-`GenerationSettings` controls engine behavior and is optional. Defaults:
-- strict_mode: False (on parse issues, return None instead of raising)
-- init_kwargs/inference_kwargs: None (use engine defaults)
-- config_kwargs: None (used by some backends like DSPy)
-- inference_mode: None (use engine defaults; specifies how the engine queries the model and parses results)
+You pass supported models directly to `PredictiveTask`. Optionally, you can include `GenerationSettings` to
+influence model initialization and runtime behavior.
 
 Batching is configured on each task via `batch_size`:
 - `batch_size = -1` processes all inputs at once (default)
 - `batch_size = N` processes N docs per batch
+
+### GenerationSettings (optional)
+`GenerationSettings` controls details of how the model's structured generation will be run. It allows to configure:
+
+- `strict_mode`: Whether to raise encountered errors, or assign placeholder values for documents that failed to process.
+- `init_kwargs`: Model-specific arguments that will be passed to the model's structured generation abstraction at its initialization.
+- `inference_kwargs`: Model-specific arguments that will be passed to the model's structured generation abstraction during inference.
+- `config_kwargs`: Model-specific arguments that will be applied to the model after task initialization.
+- `inference_mode`: Model-specific modes for structured generation. Don't change this unless you _exactly_ know what you're doing.
 
 Example:
 

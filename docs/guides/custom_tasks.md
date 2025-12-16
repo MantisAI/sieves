@@ -1,11 +1,12 @@
 # Creating Custom Tasks
 
 This guide explains how to create custom tasks. `sieves` distinguishes two types of tasks:
+
 1. Ordinary tasks inherit from `Task`. Pretty much their only requirement is to process a bunch of documents and output
    the same set of documents with their modifications.
-2. Predictive tasks inherit from `PredictiveTask` (which inherits from `Task`). Those are for tasks using engines (i.e.
-   zero-shot models). They are more complex, as they need to implement the required interface to integrate with at least
-   one engines.
+2. Predictive tasks inherit from `PredictiveTask` (which inherits from `Task`). Those are for tasks using predictive (i.e.
+   zero-shot) models. They are more complex, as they need to implement the required interface to integrate with at least
+   one model type.
 
 While there are a bunch of pre-built tasks available for you to use, you might want to write your own to match your
 use-case. This guide describes how to do that.
@@ -42,7 +43,7 @@ task using `outlines`.
 
 Before diving into implementation, let's understand why `sieves` uses the Bridge pattern and how components fit together.
 
-### The Problem: Engine Diversity
+### The Challenge: Model Diversity
 
 Different NLP frameworks have vastly different APIs:
 
@@ -50,8 +51,9 @@ Different NLP frameworks have vastly different APIs:
 - **DSPy**: Uses signatures + optimizers with Python-native schemas
 - **Transformers**: Uses `pipeline()` API with classification/generation modes
 - **LangChain**: Uses chains + prompts with custom parsers
+- **GliNER2**: Uses structure chaining patterns to describe custom JSON structures
 
-Without abstraction, each task would need separate implementations for each engine - a maintenance nightmare as the library grows.
+Without abstraction, each task would need separate implementations for each model - unfeasible to maintain.
 
 ### The Solution: Bridge Pattern
 
@@ -77,14 +79,15 @@ The Bridge pattern decouples task logic (what to compute) from engine-specific i
                        │
                        ▼
             ┌──────────────────────┐
-            │       Engine         │ ◄── Internal inference handler
+            │    ModelWrapper      │ ◄── Internal inference handler
             │  (Inference logic)   │     Auto-detected from model type
             └──────────┬───────────┘
                        │
                        ▼
             ┌──────────────────────┐
-            │        Model         │ ◄── User-provided
-            │   (Neural network)   │     Any supported model
+            │        Model         │ ◄── User-provided.
+            │  (3rd party          │     Any supported model
+            │   library instance)  │
             └──────────────────────┘
 ```
 
@@ -160,11 +163,7 @@ Use built-in tasks (`Classification`, `NER`, `InformationExtraction`, etc.) when
 
 ✅ **Novel task type**: Your task doesn't fit any existing task (e.g., custom scoring, specialized extraction)
 
-✅ **Custom output schema**: You need a specific, complex result structure beyond simple labels or entities
-
 ✅ **Specialized consolidation**: Your task requires unique logic for merging multi-chunk results (e.g., weighted averaging, consensus voting)
-
-✅ **Research/experimentation**: You're prototyping new NLP approaches or evaluation methods
 
 **Don't create custom tasks for:**
 
@@ -230,7 +229,8 @@ The schema requires a reasoning explanation and a score between 0 and 1.
 
 #### Create the Bridge Class
 
-Start by defining the bridge class that will handle sentiment analysis:
+Start by defining the bridge class that will handle sentiment analysis. In this case we start with a bridge that will
+employ Outlines for our sentiment analysis task.
 
 ```python
 --8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-class-def"
@@ -355,6 +355,7 @@ We can now use our sentiment analysis task like every built-in task:
 **Symptom**: After running your task, `doc.results[task_id]` is empty or missing.
 
 **Possible causes**:
+
 1. **`integrate()` not called correctly**: Ensure your bridge's `integrate()` method stores results in `doc.results[self._task_id]`
 2. **Incorrect task_id**: Verify you're using the correct task ID (check `task._task_id`)
 3. **Engine returning None**: The engine may be returning None results (e.g., due to generation errors in permissive mode)
@@ -377,6 +378,7 @@ def integrate(self, results, docs):
 **Symptom**: `TypeError` or `AttributeError` in the consolidate method.
 
 **Possible causes**:
+
 1. **Mismatched types**: Results from integrate() don't match the type expected in consolidate()
 2. **None results not handled**: Some results may be None (from engine errors)
 3. **Incorrect doc_offsets slicing**: Check that you're using `results[doc_offset[0]:doc_offset[1]]` correctly
@@ -404,6 +406,7 @@ def consolidate(self, results, docs_offsets):
 **Cause**: You're trying to use an engine that your bridge doesn't support.
 
 **Solution**: Either:
+
 1. Implement a bridge for that engine type
 2. Use a supported engine (check `task.supports`)
 3. Update `_init_bridge()` to handle the engine type

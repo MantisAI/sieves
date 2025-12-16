@@ -15,21 +15,19 @@ The process uses Bayesian optimization to find the best combination of prompt an
 
 ### Use optimization when:
 
-✅ **You have labeled training data** (10+ examples minimum, 50+ recommended)
-✅ **Zero-shot performance is suboptimal** (<70% accuracy on your task)
-✅ **You can invest in API costs** ($5-50 typical per optimization run)
-✅ **You want to systematically improve prompts** rather than manual trial-and-error
-✅ **Your task has clear evaluation metrics** (accuracy, F1, etc.)
-
-**Typical improvement**: 10-30% accuracy boost over zero-shot, depending on task complexity
+- ✅ **You have labeled training data** (10+ examples minimum, 50+ recommended)
+- ✅ **Zero-shot performance is suboptimal** (<70% accuracy on your task)
+- ✅ **You can invest in API costs** ($5-50 typical per optimization run)
+- ✅ **You want to systematically improve prompts** rather than manual trial-and-error
+- ✅ **Your task has clear evaluation metrics** (accuracy, F1, etc.)
 
 ### Skip optimization when:
 
-❌ **You have <10 examples** - Not enough data for reliable optimization
-❌ **Zero-shot already works well** (>90% accuracy) - Diminishing returns
-❌ **Budget is tight** - Optimization requires many LLM calls
-❌ **You need quick prototyping** - Manual few-shot examples are faster initially
-❌ **Evaluation is subjective** - Hard to automatically measure improvement
+- ❌ **You have <10 examples** - Not enough data for reliable optimization
+- ❌ **Zero-shot already works well** - Diminishing returns
+- ❌ **Budget is tight** - Optimization requires many LLM calls
+- ❌ **You need quick prototyping** - Manual few-shot examples are faster initially
+- ❌ **Evaluation is subjective** - Hard to automatically measure improvement
 
 ### Decision Tree
 
@@ -40,20 +38,19 @@ Do you have labeled examples?
    ├─ <10 examples → Use manual few-shot, don't optimize yet
    ├─ 10-50 examples → Try optimization with minimal settings
    └─ 50+ examples → Optimization recommended
-       └─ Is your zero-shot accuracy <70%?
-          ├─ Yes → Optimization will likely help significantly
-          └─ No (>70%) → Optimization may provide modest gains
 ```
 
 ### Cost Considerations
 
 > **⚠️ Cost Warning**
 > Optimization involves **multiple LLM calls** during the search process. Costs depend on:
+>
 > - Dataset size (more examples = more evaluations)
 > - DSPy optimizer configuration (`num_candidates`, `num_trials`)
 > - Model pricing (larger models cost more per call)
 >
 > **Estimated costs**:
+>
 > - Small dataset (20 examples), minimal settings: $2-5
 > - Medium dataset (100 examples), default settings: $20-50
 > - Large dataset (500+ examples), aggressive settings: $100-500
@@ -136,7 +133,7 @@ These tasks use a **generic LLM-as-judge evaluator** that compares ground truth 
 - **Translation** - Evaluates translation quality
 - **Question Answering** - Evaluates answer correctness
 
-> **Note**: LLM-based evaluation adds additional costs since each evaluation requires an extra LLM _call.
+> **Note**: LLM-based evaluation adds additional costs since each evaluation requires an extra LLM call.
 
 ## Optimizer Configuration
 
@@ -156,11 +153,13 @@ Optimizer(
 ### Key DSPy Parameters
 
 **Init kwargs** (passed to MIPROv2 initialization):
+
 - `num_candidates` (default: 10) - Number of prompt candidates per trial
 - `max_errors` (default: 10) - Maximum errors before stopping
 - `auto` - Automatic prompt generation strategy
 
 **Compile kwargs** (passed to MIPROv2.compile()):
+
 - `num_trials` (default: 30) - Number of optimization trials
 - `minibatch` (default: True) - Use minibatch for large datasets
 - `minibatch_size` - Size of minibatches when `minibatch=True`
