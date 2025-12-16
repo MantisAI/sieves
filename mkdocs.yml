@@ -39,6 +39,10 @@ markdown_extensions:
   - admonition
   - codehilite
   - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: ['.']
+      check_paths: true
+      dedent_subsections: true
 
 nav:
   - Home:
@@ -80,6 +84,7 @@ nav:
             - engines/outlines.md
   - Guides:
       - guides/getting_started.md
+      - guides/models.md
       - guides/preprocessing.md
       - guides/serialization.md
       - guides/custom_tasks.md

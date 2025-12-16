@@ -1,9 +1,8 @@
 # `sieves`
 
-`sieves` is a Python library designed for zero-shot and few-shot NLP tasks that focuses on structured generation,
-allowing developers to build production-ready NLP prototypes without requiring training data. It provides a unified
-interface that wraps popular NLP tools (like `outlines`, `dspy`, `langchain`, and others) while ensuring structured
-outputs and observability.
+`sieves` is a Python library designed for zero-shot document AI tasks that focuses on structured generation. It allows
+developers to quickly build NLP prototypes without requiring training data. It provides a unified interface that wraps
+popular NLP tools while ensuring structured  outputs and observability.
 
 It bundles common NLP utilities, document parsing, and text chunking capabilities together with ready-to-use tasks like
 classification and information extraction, all organized in an observable pipeline architecture. It's particularly
@@ -14,11 +13,12 @@ valuable for rapid prototyping scenarios where structured output is needed but t
 
 You can install `sieves` with different options depending on your needs
 
-Core package with minimal dependencies:
+Core package:
 ```bash
 pip install sieves
 ```
-Note: Ingestion libraries (document parsing such as `docling`) are not installed by default. Install them manually or use the ingestion extra:
+
+Ingestion libraries (document parsing such as `docling`) are optional. Install them manually or use the ingestion extra:
 
 ```bash
 pip install "sieves[ingestion]"

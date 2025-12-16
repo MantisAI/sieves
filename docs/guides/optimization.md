@@ -13,82 +13,101 @@ The process uses Bayesian optimization to find the best combination of prompt an
 
 ## When to Use Optimization
 
-Optimization is valuable when:
-- You have **labeled data** (few-shot examples with ground truth)
-- You want to **improve task accuracy** beyond zero-shot performance
-- You're willing to invest **time and API cost** for better results
+### Use optimization when:
+
+- ✅ **You have labeled training data** (10+ examples minimum, 50+ recommended)
+- ✅ **Zero-shot performance is suboptimal** (<70% accuracy on your task)
+- ✅ **You can invest in API costs** ($5-50 typical per optimization run)
+- ✅ **You want to systematically improve prompts** rather than manual trial-and-error
+- ✅ **Your task has clear evaluation metrics** (accuracy, F1, etc.)
+
+### Skip optimization when:
+
+- ❌ **You have <10 examples** - Not enough data for reliable optimization
+- ❌ **Zero-shot already works well** - Diminishing returns
+- ❌ **Budget is tight** - Optimization requires many LLM calls
+- ❌ **You need quick prototyping** - Manual few-shot examples are faster initially
+- ❌ **Evaluation is subjective** - Hard to automatically measure improvement
+
+### Decision Tree
+
+```
+Do you have labeled examples?
+├─ No → Collect data first, use zero-shot for now
+└─ Yes → How many?
+   ├─ <10 examples → Use manual few-shot, don't optimize yet
+   ├─ 10-50 examples → Try optimization with minimal settings
+   └─ 50+ examples → Optimization recommended
+```
+
+### Cost Considerations
 
 > **⚠️ Cost Warning**
 > Optimization involves **multiple LLM calls** during the search process. Costs depend on:
+>
 > - Dataset size (more examples = more evaluations)
 > - DSPy optimizer configuration (`num_candidates`, `num_trials`)
-> - Model pricing (larger models cost more per _call)
+> - Model pricing (larger models cost more per call)
+>
+> **Estimated costs**:
+>
+> - Small dataset (20 examples), minimal settings: $2-5
+> - Medium dataset (100 examples), default settings: $20-50
+> - Large dataset (500+ examples), aggressive settings: $100-500
 >
 > Start with small datasets and conservative optimizer settings to control costs.
 
 ## Quick Example
 
-Here's how to optimize a classification task:
+Here's a step-by-step guide to optimizing a classification task.
+
+### 1. Import Dependencies
+
+First, import the required modules for optimization:
 
 ```python
-import os
-import dspy
-from sieves.tasks import Classification
-from sieves.tasks.optimization import Optimizer
-from sieves import GenerationSettings
-
-# 1. Create model for optimization
-model = dspy.LM("claude-3-haiku-20240307", api_key=os.environ["ANTHROPIC_API_KEY"])
-
-# 2. Create task with few-shot examples (at least 2 required)
-examples = [
-    Classification.FewshotExampleSingleLabel(
-        text="The new AI model achieves state-of-the-art results",
-        label="technology",
-        confidence=1.0
-    ),
-    Classification.FewshotExampleSingleLabel(
-        text="Election results show significant voter turnout",
-        label="politics",
-        confidence=1.0
-    ),
-    # ... add more examples (recommended: 6-20 examples)
-]
-
-task = Classification(
-    labels={
-        "technology": "Technology news, AI, software, and digital innovations",
-        "politics": "Political events, elections, and government affairs",
-        "sports": "Sports news, games, athletes, and competitions"
-    },
-    model=model,
-    fewshot_examples=examples,
-    generation_settings=GenerationSettings(),
-)
-
-# 3. Create optimizer
-optimizer = Optimizer(
-    model=model,                    # Model for optimization (can differ from task model)
-    val_frac=0.25,                  # Use 25% of examples for validation
-    seed=42,                        # For reproducibility
-    shuffle=True,                   # Shuffle data before splitting
-    dspy_init_kwargs=dict(
-        num_candidates=2,           # Number of prompt candidates to try
-        max_errors=3                # Max errors before stopping
-    ),
-    dspy_compile_kwargs=dict(
-        num_trials=1,               # Number of optimization trials
-        minibatch=False             # Use full batch (True for large datasets)
-    )
-)
-
-# 4. Run optimization
-best_prompt, best_examples = task.optimize(optimizer, verbose=True)
-
-# The task now uses the optimized prompt and examples automatically
-print(f"Optimized prompt: {best_prompt}")
-print(f"Number of selected examples: {len(best_examples)}")
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-imports"
 ```
+
+These imports provide the DSPy model, task classes, and the few-shot example schema needed for optimization.
+
+### 2. Prepare Training Data
+
+With our dependencies imported, we'll create labeled examples for the optimizer. Each example needs the input text, expected label, and a confidence score (1.0 for certain labels):
+
+```python
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-training-data"
+```
+
+The optimizer will use these examples to evaluate different prompt and few-shot combinations. More examples generally lead to better optimization results, but also increase API costs.
+
+### 3. Create the Task
+
+Now that we have training data, let's define the classification task we want to optimize. We'll include label descriptions to help guide the model:
+
+```python
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-task-setup"
+```
+
+### 4. Configure the Optimizer
+
+With our task defined, we need to set up the optimizer that will search for the best prompt and example combination. The example below uses minimal settings to control API costs during experimentation:
+
+```python
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-optimizer-config"
+```
+
+The optimizer splits your data into training and validation sets (25% validation here), then uses Bayesian optimization to explore the space of possible prompts and few-shot selections. The minimal settings (`num_candidates=2`, `num_trials=1`) are for cost control during testing - increase these values for more thorough optimization in production.
+
+### 5. Run Optimization
+
+Finally, we execute the optimization process. The optimizer will iteratively test different prompt and example combinations, evaluating each on the validation set:
+
+```python
+--8<-- "sieves/tests/docs/test_optimization.py:optimization-run"
+```
+
+The optimizer returns two key outputs: the optimized prompt instructions (which may be significantly different from your original prompt) and the selected few-shot examples that were found to maximize performance. You can then use these in your production task for improved accuracy.
 
 ## Evaluation Metrics
 
@@ -114,7 +133,7 @@ These tasks use a **generic LLM-as-judge evaluator** that compares ground truth 
 - **Translation** - Evaluates translation quality
 - **Question Answering** - Evaluates answer correctness
 
-> **Note**: LLM-based evaluation adds additional costs since each evaluation requires an extra LLM _call.
+> **Note**: LLM-based evaluation adds additional costs since each evaluation requires an extra LLM call.
 
 ## Optimizer Configuration
 
@@ -134,35 +153,19 @@ Optimizer(
 ### Key DSPy Parameters
 
 **Init kwargs** (passed to MIPROv2 initialization):
+
 - `num_candidates` (default: 10) - Number of prompt candidates per trial
 - `max_errors` (default: 10) - Maximum errors before stopping
 - `auto` - Automatic prompt generation strategy
 
 **Compile kwargs** (passed to MIPROv2.compile()):
+
 - `num_trials` (default: 30) - Number of optimization trials
 - `minibatch` (default: True) - Use minibatch for large datasets
 - `minibatch_size` - Size of minibatches when `minibatch=True`
 
-### Cost Control
-
-To minimize costs during experimentation:
-
-```python
-# Use cheaper/smaller model for optimization
-optimizer = Optimizer(
-    model=dspy.LM("gpt-4o-mini"),  # Cheaper model
-    val_frac=0.3,                  # Larger validation set
-    dspy_init_kwargs=dict(
-        num_candidates=2,          # Fewer candidates (faster, cheaper)
-        max_errors=3
-    ),
-    dspy_compile_kwargs=dict(
-        num_trials=1,              # Single trial for testing
-        minibatch=True,            # Enable minibatching
-        minibatch_size=50          # Smaller batches
-    )
-)
-```
+> **💡 Cost Control Tip**
+> The example above uses minimal settings (`num_candidates=2`, `num_trials=1`) to reduce costs during experimentation. Increase these values for more thorough optimization once you've validated your setup.
 
 ## Best Practices
 
@@ -172,39 +175,6 @@ optimizer = Optimizer(
 4. **Split data wisely**: Use 20-30% for validation (`val_frac=0.25` is a good default)
 5. **Provide diverse examples**: Include examples covering different edge cases
 6. **Consider model choice**: You can use a cheaper model for optimization than for inference
-
-## Example: Multi-Label Classification
-
-```python
-import dspy
-from sieves.tasks import Classification
-from sieves.tasks.optimization import Optimizer
-
-model = dspy.LM("claude-3-haiku-20240307", api_key="...")
-
-# Multi-label examples with per-label confidence
-examples = [
-    Classification.FewshotExampleMultiLabel(
-        text="Quantum computing advances promise faster drug discovery",
-        confidence_per_label={"technology": 0.9, "healthcare": 0.7, "finance": 0.1}
-    ),
-    # ... more examples
-]
-
-task = Classification(
-    labels={
-        "technology": "Technology and software topics",
-        "healthcare": "Healthcare, medicine, and medical research",
-        "finance": "Financial markets, banking, and economics"
-    },
-    model=model,
-    multi_label=True,
-    fewshot_examples=examples
-)
-
-optimizer = Optimizer(model=model, val_frac=0.25)
-best_prompt, best_examples = task.optimize(optimizer)
-```
 
 ## Troubleshooting
 
@@ -224,8 +194,36 @@ best_prompt, best_examples = task.optimize(optimizer)
 - Try different `val_frac` values (0.2-0.3 range)
 - Increase `num_trials` for more thorough search
 
-## Further Reading
+## Related Guides
 
-- [DSPy MIPROv2 Documentation](https://dspy-docs.vercel.app/api/optimizers/MIPROv2)
-- [DSPy Optimization Guide](https://dspy-docs.vercel.app/docs/building-blocks/optimizers)
-- [Task-specific documentation](../tasks/predictive/classification.md) for details on each task's evaluation metric
+- **[Custom Tasks](custom_tasks.md)** - Create custom tasks that can also be optimized
+- **[Task Distillation](distillation.md)** - After optimizing, distill to faster models for production
+- **[Serialization](serialization.md)** - Save optimized prompts and examples for reuse
+
+## Learning More About Optimization
+
+Sieves optimization is built on [DSPy's MIPROv2 optimizer](https://dspy-docs.vercel.app/api/optimizers/MIPROv2). For in-depth guidance on optimization techniques, training data quality, and interpreting results, we recommend exploring these external resources:
+
+### Understanding MIPROv2
+
+- 📖 **[MIPROv2 API Reference](https://dspy-docs.vercel.app/api/optimizers/MIPROv2)** - Core concepts, parameters, and API documentation
+- 📖 **[DSPy Optimizers Overview](https://dspy-docs.vercel.app/docs/building-blocks/optimizers)** - Comprehensive guide to DSPy's optimization framework
+- 🎓 **[DSPy Optimization Tutorial](https://dspy-docs.vercel.app/docs/tutorials)** - Step-by-step walkthroughs and examples
+
+### Best Practices & Advanced Topics
+
+- 📊 **Training Data Quality** - What makes good training data for optimization (see [DSPy documentation](https://dspy-docs.vercel.app/docs/building-blocks/optimizers#preparing-data))
+- 🔍 **Interpreting Results** - Understanding optimizer outputs and evaluating improvements (covered in [DSPy guides](https://dspy-docs.vercel.app/docs/building-blocks/optimizers))
+- ⚙️ **Hyperparameter Tuning** - Adjusting `num_trials`, `num_candidates`, and other optimizer settings for better results
+- 🎯 **Evaluation Metrics** - Choosing the right metrics for your task (see Evaluation Metrics section above)
+
+### Sieves-Specific Integration
+
+The main differences when using optimization in Sieves:
+
+- **Simplified API**: Use `task.optimize(optimizer)` instead of calling DSPy optimizers directly
+- **Automatic integration**: Optimized prompts and few-shot examples are automatically integrated into the task
+- **Task compatibility**: Works with all `PredictiveTask` subclasses (Classification, NER, InformationExtraction, etc.)
+- **Full parameter access**: All DSPy optimizer parameters are available via the `Optimizer` class constructor
+
+For questions specific to Sieves optimization integration, see the [Troubleshooting](#troubleshooting) section above or consult the [task-specific documentation](../tasks/predictive/classification.md) for evaluation metrics.

@@ -95,7 +95,7 @@ pipe = Pipeline([import_task, chunking_task, classification_task])
 
 - **No Materialization**: Documents are processed using iterators; passing documents are batched together without materializing the entire document collection upfront
 - **Index-Based Tracking**: The implementation uses document indices for efficient filtering and reordering
-- **All Engines Supported**: Conditional execution works with all supported engines (DSPy, LangChain, Outlines, HuggingFace, GLiNER, etc.)
+- **All Engines Supported**: Conditional execution works with all supported engines (DSPy, LangChain, Outlines, HuggingFace, GLiNER2, etc.)
 - **Serialization**: Non-callable condition values (like `None`) serialize naturally; callable conditions are serialized as placeholders
 
 ::: sieves.tasks.core.Task
