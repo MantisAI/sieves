@@ -11,7 +11,7 @@ from typing import Any, Protocol, TypeVar, override
 import jinja2
 import pydantic
 
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 
 ModelWrapperPromptSignature = TypeVar("ModelWrapperPromptSignature")
 ModelWrapperModel = TypeVar("ModelWrapperModel")
@@ -34,25 +34,25 @@ class Executable(Protocol[ModelWrapperResult]):
 class ModelWrapper[ModelWrapperPromptSignature, ModelWrapperResult, ModelWrapperModel, ModelWrapperInferenceMode]:
     """Base class for model wrappers handling model invocation and structured generation."""
 
-    def __init__(self, model: ModelWrapperModel, generation_settings: GenerationSettings):
-        """Initialize model wrapper with model and generation settings.
+    def __init__(self, model: ModelWrapperModel, model_settings: ModelSettings):
+        """Initialize model wrapper with model and model settings.
 
         :param model: Instantiated model instance.
-        :param generation_settings: Generation settings.
+        :param model_settings: Model settings.
         """
         self._model = model
-        self._generation_settings = generation_settings
-        self._inference_kwargs = generation_settings.inference_kwargs or {}
-        self._init_kwargs = generation_settings.init_kwargs or {}
-        self._strict_mode = generation_settings.strict_mode
+        self._model_settings = model_settings
+        self._inference_kwargs = model_settings.inference_kwargs or {}
+        self._init_kwargs = model_settings.init_kwargs or {}
+        self._strict = model_settings.strict
 
     @property
-    def generation_settings(self) -> GenerationSettings:
-        """Return generation settings.
+    def model_settings(self) -> ModelSettings:
+        """Return model settings.
 
-        :return: Generation settings.
+        :return: Model settings.
         """
-        return self._generation_settings
+        return self._model_settings
 
     @property
     def model(self) -> ModelWrapperModel:
@@ -168,7 +168,7 @@ class PydanticModelWrapper(
             yield from generator([template.render(**doc_values, **examples) for doc_values in values])
 
         except Exception as err:
-            if self._strict_mode:
+            if self._strict:
                 raise RuntimeError(
                     "Encountered problem when executing prompt. Ensure your few-shot examples and document "
                     "chunks contain sensible information."

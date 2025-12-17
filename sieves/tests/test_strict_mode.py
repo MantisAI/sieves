@@ -2,7 +2,7 @@
 import pydantic
 import pytest
 
-from sieves import Doc, Pipeline
+from sieves import Doc, Pipeline, ModelSettings
 from sieves.model_wrappers import ModelType
 from sieves.tasks.predictive import information_extraction
 
@@ -10,9 +10,9 @@ from sieves.tasks.predictive import information_extraction
 @pytest.mark.parametrize(
     "batch_runtime", (ModelType.dspy, ModelType.langchain, ModelType.outlines), indirect=["batch_runtime"]
 )
-@pytest.mark.parametrize("strict_mode", [True, False])
-def test_strict_mode(batch_runtime, strict_mode):
-    batch_runtime.generation_settings.strict_mode = strict_mode
+@pytest.mark.parametrize("strict", [True, False])
+def test_strict(batch_runtime, strict):
+    model_settings = ModelSettings(strict=strict)
 
     class Person(pydantic.BaseModel, frozen=True):
         name: str
@@ -22,22 +22,22 @@ def test_strict_mode(batch_runtime, strict_mode):
         information_extraction.InformationExtraction(
             entity_type=Person,
             model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
+            model_settings=model_settings,
             batch_size=batch_runtime.batch_size,
         )
     ])
 
     docs: list[Doc] = []
     hit_exception = False
-    if strict_mode:
+    if strict:
         try:
             docs = list(pipe([Doc(text=".")]))
         except Exception:
             hit_exception = True
-    if strict_mode is False:
+    if strict is False:
         docs = list(pipe([Doc(text=".")]))
 
-    if strict_mode and hit_exception:
+    if strict and hit_exception:
         assert len(docs) == 0
     else:
         assert len(docs) == 1

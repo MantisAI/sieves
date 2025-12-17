@@ -2,7 +2,7 @@
 import pytest
 
 from sieves import Doc, Pipeline, tasks
-from sieves.model_wrappers import ModelType, GenerationSettings, dspy_, langchain_, outlines_
+from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, PIIMasking
 from sieves.tasks.predictive import pii_masking
@@ -31,7 +31,7 @@ def test_run(pii_masking_docs, batch_runtime, fewshot) -> None:
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     task = tasks.predictive.PIIMasking(
         model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        model_settings=batch_runtime.model_settings,
         batch_size=batch_runtime.batch_size,
         **fewshot_args,
     )
@@ -72,7 +72,7 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
     pipe = Pipeline([
         tasks.predictive.PIIMasking(
             model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
+            model_settings=batch_runtime.model_settings,
             batch_size=batch_runtime.batch_size,
         )
     ])
@@ -84,12 +84,12 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
                       'batch_size': {'is_placeholder': False, "value": -1},
-                      'generation_settings': {'is_placeholder': False,
+                      'model_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
-                                                        'strict_mode': False, 'inference_mode': None}},
+                                                        'strict': True, 'inference_mode': None}},
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'mask_placeholder': {'is_placeholder': False,
                                            'value': '[MASKED]'},
@@ -119,7 +119,7 @@ def test_inference_mode_override(batch_runtime) -> None:
 
     task = tasks.predictive.PIIMasking(
         model=batch_runtime.model,
-        generation_settings=GenerationSettings(inference_mode=dummy),
+        model_settings=ModelSettings(inference_mode=dummy),
         batch_size=batch_runtime.batch_size,
     )
 
@@ -144,7 +144,7 @@ def test_run_with_dict_pii_types(pii_masking_docs, batch_runtime) -> None:
         tasks.predictive.PIIMasking(
             pii_types=pii_types_with_descriptions,
             model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
+            model_settings=batch_runtime.model_settings,
             batch_size=batch_runtime.batch_size,
         )
     ])
@@ -169,7 +169,7 @@ def test_run_with_list_pii_types(pii_masking_docs, batch_runtime) -> None:
         tasks.predictive.PIIMasking(
             pii_types=pii_types_list,
             model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
+            model_settings=batch_runtime.model_settings,
             batch_size=batch_runtime.batch_size,
         )
     ])
@@ -192,7 +192,7 @@ def test_run_with_none_pii_types(pii_masking_docs, batch_runtime) -> None:
         tasks.predictive.PIIMasking(
             pii_types=None,
             model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
+            model_settings=batch_runtime.model_settings,
             batch_size=batch_runtime.batch_size,
         )
     ])

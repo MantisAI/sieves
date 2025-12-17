@@ -116,7 +116,7 @@ Each layer has clear, focused responsibilities:
 
 - Handles low-level inference mechanics (batching, generation, error handling)
 - Manages model calls and streaming
-- Applies generation settings (temperature, max_tokens, top_p)
+- Applies model settings (temperature, max_tokens, top_p)
 - **Users never interact with this directly** - it's an implementation detail
 
 ### Key Methods: integrate() vs consolidate()
@@ -205,7 +205,7 @@ A `Bridge` requires you to implement/specify the following:
 - How to _integrate_ results into docs.
 - How to _consolidate_ results from multiple doc chunks into one result per doc.
 
-The _inference mode_ (which defines how the model wrapper queries the model and parses the results) is configured via `GenerationSettings` when creating the task, rather than in the Bridge.
+The _inference mode_ (which defines how the model wrapper queries the model and parses the results) is configured via `ModelSettings` when creating the task, rather than in the Bridge.
 
 We'll save this in `sentiment_analysis_bridges.py`.
 

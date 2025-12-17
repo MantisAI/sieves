@@ -65,7 +65,7 @@ def test_caching(batch_runtime) -> None:
 
     n_docs = 10
     docs = [Doc(text=text_science) for _ in range(n_docs)]
-    pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size))
+    pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, model_settings=batch_runtime.model_settings, batch_size=batch_runtime.batch_size))
     docs = list(pipe(docs))
     assert pipe._cache_stats == {"hits": 9, "misses": 1, "total": 10, "unique": 1}
     assert len(docs) == n_docs
@@ -73,7 +73,7 @@ def test_caching(batch_runtime) -> None:
     # Test that uniqueness filtering works while preserving sequence of Docs.
 
     docs = [Doc(text=text_science), Doc(text=text_politics), Doc(text=text_science)]
-    pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size))
+    pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, model_settings=batch_runtime.model_settings, batch_size=batch_runtime.batch_size))
     docs = list(pipe(docs))
     assert docs[0].text == docs[2].text == text_science
     assert docs[1].text == text_politics
@@ -83,8 +83,8 @@ def test_caching(batch_runtime) -> None:
 
     n_docs = 10
     docs = [Doc(text=text_science) for _ in range(n_docs)]
-    uncached_pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size), use_cache=False)
-    cached_pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size))
+    uncached_pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, model_settings=batch_runtime.model_settings, batch_size=batch_runtime.batch_size), use_cache=False)
+    cached_pipe = Pipeline(tasks=Classification(labels=labels, model=batch_runtime.model, model_settings=batch_runtime.model_settings, batch_size=batch_runtime.batch_size))
 
     start = time.time()
     uncached_docs = list(uncached_pipe(docs))

@@ -5,6 +5,7 @@ import enum
 from collections.abc import Iterable, Sequence
 from typing import Any, Literal, override
 
+import json_repair
 import outlines
 import pydantic
 from outlines.models import AsyncBlackBoxModel, BlackBoxModel, SteerableModel
@@ -91,7 +92,14 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
                 if inference_mode == InferenceMode.json:
                     assert len(results) == len(prompts)
                     assert isinstance(prompt_signature, type) and issubclass(prompt_signature, pydantic.BaseModel)
-                    yield from [prompt_signature.model_validate_json(result) for result in results]
+
+                    for result in results:
+                        try:
+                            yield prompt_signature.model_validate_json(result)
+                        # If naive parsing fails: JSON is potentially invalid. Attempt to repair it, then try again.
+                        except pydantic.ValidationError:
+                            yield prompt_signature.model_validate_json(json_repair.repair_json(result))
+
                 else:
                     yield from results
 

@@ -11,7 +11,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
@@ -58,7 +58,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
         overwrite: bool = False,
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
-        generation_settings: GenerationSettings = GenerationSettings(),
+        model_settings: ModelSettings = ModelSettings(),
         condition: Callable[[Doc], bool] | None = None,
     ) -> None:
         """
@@ -74,7 +74,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
             documents' `.results` field.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
-        :param generation_settings: Settings for structured generation.
+        :param model_settings: Settings for structured generation.
         :param condition: Optional callable that determines whether to process each document.
         """
         self._to = to
@@ -87,7 +87,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
             overwrite=overwrite,
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
             condition=condition,
         )
 
@@ -105,7 +105,7 @@ class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]
                 prompt_instructions=self._custom_prompt_instructions,
                 overwrite=self._overwrite,
                 language=self._to,
-                generation_settings=self._generation_settings,
+                model_settings=self._model_settings,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

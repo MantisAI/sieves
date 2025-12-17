@@ -47,7 +47,7 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
         classifier = classification.Classification(
             task_id="classifier",
             model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
+            model_settings=batch_runtime.model_settings,
             batch_size=batch_runtime.batch_size,
             labels={
                 "science": "Topics related to scientific disciplines and research",
@@ -114,7 +114,7 @@ def test_serialization(batch_runtime) -> None:
         classifier = classification.Classification(
             task_id="classifier",
             model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
+            model_settings=batch_runtime.model_settings,
             batch_size=batch_runtime.batch_size,
             labels={
                 "science": "Topics related to scientific disciplines and research",
@@ -141,12 +141,12 @@ def test_serialization(batch_runtime) -> None:
                                            'value': ()},
                       'batch_size': {'is_placeholder': False, 'value': -1},
                       'condition': {'is_placeholder': False, 'value': None},
-                      'generation_settings': {'is_placeholder': False,
+                      'model_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
-                                                        'strict_mode': False,
+                                                        'strict': True,
                                                         'inference_mode': None,}},
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'labels': {'is_placeholder': False,

@@ -7,7 +7,7 @@ This guide will help you get started with using `sieves` for zero-shot and few-s
 `sieves` is built around four main concepts:
 
 1. **Documents (`Doc`)**: The basic unit of text that you want to process. A document can be created from text or a URI.
-2. **Models + GenerationSettings**: You pass a model from your chosen backend (Outlines, DSPy, LangChain, etc.) and optional `GenerationSettings` (e.g., batch size)
+2. **Models + ModelSettings**: You pass a model from your chosen backend (Outlines, DSPy, LangChain, etc.) and optional `ModelSettings` (e.g., batch size)
 3. **Tasks**: NLP operations you want to perform on your documents (classification, information extraction, etc.)
 4. **Pipeline**: A sequence of tasks that process your documents
 
@@ -66,17 +66,17 @@ Here's a more involved example that:
 `sieves` supports multiple frameworks for interacting with zero-shot language models - see
 https://sieves.ai/guides/models/ for an overview.
 
-You pass supported models directly to `PredictiveTask`. Optionally, you can include `GenerationSettings` to
+You pass supported models directly to `PredictiveTask`. Optionally, you can include `ModelSettings` to
 influence model initialization and runtime behavior.
 
 Batching is configured on each task via `batch_size`:
 - `batch_size = -1` processes all inputs at once (default)
 - `batch_size = N` processes N docs per batch
 
-### GenerationSettings (optional)
-`GenerationSettings` controls details of how the model's structured generation will be run. It allows to configure:
+### ModelSettings (optional)
+`ModelSettings` controls details of how the model's structured generation will be run. It allows to configure:
 
-- `strict_mode`: Whether to raise encountered errors, or assign placeholder values for documents that failed to process.
+- `strict`: Whether to raise encountered errors, or assign placeholder values for documents that failed to process.
 - `init_kwargs`: Model-specific arguments that will be passed to the model's structured generation abstraction at its initialization.
 - `inference_kwargs`: Model-specific arguments that will be passed to the model's structured generation abstraction during inference.
 - `config_kwargs`: Model-specific arguments that will be applied to the model after task initialization.
@@ -84,7 +84,7 @@ Batching is configured on each task via `batch_size`:
 
 Example:
 
-```python title="Configuring generation settings and batching"
+```python title="Configuring model settings and batching"
 --8<-- "sieves/tests/docs/test_getting_started.py:generation-settings-config"
 ```
 

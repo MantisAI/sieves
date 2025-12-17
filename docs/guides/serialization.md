@@ -96,7 +96,7 @@ The configuration file contains:
 
 !!! info Parameter management
 
-      When loading pipelines, provide all required initialization parameters (e.g. models) and ensure you're loading a pipeline with a compatible `sieves` version. `GenerationSettings` is optional unless you want to override defaults.
+      When loading pipelines, provide all required initialization parameters (e.g. models) and ensure you're loading a pipeline with a compatible `sieves` version. `ModelSettings` is optional unless you want to override defaults.
 
 !!! warning Limitations
 

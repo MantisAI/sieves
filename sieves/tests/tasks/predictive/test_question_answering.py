@@ -2,7 +2,7 @@
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.model_wrappers import ModelType, GenerationSettings, dspy_, langchain_, outlines_
+from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, QuestionAnswering
 from sieves.tasks.predictive import question_answering
@@ -45,7 +45,7 @@ def test_run(qa_docs, batch_runtime, fewshot):
             "What the goal of the science as described in the text?",
         ],
         model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        model_settings=batch_runtime.model_settings,
         batch_size=batch_runtime.batch_size,
         **fewshot_args,
     )
@@ -92,7 +92,7 @@ def test_serialization(qa_docs, batch_runtime) -> None:
                     "What the goal of the science as described in the text?",
                 ],
                 model=batch_runtime.model,
-                generation_settings=batch_runtime.generation_settings,
+                model_settings=batch_runtime.model_settings,
                 batch_size=batch_runtime.batch_size,
             )
         ]
@@ -106,12 +106,12 @@ def test_serialization(qa_docs, batch_runtime) -> None:
                                                            'fewshot_examples': {'is_placeholder': False,
                                                                                 'value': ()},
                                                            'batch_size': {'is_placeholder': False, "value": -1},
-                                                           'generation_settings': {'is_placeholder': False,
+                                                           'model_settings': {'is_placeholder': False,
                                                                                    'value': {
                                                                                        'config_kwargs': None,
                                                                                        'inference_kwargs': None,
                                                                                        'init_kwargs': None,
-                                                                                       'strict_mode': False,
+                                                                                       'strict': True,
                                                                                        'inference_mode': None}},
                                                            'include_meta': {'is_placeholder': False, 'value': True},
                                                            'model': {'is_placeholder': True,
@@ -148,7 +148,7 @@ def test_inference_mode_override(batch_runtime) -> None:
             "What the goal of the science as described in the text?",
         ],
         model=batch_runtime.model,
-        generation_settings=GenerationSettings(inference_mode=dummy),
+        model_settings=ModelSettings(inference_mode=dummy),
         batch_size=batch_runtime.batch_size,
     )
 

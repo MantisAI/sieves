@@ -18,7 +18,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, ModelWrapper, ModelWrapperInferenceMode  # noqa: F401
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.model_wrappers.utils import init_model_wrapper
 from sieves.serialization import Config
 from sieves.tasks import optimization
@@ -93,7 +93,7 @@ class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC)
         overwrite: bool,
         prompt_instructions: str | None,
         fewshot_examples: Sequence[FewshotExample],
-        generation_settings: GenerationSettings,
+        model_settings: ModelSettings,
         condition: Callable[[Doc], bool] | None = None,
     ):
         """Initialize PredictiveTask.
@@ -107,14 +107,14 @@ class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC)
             documents' `.results` field.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
-        :param generation_settings: Settings for structured generation. Use the `inference_mode` field to specify the
+        :param model_settings: Settings for structured generation. Use the `inference_mode` field to specify the
             inference mode for the model wrapper. If not provided, the model wrapper will use its default mode.
         :param condition: Optional callable that determines whether to process each document.
         """
         super().__init__(task_id=task_id, include_meta=include_meta, batch_size=batch_size, condition=condition)
 
-        self._model_wrapper = init_model_wrapper(model, generation_settings)
-        self._generation_settings = generation_settings
+        self._model_wrapper = init_model_wrapper(model, model_settings)
+        self._model_settings = model_settings
         self._overwrite = overwrite
         self._custom_prompt_instructions = prompt_instructions
         self._bridge = self._init_bridge(ModelType.get_model_type(self._model_wrapper))
@@ -225,10 +225,13 @@ class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC)
 
     @property
     def _state(self) -> dict[str, Any]:
+        print("------- serializing")
+        print(self._model_wrapper.model_settings.strict)
+        print(self._model_settings.strict)
         return {
             **super()._state,
             "model": self._model_wrapper.model,
-            "generation_settings": self._model_wrapper.generation_settings.model_dump(),
+            "model_settings": self._model_wrapper.model_settings.model_dump(),
             "prompt_instructions": self._custom_prompt_instructions,
             "fewshot_examples": self._fewshot_examples,
         }
@@ -244,7 +247,7 @@ class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC)
         :return PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]: Deserialized PredictiveTask instance.
         """
         init_dict = config.to_init_dict(cls, **kwargs)
-        init_dict["generation_settings"] = GenerationSettings.model_validate(init_dict["generation_settings"])
+        init_dict["model_settings"] = ModelSettings.model_validate(init_dict["model_settings"])
 
         return cls(**init_dict)
 

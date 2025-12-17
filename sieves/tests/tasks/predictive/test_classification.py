@@ -3,7 +3,7 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.model_wrappers import ModelType, GenerationSettings
+from sieves.model_wrappers import ModelType, ModelSettings
 from sieves.serialization import Config
 from sieves.tasks import Classification
 from sieves.tasks.predictive import classification
@@ -49,7 +49,7 @@ def _run(
         task_id="classifier",
         labels=labels,
         model=runtime.model,
-        generation_settings=runtime.generation_settings,
+        model_settings=runtime.model_settings,
         batch_size=runtime.batch_size,
         multi_label=multilabel,
         **fewshot_args,
@@ -117,7 +117,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
             task_id="classifier",
             labels=labels,
             model=batch_runtime.model,
-            generation_settings=batch_runtime.generation_settings,
+            model_settings=batch_runtime.model_settings,
             batch_size=batch_runtime.batch_size,
         )
     )
@@ -130,12 +130,12 @@ def test_serialization(classification_docs, batch_runtime) -> None:
                                                            'fewshot_examples': {'is_placeholder': False,
                                                                                 'value': ()},
                                                            'batch_size': {'is_placeholder': False, "value": -1},
-                                                           'generation_settings': {'is_placeholder': False,
+                                                           'model_settings': {'is_placeholder': False,
                                                                                    'value': {
                                                                                        'config_kwargs': None,
                                                                                        'inference_kwargs': None,
                                                                                        'init_kwargs': None,
-                                                                                       'strict_mode': False,
+                                                                                       'strict': True,
                                                                                        'inference_mode': None}},
                                                            'include_meta': {'is_placeholder': False, 'value': True},
                                                            'labels': {'is_placeholder': False,
@@ -173,7 +173,7 @@ def test_labels_validation(batch_runtime) -> None:
     classification.Classification(
         labels=["science", "politics"],
         model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        model_settings=batch_runtime.model_settings,
         batch_size=batch_runtime.batch_size,
     )
 
@@ -182,7 +182,7 @@ def test_labels_validation(batch_runtime) -> None:
     classification.Classification(
         labels=labels_with_descriptions,
         model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        model_settings=batch_runtime.model_settings,
         batch_size=batch_runtime.batch_size,
     )
 
@@ -191,7 +191,7 @@ def test_labels_validation(batch_runtime) -> None:
     classification.Classification(
         labels=partial_descriptions,
         model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        model_settings=batch_runtime.model_settings,
         batch_size=batch_runtime.batch_size,
     )
 
@@ -277,7 +277,7 @@ def test_inference_mode_override(batch_runtime) -> None:
         task_id="classifier",
         labels=["science", "politics"],
         model=batch_runtime.model,
-        generation_settings=GenerationSettings(inference_mode=dummy),
+        model_settings=ModelSettings(inference_mode=dummy),
         batch_size=batch_runtime.batch_size,
     )
 
