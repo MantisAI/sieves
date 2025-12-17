@@ -9,7 +9,7 @@ import dspy
 import pydantic
 
 from sieves.data.doc import Doc
-from sieves.engines import EngineType, dspy_, langchain_, outlines_
+from sieves.engines import ModelType, dspy_, langchain_, outlines_
 from sieves.engines.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
@@ -132,15 +132,15 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
         )
 
     @override
-    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
-        bridge_types: dict[EngineType, type[_TaskBridge]] = {
-            EngineType.dspy: DSPyPIIMasking,
-            EngineType.langchain: LangChainPIIMasking,
-            EngineType.outlines: OutlinesPIIMasking,
+    def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
+        bridge_types: dict[ModelType, type[_TaskBridge]] = {
+            ModelType.dspy: DSPyPIIMasking,
+            ModelType.langchain: LangChainPIIMasking,
+            ModelType.outlines: OutlinesPIIMasking,
         }
 
         try:
-            return bridge_types[engine_type](
+            return bridge_types[model_type](
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 mask_placeholder=self._mask_placeholder,
@@ -149,15 +149,15 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
                 generation_settings=self._generation_settings,
             )
         except KeyError as err:
-            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
+            raise KeyError(f"Engine type {model_type} is not supported by {self.__class__.__name__}.") from err
 
     @staticmethod
     @override
-    def supports() -> set[EngineType]:
+    def supports() -> set[ModelType]:
         return {
-            EngineType.dspy,
-            EngineType.langchain,
-            EngineType.outlines,
+            ModelType.dspy,
+            ModelType.langchain,
+            ModelType.outlines,
         }
 
     @property

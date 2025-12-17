@@ -11,7 +11,7 @@ from sieves.tasks import Classification
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [engines.EngineType.outlines],
+    [engines.ModelType.outlines],
     indirect=True,
 )
 def test_double_task(dummy_docs, batch_runtime) -> None:
@@ -45,7 +45,7 @@ def test_double_task(dummy_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [engines.EngineType.huggingface],
+    [engines.ModelType.huggingface],
     indirect=True,
 )
 def test_caching(batch_runtime) -> None:

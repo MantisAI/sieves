@@ -40,7 +40,7 @@ def init_engine(
     :raises ValueError: If model type isn't supported.
     """
     model_type = type(model)
-    module_engine_map = {
+    module_wrapper_map = {
         dspy_: getattr(dspy_, "DSPy", None),
         gliner_: getattr(gliner_, "GliNER", None),
         huggingface_: getattr(huggingface_, "HuggingFace", None),
@@ -48,18 +48,17 @@ def init_engine(
         outlines_: getattr(outlines_, "Outlines", None),
     }
 
-    for module, engine_type in module_engine_map.items():
-        if engine_type is None:
-            continue
-
+    for module, model_wrapper_type in module_wrapper_map.items():
         assert hasattr(module, "Model")
+        assert model_wrapper_type
+
         try:
             module_model_types = module.Model.__args__
         except AttributeError:
             module_model_types = (module.Model,)
 
         if any(issubclass(model_type, module_model_type) for module_model_type in module_model_types):
-            internal_engine = engine_type(
+            internal_engine = model_wrapper_type(
                 model=model,
                 generation_settings=generation_settings,
             )

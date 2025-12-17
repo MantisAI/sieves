@@ -12,7 +12,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.engines import (
-    EngineType,
+    ModelType,
     dspy_,
     gliner_,
     huggingface_,
@@ -133,16 +133,16 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         self._fewshot_examples: Sequence[FewshotExample]
 
     @override
-    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
+    def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types = {
-            EngineType.langchain: LangChainNER,
-            EngineType.outlines: OutlinesNER,
-            EngineType.dspy: DSPyNER,
-            EngineType.gliner: GlinerNER,
+            ModelType.langchain: LangChainNER,
+            ModelType.outlines: OutlinesNER,
+            ModelType.dspy: DSPyNER,
+            ModelType.gliner: GlinerNER,
         }
 
         try:
-            bridge_class = bridge_types[engine_type]
+            bridge_class = bridge_types[model_type]
             result = bridge_class(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
@@ -151,16 +151,16 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             )
             return result  # type: ignore[return-value]
         except KeyError as err:
-            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
+            raise KeyError(f"Engine type {model_type} is not supported by {self.__class__.__name__}.") from err
 
     @staticmethod
     @override
-    def supports() -> set[EngineType]:
+    def supports() -> set[ModelType]:
         return {
-            EngineType.langchain,
-            EngineType.dspy,
-            EngineType.outlines,
-            EngineType.gliner,
+            ModelType.langchain,
+            ModelType.dspy,
+            ModelType.outlines,
+            ModelType.gliner,
         }
 
     @override

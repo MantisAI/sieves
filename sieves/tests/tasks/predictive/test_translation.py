@@ -2,7 +2,7 @@
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
+from sieves.engines import ModelType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import translation
@@ -70,7 +70,7 @@ def _to_hf_dataset(task: translation.Translation, docs: list[Doc]) -> None:
         task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [ModelType.dspy], indirect=["batch_runtime"])
 def test_serialization(translation_docs, batch_runtime) -> None:
     pipe = Pipeline([
         translation.Translation(

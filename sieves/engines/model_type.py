@@ -13,7 +13,7 @@ from sieves.engines.outlines_ import Outlines
 
 
 class ModelType(enum.Enum):
-    """Available engine types."""
+    """Available model types."""
 
     dspy = DSPy
     gliner = GliNER
@@ -23,9 +23,9 @@ class ModelType(enum.Enum):
 
     @classmethod
     def all(cls) -> tuple[ModelType, ...]:
-        """Return all available engine types.
+        """Return all available model types.
 
-        :return tuple[ModelType, ...]: All available engine types.
+        :return tuple[ModelType, ...]: All available model types.
         """
         return tuple(ModelType)
 

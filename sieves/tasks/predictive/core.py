@@ -17,7 +17,7 @@ import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineInferenceMode, EngineType  # noqa: F401
+from sieves.engines import Engine, EngineInferenceMode, ModelType  # noqa: F401
 from sieves.engines.types import GenerationSettings
 from sieves.engines.utils import init_engine
 from sieves.serialization import Config
@@ -121,7 +121,7 @@ class PredictiveTask(
         self._generation_settings = generation_settings
         self._overwrite = overwrite
         self._custom_prompt_instructions = prompt_instructions
-        self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
+        self._bridge = self._init_bridge(ModelType.get_engine_type(self._engine))
         self._fewshot_examples = fewshot_examples
 
         self._validate_fewshot_examples()
@@ -134,19 +134,19 @@ class PredictiveTask(
         pass
 
     @abc.abstractmethod
-    def _init_bridge(self, engine_type: EngineType) -> TaskBridge:
+    def _init_bridge(self, model_type: ModelType) -> TaskBridge:
         """Initialize bridge.
 
-        :param engine_type: Type of engine to initialize bridge for.
+        :param model_type: Type of engine to initialize bridge for.
         :return _TaskBridge: Engine task bridge.
         """
 
     @staticmethod
     @abc.abstractmethod
-    def supports() -> set[EngineType]:
-        """Return supported engine types.
+    def supports() -> set[ModelType]:
+        """Return supported model types.
 
-        :return set[EngineType]: Supported engine types.
+        :return set[ModelType]: Supported model types.
         """
 
     @property
@@ -165,6 +165,7 @@ class PredictiveTask(
 
         :return str | None: Prompt signature description.
         """
+        assert hasattr(self._bridge, "prompt_signature_description")
         sig_desc = self._bridge.prompt_signature_description
         assert sig_desc is None or isinstance(sig_desc, str)
         return sig_desc
@@ -326,7 +327,7 @@ class PredictiveTask(
         :raises KeyError: If no DSPy bridge defined for this task.
         """
         try:
-            dspy_bridge = self._bridge if self._engine == EngineType.dspy else self._init_bridge(EngineType.dspy)
+            dspy_bridge = self._bridge if self._engine == ModelType.dspy else self._init_bridge(ModelType.dspy)
             return dspy_bridge.prompt_signature
 
         except KeyError as err:
@@ -445,6 +446,6 @@ class PredictiveTask(
         self._custom_prompt_instructions = best_prompt
 
         # Reinitialize bridge to use new prompt and few-shot examples.
-        self._bridge = self._init_bridge(EngineType.get_engine_type(self._engine))
+        self._bridge = self._init_bridge(ModelType.get_engine_type(self._engine))
 
         return best_prompt, self._fewshot_examples

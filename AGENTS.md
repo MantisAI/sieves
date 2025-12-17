@@ -256,7 +256,7 @@ Enforced via CI pipeline:
 2. Subclass appropriate base (e.g., `PydanticEngine` for schema-aware generation)
 3. Implement `build_executable(signature, **kwargs)` → callable
 4. Advertise `inference_modes` property
-5. Add to `EngineType` enum in `engine_type.py`
+5. Add to `ModelType` enum in `model_type.py`
 6. Ensure `serialize()/deserialize()` work with `Config`
 7. Add tests and docs
 

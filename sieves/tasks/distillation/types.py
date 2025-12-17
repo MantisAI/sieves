@@ -15,9 +15,9 @@ class DistillationFramework(enum.Enum):
 
     @classmethod
     def all(cls) -> tuple[DistillationFramework, ...]:
-        """Return all available engine types.
+        """Return all available model types.
 
-        :return tuple[EngineType, ...]: All available engine types.
+        :return tuple[ModelType, ...]: All available model types.
         """
         return tuple(dist_type for dist_type in DistillationFramework)
 

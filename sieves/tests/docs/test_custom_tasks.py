@@ -171,7 +171,7 @@ def test_custom_predictive_task_example():
     import pydantic
 
     from sieves.data import Doc
-    from sieves.engines import EngineType
+    from sieves.engines import ModelType
     from sieves.serialization import Config
     from sieves.tasks.predictive.core import PredictiveTask
     # --8<-- [end:custom-task-predictive-imports]
@@ -292,9 +292,9 @@ def test_custom_predictive_task_example():
     # --8<-- [end:custom-task-predictive-task-class]
         # --8<-- [start:custom-task-predictive-init-supports]
         # For the initialization of the bridge. We raise an error if an engine has been specified that we don't support (due
-        # to us not having a bridge implemented that would support this engine type).
-        def _init_bridge(self, engine_type: EngineType) -> OutlinesSentimentAnalysis:
-            if engine_type == EngineType.outlines:
+        # to us not having a bridge implemented that would support this model type).
+        def _init_bridge(self, model_type: ModelType) -> OutlinesSentimentAnalysis:
+            if model_type == ModelType.outlines:
                 return OutlinesSentimentAnalysis(
                     task_id=self._task_id,
                     prompt_instructions=self._custom_prompt_instructions,
@@ -302,12 +302,12 @@ def test_custom_predictive_task_example():
                     generation_settings=self._generation_settings,
                 )
             else:
-                raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
+                raise KeyError(f"Engine type {model_type} is not supported by {self.__class__.__name__}.")
 
-        # Represents set of supported engine types.
+        # Represents set of supported model types.
         @property
-        def supports(self) -> set[EngineType]:
-            return {EngineType.outlines}
+        def supports(self) -> set[ModelType]:
+            return {ModelType.outlines}
         # --8<-- [end:custom-task-predictive-init-supports]
 
         # --8<-- [start:custom-task-predictive-to-hf-dataset]
@@ -348,7 +348,7 @@ def test_using_custom_task_example(small_outlines_model):
     import pydantic
     import datasets
     from sieves.data import Doc
-    from sieves.engines import EngineType, EngineInferenceMode, outlines_
+    from sieves.engines import ModelType, EngineInferenceMode, outlines_
     from sieves.tasks.predictive.bridges import Bridge
     from sieves.tasks.predictive.core import PredictiveTask
     from sieves.serialization import Config
@@ -437,8 +437,8 @@ def test_using_custom_task_example(small_outlines_model):
                 generation_settings=generation_settings, condition=None
             )
 
-        def _init_bridge(self, engine_type: EngineType) -> OutlinesSentimentAnalysis:
-            if engine_type == EngineType.outlines:
+        def _init_bridge(self, model_type: ModelType) -> OutlinesSentimentAnalysis:
+            if model_type == ModelType.outlines:
                 return OutlinesSentimentAnalysis(
                     task_id=self._task_id,
                     prompt_instructions=self._custom_prompt_instructions,
@@ -446,11 +446,11 @@ def test_using_custom_task_example(small_outlines_model):
                     generation_settings=self._generation_settings,
                 )
             else:
-                raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.")
+                raise KeyError(f"Engine type {model_type} is not supported by {self.__class__.__name__}.")
 
         @property
-        def supports(self) -> set[EngineType]:
-            return {EngineType.outlines}
+        def supports(self) -> set[ModelType]:
+            return {ModelType.outlines}
 
         def to_hf_dataset(self, docs: Iterable[Doc]) -> datasets.Dataset:
             info = datasets.DatasetInfo(

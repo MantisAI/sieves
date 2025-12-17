@@ -12,7 +12,7 @@ import transformers
 from langchain_openai import ChatOpenAI
 
 from sieves import Doc
-from sieves.engines.engine_type import EngineType
+from sieves.engines.model_type import ModelType
 from sieves.engines.utils import GenerationSettings
 from sieves.tasks.types import Model
 
@@ -29,26 +29,26 @@ def tokenizer() -> tokenizers.Tokenizer:
 
 
 @cache
-def make_model(engine_type: EngineType) -> Model:
+def make_model(model_type: ModelType) -> Model:
     """Create model.
-    :param engine_type: Engine type. to create model for.
+    :param model_type: Engine type. to create model for.
     :return Any: Model instance.
     """
     openrouter_api_base = "https://openrouter.ai/api/v1/"
     openrouter_model_id = "google/gemini-2.5-flash-lite-preview-09-2025"
 
-    match engine_type:
-        case EngineType.dspy:
+    match model_type:
+        case ModelType.dspy:
             model = dspy.LM(
                 f"openrouter/{openrouter_model_id}",
                 api_base=openrouter_api_base,
                 api_key=os.environ['OPENROUTER_API_KEY']
             )
 
-        case EngineType.gliner:
+        case ModelType.gliner:
             model = gliner2.GLiNER2.from_pretrained("fastino/gliner2-base-v1")
 
-        case EngineType.langchain:
+        case ModelType.langchain:
             model = ChatOpenAI(
                 api_key=os.environ['OPENROUTER_API_KEY'],
                 base_url=openrouter_api_base,
@@ -56,12 +56,12 @@ def make_model(engine_type: EngineType) -> Model:
                 temperature=0
             )
 
-        case EngineType.huggingface:
+        case ModelType.huggingface:
             model = transformers.pipeline(
                 "zero-shot-classification", model="MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33"
             )
 
-        case EngineType.outlines:
+        case ModelType.outlines:
             model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
             model = outlines.models.from_transformers(
                 transformers.AutoModelForCausalLM.from_pretrained(model_name),
@@ -69,34 +69,34 @@ def make_model(engine_type: EngineType) -> Model:
             )
 
         case _:
-            raise ValueError(f"Unsupported runtime type {engine_type}.")
+            raise ValueError(f"Unsupported runtime type {model_type}.")
 
     return model
 
 
 @cache
-def _make_runtime(engine_type: EngineType, batch_size: int) -> Runtime:
+def _make_runtime(model_type: ModelType, batch_size: int) -> Runtime:
     """Create runtime tuple (model, generation_settings) for tests.
 
-    :param engine_type: Engine type.
+    :param model_type: Engine type.
     :param batch_size: Batch size to use in runtime.
     :return: Runtime tuple.
     """
-    return Runtime(make_model(engine_type), GenerationSettings(), batch_size)
+    return Runtime(make_model(model_type), GenerationSettings(), batch_size)
 
 
 @pytest.fixture(scope="function")
 def batch_runtime(request) -> Runtime:
     """Initialize runtime with batching enabled (batch_size = -1)."""
-    assert isinstance(request.param, EngineType)
-    return _make_runtime(engine_type=request.param, batch_size=-1)
+    assert isinstance(request.param, ModelType)
+    return _make_runtime(model_type=request.param, batch_size=-1)
 
 
 @pytest.fixture(scope="function")
 def runtime(request) -> Runtime:
     """Initialize runtime without batching (batch_size = 1)."""
-    assert isinstance(request.param, EngineType)
-    return _make_runtime(engine_type=request.param, batch_size=1)
+    assert isinstance(request.param, ModelType)
+    return _make_runtime(model_type=request.param, batch_size=1)
 
 
 @pytest.fixture(scope="session")

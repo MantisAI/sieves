@@ -4,7 +4,7 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline, tasks
-from sieves.engines import EngineType, GenerationSettings, dspy_, langchain_, outlines_
+from sieves.engines import ModelType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, InformationExtraction
 from sieves.tasks.predictive import information_extraction
@@ -102,7 +102,7 @@ def _to_hf_dataset(task: InformationExtraction, docs: list[Doc]) -> None:
         task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.outlines], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [ModelType.outlines], indirect=["batch_runtime"])
 def test_serialization(information_extraction_docs, batch_runtime) -> None:
     pipe = Pipeline(
         tasks.predictive.InformationExtraction(

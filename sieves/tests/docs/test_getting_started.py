@@ -20,7 +20,7 @@ from pathlib import Path
 import tokenizers
 
 from sieves import Doc, Pipeline, tasks
-from sieves.engines import EngineType
+from sieves.engines import ModelType
 
 
 def test_basic_classification_example(small_outlines_model):
@@ -271,7 +271,7 @@ def test_readme_quick_start_basic(small_outlines_model):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("runtime", [EngineType.dspy], indirect=True)
+@pytest.mark.parametrize("runtime", [ModelType.dspy], indirect=True)
 def test_readme_advanced_example(runtime):
     """Test the Advanced IE + PDF example from README."""
     model = runtime.model

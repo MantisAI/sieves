@@ -3,7 +3,7 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType, GenerationSettings
+from sieves.engines import ModelType, GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks import Classification
 from sieves.tasks.predictive import classification
@@ -105,7 +105,7 @@ def _to_hf_dataset(task: Classification, docs: list[Doc], multi_label: bool) -> 
         task.to_hf_dataset([Doc(text="This is a dummy text.")])
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [ModelType.huggingface], indirect=["batch_runtime"])
 def test_serialization(classification_docs, batch_runtime) -> None:
     labels = {
         "science": "Topics related to scientific disciplines and research",
@@ -166,7 +166,7 @@ def test_serialization(classification_docs, batch_runtime) -> None:
     Pipeline.deserialize(config=config, tasks_kwargs=[{"model": batch_runtime.model}])
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [ModelType.huggingface], indirect=["batch_runtime"])
 def test_labels_validation(batch_runtime) -> None:
     """Test that labels parameter accepts both list and dict formats."""
     # Valid case - list format (no descriptions)
