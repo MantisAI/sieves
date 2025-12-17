@@ -64,6 +64,7 @@ def test_basic_setfit_distillation(small_dspy_model):
             val_frac=0.3,
             seed=42,
             train_kwargs={
+                "num_iterations": 1,    # Min. iterations.
                 "num_epochs": 1,        # Minimal epochs (instead of 3-5)
                 "batch_size": 8,
             },
