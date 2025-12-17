@@ -213,6 +213,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                     raise KeyError(f"Document does not have results for task ID {self._task_id}")
 
                 # Get the entities from the document results
+                print(doc.results[self._task_id])
                 result = doc.results[self._task_id].entities
                 entities: list[dict[str, Any]] = []
 

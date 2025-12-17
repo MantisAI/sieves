@@ -524,14 +524,11 @@ class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
     @override
     def integrate(self, results: Iterable[gliner_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc_results, doc in zip(results, docs):
-            doc.results[self._task_id] = [
-                Entities(
-                    entities=[
-                        Entity.model_validate({k: v for k, v in res.items() if k != "confidence"})
-                        for res in doc_results
-                    ],
-                    text=doc.text,
-                )
-            ]
+            doc.results[self._task_id] = Entities(
+                entities=[
+                    Entity.model_validate({k: v for k, v in res.items() if k != "confidence"}) for res in doc_results
+                ],
+                text=doc.text,
+            )
 
         return docs
