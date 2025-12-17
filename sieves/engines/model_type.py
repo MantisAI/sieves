@@ -12,7 +12,7 @@ from sieves.engines.langchain_ import LangChain
 from sieves.engines.outlines_ import Outlines
 
 
-class EngineType(enum.Enum):
+class ModelType(enum.Enum):
     """Available engine types."""
 
     dspy = DSPy
@@ -22,24 +22,24 @@ class EngineType(enum.Enum):
     outlines = Outlines
 
     @classmethod
-    def all(cls) -> tuple[EngineType, ...]:
+    def all(cls) -> tuple[ModelType, ...]:
         """Return all available engine types.
 
-        :return tuple[EngineType, ...]: All available engine types.
+        :return tuple[ModelType, ...]: All available engine types.
         """
-        return tuple(EngineType)
+        return tuple(ModelType)
 
     @classmethod
     def get_engine_type(
         cls, engine: Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]
-    ) -> EngineType:
-        """Return engine type for specified engine.
+    ) -> ModelType:
+        """Return model type for specified engine.
 
         :param engine: Engine to get type for.
-        :return EngineType: Engine type for self._engine.
-        :raises ValueError: if engine class not found in EngineType.
+        :return ModelType: Engine type for self._engine.
+        :raises ValueError: if engine class not found in ModelType.
         """
-        for et in EngineType:
+        for et in ModelType:
             if isinstance(engine, et.value):
                 return et
-        raise ValueError(f"Engine class {engine.__class__.__name__} not found in EngineType.")
+        raise ValueError(f"Engine class {engine.__class__.__name__} not found in ModelType.")

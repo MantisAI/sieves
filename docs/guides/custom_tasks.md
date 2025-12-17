@@ -407,14 +407,14 @@ def consolidate(self, results, docs_offsets):
 
 **Solution**: Either:
 
-1. Implement a bridge for that engine type
+1. Implement a bridge for that model type
 2. Use a supported engine (check `task.supports`)
-3. Update `_init_bridge()` to handle the engine type
+3. Update `_init_bridge()` to handle the model type
 
 ```python
 # Check supported engines before creating task
-from sieves.engines import EngineType
-print(f"Supported engines: {task.supports}")  # e.g., {EngineType.outlines}
+from sieves.engines import ModelType
+print(f"Supported engines: {task.supports}")  # e.g., {ModelType.outlines}
 ```
 
 #### Prompt template not rendering correctly
