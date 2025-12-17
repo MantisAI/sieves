@@ -1,4 +1,4 @@
-"""GLiNER2 engine wrapper built on top of GLiNER2 multi‑task pipelines."""
+"""GLiNER2 model wrapper wrapper built on top of GLiNER2 multi‑task pipelines."""
 
 import enum
 import warnings
@@ -9,7 +9,7 @@ import gliner2
 import jinja2
 import pydantic
 
-from sieves.engines.core import Engine, Executable
+from sieves.model_wrappers.core import Executable, ModelWrapper
 
 PromptSignature = gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder
 Model = gliner2.GLiNER2
@@ -24,8 +24,8 @@ class InferenceMode(enum.Enum):
     structure = 3
 
 
-class GliNER(Engine[PromptSignature, Result, Model, InferenceMode]):
-    """Engine adapter for GLiNER2."""
+class GliNER(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
+    """ModelWrapper adapter for GLiNER2."""
 
     @override
     @property
@@ -47,7 +47,7 @@ class GliNER(Engine[PromptSignature, Result, Model, InferenceMode]):
     ) -> Executable[Result]:
         cls_name = self.__class__.__name__
         if len(list(fewshot_examples)):
-            warnings.warn(f"Few-shot examples are not supported by engine {cls_name}.")
+            warnings.warn(f"Few-shot examples are not supported by model type {cls_name}.")
 
         # Overwrite prompt default template, if template specified. Note that this is a static prompt and GliNER doesn't
         # do few-shotting, so we don't inject anything into the template.
@@ -55,7 +55,7 @@ class GliNER(Engine[PromptSignature, Result, Model, InferenceMode]):
             self._model.prompt = jinja2.Template(prompt_template).render()
 
         def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result]:
-            """Execute prompts with engine for given values.
+            """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
             :return Iterable[Result]: Results for prompts.
@@ -63,7 +63,11 @@ class GliNER(Engine[PromptSignature, Result, Model, InferenceMode]):
             yield from self._model.batch_extract(
                 texts=[val["text"] for val in values],
                 schemas=prompt_signature,
-                **({"batch_size": len(values)} | self._inference_kwargs | {"include_confidence": True}),
+                **(
+                    {"batch_size": len(values)}
+                    | self._inference_kwargs
+                    | {"include_confidence": True, "include_spans": True}
+                ),
             )
 
         return execute

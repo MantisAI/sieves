@@ -879,14 +879,14 @@ wheels = [
 
 [[package]]
 name = "gliner2"
-version = "1.1.2"
+version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "gliner" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/9c/404acd3fb5f32a99bbf15379838dc9361db34265d965380410643e4c19e4/gliner2-1.1.2.tar.gz", hash = "sha256:b8fabfce3a7d0ea3b4e4647a2112a0b6e77d5b1776e7b9494ac5dd0b1557219a", size = 64390, upload-time = "2025-12-04T17:07:17.544Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/95/a4/585790cd28a4082acfd5767f493ca029f276e57d142831f9d544960e9a3b/gliner2-1.2.1.tar.gz", hash = "sha256:3e44b175a8bb1e3ab1fa896a07dc17ca9de1b580986bfbfe3c1ca90a399fd220", size = 115593, upload-time = "2025-12-17T15:21:15.382Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/37/c4fed47c937b6a37df0e88585faa766f65aa7af34f3b3f1277e67e546519/gliner2-1.1.2-py3-none-any.whl", hash = "sha256:3de83bef906a29f4dafa8d59fbf5cc41be3f8ebd8248910e45c39293079ab1c7", size = 61377, upload-time = "2025-12-04T17:07:15.318Z" },
+    { url = "https://files.pythonhosted.org/packages/11/30/d7053fc53d66b72c4ac41b3ffe8e944558b1fa28175f679c207e8b8ff0a7/gliner2-1.2.1-py3-none-any.whl", hash = "sha256:a2da17b887fa42317f7a29521c6f6e1c5aba809fa2b0d650c65466642cf5e301", size = 80214, upload-time = "2025-12-17T15:21:12.727Z" },
 ]
 
 [[package]]
@@ -3212,7 +3212,7 @@ requires-dist = [
     { name = "docling", marker = "extra == 'ingestion'", specifier = ">=2,<3" },
     { name = "dspy", specifier = ">=3,<4" },
     { name = "dspy-ai", specifier = ">=3,<4" },
-    { name = "gliner2", specifier = ">=1.1,<2" },
+    { name = "gliner2", specifier = ">=1.2,<1.3" },
     { name = "jinja2", specifier = ">=3,<4" },
     { name = "langchain", specifier = ">=0.3,<0.4" },
     { name = "langchain-community", marker = "extra == 'test'", specifier = ">=0.3.31,<0.4" },

@@ -11,7 +11,7 @@ import pytest
 import setfit
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType
+from sieves.model_wrappers import ModelType
 from sieves.serialization import Config
 from sieves.tasks import DistillationFramework
 from sieves.tasks.predictive import classification
@@ -33,7 +33,7 @@ def _get_docs() -> list[Doc]:
     ]
 
 
-@pytest.mark.parametrize("batch_runtime", (EngineType.huggingface,), indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", (ModelType.huggingface,), indirect=["batch_runtime"])
 @pytest.mark.parametrize("distillation_framework", DistillationFramework.all())
 def test_distillation_classification(batch_runtime, distillation_framework) -> None:
     seed = 42
@@ -104,7 +104,7 @@ def test_distillation_classification(batch_runtime, distillation_framework) -> N
                 assert preds.shape[1] in (1, 2)
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.huggingface], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [ModelType.huggingface], indirect=["batch_runtime"])
 def test_serialization(batch_runtime) -> None:
     seed = 42
     dir_path: str | None

@@ -11,15 +11,15 @@ import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import (
-    EngineType,
+from sieves.model_wrappers import (
+    ModelType,
     dspy_,
     gliner_,
     huggingface_,
     langchain_,
     outlines_,
 )
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
@@ -54,7 +54,7 @@ class FewshotExample(BaseFewshotExample):
 
 
 class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
-    """Extract named entities from text using various engines.
+    """Extract named entities from text using various model wrappers.
 
     Examples:
         Basic usage with list of entity types:
@@ -133,16 +133,16 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         self._fewshot_examples: Sequence[FewshotExample]
 
     @override
-    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
+    def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types = {
-            EngineType.langchain: LangChainNER,
-            EngineType.outlines: OutlinesNER,
-            EngineType.dspy: DSPyNER,
-            EngineType.gliner: GlinerNER,
+            ModelType.langchain: LangChainNER,
+            ModelType.outlines: OutlinesNER,
+            ModelType.dspy: DSPyNER,
+            ModelType.gliner: GlinerNER,
         }
 
         try:
-            bridge_class = bridge_types[engine_type]
+            bridge_class = bridge_types[model_type]
             result = bridge_class(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
@@ -151,16 +151,16 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             )
             return result  # type: ignore[return-value]
         except KeyError as err:
-            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
+            raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
 
     @staticmethod
     @override
-    def supports() -> set[EngineType]:
+    def supports() -> set[ModelType]:
         return {
-            EngineType.langchain,
-            EngineType.dspy,
-            EngineType.outlines,
-            EngineType.gliner,
+            ModelType.langchain,
+            ModelType.dspy,
+            ModelType.outlines,
+            ModelType.gliner,
         }
 
     @override
@@ -213,6 +213,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                     raise KeyError(f"Document does not have results for task ID {self._task_id}")
 
                 # Get the entities from the document results
+                print(doc.results[self._task_id])
                 result = doc.results[self._task_id].entities
                 entities: list[dict[str, Any]] = []
 

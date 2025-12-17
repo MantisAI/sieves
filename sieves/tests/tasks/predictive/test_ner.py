@@ -2,20 +2,21 @@
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType, GenerationSettings
+from sieves.model_wrappers import ModelType, GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import ner
 from sieves.tasks.predictive.ner.core import EntityWithContext
 
 
+
+
 @pytest.mark.parametrize(
     "batch_runtime",
-    # ner.NER.supports(),
-    (EngineType.gliner,),
+    ner.NER.supports(),
     indirect=["batch_runtime"],
 )
-@pytest.mark.parametrize("fewshot", [False])
+@pytest.mark.parametrize("fewshot", [True, False])
 def test_run(ner_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         ner.FewshotExample(
@@ -59,7 +60,7 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
         _to_hf_dataset(task, docs)
 
 
-@pytest.mark.parametrize("batch_runtime", [EngineType.dspy], indirect=["batch_runtime"])
+@pytest.mark.parametrize("batch_runtime", [ModelType.dspy], indirect=["batch_runtime"])
 def test_serialization(ner_docs, batch_runtime) -> None:
     pipe = Pipeline(
         ner.NER(
@@ -128,7 +129,7 @@ def _to_hf_dataset(task: ner.NER, docs: list[Doc]) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy, EngineType.langchain, EngineType.outlines, EngineType.gliner],
+    [ModelType.dspy, ModelType.langchain, ModelType.outlines, ModelType.gliner],
     indirect=["batch_runtime"],
 )
 def test_inference_mode_override(batch_runtime) -> None:

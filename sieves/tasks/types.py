@@ -1,6 +1,6 @@
 """Common types."""
 
-from sieves.engines import (
+from sieves.model_wrappers import (
     dspy_,
     gliner_,
     huggingface_,

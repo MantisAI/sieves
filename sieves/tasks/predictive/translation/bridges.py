@@ -10,8 +10,8 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -19,7 +19,7 @@ _BridgeResult = TypeVar("_BridgeResult")
 
 
 class TranslationBridge(
-    Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode],
+    Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode],
     abc.ABC,
 ):
     """Abstract base class for translation bridges."""
@@ -120,7 +120,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
 
 
 class PydanticBasedTranslation(
-    TranslationBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode],
+    TranslationBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode],
     abc.ABC,
 ):
     """Base class for Pydantic-based translation bridges."""

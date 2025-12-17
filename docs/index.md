@@ -1,13 +1,11 @@
 # `sieves`
 
-`sieves` is a Python library designed for zero-shot document AI tasks that focuses on structured generation. It allows
-developers to quickly build NLP prototypes without requiring training data. It provides a unified interface that wraps
-popular NLP tools while ensuring structured  outputs and observability.
+`sieves` is a library for zero-shot document AI with structured generation. It facilitates the rapid prototyping of
+document AI pipelines with validated output. No training required.
 
 It bundles common NLP utilities, document parsing, and text chunking capabilities together with ready-to-use tasks like
 classification and information extraction, all organized in an observable pipeline architecture. It's particularly
 valuable for rapid prototyping scenarios where structured output is needed but training data is scarce.
-
 
 ## Quick Installation
 
@@ -54,8 +52,8 @@ pip install "sieves[distill]"
 
 1. **`Pipeline`**: The main orchestrator that runs your NLP tasks sequentially (define with `Pipeline([...])` or chain with `+`)
 2. **`Task`**: Pre-built or custom NLP operations (classification, extraction, etc.)
-3. **`Engine`**: Backend implementations that power the tasks (outlines, dspy, langchain, etc.)
-4. **`Bridge`**: Connectors between Tasks and Engines
+3. **`ModelWrapper`**: Backend implementations that power the tasks (outlines, dspy, langchain, etc.)
+4. **`Bridge`**: Connectors between Tasks and Model wrappers
 5. **`Doc`**: The fundamental data structure for document processing
 
 ## Essential Links
@@ -86,7 +84,7 @@ We've prepared several guides to help you get up to speed quickly:
 - Dive into our guides, starting with the [Getting Started Guide](guides/getting_started.md)
 - Check out example pipelines in our repository
 - Learn about custom task creation
-- Understand different engine configurations
+- Understand different model configurations
 
 Consult the API reference for each component you're working with if you have specific question. They contain detailed
 information about parameters, configurations, and best practices.

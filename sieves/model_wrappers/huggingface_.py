@@ -1,4 +1,4 @@
-"""Hugging Face transformers engine wrapper (zero-shot classification)."""
+"""Hugging Face transformers zero-shot classification pipeline model wrapper."""
 
 import enum
 from collections.abc import Iterable, Sequence
@@ -8,7 +8,7 @@ import jinja2
 import pydantic
 import transformers
 
-from sieves.engines.core import Engine, Executable
+from sieves.model_wrappers.core import Executable, ModelWrapper
 
 PromptSignature = list[str]
 Model = transformers.Pipeline
@@ -21,8 +21,8 @@ class InferenceMode(enum.Enum):
     zeroshot_cls = 0
 
 
-class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
-    """Engine adapter around ``transformers.Pipeline`` for zero‑shot tasks."""
+class HuggingFace(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
+    """ModelWrapper adapter around ``transformers.Pipeline`` for zero‑shot tasks."""
 
     @override
     @property
@@ -43,7 +43,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
         cls_name = self.__class__.__name__
-        assert prompt_template, ValueError(f"prompt_template has to be provided to {cls_name} engine by task.")
+        assert prompt_template, ValueError(f"prompt_template has to be provided to {cls_name} model wrapper by task.")
         assert isinstance(prompt_signature, list)
 
         # Render template with few-shot examples. Note that we don't use extracted document values here, as HF zero-shot
@@ -54,7 +54,7 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
         def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result]:
-            """Execute prompts with engine for given values.
+            """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
             :return Iterable[Result]: Results for prompts.
@@ -70,6 +70,6 @@ class HuggingFace(Engine[PromptSignature, Result, Model, InferenceMode]):
                     )
 
                 case _:
-                    raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
+                    raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} model wrapper.")
 
         return execute

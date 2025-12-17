@@ -88,8 +88,8 @@ Example:
 --8<-- "sieves/tests/docs/test_getting_started.py:generation-settings-config"
 ```
 
-To specify an inference mode (engine-specific):
+To specify an inference mode (model type-specific):
 
-```python title="Engine-specific inference mode configuration"
+```python title="ModelWrapper-specific inference mode configuration"
 --8<-- "sieves/tests/docs/test_getting_started.py:inference-mode-config"
 ```

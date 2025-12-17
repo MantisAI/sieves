@@ -1,17 +1,23 @@
-"""Utils for engines."""
+"""Utils for model wrappers."""
 
 import outlines
 import transformers
 
-from sieves.engines import (
+from sieves.model_wrappers import (
     dspy_,
     gliner_,
     huggingface_,
     langchain_,
     outlines_,
 )
-from sieves.engines.core import Engine, EngineInferenceMode, EngineModel, EnginePromptSignature, EngineResult
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers.core import (
+    ModelWrapper,
+    ModelWrapperInferenceMode,
+    ModelWrapperModel,
+    ModelWrapperPromptSignature,
+    ModelWrapperResult,
+)
+from sieves.model_wrappers.types import GenerationSettings
 
 Model = dspy_.Model | gliner_.Model | huggingface_.Model | langchain_.Model | outlines_.Model
 
@@ -29,18 +35,18 @@ def init_default_model() -> outlines.models.Transformers:  # noqa: D401
     )
 
 
-def init_engine(
+def init_model_wrapper(
     model: Model, generation_settings: GenerationSettings
-) -> Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]:  # noqa: D401
-    """Initialize internal engine object.
+) -> ModelWrapper[ModelWrapperPromptSignature, ModelWrapperResult, ModelWrapperModel, ModelWrapperInferenceMode]:  # noqa: D401
+    """Initialize internal model wrapper object.
 
     :param model: Model to use.
     :param generation_settings: Settings for structured generation.
-    :return Engine: Engine.
+    :return ModelWrapper: ModelWrapper.
     :raises ValueError: If model type isn't supported.
     """
     model_type = type(model)
-    module_engine_map = {
+    module_wrapper_map = {
         dspy_: getattr(dspy_, "DSPy", None),
         gliner_: getattr(gliner_, "GliNER", None),
         huggingface_: getattr(huggingface_, "HuggingFace", None),
@@ -48,24 +54,23 @@ def init_engine(
         outlines_: getattr(outlines_, "Outlines", None),
     }
 
-    for module, engine_type in module_engine_map.items():
-        if engine_type is None:
-            continue
-
+    for module, model_wrapper_type in module_wrapper_map.items():
         assert hasattr(module, "Model")
+        assert model_wrapper_type
+
         try:
             module_model_types = module.Model.__args__
         except AttributeError:
             module_model_types = (module.Model,)
 
         if any(issubclass(model_type, module_model_type) for module_model_type in module_model_types):
-            internal_engine = engine_type(
+            internal_model_wrapper = model_wrapper_type(
                 model=model,
                 generation_settings=generation_settings,
             )
-            assert isinstance(internal_engine, Engine)
+            assert isinstance(internal_model_wrapper, ModelWrapper)
 
-            return internal_engine
+            return internal_model_wrapper
 
     raise ValueError(
         f"Model type {model.__class__} is not supported. Please check the documentation and ensure that (1) you're "

@@ -149,5 +149,5 @@ class Task(abc.ABC):
         :param kwargs: Values to inject into loaded config.
         :return: Deserialized Task instance.
         """
-        # Deserialize and inject engine.
+        # Deserialize and inject model wrapper.
         return cls(**config.to_init_dict(cls, **kwargs))

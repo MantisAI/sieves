@@ -3,12 +3,12 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import EngineType
+from sieves.model_wrappers import ModelType
 from sieves.tasks.predictive import information_extraction
 
 
 @pytest.mark.parametrize(
-    "batch_runtime", (EngineType.dspy, EngineType.langchain, EngineType.outlines), indirect=["batch_runtime"]
+    "batch_runtime", (ModelType.dspy, ModelType.langchain, ModelType.outlines), indirect=["batch_runtime"]
 )
 @pytest.mark.parametrize("strict_mode", [True, False])
 def test_strict_mode(batch_runtime, strict_mode):

@@ -2,14 +2,14 @@
 import pytest
 
 from sieves import Pipeline
-from sieves.engines import EngineType
+from sieves.model_wrappers import ModelType
 from sieves.serialization import Config
 from sieves.tasks.preprocessing.chunking.naive import NaiveChunker
 
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.huggingface],
+    [ModelType.huggingface],
     indirect=["batch_runtime"],
 )
 def test_run(dummy_docs, batch_runtime) -> None:

@@ -1,4 +1,4 @@
-"""DSPy engine integration for Sieves."""
+"""DSPy model wrapper."""
 
 import asyncio
 import enum
@@ -10,8 +10,8 @@ import litellm
 import nest_asyncio
 import pydantic
 
-from sieves.engines.core import Engine, Executable
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers.core import Executable, ModelWrapper
+from sieves.model_wrappers.types import GenerationSettings
 
 PromptSignature = dspy.Signature | dspy.Module
 Model = dspy.LM | dspy.BaseLM
@@ -38,11 +38,11 @@ class InferenceMode(enum.Enum):
     module = dspy.Module
 
 
-class DSPy(Engine[PromptSignature, Result, Model, InferenceMode]):
-    """Engine for DSPy."""
+class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
+    """ModelWrapper for DSPy."""
 
     def __init__(self, model: Model, generation_settings: GenerationSettings):
-        """Initialize engine.
+        """Initialize model wrapper.
 
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
             onwards, serve it with OLlama - see here: # https://dspy.ai/learn/programming/language_models/?h=models#__tabbed_1_5.

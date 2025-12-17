@@ -16,9 +16,9 @@ dependencies = [
     "loguru>=0.7,<1",
     "pydantic>=2,<3",
     "nest-asyncio>=1,<2",
-    # Engines
+    # Model wrappers
     "outlines>=1,<2",
-    "gliner2>=1.1,<2",
+    "gliner2>=1.2,<2",
     "transformers[torch]>=4,<5",
     "dspy-ai>=3,<4",
     "dspy>=3,<4",

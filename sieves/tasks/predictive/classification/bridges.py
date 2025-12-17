@@ -11,21 +11,21 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import (
-    EngineInferenceMode,
+from sieves.model_wrappers import (
+    ModelWrapperInferenceMode,
     dspy_,
     huggingface_,
     langchain_,
     outlines_,
 )
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
-class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
+class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for classification bridges."""
 
     def __init__(
@@ -319,7 +319,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
 
 
 class PydanticBasedClassification(
-    ClassificationBridge[pydantic.BaseModel | list[str], pydantic.BaseModel | str, EngineInferenceMode], abc.ABC
+    ClassificationBridge[pydantic.BaseModel | list[str], pydantic.BaseModel | str, ModelWrapperInferenceMode], abc.ABC
 ):
     """Base class for Pydantic-based classification bridges."""
 
@@ -494,7 +494,7 @@ class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMo
         return self._generation_settings.inference_mode or langchain_.InferenceMode.structured
 
 
-class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[EngineInferenceMode], abc.ABC):
+class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[ModelWrapperInferenceMode], abc.ABC):
     """Base class for Pydantic-based classification bridges with label forcing."""
 
     @override

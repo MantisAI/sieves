@@ -5,13 +5,13 @@ import tqdm
 
 import pytest
 
-from sieves import Doc, Pipeline, engines, tasks
+from sieves import Doc, Pipeline, model_wrappers, tasks
 from sieves.tasks import Classification
 
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [engines.EngineType.outlines],
+    [model_wrappers.ModelType.outlines],
     indirect=True,
 )
 def test_double_task(dummy_docs, batch_runtime) -> None:
@@ -45,7 +45,7 @@ def test_double_task(dummy_docs, batch_runtime) -> None:
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [engines.EngineType.huggingface],
+    [model_wrappers.ModelType.huggingface],
     indirect=True,
 )
 def test_caching(batch_runtime) -> None:
@@ -107,9 +107,9 @@ def test_caching(batch_runtime) -> None:
     assert cached_pipe._cache_stats == {"hits": 0, "misses": 0, "total": 0, "unique": 0}
 
 
-def test_engine_imports() -> None:
+def test_model_wrapper_imports() -> None:
     """Tests direct runtime imports."""
-    from sieves.engines import DSPy, GliNER, HuggingFace, LangChain, Outlines  # noqa: F401
+    from sieves.model_wrappers import DSPy, GliNER, HuggingFace, LangChain, Outlines  # noqa: F401
 
 
 def test_add_task_task(dummy_docs) -> None:

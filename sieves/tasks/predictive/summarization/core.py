@@ -10,8 +10,8 @@ import datasets
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, langchain_, outlines_
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
@@ -41,7 +41,7 @@ class FewshotExample(BaseFewshotExample):
 
 
 class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
-    """Summarize documents to a target length using structured engines."""
+    """Summarize documents to a target length using structured model wrappers."""
 
     def __init__(
         self,
@@ -69,7 +69,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation. Use the `inference_mode` field to specify the
-            inference mode for the engine.
+            inference mode for the model wrapper.
         :param condition: Optional callable that determines whether to process each document.
         """
         self._n_words = n_words
@@ -87,15 +87,15 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
         )
 
     @override
-    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
-        bridge_types: dict[EngineType, type[_TaskBridge]] = {
-            EngineType.dspy: DSPySummarization,
-            EngineType.langchain: LangChainSummarization,
-            EngineType.outlines: OutlinesSummarization,
+    def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
+        bridge_types: dict[ModelType, type[_TaskBridge]] = {
+            ModelType.dspy: DSPySummarization,
+            ModelType.langchain: LangChainSummarization,
+            ModelType.outlines: OutlinesSummarization,
         }
 
         try:
-            bridge_type = bridge_types[engine_type]
+            bridge_type = bridge_types[model_type]
 
             return bridge_type(
                 task_id=self._task_id,
@@ -105,15 +105,15 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
                 generation_settings=self._generation_settings,
             )
         except KeyError as err:
-            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
+            raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
 
     @staticmethod
     @override
-    def supports() -> set[EngineType]:
+    def supports() -> set[ModelType]:
         return {
-            EngineType.dspy,
-            EngineType.langchain,
-            EngineType.outlines,
+            ModelType.dspy,
+            ModelType.langchain,
+            ModelType.outlines,
         }
 
     @property

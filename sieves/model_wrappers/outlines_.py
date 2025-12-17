@@ -1,4 +1,4 @@
-"""Outlines engine wrapper supporting text, choices, regex and JSON schemas."""
+"""Outlines model_wrapper."""
 
 import asyncio
 import enum
@@ -9,7 +9,7 @@ import outlines
 import pydantic
 from outlines.models import AsyncBlackBoxModel, BlackBoxModel, SteerableModel
 
-from sieves.engines.core import Executable, PydanticEngine
+from sieves.model_wrappers.core import Executable, PydanticModelWrapper
 
 PromptSignature = (
     pydantic.BaseModel | list[str] | str | outlines.types.Choice | outlines.types.Regex | outlines.types.JsonSchema
@@ -35,8 +35,8 @@ class InferenceMode(enum.Enum):
     json = "json"
 
 
-class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
-    """Engine for Outlines with multiple structured inference modes."""
+class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMode]):
+    """ModelWrapper for Outlines with multiple structured inference modes."""
 
     @override
     @property
@@ -63,7 +63,7 @@ class Outlines(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         generator = outlines.Generator(self._model, output_type=prompt_signature, **self._init_kwargs)
 
         def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
-            """Execute prompts with engine for given values.
+            """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.

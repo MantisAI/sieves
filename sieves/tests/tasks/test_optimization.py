@@ -4,7 +4,7 @@ import pydantic
 import pytest
 
 from sieves import GenerationSettings
-from sieves.engines import EngineType
+from sieves.model_wrappers import ModelType
 from sieves.tasks.optimization import Optimizer
 from sieves.tasks.predictive import (
     classification,
@@ -26,7 +26,7 @@ def optimizer(request) -> Optimizer:
 
     :return: model and optimizer to use for optimization.
     """
-    model = make_model(EngineType.dspy)
+    model = make_model(ModelType.dspy)
     optimizer = Optimizer(
         model,
         val_frac=.25,

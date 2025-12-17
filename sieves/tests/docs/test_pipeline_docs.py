@@ -13,7 +13,7 @@ Usage in markdown:
 def test_pipeline_creation_patterns(example_chunker, small_transformer_model):
     """Test various ways to create and combine pipelines."""
     chunker = example_chunker
-    engine = small_transformer_model
+    model = small_transformer_model
 
     # --8<-- [start:pipeline-creation-patterns]
     from sieves import Pipeline, tasks
@@ -21,7 +21,7 @@ def test_pipeline_creation_patterns(example_chunker, small_transformer_model):
     # Verbose initialization (allows non-default configuration).
     t_ingest = tasks.preprocessing.Ingestion(export_format="markdown")
     t_chunk = tasks.preprocessing.Chunking(chunker)
-    t_cls = tasks.predictive.Classification(labels=["science", "politics"], model=engine)
+    t_cls = tasks.predictive.Classification(labels=["science", "politics"], model=model)
     pipe = Pipeline([t_ingest, t_chunk, t_cls], use_cache=True)
 
     # Succinct chaining (equivalent task order).
@@ -38,7 +38,7 @@ def test_pipeline_creation_patterns(example_chunker, small_transformer_model):
     pipe_mutable += t_chunk  # appends t_chunk
 
     # Can also append entire pipelines
-    pipe_to_append = Pipeline([tasks.predictive.Classification(labels=["tech", "sports"], model=engine)])
+    pipe_to_append = Pipeline([tasks.predictive.Classification(labels=["tech", "sports"], model=model)])
     pipe_mutable += pipe_to_append  # appends all tasks from pipe_to_append
 
     # Note:

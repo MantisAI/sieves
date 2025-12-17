@@ -1,4 +1,4 @@
-"""LangChain engine wrapper for structured outputs using Pydantic."""
+"""LangChain model wrapper for structured outputs using Pydantic."""
 
 import asyncio
 import enum
@@ -9,7 +9,7 @@ import langchain_core.language_models
 import nest_asyncio
 import pydantic
 
-from sieves.engines.core import Executable, PydanticEngine
+from sieves.model_wrappers.core import Executable, PydanticModelWrapper
 
 nest_asyncio.apply()
 
@@ -24,8 +24,8 @@ class InferenceMode(enum.Enum):
     structured = "structured"
 
 
-class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
-    """Engine for LangChain."""
+class LangChain(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMode]):
+    """ModelWrapper for LangChain."""
 
     @override
     @property
@@ -47,7 +47,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
         model = self._model.with_structured_output(prompt_signature)
 
         def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
-            """Execute prompts with engine for given values.
+            """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
             :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
@@ -67,7 +67,7 @@ class LangChain(PydanticEngine[PromptSignature, Result, Model, InferenceMode]):
 
                     generator = generate
                 case _:
-                    raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} engine.")
+                    raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} model wrapper.")
 
             yield from self._infer(generator, template, values, fewshot_examples)
 

@@ -74,14 +74,14 @@ nav:
         - tasks/predictive/summarization.md
         - tasks/predictive/translation.md
 
-    - Engines:
-        - engines/base_engine.md
-        - All Engines:
-            - engines/dspy.md
-            - engines/gliner.md
-            - engines/huggingface.md
-            - engines/langchain.md
-            - engines/outlines.md
+    - Model wrappers:
+        - model_wrappers/base_model_wrapper.md
+        - All Model wrappers:
+            - model_wrappers/dspy.md
+            - model_wrappers/gliner.md
+            - model_wrappers/huggingface.md
+            - model_wrappers/langchain.md
+            - model_wrappers/outlines.md
   - Guides:
       - guides/getting_started.md
       - guides/models.md

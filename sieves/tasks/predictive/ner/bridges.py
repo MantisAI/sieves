@@ -12,8 +12,8 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, gliner_, langchain_, outlines_
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, gliner_, langchain_, outlines_
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -67,7 +67,7 @@ class Entities(pydantic.BaseModel):
     text: str
 
 
-class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
+class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for NER bridges."""
 
     def __init__(
@@ -321,7 +321,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
             yield dspy.Prediction.from_completions({"entities": [all_entities]}, signature=self.prompt_signature)
 
 
-class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode], abc.ABC):
+class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
     """Base class for Pydantic-based NER bridges."""
 
     @override
@@ -524,14 +524,11 @@ class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
     @override
     def integrate(self, results: Iterable[gliner_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc_results, doc in zip(results, docs):
-            doc.results[self._task_id] = [
-                Entities(
-                    entities=[
-                        Entity.model_validate({k: v for k, v in res.items() if k != "confidence"})
-                        for res in doc_results
-                    ],
-                    text=doc.text,
-                )
-            ]
+            doc.results[self._task_id] = Entities(
+                entities=[
+                    Entity.model_validate({k: v for k, v in res.items() if k != "confidence"}) for res in doc_results
+                ],
+                text=doc.text,
+            )
 
         return docs

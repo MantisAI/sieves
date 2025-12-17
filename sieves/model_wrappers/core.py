@@ -1,4 +1,4 @@
-"""Engine core interfaces and base classes used by backends."""
+"""ModelWrapper core interfaces and base classes used by backends."""
 
 from __future__ import annotations
 
@@ -6,23 +6,23 @@ import abc
 import asyncio
 import enum
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Sequence
-from typing import Any, Generic, Protocol, TypeVar, override
+from typing import Any, Protocol, TypeVar, override
 
 import jinja2
 import pydantic
 
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers.types import GenerationSettings
 
-EnginePromptSignature = TypeVar("EnginePromptSignature")
-EngineModel = TypeVar("EngineModel")
-EngineResult = TypeVar("EngineResult", covariant=True)
-EngineInferenceMode = TypeVar("EngineInferenceMode", bound=enum.Enum)
+ModelWrapperPromptSignature = TypeVar("ModelWrapperPromptSignature")
+ModelWrapperModel = TypeVar("ModelWrapperModel")
+ModelWrapperResult = TypeVar("ModelWrapperResult", covariant=True)
+ModelWrapperInferenceMode = TypeVar("ModelWrapperInferenceMode", bound=enum.Enum)
 
 
-class Executable(Protocol[EngineResult]):
+class Executable(Protocol[ModelWrapperResult]):
     """Callable protocol representing a compiled prompt executable."""
 
-    def __call__(self, values: Sequence[dict[str, Any]]) -> Iterable[EngineResult | None]:
+    def __call__(self, values: Sequence[dict[str, Any]]) -> Iterable[ModelWrapperResult | None]:
         """Execute prompt executable for given values.
 
         :param values: Values to inject into prompts.
@@ -31,11 +31,11 @@ class Executable(Protocol[EngineResult]):
         ...
 
 
-class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
-    """Base class for engines wrapping model invocation and batching."""
+class ModelWrapper[ModelWrapperPromptSignature, ModelWrapperResult, ModelWrapperModel, ModelWrapperInferenceMode]:
+    """Base class for model wrappers handling model invocation and structured generation."""
 
-    def __init__(self, model: EngineModel, generation_settings: GenerationSettings):
-        """Initialize engine with model and generation settings.
+    def __init__(self, model: ModelWrapperModel, generation_settings: GenerationSettings):
+        """Initialize model wrapper with model and generation settings.
 
         :param model: Instantiated model instance.
         :param generation_settings: Generation settings.
@@ -55,7 +55,7 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         return self._generation_settings
 
     @property
-    def model(self) -> EngineModel:
+    def model(self) -> ModelWrapperModel:
         """Return model instance.
 
         :return: Model instance.
@@ -65,14 +65,14 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
     @property
     @abc.abstractmethod
     def supports_few_shotting(self) -> bool:
-        """Return whether engine supports few-shotting.
+        """Return whether model wrapper supports few-shotting.
 
-        :return: Whether engine supports few-shotting.
+        :return: Whether model wrapper supports few-shotting.
         """
 
     @property
     @abc.abstractmethod
-    def inference_modes(self) -> type[EngineInferenceMode]:
+    def inference_modes(self) -> type[ModelWrapperInferenceMode]:
         """Return supported inference modes.
 
         :return: Supported inference modes.
@@ -81,16 +81,17 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
     @abc.abstractmethod
     def build_executable(
         self,
-        inference_mode: EngineInferenceMode,
+        inference_mode: ModelWrapperInferenceMode,
         prompt_template: str | None,
-        prompt_signature: type[EnginePromptSignature] | EnginePromptSignature,
+        prompt_signature: type[ModelWrapperPromptSignature] | ModelWrapperPromptSignature,
         fewshot_examples: Sequence[pydantic.BaseModel] = (),
-    ) -> Executable[EngineResult | None]:
+    ) -> Executable[ModelWrapperResult | None]:
         """Return a prompt executable for the given signature and mode.
 
-        This wraps the engine‑native generation callable (e.g., DSPy Predict,
-        Outlines Generator) with Sieves’ uniform interface.
-        :param inference_mode: Inference mode to use (e.g. classification, JSON, ... - this is engine-specific).
+        This wraps the model type‑native generation callable (e.g., DSPy Predict, Outlines Generator) with sieves’
+        uniform interface.
+
+        :param inference_mode: Inference mode to use (e.g. classification, JSON, ... - this is model type-specific).
         :param prompt_template: Prompt template.
         :param prompt_signature: Expected prompt signature type.
         :param fewshot_examples: Few-shot examples.
@@ -116,15 +117,18 @@ class Engine(Generic[EnginePromptSignature, EngineResult, EngineModel, EngineInf
         return await asyncio.gather(*calls)
 
 
-class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, EngineModel, EngineInferenceMode]):
-    """Abstract super class for engines using Pydantic signatures and results.
+class PydanticModelWrapper(
+    abc.ABC, ModelWrapper[ModelWrapperPromptSignature, ModelWrapperResult, ModelWrapperModel, ModelWrapperInferenceMode]
+):
+    """Abstract super class for model wrappers using Pydantic signatures and results.
 
-    Note that this class also assumes the engine accepts a prompt. This holds true for most engines - it doesn't only
-    for those with an idiocratic way to process prompts like DSPy, or decoder-only models which don't work with
-    object-based signatures anyway.
-    If and once we add support for a Pydantic-based engine that doesn't accept prompt templates, we'll adjust by
+    Note that this class also assumes the model wrapper accepts a prompt. This holds true for most model wrappers - it
+    doesn't only for those with an idiosyncratic way to process prompts like DSPy, or decoder-only models which don't
+    work with object-based signatures anyway.
+
+    If and once we add support for a Pydantic-based model wrapper that doesn't accept prompt templates, we'll adjust by
     modifying `_infer()` to accept an additional parameter specifying how to handle prompt/instruction injection (and
-    we might have to make `supports_few_shotting()` engine-specific again).
+    we might have to make `supports_few_shotting()` model type-specific again).
     """
 
     @classmethod
@@ -144,11 +148,11 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
 
     def _infer(
         self,
-        generator: Callable[[list[str]], Iterable[EngineResult]],
+        generator: Callable[[list[str]], Iterable[ModelWrapperResult]],
         template: jinja2.Template,
         values: Sequence[dict[str, Any]],
         fewshot_examples: Sequence[pydantic.BaseModel],
-    ) -> Iterable[EngineResult | None]:
+    ) -> Iterable[ModelWrapperResult | None]:
         """Run inference in batches with exception handling.
 
         :param generator: Callable generating responses.
@@ -157,7 +161,7 @@ class PydanticEngine(abc.ABC, Engine[EnginePromptSignature, EngineResult, Engine
         :param fewshot_examples: Fewshot examples.
         :return: Results parsed from responses.
         """
-        fewshot_examples_dict = Engine.convert_fewshot_examples(fewshot_examples)
+        fewshot_examples_dict = ModelWrapper.convert_fewshot_examples(fewshot_examples)
         examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
 
         try:

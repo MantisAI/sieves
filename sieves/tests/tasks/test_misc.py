@@ -13,8 +13,8 @@ import pydantic
 import pytest
 import transformers
 
-from sieves import Doc, Pipeline, engines, tasks
-from sieves.engines.utils import init_default_model
+from sieves import Doc, Pipeline, model_wrappers, tasks
+from sieves.model_wrappers.utils import init_default_model
 from sieves.tasks.utils import PydanticToHFDatasets
 
 

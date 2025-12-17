@@ -20,7 +20,7 @@ from pathlib import Path
 import tokenizers
 
 from sieves import Doc, Pipeline, tasks
-from sieves.engines import EngineType
+from sieves.model_wrappers import ModelType
 
 
 def test_basic_classification_example(small_outlines_model):
@@ -182,7 +182,7 @@ def test_generation_settings_example(small_transformer_model):
     model = small_transformer_model  # For testing, use fixture
 
     # --8<-- [start:generation-settings-config]
-    from sieves.engines.utils import GenerationSettings
+    from sieves.model_wrappers.utils import GenerationSettings
     from sieves import tasks
 
     classifier = tasks.Classification(
@@ -202,14 +202,14 @@ def test_generation_settings_example(small_transformer_model):
 
 
 def test_inference_mode_example(small_outlines_model):
-    """Test engine-specific inference mode configuration."""
+    """Test model type-specific inference mode configuration."""
     model = small_outlines_model  # For testing, use fixture
 
     # --8<-- [start:inference-mode-config]
     import outlines
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from sieves.engines import outlines_
-    from sieves.engines.utils import GenerationSettings
+    from sieves.model_wrappers import outlines_
+    from sieves.model_wrappers.utils import GenerationSettings
     from sieves import tasks
 
     model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
@@ -271,7 +271,7 @@ def test_readme_quick_start_basic(small_outlines_model):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("runtime", [EngineType.dspy], indirect=True)
+@pytest.mark.parametrize("runtime", [ModelType.dspy], indirect=True)
 def test_readme_advanced_example(runtime):
     """Test the Advanced IE + PDF example from README."""
     model = runtime.model

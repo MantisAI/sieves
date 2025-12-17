@@ -5,21 +5,21 @@ from __future__ import annotations
 import abc
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import Any, Generic, Literal, TypeVar, override
+from typing import Any, Literal, TypeVar, override
 
 import gliner2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, gliner_
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers import ModelWrapperInferenceMode, gliner_
+from sieves.model_wrappers.types import GenerationSettings
 
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
 TaskResult = TypeVar("TaskResult")
-TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult, EngineInferenceMode]")  # type: ignore[valid-type]
+TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode]")  # type: ignore[valid-type]
 
 
-class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.ABC):
+class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC):
     """Bridge base class."""
 
     def __init__(
@@ -83,11 +83,11 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
 
         Chains `_prompt_instructions`, `_prompt_example_template` and `_prompt_conclusion`.
 
-        Note: different engines have different expectations as how a prompt should look like. E.g. outlines supports the
-        Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these things in
-        a different value in the workflow and hence expects the prompt not to include these things. Mind engine-specific
-        expectations when creating a prompt template.
-        :return str | None: Prompt template as string. None if not used by engine.
+        Note: different model have different expectations as to how a prompt should look like. E.g. outlines supports
+        the Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these
+        things in a different value in the workflow and hence expects the prompt not to include these things. Mind
+        model-specific expectations when creating a prompt template.
+        :return str | None: Prompt template as string. None if not used by model wrapper.
         """
         return f"""
         {self._custom_prompt_instructions or self._prompt_instructions}
@@ -101,7 +101,7 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
         """Create output signature.
 
         E.g.: `Signature` in DSPy, Pydantic objects in outlines, JSON schema in jsonformers.
-        This is engine-specific.
+        This is model type-specific.
 
         :return type[_TaskPromptSignature] | _TaskPromptSignature: Output signature object. This can be an instance
             (e.g. a regex string) or a class (e.g. a Pydantic class).
@@ -109,10 +109,10 @@ class Bridge(Generic[TaskPromptSignature, TaskResult, EngineInferenceMode], abc.
 
     @property
     @abc.abstractmethod
-    def inference_mode(self) -> EngineInferenceMode:
+    def inference_mode(self) -> ModelWrapperInferenceMode:
         """Return inference mode.
 
-        :return EngineInferenceMode: Inference mode.
+        :return ModelWrapperInferenceMode: Inference mode.
         """
 
     def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:

@@ -13,8 +13,8 @@ import gliner2.inference.engine
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineType, dspy_, gliner_, huggingface_, langchain_, outlines_
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers import ModelType, dspy_, gliner_, huggingface_, langchain_, outlines_
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.distillation_import import model2vec, setfit
 from sieves.tasks.distillation.types import DistillationFramework
@@ -82,7 +82,7 @@ FewshotExample = FewshotExampleMultiLabel | FewshotExampleSingleLabel
 
 
 class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
-    """Predictive task for text classification across multiple engine backends.
+    """Predictive task for text classification.
 
     Examples:
         Basic usage with list of labels:
@@ -156,16 +156,16 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
-    def _init_bridge(self, engine_type: EngineType) -> _TaskBridge:
+    def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.
 
-        :return: Engine task.
-        :raises ValueError: If engine type is not supported.
+        :return: ModelWrapper task.
+        :raises ValueError: If model type is not supported.
         """
         # Reconstruct labels parameter (as dict if descriptions exist, else as list)
         labels = self._label_descriptions if self._label_descriptions else self._labels
 
-        if engine_type == EngineType.gliner:
+        if model_type == ModelType.gliner:
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
@@ -178,15 +178,15 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 inference_mode=gliner_.InferenceMode.classification,
             )
 
-        bridge_types: dict[EngineType, type[_TaskBridge]] = {
-            EngineType.dspy: DSPyClassification,
-            EngineType.huggingface: HuggingFaceClassification,
-            EngineType.outlines: OutlinesClassification,
-            EngineType.langchain: LangChainClassification,
+        bridge_types: dict[ModelType, type[_TaskBridge]] = {
+            ModelType.dspy: DSPyClassification,
+            ModelType.huggingface: HuggingFaceClassification,
+            ModelType.outlines: OutlinesClassification,
+            ModelType.langchain: LangChainClassification,
         }
 
         try:
-            bridge_type = bridge_types[engine_type]
+            bridge_type = bridge_types[model_type]
             assert not issubclass(bridge_type, GliNERBridge)
 
             return bridge_type(
@@ -197,17 +197,17 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 generation_settings=self._generation_settings,
             )
         except KeyError as err:
-            raise KeyError(f"Engine type {engine_type} is not supported by {self.__class__.__name__}.") from err
+            raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
 
     @staticmethod
     @override
-    def supports() -> set[EngineType]:
+    def supports() -> set[ModelType]:
         return {
-            EngineType.dspy,
-            EngineType.gliner,
-            EngineType.huggingface,
-            EngineType.langchain,
-            EngineType.outlines,
+            ModelType.dspy,
+            ModelType.gliner,
+            ModelType.huggingface,
+            ModelType.langchain,
+            ModelType.outlines,
         }
 
     def _validate_fewshot_examples(self) -> None:
@@ -382,8 +382,8 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         """Convert results to a Hugging Face dataset with multi-hot labels.
 
         The emitted dataset contains a ``text`` column and a ``labels`` column which is a multi-hot list aligned to
-        ``self._labels``. This method is robust to different result shapes produced by various engines and bridges in
-        both single-label and multi-label configurations:
+        ``self._labels``. This method is robust to different result shapes produced by various model wrappers and
+        bridges in both single-label and multi-label configurations:
         - ``list[tuple[str, float]]`` for multi-label results
         - ``tuple[str, float]`` for single-label results
         - ``str`` for single-label results (assumes score ``1.0``)

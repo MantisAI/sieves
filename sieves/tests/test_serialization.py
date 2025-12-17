@@ -9,7 +9,7 @@ import dspy
 import pytest
 
 from sieves import Pipeline
-from sieves.engines import EngineType
+from sieves.model_wrappers import ModelType
 from sieves.serialization import Config
 from sieves.tasks import preprocessing
 from sieves.tasks.predictive import classification
@@ -18,7 +18,7 @@ from sieves.tests.conftest import make_model
 
 @pytest.mark.parametrize(
     "batch_runtime",
-    [EngineType.dspy],
+    [ModelType.dspy],
     indirect=["batch_runtime"],
 )
 def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
@@ -102,7 +102,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
             tmp_path,
             (
                 {"chunker": chonkie.TokenChunker(tokenizer)},
-                {"model": make_model(EngineType.dspy)},
+                {"model": make_model(ModelType.dspy)},
             ),
         )
 
