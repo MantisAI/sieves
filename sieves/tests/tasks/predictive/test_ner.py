@@ -9,13 +9,14 @@ from sieves.tasks.predictive import ner
 from sieves.tasks.predictive.ner.core import EntityWithContext
 
 
+
+
 @pytest.mark.parametrize(
     "batch_runtime",
-    # ner.NER.supports(),
-    (ModelType.gliner,),
+    ner.NER.supports(),
     indirect=["batch_runtime"],
 )
-@pytest.mark.parametrize("fewshot", [False])
+@pytest.mark.parametrize("fewshot", [True, False])
 def test_run(ner_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         ner.FewshotExample(

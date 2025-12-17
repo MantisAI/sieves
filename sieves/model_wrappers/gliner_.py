@@ -60,10 +60,15 @@ class GliNER(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
             :param values: Values to inject into prompts.
             :return Iterable[Result]: Results for prompts.
             """
-            yield from self._model.batch_extract(
+            res = self._model.batch_extract(
                 texts=[val["text"] for val in values],
                 schemas=prompt_signature,
-                **({"batch_size": len(values)} | self._inference_kwargs | {"include_confidence": True}),
+                **(
+                    {"batch_size": len(values)}
+                    | self._inference_kwargs
+                    | {"include_confidence": True, "include_spans": True}
+                ),
             )
+            yield from res
 
         return execute
