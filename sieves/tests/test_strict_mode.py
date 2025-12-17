@@ -3,7 +3,7 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import ModelType
+from sieves.model_wrappers import ModelType
 from sieves.tasks.predictive import information_extraction
 
 

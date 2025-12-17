@@ -78,10 +78,10 @@ tasks:
         is_placeholder: false
         value: Chunker
     - cls_name: sieves.tasks.predictive.information_extraction.core.InformationExtraction
-      engine:
+      model_wrapper:
         is_placeholder: false
         value:
-          cls_name: sieves.engines.outlines_.Outlines
+          cls_name: sieves.model_wrappers.outlines_.Outlines
           model:
             is_placeholder: true
             value: outlines.models.transformers

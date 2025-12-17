@@ -1,6 +1,6 @@
 """Import 3rd-party libraries required for distillation.
 
-If library can't be found, placeholder engines is imported instead.
+If library can't be found, placeholder model wrappers is imported instead.
 
 This allows us to import everything downstream without having to worry about optional dependencies. If a user specifies
 a non-installed distillation framework, we terminate with an error.

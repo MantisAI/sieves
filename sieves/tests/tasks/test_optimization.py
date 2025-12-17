@@ -4,7 +4,7 @@ import pydantic
 import pytest
 
 from sieves import GenerationSettings
-from sieves.engines import ModelType
+from sieves.model_wrappers import ModelType
 from sieves.tasks.optimization import Optimizer
 from sieves.tasks.predictive import (
     classification,

@@ -232,7 +232,7 @@ sieves is built on three key abstractions:
 - **`Task`**: A processing step (classification, extraction, summarization, etc.)
 - **`Pipeline`**: Orchestrates tasks with caching, serialization, and observability
 
-[→ Read the architecture guide](https://sieves.ai/guides/custom_tasks#understanding-the-architecture) for details on bridges, engines, and internals.
+[→ Read the architecture guide](https://sieves.ai/guides/custom_tasks#understanding-the-architecture) for details on bridges, models, and internals.
 
 ## Supported Models
 

@@ -15,7 +15,7 @@ If you feel like your task might be useful for others, we'd happy to see you sub
 
 ## Tasks
 
-Inherit from `Task` whenever you want to implement something that doesn't require interacting with engines.
+Inherit from `Task` whenever you want to implement something that doesn't require interacting with models.
 That can be document pre- or postprocessing, or something completely different - you could e.g. run an agent following
 instructions provided in `docs`, and then follow this up with a subsequent task in your pipeline analyzing and
 structuring those results.
@@ -57,7 +57,7 @@ Without abstraction, each task would need separate implementations for each mode
 
 ### The Solution: Bridge Pattern
 
-The Bridge pattern decouples task logic (what to compute) from engine-specific implementation (how to compute):
+The Bridge pattern decouples task logic (what to compute) from model-specific implementation (how to compute):
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -73,7 +73,7 @@ The Bridge pattern decouples task logic (what to compute) from engine-specific i
                        │
                        ▼
             ┌──────────────────────┐
-            │       Bridge         │ ◄── Engine-specific adapter
+            │       Bridge         │ ◄── ModelWrapper-specific adapter
             │  (How to compute)    │     DSPyClassification, OutlinesNER
             └──────────┬───────────┘
                        │
@@ -101,18 +101,18 @@ Each layer has clear, focused responsibilities:
 - Provides task-specific configuration (labels, entity types, prompt instructions)
 - Manages few-shot examples for in-context learning
 - Handles optimization (prompt tuning) and distillation (model compression)
-- **Engine-agnostic**: Same task API works with any backend (DSPy, Outlines, etc.)
+- **ModelWrapper-agnostic**: Same task API works with any backend (DSPy, Outlines, etc.)
 
 **Bridge** (User implements this for custom tasks):
 
-- Defines **how** to solve the problem for a specific engine
+- Defines **how** to solve the problem for a specific model type
 - Creates prompts (Jinja2 templates for Outlines, signatures for DSPy)
 - Parses model outputs into structured results (Pydantic models)
 - Integrates results into documents (`integrate()` method)
 - Consolidates multi-chunk results into document-level results (`consolidate()` method)
-- **Engine-specific**: Each engine needs its own Bridge implementation
+- **ModelWrapper-specific**: Each model type needs its own Bridge implementation
 
-**Engine** (Internal, automatically detected):
+**ModelWrapper** (Internal, automatically detected):
 
 - Handles low-level inference mechanics (batching, generation, error handling)
 - Manages model calls and streaming
@@ -194,18 +194,18 @@ Now let's implement a custom task that actually needs custom logic: sentiment an
 
 ### 1. Implement a `Bridge`
 
-A `Bridge` defines how to solve a task for a certain engine. We decided to go with `outlines` as our engine (you can
-allow multiple engines for a task by implementing corresponding bridges, but for simplicity's sake we'll stick with
+A `Bridge` defines how to solve a task for a certain model type. We decided to go with `outlines` as our model type (you can
+support multiple models for a task by implementing corresponding bridges, but for simplicity's sake we'll stick with
 DSPy only here).
 
 A `Bridge` requires you to implement/specify the following:
-- A _prompt template_ (optional depending on the engine used).
-- A _prompt signature description_ (optional depending on the engine used).
+- A _prompt template_ (optional depending on the model type used).
+- A _prompt signature description_ (optional depending on the model type used).
 - A _prompt signature_ describing how results have to be structured.
 - How to _integrate_ results into docs.
 - How to _consolidate_ results from multiple doc chunks into one result per doc.
 
-The _inference mode_ (which defines how the engine queries the model and parses the results) is configured via `GenerationSettings` when creating the task, rather than in the Bridge.
+The _inference mode_ (which defines how the model wrapper queries the model and parses the results) is configured via `GenerationSettings` when creating the task, rather than in the Bridge.
 
 We'll save this in `sentiment_analysis_bridges.py`.
 
@@ -280,7 +280,7 @@ Our bridge now handles the complete workflow: prompting the model, parsing struc
 
 ### 2. Build a `SentimentAnalysisTask`
 
-The task class wraps the bridge from Section 1 and provides engine-agnostic functionality. It handles bridge instantiation, few-shot examples, and dataset export. We'll save this in `sentiment_analysis_task.py`.
+The task class wraps the bridge from Section 1 and provides model type-agnostic functionality. It handles bridge instantiation, few-shot examples, and dataset export. We'll save this in `sentiment_analysis_task.py`.
 
 !!! note "Bridge Implementation"
     In a real project, you'd import the bridge from a separate module:
@@ -320,13 +320,13 @@ Now create the main task class that uses the bridge:
 
 #### Implement Bridge Initialization
 
-Define how to initialize the bridge for supported engines:
+Define how to initialize the bridge for supported models:
 
 ```python
 --8<-- "sieves/tests/docs/test_custom_tasks.py:custom-task-predictive-init-supports"
 ```
 
-The task raises an error if an unsupported engine is specified.
+The task raises an error if an unsupported model type is specified.
 
 #### Add Dataset Export (Optional)
 
@@ -358,7 +358,7 @@ We can now use our sentiment analysis task like every built-in task:
 
 1. **`integrate()` not called correctly**: Ensure your bridge's `integrate()` method stores results in `doc.results[self._task_id]`
 2. **Incorrect task_id**: Verify you're using the correct task ID (check `task._task_id`)
-3. **Engine returning None**: The engine may be returning None results (e.g., due to generation errors in permissive mode)
+3. **ModelWrapper returning None**: The model wrapper may be returning None results (e.g., due to generation errors in permissive mode)
 
 **Debug steps**:
 ```python
@@ -380,7 +380,7 @@ def integrate(self, results, docs):
 **Possible causes**:
 
 1. **Mismatched types**: Results from integrate() don't match the type expected in consolidate()
-2. **None results not handled**: Some results may be None (from engine errors)
+2. **None results not handled**: Some results may be None (from model wrapper errors)
 3. **Incorrect doc_offsets slicing**: Check that you're using `results[doc_offset[0]:doc_offset[1]]` correctly
 
 **Solution**:
@@ -401,20 +401,20 @@ def consolidate(self, results, docs_offsets):
         ...
 ```
 
-#### "Engine type X is not supported" error
+#### "Model type X is not supported" error
 
-**Cause**: You're trying to use an engine that your bridge doesn't support.
+**Cause**: You're trying to use an model type that your bridge doesn't support.
 
 **Solution**: Either:
 
 1. Implement a bridge for that model type
-2. Use a supported engine (check `task.supports`)
+2. Use a supported model type (check `task.supports`)
 3. Update `_init_bridge()` to handle the model type
 
 ```python
-# Check supported engines before creating task
-from sieves.engines import ModelType
-print(f"Supported engines: {task.supports}")  # e.g., {ModelType.outlines}
+# Check supported models before creating task
+from sieves.model_wrappers import ModelType
+print(f"Supported models: {task.supports}")  # e.g., {ModelType.outlines}
 ```
 
 #### Prompt template not rendering correctly

@@ -20,7 +20,7 @@ def test_basic_optimization_example(small_dspy_model):
     # --8<-- [start:optimization-imports]
     import dspy
     from sieves import tasks, Doc
-    from sieves.engines.utils import GenerationSettings
+    from sieves.model_wrappers.utils import GenerationSettings
     from sieves.tasks import Optimizer
     from sieves.tasks.predictive.classification import FewshotExampleSingleLabel
     # --8<-- [end:optimization-imports]

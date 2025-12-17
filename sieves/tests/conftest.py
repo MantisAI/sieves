@@ -12,8 +12,8 @@ import transformers
 from langchain_openai import ChatOpenAI
 
 from sieves import Doc
-from sieves.engines.model_type import ModelType
-from sieves.engines.utils import GenerationSettings
+from sieves.model_wrappers.model_type import ModelType
+from sieves.model_wrappers.utils import GenerationSettings
 from sieves.tasks.types import Model
 
 
@@ -31,7 +31,7 @@ def tokenizer() -> tokenizers.Tokenizer:
 @cache
 def make_model(model_type: ModelType) -> Model:
     """Create model.
-    :param model_type: Engine type. to create model for.
+    :param model_type: Model type. to create model for.
     :return Any: Model instance.
     """
     openrouter_api_base = "https://openrouter.ai/api/v1/"
@@ -78,7 +78,7 @@ def make_model(model_type: ModelType) -> Model:
 def _make_runtime(model_type: ModelType, batch_size: int) -> Runtime:
     """Create runtime tuple (model, generation_settings) for tests.
 
-    :param model_type: Engine type.
+    :param model_type: Model type.
     :param batch_size: Batch size to use in runtime.
     :return: Runtime tuple.
     """

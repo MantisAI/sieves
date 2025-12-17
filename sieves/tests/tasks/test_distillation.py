@@ -11,7 +11,7 @@ import pytest
 import setfit
 
 from sieves import Doc, Pipeline
-from sieves.engines import ModelType
+from sieves.model_wrappers import ModelType
 from sieves.serialization import Config
 from sieves.tasks import DistillationFramework
 from sieves.tasks.predictive import classification

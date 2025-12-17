@@ -9,7 +9,7 @@ import dspy
 import pytest
 
 from sieves import Pipeline
-from sieves.engines import ModelType
+from sieves.model_wrappers import ModelType
 from sieves.serialization import Config
 from sieves.tasks import preprocessing
 from sieves.tasks.predictive import classification

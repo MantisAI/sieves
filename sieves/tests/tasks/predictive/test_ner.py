@@ -2,7 +2,7 @@
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import ModelType, GenerationSettings
+from sieves.model_wrappers import ModelType, GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import ner

@@ -13,8 +13,8 @@ import gliner2.inference.engine
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import ModelType, dspy_, gliner_, langchain_, outlines_
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers import ModelType, dspy_, gliner_, langchain_, outlines_
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.bridges import GliNERBridge
@@ -100,8 +100,8 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.
 
-        :param model_type: Type of engine to initialize bridge for.
-        :return _TaskBridge: Engine task bridge.
+        :param model_type: Type of model to initialize bridge for.
+        :return _TaskBridge: ModelWrapper task bridge.
         :raises ValueError: If model type is not supported.
         :raises TypeError: On entity type and model type mismatch.
         """
@@ -139,7 +139,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
                 generation_settings=self._generation_settings,
             )
         except KeyError as err:
-            raise KeyError(f"Engine type {model_type} is not supported by {self.__class__.__name__}.") from err
+            raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
 
         return bridge
 

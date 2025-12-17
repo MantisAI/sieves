@@ -1,4 +1,4 @@
-"""Base class for predictive tasks composed with engines and bridges."""
+"""Base class for predictive tasks composed with model wrappers and bridges."""
 
 from __future__ import annotations
 
@@ -10,16 +10,16 @@ import sys
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Generic, Self
+from typing import Any, Self
 
 import datasets
 import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import Engine, EngineInferenceMode, ModelType  # noqa: F401
-from sieves.engines.types import GenerationSettings
-from sieves.engines.utils import init_engine
+from sieves.model_wrappers import ModelType, ModelWrapper, ModelWrapperInferenceMode  # noqa: F401
+from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.utils import init_model_wrapper
 from sieves.serialization import Config
 from sieves.tasks import optimization
 from sieves.tasks.core import Task
@@ -69,7 +69,7 @@ class FewshotExample(pydantic.BaseModel):
 
         :returns: Example as `dspy.Example`.
         """
-        return dspy.Example(**Engine.convert_fewshot_examples([self])[0]).with_inputs(*self.input_fields)
+        return dspy.Example(**ModelWrapper.convert_fewshot_examples([self])[0]).with_inputs(*self.input_fields)
 
     @classmethod
     def from_dspy(cls, example: dspy.Example) -> Self:
@@ -81,11 +81,7 @@ class FewshotExample(pydantic.BaseModel):
         return cls(**example)
 
 
-class PredictiveTask(
-    Generic[TaskPromptSignature, TaskResult, TaskBridge],
-    Task,
-    abc.ABC,
-):
+class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC):
     """Base class for predictive tasks."""
 
     def __init__(
@@ -112,16 +108,16 @@ class PredictiveTask(
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param generation_settings: Settings for structured generation. Use the `inference_mode` field to specify the
-            inference mode for the engine. If not provided, the engine will use its default mode.
+            inference mode for the model wrapper. If not provided, the model wrapper will use its default mode.
         :param condition: Optional callable that determines whether to process each document.
         """
         super().__init__(task_id=task_id, include_meta=include_meta, batch_size=batch_size, condition=condition)
 
-        self._engine = init_engine(model, generation_settings)
+        self._model_wrapper = init_model_wrapper(model, generation_settings)
         self._generation_settings = generation_settings
         self._overwrite = overwrite
         self._custom_prompt_instructions = prompt_instructions
-        self._bridge = self._init_bridge(ModelType.get_engine_type(self._engine))
+        self._bridge = self._init_bridge(ModelType.get_model_type(self._model_wrapper))
         self._fewshot_examples = fewshot_examples
 
         self._validate_fewshot_examples()
@@ -137,8 +133,8 @@ class PredictiveTask(
     def _init_bridge(self, model_type: ModelType) -> TaskBridge:
         """Initialize bridge.
 
-        :param model_type: Type of engine to initialize bridge for.
-        :return _TaskBridge: Engine task bridge.
+        :param model_type: Type of model to initialize bridge for.
+        :return _TaskBridge: ModelWrapper task bridge.
         """
 
     @staticmethod
@@ -180,7 +176,7 @@ class PredictiveTask(
         signature = self._bridge.prompt_signature
 
         # 2. Build executable.
-        executable = self._engine.build_executable(
+        executable = self._model_wrapper.build_executable(
             inference_mode=self._bridge.inference_mode,
             prompt_template=self.prompt_template,
             prompt_signature=signature,
@@ -231,8 +227,8 @@ class PredictiveTask(
     def _state(self) -> dict[str, Any]:
         return {
             **super()._state,
-            "model": self._engine.model,
-            "generation_settings": self._engine.generation_settings.model_dump(),
+            "model": self._model_wrapper.model,
+            "generation_settings": self._model_wrapper.generation_settings.model_dump(),
             "prompt_instructions": self._custom_prompt_instructions,
             "fewshot_examples": self._fewshot_examples,
         }
@@ -327,7 +323,7 @@ class PredictiveTask(
         :raises KeyError: If no DSPy bridge defined for this task.
         """
         try:
-            dspy_bridge = self._bridge if self._engine == ModelType.dspy else self._init_bridge(ModelType.dspy)
+            dspy_bridge = self._bridge if self._model_wrapper == ModelType.dspy else self._init_bridge(ModelType.dspy)
             return dspy_bridge.prompt_signature
 
         except KeyError as err:
@@ -446,6 +442,6 @@ class PredictiveTask(
         self._custom_prompt_instructions = best_prompt
 
         # Reinitialize bridge to use new prompt and few-shot examples.
-        self._bridge = self._init_bridge(ModelType.get_engine_type(self._engine))
+        self._bridge = self._init_bridge(ModelType.get_model_type(self._model_wrapper))
 
         return best_prompt, self._fewshot_examples

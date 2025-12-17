@@ -22,7 +22,6 @@ coverage:
     - "sieves/tests"
     - "docs"
     - "**/test_*.py"
-    - "sieves/engines/engine_import.py"
     - "sieves/tasks/distillation/distillation_import.py"
 
 comment:

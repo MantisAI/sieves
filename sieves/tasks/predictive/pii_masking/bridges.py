@@ -10,15 +10,15 @@ import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import EngineInferenceMode, dspy_, langchain_, outlines_
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
-class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, EngineInferenceMode], abc.ABC):
+class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for PII masking bridges."""
 
     def __init__(
@@ -140,7 +140,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        """Return inference mode for DSPy engine."""
+        """Return inference mode for DSPy model wrapper."""
         return self._generation_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
@@ -186,7 +186,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
             )
 
 
-class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, EngineInferenceMode], abc.ABC):
+class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
     """Base class for Pydantic-based PII masking bridges."""
 
     @property
@@ -236,7 +236,7 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
     @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
-        """Define prompt signature for Pydantic-based engines."""
+        """Define prompt signature for Pydantic-based model wrappers."""
         PIIEntity = self._pii_entity_cls
 
         class PIIMasking(pydantic.BaseModel, frozen=True):

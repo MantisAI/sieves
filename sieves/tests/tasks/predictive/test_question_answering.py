@@ -2,7 +2,7 @@
 import pytest
 
 from sieves import Doc, Pipeline
-from sieves.engines import ModelType, GenerationSettings, dspy_, langchain_, outlines_
+from sieves.model_wrappers import ModelType, GenerationSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, QuestionAnswering
 from sieves.tasks.predictive import question_answering

@@ -11,8 +11,8 @@ import dspy
 import pydantic
 
 from sieves.data import Doc
-from sieves.engines import ModelType, dspy_, langchain_, outlines_
-from sieves.engines.types import GenerationSettings
+from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
+from sieves.model_wrappers.types import GenerationSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
@@ -111,7 +111,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
                 generation_settings=self._generation_settings,
             )
         except KeyError as err:
-            raise KeyError(f"Engine type {model_type} is not supported by {self.__class__.__name__}.") from err
+            raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
 
     @staticmethod
     @override
