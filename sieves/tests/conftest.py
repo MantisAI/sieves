@@ -1,9 +1,10 @@
 # mypy: ignore-errors
 import os
 from functools import cache
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import dspy
+import openai
 import gliner2
 import outlines
 import pytest
@@ -13,13 +14,13 @@ from langchain_openai import ChatOpenAI
 
 from sieves import Doc
 from sieves.model_wrappers.model_type import ModelType
-from sieves.model_wrappers.utils import GenerationSettings
+from sieves.model_wrappers.utils import ModelSettings
 from sieves.tasks.types import Model
 
 
 class Runtime(NamedTuple):
     model: Model
-    generation_settings: GenerationSettings
+    model_settings: ModelSettings
     batch_size: int
 
 
@@ -62,10 +63,9 @@ def make_model(model_type: ModelType) -> Model:
             )
 
         case ModelType.outlines:
-            model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-            model = outlines.models.from_transformers(
-                transformers.AutoModelForCausalLM.from_pretrained(model_name),
-                transformers.AutoTokenizer.from_pretrained(model_name),
+            model = outlines.from_openai(
+                openai.OpenAI(base_url=openrouter_api_base, api_key=os.environ['OPENROUTER_API_KEY']),
+                "google/gemini-2.5-flash-lite-preview-09-2025"
             )
 
         case _:
@@ -76,13 +76,13 @@ def make_model(model_type: ModelType) -> Model:
 
 @cache
 def _make_runtime(model_type: ModelType, batch_size: int) -> Runtime:
-    """Create runtime tuple (model, generation_settings) for tests.
+    """Create runtime tuple (model, model_settings) for tests.
 
     :param model_type: Model type.
     :param batch_size: Batch size to use in runtime.
     :return: Runtime tuple.
     """
-    return Runtime(make_model(model_type), GenerationSettings(), batch_size)
+    return Runtime(make_model(model_type), ModelSettings(strict=True), batch_size)
 
 
 @pytest.fixture(scope="function")
@@ -108,12 +108,16 @@ def dummy_docs() -> list[Doc]:
 def classification_docs() -> list[Doc]:
     return [
         Doc(
-            text="A new law has been passed. The opposition doesn't support it, but parliament has voted on it. This "
-            "is about politics - parliament, laws, parties, politicians."
+            text="""
+            A new law has been passed. The opposition doesn't support it, but parliament has voted on it. This is about
+            politics - parliament, laws, parties, politicians. It's about how society is governed.
+            """
         ),
         Doc(
-            text="Scientists report that plasma is a state of matter. They published an academic paper. This is about "
-            "science - scientists, papers, experiments, laws of nature."
+            text="""
+            Scientists report that plasma is a state of matter. They published an academic paper. This is about science
+             - scientists, papers, experiments, laws of nature. It's about the exploration of the natural world.
+            """
         ),
     ]
 

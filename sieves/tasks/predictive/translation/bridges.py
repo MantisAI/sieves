@@ -11,7 +11,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -30,7 +30,7 @@ class TranslationBridge(
         prompt_instructions: str | None,
         overwrite: bool,
         language: str,
-        generation_settings: GenerationSettings,
+        model_settings: ModelSettings,
     ):
         """Initialize TranslationBridge.
 
@@ -38,13 +38,13 @@ class TranslationBridge(
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with translation.
         :param language: Language to translate to.
-        :param generation_settings: Generation settings including inference_mode.
+        :param model_settings: Model settings including inference_mode.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=overwrite,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
         )
         self._to = language
 
@@ -86,7 +86,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return self._generation_settings.inference_mode or dspy_.InferenceMode.predict
+        return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -207,7 +207,7 @@ class OutlinesTranslation(PydanticBasedTranslation[outlines_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+        return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
@@ -216,4 +216,4 @@ class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return self._generation_settings.inference_mode or langchain_.InferenceMode.structured
+        return self._model_settings.inference_mode or langchain_.InferenceMode.structured

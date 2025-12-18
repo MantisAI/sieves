@@ -11,7 +11,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
@@ -57,7 +57,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         batch_size: int = -1,
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
-        generation_settings: GenerationSettings = GenerationSettings(),
+        model_settings: ModelSettings = ModelSettings(),
         condition: Callable[[Doc], bool] | None = None,
     ) -> None:
         """
@@ -70,7 +70,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         :param batch_size: Batch size to use for inference. Use -1 to process all documents at once.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
-        :param generation_settings: Settings for structured generation.
+        :param model_settings: Settings for structured generation.
         :param condition: Optional callable that determines whether to process each document.
         """
         self._questions = questions
@@ -82,7 +82,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
             overwrite=False,
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
             condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
@@ -102,7 +102,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 questions=self._questions,
-                generation_settings=self._generation_settings,
+                model_settings=self._model_settings,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

@@ -19,7 +19,7 @@ from sieves.model_wrappers import (
     langchain_,
     outlines_,
 )
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
@@ -87,7 +87,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         batch_size: int = -1,
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
-        generation_settings: GenerationSettings = GenerationSettings(),
+        model_settings: ModelSettings = ModelSettings(),
         condition: Callable[[Doc], bool] | None = None,
     ) -> None:
         """Initialize NER task.
@@ -104,7 +104,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
         :param batch_size: Batch size to use for inference. Use -1 to process all documents at once.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
-        :param generation_settings: Settings for structured generation.
+        :param model_settings: Settings for structured generation.
         :param condition: Optional callable that determines whether to process each document.
         """
         if entities is None:
@@ -127,7 +127,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
             overwrite=False,
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
             condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
@@ -147,7 +147,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 entities=self._entities_param,
-                generation_settings=self._generation_settings,
+                model_settings=self._model_settings,
             )
             return result  # type: ignore[return-value]
         except KeyError as err:
@@ -213,7 +213,6 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
                     raise KeyError(f"Document does not have results for task ID {self._task_id}")
 
                 # Get the entities from the document results
-                print(doc.results[self._task_id])
                 result = doc.results[self._task_id].entities
                 entities: list[dict[str, Any]] = []
 

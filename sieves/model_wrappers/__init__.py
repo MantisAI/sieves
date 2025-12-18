@@ -16,7 +16,7 @@ from sieves.model_wrappers.huggingface_ import HuggingFace
 from sieves.model_wrappers.langchain_ import LangChain
 from sieves.model_wrappers.model_type import ModelType
 from sieves.model_wrappers.outlines_ import Outlines
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 
 __all__ = [
     "dspy_",
@@ -27,7 +27,7 @@ __all__ = [
     "ModelType",
     "ModelWrapperResult",
     "ModelWrapper",
-    "GenerationSettings",
+    "ModelSettings",
     "gliner_",
     "GliNER",
     "langchain_",

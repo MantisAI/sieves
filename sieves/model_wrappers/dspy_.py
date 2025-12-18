@@ -11,7 +11,7 @@ import nest_asyncio
 import pydantic
 
 from sieves.model_wrappers.core import Executable, ModelWrapper
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 
 PromptSignature = dspy.Signature | dspy.Module
 Model = dspy.LM | dspy.BaseLM
@@ -41,7 +41,7 @@ class InferenceMode(enum.Enum):
 class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
     """ModelWrapper for DSPy."""
 
-    def __init__(self, model: Model, generation_settings: GenerationSettings):
+    def __init__(self, model: Model, model_settings: ModelSettings):
         """Initialize model wrapper.
 
         :param model: Model to run. Note: DSPy only runs with APIs. If you want to run a model locally from v2.5
@@ -50,10 +50,10 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
             > curl -fsSL https://ollama.ai/install.sh | sh
             > ollama run MODEL_ID
             > `model = dspy.LM(MODEL_ID, api_base='http://localhost:11434', api_key='')`
-        :param generation_settings: Settings including DSPy configuration in `config_kwargs`.
+        :param model_settings: Settings including DSPy configuration in `config_kwargs`.
         """
-        super().__init__(model, generation_settings)
-        cfg = generation_settings.config_kwargs or {}
+        super().__init__(model, model_settings)
+        cfg = model_settings.config_kwargs or {}
         dspy.configure(lm=model, **cfg)
 
         # Disable noisy LiteLLM logging.
@@ -111,7 +111,7 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
                 yield from asyncio.run(self._execute_async_calls(calls))
 
             except Exception as err:
-                if self._strict_mode:
+                if self._strict:
                     raise RuntimeError(
                         "Encountered problem when executing prompt. Ensure your few-shot examples and document "
                         "chunks contain sensible information."

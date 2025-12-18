@@ -102,7 +102,7 @@ def test_custom_bridge_example():
 
         @property
         def inference_mode(self) -> outlines_.InferenceMode:
-            return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
         # We return our SentimentEstimate as prompt signature.
         @cached_property
@@ -231,7 +231,7 @@ def test_custom_predictive_task_example():
 
         @property
         def inference_mode(self) -> outlines_.InferenceMode:
-            return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
         # We return our SentimentEstimate as prompt signature.
         @cached_property
@@ -299,7 +299,7 @@ def test_custom_predictive_task_example():
                     task_id=self._task_id,
                     prompt_instructions=self._custom_prompt_instructions,
                     overwrite=False,
-                    generation_settings=self._generation_settings,
+                    model_settings=self._model_settings,
                 )
             else:
                 raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.")
@@ -391,7 +391,7 @@ def test_using_custom_task_example(small_outlines_model):
 
         @property
         def inference_mode(self) -> outlines_.InferenceMode:
-            return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
         @cached_property
         def prompt_signature(self) -> type[pydantic.BaseModel]:
@@ -427,14 +427,14 @@ def test_using_custom_task_example(small_outlines_model):
     class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, OutlinesSentimentAnalysis]):
         def __init__(self, model, task_id: str = "SentimentAnalysis", include_meta: bool = True, batch_size: int = -1,
                      prompt_instructions: str | None = None, fewshot_examples: Any = (),
-                     generation_settings=None):
-            if generation_settings is None:
-                from sieves.model_wrappers.types import GenerationSettings
-                generation_settings = GenerationSettings()
+                     model_settings=None):
+            if model_settings is None:
+                from sieves.model_wrappers.types import ModelSettings
+                model_settings = ModelSettings()
             super().__init__(
                 model=model, task_id=task_id, include_meta=include_meta, batch_size=batch_size,
                 overwrite=False, prompt_instructions=prompt_instructions, fewshot_examples=fewshot_examples,
-                generation_settings=generation_settings, condition=None
+                model_settings=model_settings, condition=None
             )
 
         def _init_bridge(self, model_type: ModelType) -> OutlinesSentimentAnalysis:
@@ -443,7 +443,7 @@ def test_using_custom_task_example(small_outlines_model):
                     task_id=self._task_id,
                     prompt_instructions=self._custom_prompt_instructions,
                     overwrite=False,
-                    generation_settings=self._generation_settings,
+                    model_settings=self._model_settings,
                 )
             else:
                 raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.")

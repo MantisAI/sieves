@@ -30,7 +30,7 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                 task_id="classifier",
                 labels={"science": "Everything about science.", "politics": "Everything about politics."},
                 model=batch_runtime.model,
-                generation_settings=batch_runtime.generation_settings,
+                model_settings=batch_runtime.model_settings,
                 batch_size=batch_runtime.batch_size,
             ),
         ]
@@ -57,13 +57,13 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
                 },
                 {
                     "cls_name": "sieves.tasks.predictive.classification.core.Classification",
-                    'generation_settings': {
+                    'model_settings': {
                         'is_placeholder': False,
                         'value': {
                             'config_kwargs': None,
                             'inference_kwargs': None,
                             'init_kwargs': None,
-                            'strict_mode': False,
+                            'strict': True,
                             'inference_mode': None,
                         }
                     },

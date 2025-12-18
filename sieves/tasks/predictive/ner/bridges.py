@@ -13,7 +13,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, gliner_, langchain_, outlines_
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -75,7 +75,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         entities: list[str] | dict[str, str],
         task_id: str,
         prompt_instructions: str | None,
-        generation_settings: GenerationSettings,
+        model_settings: ModelSettings,
     ):
         """Initialize NERBridge.
 
@@ -83,13 +83,13 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
             to descriptions.
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param generation_settings: Generation settings including inference_mode.
+        :param model_settings: Model settings including inference_mode.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
         )
         if isinstance(entities, dict):
             self._entities = list(entities.keys())
@@ -291,7 +291,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return self._generation_settings.inference_mode or dspy_.InferenceMode.predict
+        return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
     def consolidate(
@@ -434,7 +434,7 @@ class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+        return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
@@ -443,7 +443,7 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return self._generation_settings.inference_mode or langchain_.InferenceMode.structured
+        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
 
 class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
@@ -454,7 +454,7 @@ class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         entities: list[str] | dict[str, str],
         task_id: str,
         prompt_instructions: str | None,
-        generation_settings: GenerationSettings,
+        model_settings: ModelSettings,
     ):
         """Initialize GLiNER2 NER bridge.
 
@@ -462,13 +462,13 @@ class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
             to descriptions.
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param generation_settings: Generation settings including inference_mode.
+        :param model_settings: Model settings including inference_mode.
         """
         super().__init__(
             entities=entities,
             task_id=task_id,
             prompt_instructions=prompt_instructions,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
         )
 
     @override
@@ -494,7 +494,7 @@ class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gline
     @override
     @property
     def inference_mode(self) -> gliner_.InferenceMode:
-        return self._generation_settings.inference_mode or gliner_.InferenceMode.entities
+        return self._model_settings.inference_mode or gliner_.InferenceMode.entities
 
     @override
     def consolidate(

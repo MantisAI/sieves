@@ -3,7 +3,7 @@ import dspy
 import pydantic
 import pytest
 
-from sieves import GenerationSettings
+from sieves import ModelSettings
 from sieves.model_wrappers import ModelType
 from sieves.tasks.optimization import Optimizer
 from sieves.tasks.predictive import (
@@ -94,14 +94,14 @@ def test_optimization_classification(optimizer) -> None:
         labels=["fruit", "vegetable"],
         fewshot_examples=examples_single_label,
         model=optimizer.model,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
     task_multi_label = classification.Classification(
         multi_label=True,
         labels=["comedy", "scifi"],
         fewshot_examples=examples_multi_label,
         model=optimizer.model,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
 
     # Test evaluation.
@@ -175,7 +175,7 @@ def test_optimization_sentiment_analysis(optimizer) -> None:
         aspects=('quality', 'delivery'),
         model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
 
     # Test evaluation: perfect match
@@ -253,7 +253,7 @@ def test_optimization_ner(optimizer) -> None:
         entities=['PERSON', 'LOCATION'],
         model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
 
     # Test evaluation: perfect match (F1 = 1.0)
@@ -354,7 +354,7 @@ def test_optimization_pii_masking(optimizer) -> None:
         pii_types=['NAME', 'EMAIL'],
         model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
 
     # Test evaluation: perfect match (F1 = 1.0)
@@ -447,7 +447,7 @@ def test_optimization_information_extraction(optimizer) -> None:
         entity_type=Person,
         model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
 
     # Test evaluation: perfect match (F1 = 1.0)
@@ -545,7 +545,7 @@ def test_optimization_summarization(optimizer) -> None:
         n_words=30,
         model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
 
     # Test LLM-based evaluation (no hardcoded scores since it uses LLM)
@@ -604,7 +604,7 @@ def test_optimization_translation(optimizer) -> None:
         to='Spanish',
         model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
 
     # Test LLM-based evaluation
@@ -666,7 +666,7 @@ def test_optimization_question_answering(optimizer) -> None:
         questions=questions,
         model=optimizer.model,
         fewshot_examples=examples,
-        generation_settings=GenerationSettings(),
+        model_settings=ModelSettings(),
     )
 
     # Test LLM-based evaluation

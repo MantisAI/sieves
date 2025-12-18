@@ -18,7 +18,7 @@ from sieves.model_wrappers import (
     langchain_,
     outlines_,
 )
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -34,7 +34,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         prompt_instructions: str | None,
         labels: list[str] | dict[str, str],
         multi_label: bool,
-        generation_settings: GenerationSettings,
+        model_settings: ModelSettings,
     ):
         """Initialize ClassificationBridge.
 
@@ -44,13 +44,13 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         :param multi_label: If True, task returns confidence scores for all specified labels. If False, task returns
             most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
             accuracy.
-        :param generation_settings: Generation settings.
+        :param model_settings: Model settings.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
         )
         if isinstance(labels, dict):
             self._labels = list(labels.keys())
@@ -151,7 +151,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
-        return self._generation_settings.inference_mode or dspy_.InferenceMode.predict
+        return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -275,7 +275,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     @override
     @property
     def inference_mode(self) -> huggingface_.InferenceMode:
-        return self._generation_settings.inference_mode or huggingface_.InferenceMode.zeroshot_cls
+        return self._model_settings.inference_mode or huggingface_.InferenceMode.zeroshot_cls
 
     @override
     def integrate(self, results: Iterable[huggingface_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -491,7 +491,7 @@ class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMo
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return self._generation_settings.inference_mode or langchain_.InferenceMode.structured
+        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
 
 class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[ModelWrapperInferenceMode], abc.ABC):
@@ -574,6 +574,6 @@ class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outline
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return self._generation_settings.inference_mode or (
+        return self._model_settings.inference_mode or (
             outlines_.InferenceMode.json if self._multi_label else outlines_.InferenceMode.choice
         )

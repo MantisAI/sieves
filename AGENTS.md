@@ -178,10 +178,10 @@ uv run python -c "import sieves; print(sieves.__name__)"
    - Defines prompt templates (Jinja2-based)
    - Handles output schema and parsing
 
-6. **GenerationSettings** (`sieves.model_wrappers.types.GenerationSettings`)
+6. **ModelSettings** (`sieves.model_wrappers.types.ModelSettings`)
    - Configures structured generation behavior
-   - Fields: `init_kwargs`, `inference_kwargs`, `inference_mode`, `strict_mode`, batch settings
-   - `strict_mode=True`: raises on inference failure; `False`: yields None for failed docs
+   - Fields: `init_kwargs`, `inference_kwargs`, `inference_mode`, `strict`, batch settings
+   - `strict=True`: raises on inference failure; `False`: yields None for failed docs
 
 ### Data Flow
 
@@ -292,7 +292,7 @@ Enforced via CI pipeline:
 
 - **Document-level caching:** Pipeline hashes documents by `hash(doc.text or doc.uri)`; cache stores results
 - **Disable when needed:** `Pipeline(use_cache=False)`
-- **Batch processing:** Configure `batch_size` in task initialization or GenerationSettings (−1 = batch all)
+- **Batch processing:** Configure `batch_size` in task initialization or ModelSettings (−1 = batch all)
 - **Streaming:** Tasks accept `Iterable[Doc]` for lazy evaluation on large corpora
 - **Conditional execution:** Use `condition` parameter on tasks to filter documents: `task(docs, condition=lambda d: len(d.text) > 100)`
 - **Observability:** Loguru logging during execution; access cache stats via pipeline
@@ -322,7 +322,7 @@ Enforced via CI pipeline:
 - Respect optional dependencies; gate ingestion/distillation imports behind extras (model libraries are now core)
 - Update docs (`docs/`) if you add public features
 - Write tests for new functionality
-- Consider conditional execution and error handling (`strict_mode`) for robust pipelines
+- Consider conditional execution and error handling (`strict`) for robust pipelines
 
 ### Don't
 
@@ -425,9 +425,9 @@ Key changes that affect development (last ~2-3 months):
 1. **All Model wrappers as Core Dependencies** (#210) - Outlines, DSPy, LangChain, Transformers, and GLiNER2 are now included in base installation
 2. **DSPy v3 Migration** (#192) - Upgraded to DSPy v3 (breaking API changes from v2)
 3. **GliNER2 Migration** (#202) - Migrated from GliNER v1 to GLiNER2 for improved NER performance
-4. **GenerationSettings Refactoring** (#194) - `inference_mode` moved into GenerationSettings (simplified task init)
+4. **ModelSettings Refactoring** (#194) - `inference_mode` moved into ModelSettings (simplified task init)
 5. **Conditional Task Execution** (#195) - Added `condition` parameter for filtering docs during execution
-6. **Non-strict Execution Support** (#196) - Better error handling; `strict_mode=False` allows graceful failures
+6. **Non-strict Execution Support** (#196) - Better error handling; `strict=False` allows graceful failures
 7. **Standardized Output Fields** (#206) - Normalized descriptive/ID attribute naming across tasks
 8. **Chonkie Integration** - Token-based chunking framework now primary chunking backend
 9. **Optional Progress Bars** (#197) - Progress display now configurable per task

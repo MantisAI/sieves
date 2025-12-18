@@ -14,7 +14,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, dspy_, gliner_, huggingface_, langchain_, outlines_
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.distillation_import import model2vec, setfit
 from sieves.tasks.distillation.types import DistillationFramework
@@ -114,7 +114,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
         multi_label: bool = True,
-        generation_settings: GenerationSettings = GenerationSettings(),
+        model_settings: ModelSettings = ModelSettings(),
         condition: Callable[[Doc], bool] | None = None,
     ) -> None:
         """Initialize new Classification task.
@@ -132,7 +132,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         :param multi_label: If True, task returns confidence scores for all specified labels. If False, task returns
             most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
             accuracy.
-        :param generation_settings: Generation settings.
+        :param model_settings: Model settings.
         :param condition: Optional callable that determines whether to process each document.
         """
         if isinstance(labels, dict):
@@ -151,7 +151,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
             overwrite=False,
             prompt_instructions=prompt_instructions,
             fewshot_examples=fewshot_examples,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
             condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
@@ -174,7 +174,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                     labels=labels,
                     multi_label=self._multi_label,
                 ),
-                generation_settings=self._generation_settings,
+                model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.classification,
             )
 
@@ -194,7 +194,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
                 prompt_instructions=self._custom_prompt_instructions,
                 labels=labels,
                 multi_label=self._multi_label,
-                generation_settings=self._generation_settings,
+                model_settings=self._model_settings,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

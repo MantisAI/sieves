@@ -177,12 +177,12 @@ def test_advanced_pipeline_example(example_chunker, small_outlines_model):
     assert len(results) > 0
 
 
-def test_generation_settings_example(small_transformer_model):
-    """Test GenerationSettings configuration with strict mode and batching."""
+def test_model_settings_example(small_transformer_model):
+    """Test ModelSettings configuration with strict mode and batching."""
     model = small_transformer_model  # For testing, use fixture
 
     # --8<-- [start:generation-settings-config]
-    from sieves.model_wrappers.utils import GenerationSettings
+    from sieves.model_wrappers.utils import ModelSettings
     from sieves import tasks
 
     classifier = tasks.Classification(
@@ -191,14 +191,14 @@ def test_generation_settings_example(small_transformer_model):
             "politics": "Political news and government"
         },
         model=model,
-        generation_settings=GenerationSettings(strict_mode=True),
+        model_settings=ModelSettings(strict=True),
         batch_size=8,
     )
     # --8<-- [end:generation-settings-config]
 
     # Assertions for testing
     assert classifier is not None
-    assert classifier._generation_settings.strict_mode is True
+    assert classifier._model_settings.strict is True
 
 
 def test_inference_mode_example(small_outlines_model):
@@ -209,7 +209,7 @@ def test_inference_mode_example(small_outlines_model):
     import outlines
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from sieves.model_wrappers import outlines_
-    from sieves.model_wrappers.utils import GenerationSettings
+    from sieves.model_wrappers.utils import ModelSettings
     from sieves import tasks
 
     model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
@@ -220,8 +220,8 @@ def test_inference_mode_example(small_outlines_model):
     classifier = tasks.Classification(
         labels=["science", "politics"],
         model=model,
-        generation_settings=GenerationSettings(
-            strict_mode=True,
+        model_settings=ModelSettings(
+            strict=True,
             inference_mode=outlines_.InferenceMode.json  # Specifies how to parse results
         ),
         batch_size=8,
@@ -230,7 +230,7 @@ def test_inference_mode_example(small_outlines_model):
 
     # Assertions for testing
     assert classifier is not None
-    assert classifier._generation_settings.inference_mode == outlines_.InferenceMode.json
+    assert classifier._model_settings.inference_mode == outlines_.InferenceMode.json
 
 
 def test_readme_quick_start_basic(small_outlines_model):

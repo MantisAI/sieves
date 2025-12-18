@@ -11,7 +11,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -28,7 +28,7 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         overwrite: bool,
         mask_placeholder: str,
         pii_types: list[str] | dict[str, str] | None,
-        generation_settings: GenerationSettings,
+        model_settings: ModelSettings,
     ):
         """
         Initialize PIIBridge.
@@ -39,13 +39,13 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         :param mask_placeholder: String to replace PII with.
         :param pii_types: Types of PII to mask. Can be a list of PII type strings, a dict mapping PII types to
             descriptions, or None for all common PII types.
-        :param generation_settings: Generation settings including inference_mode.
+        :param model_settings: Model settings including inference_mode.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=overwrite,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
         )
         self._mask_placeholder = mask_placeholder
         if isinstance(pii_types, dict):
@@ -141,7 +141,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         """Return inference mode for DSPy model wrapper."""
-        return self._generation_settings.inference_mode or dspy_.InferenceMode.predict
+        return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
     def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
@@ -296,7 +296,7 @@ class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
-        return self._generation_settings.inference_mode or outlines_.InferenceMode.json
+        return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
@@ -305,4 +305,4 @@ class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
     @override
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
-        return self._generation_settings.inference_mode or langchain_.InferenceMode.structured
+        return self._model_settings.inference_mode or langchain_.InferenceMode.structured

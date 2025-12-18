@@ -12,7 +12,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
@@ -56,7 +56,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
     def __init__(
         self,
         model: _TaskModel,
-        generation_settings: GenerationSettings = GenerationSettings(),
+        model_settings: ModelSettings = ModelSettings(),
         aspects: tuple[str, ...] = tuple(),
         task_id: str | None = None,
         include_meta: bool = True,
@@ -69,7 +69,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         Initialize SentimentAnalysis task.
 
         :param model: Model to use.
-        :param generation_settings: Settings for structured generation.
+        :param model_settings: Settings for structured generation.
         :param aspects: Aspects to consider in sentiment analysis. Overall sentiment will always be determined. If
             empty, only overall sentiment will be determined.
         :param task_id: Task ID.
@@ -82,7 +82,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         self._aspects = tuple(sorted(set(aspects) | {"overall"}))
         super().__init__(
             model=model,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
             task_id=task_id,
             include_meta=include_meta,
             batch_size=batch_size,
@@ -108,7 +108,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 aspects=self._aspects,
-                generation_settings=self._generation_settings,
+                model_settings=self._model_settings,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

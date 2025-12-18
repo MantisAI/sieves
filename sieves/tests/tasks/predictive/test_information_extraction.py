@@ -4,7 +4,7 @@ import pydantic
 import pytest
 
 from sieves import Doc, Pipeline, tasks
-from sieves.model_wrappers import ModelType, GenerationSettings, dspy_, langchain_, outlines_
+from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, outlines_
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, InformationExtraction
 from sieves.tasks.predictive import information_extraction
@@ -41,7 +41,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
     task = tasks.predictive.InformationExtraction(
         entity_type=entity_type,
         model=batch_runtime.model,
-        generation_settings=batch_runtime.generation_settings,
+        model_settings=batch_runtime.model_settings,
         batch_size=batch_runtime.batch_size,
         **fewshot_args
     )
@@ -54,7 +54,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
             tasks.predictive.InformationExtraction(
                 entity_type=PersonGliner,
                 model=batch_runtime.model,
-                generation_settings=batch_runtime.generation_settings,
+                model_settings=batch_runtime.model_settings,
                 batch_size=batch_runtime.batch_size,
                 **fewshot_args
             )
@@ -63,7 +63,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot) -> None:
             tasks.predictive.InformationExtraction(
                 entity_type=Person,
                 model=batch_runtime.model,
-                generation_settings=batch_runtime.generation_settings,
+                model_settings=batch_runtime.model_settings,
                 batch_size=batch_runtime.batch_size,
                 **fewshot_args
             )
@@ -106,7 +106,10 @@ def _to_hf_dataset(task: InformationExtraction, docs: list[Doc]) -> None:
 def test_serialization(information_extraction_docs, batch_runtime) -> None:
     pipe = Pipeline(
         tasks.predictive.InformationExtraction(
-            entity_type=Person, model=batch_runtime.model, generation_settings=batch_runtime.generation_settings, batch_size=batch_runtime.batch_size,
+            entity_type=Person,
+            model=batch_runtime.model,
+            model_settings=batch_runtime.model_settings,
+            batch_size=batch_runtime.batch_size,
         )
     )
 
@@ -119,15 +122,15 @@ def test_serialization(information_extraction_docs, batch_runtime) -> None:
                       'fewshot_examples': {'is_placeholder': False,
                                            'value': ()},
                       'batch_size': {'is_placeholder': False, "value": -1},
-                      'generation_settings': {'is_placeholder': False,
+                      'model_settings': {'is_placeholder': False,
                                               'value': {
                                                         'config_kwargs': None,
                                                         'inference_kwargs': None,
                                                         'init_kwargs': None,
-                                                        'strict_mode': False, 'inference_mode': None}},
+                                                        'strict': True, 'inference_mode': None}},
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'model': {'is_placeholder': True,
-                                'value': 'outlines.models.transformers.Transformers'},
+                                'value': 'outlines.models.openai.OpenAI'},
                       'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False,
@@ -152,7 +155,7 @@ def test_inference_mode_override(batch_runtime) -> None:
     task = tasks.predictive.InformationExtraction(
         entity_type=PersonGliner if isinstance(batch_runtime.model, gliner2.GLiNER2) else Person,
         model=batch_runtime.model,
-        generation_settings=GenerationSettings(inference_mode=dummy),
+        model_settings=ModelSettings(inference_mode=dummy),
         batch_size=batch_runtime.batch_size,
     )
 

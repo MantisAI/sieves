@@ -17,7 +17,7 @@ from sieves.model_wrappers.core import (
     ModelWrapperPromptSignature,
     ModelWrapperResult,
 )
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 
 Model = dspy_.Model | gliner_.Model | huggingface_.Model | langchain_.Model | outlines_.Model
 
@@ -36,12 +36,12 @@ def init_default_model() -> outlines.models.Transformers:  # noqa: D401
 
 
 def init_model_wrapper(
-    model: Model, generation_settings: GenerationSettings
+    model: Model, model_settings: ModelSettings
 ) -> ModelWrapper[ModelWrapperPromptSignature, ModelWrapperResult, ModelWrapperModel, ModelWrapperInferenceMode]:  # noqa: D401
     """Initialize internal model wrapper object.
 
     :param model: Model to use.
-    :param generation_settings: Settings for structured generation.
+    :param model_settings: Settings for structured generation.
     :return ModelWrapper: ModelWrapper.
     :raises ValueError: If model type isn't supported.
     """
@@ -66,7 +66,7 @@ def init_model_wrapper(
         if any(issubclass(model_type, module_model_type) for module_model_type in module_model_types):
             internal_model_wrapper = model_wrapper_type(
                 model=model,
-                generation_settings=generation_settings,
+                model_settings=model_settings,
             )
             assert isinstance(internal_model_wrapper, ModelWrapper)
 

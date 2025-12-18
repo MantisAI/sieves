@@ -12,7 +12,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, gliner_
-from sieves.model_wrappers.types import GenerationSettings
+from sieves.model_wrappers.types import ModelSettings
 
 TaskPromptSignature = TypeVar("TaskPromptSignature", covariant=True)
 TaskResult = TypeVar("TaskResult")
@@ -22,21 +22,19 @@ TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult
 class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC):
     """Bridge base class."""
 
-    def __init__(
-        self, task_id: str, prompt_instructions: str | None, overwrite: bool, generation_settings: GenerationSettings
-    ):
+    def __init__(self, task_id: str, prompt_instructions: str | None, overwrite: bool, model_settings: ModelSettings):
         """Initialize new bridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param overwrite: Whether to overwrite text with produced text. Considered only by bridges for tasks producing
             fluent text - like translation, summarization, PII masking, etc.
-        :param generation_settings: Generation settings including inference_mode.
+        :param model_settings: Model settings including inference_mode.
         """
         self._task_id = task_id
         self._custom_prompt_instructions = prompt_instructions
         self._overwrite = overwrite
-        self._generation_settings = generation_settings
+        self._model_settings = model_settings
 
     @property
     @abc.abstractmethod
@@ -151,7 +149,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         task_id: str,
         prompt_instructions: str | None,
         prompt_signature: gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder,
-        generation_settings: GenerationSettings,
+        model_settings: ModelSettings,
         inference_mode: gliner_.InferenceMode,
     ):
         """Initialize GLiNER2 bridge.
@@ -162,13 +160,13 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param prompt_signature: GLiNER2 schema (list of field definitions).
-        :param generation_settings: Generation settings including inference_mode.
+        :param model_settings: Model settings including inference_mode.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
-            generation_settings=generation_settings,
+            model_settings=model_settings,
         )
         self._prompt_signature = prompt_signature
         # If prompt signature is a structure, we create a Pydantic representation of it for easier downstream result
@@ -214,7 +212,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
     @override
     @property
     def inference_mode(self) -> gliner_.InferenceMode:
-        return self._generation_settings.inference_mode or self._inference_mode
+        return self._model_settings.inference_mode or self._inference_mode
 
     def schema_to_pydantic(self) -> type[pydantic.BaseModel]:
         """Convert a Gliner2 Schema object to Pydantic models.
