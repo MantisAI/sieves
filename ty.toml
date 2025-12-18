@@ -4,6 +4,7 @@ unresolved-attribute = "ignore"
 unresolved-import = "ignore"
 invalid-assignment = "ignore"
 invalid-argument-type = "ignore"
+invalid-type-arguments = "ignore"
 missing-argument = "ignore"
 not-iterable = "ignore"
 

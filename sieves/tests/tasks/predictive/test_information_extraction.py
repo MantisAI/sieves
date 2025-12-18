@@ -130,7 +130,7 @@ def test_serialization(information_extraction_docs, batch_runtime) -> None:
                                                         'strict': True, 'inference_mode': None}},
                       'include_meta': {'is_placeholder': False, 'value': True},
                       'model': {'is_placeholder': True,
-                                'value': 'outlines.models.transformers.Transformers'},
+                                'value': 'outlines.models.openai.OpenAI'},
                       'prompt_instructions': {'is_placeholder': False,
                                           'value': None},
                       'task_id': {'is_placeholder': False,

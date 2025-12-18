@@ -1,9 +1,10 @@
 # mypy: ignore-errors
 import os
 from functools import cache
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import dspy
+import openai
 import gliner2
 import outlines
 import pytest
@@ -62,10 +63,9 @@ def make_model(model_type: ModelType) -> Model:
             )
 
         case ModelType.outlines:
-            model_name = "HuggingFaceTB/SmolLM2-135M-Instruct"
-            model = outlines.models.from_transformers(
-                transformers.AutoModelForCausalLM.from_pretrained(model_name),
-                transformers.AutoTokenizer.from_pretrained(model_name),
+            model = outlines.from_openai(
+                openai.OpenAI(base_url=openrouter_api_base, api_key=os.environ['OPENROUTER_API_KEY']),
+                "google/gemini-2.5-flash-lite-preview-09-2025"
             )
 
         case _:

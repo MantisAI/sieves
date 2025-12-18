@@ -27,6 +27,7 @@ dependencies = [
     "langchain>=0.3,<0.4",
     "sentencepiece<1",
     "json-repair>=0.48.0",
+    "openai>=1.109.1,<2",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

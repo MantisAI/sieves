@@ -10,7 +10,7 @@ import sys
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Generic, Self
 
 import datasets
 import dspy
@@ -81,7 +81,7 @@ class FewshotExample(pydantic.BaseModel):
         return cls(**example)
 
 
-class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC):
+class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task, abc.ABC):
     """Base class for predictive tasks."""
 
     def __init__(
@@ -225,9 +225,6 @@ class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC)
 
     @property
     def _state(self) -> dict[str, Any]:
-        print("------- serializing")
-        print(self._model_wrapper.model_settings.strict)
-        print(self._model_settings.strict)
         return {
             **super()._state,
             "model": self._model_wrapper.model,
@@ -327,6 +324,8 @@ class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC)
         """
         try:
             dspy_bridge = self._bridge if self._model_wrapper == ModelType.dspy else self._init_bridge(ModelType.dspy)
+            assert hasattr(dspy_bridge, "prompt_signature")
+            assert issubclass(dspy_bridge.prompt_signature, dspy.Signature | dspy.Module)
             return dspy_bridge.prompt_signature
 
         except KeyError as err:
@@ -408,7 +407,7 @@ class PredictiveTask[TaskPromptSignature, TaskResult, TaskBridge](Task, abc.ABC)
         dspy_examples = [ex.to_dspy() for ex in self._fewshot_examples]
 
         def _pred_eval(truth: dspy.Example, pred: dspy.Prediction, trace: Any | None = None) -> float:
-            """Wraps optimization evaluation, injects model.
+            """Wrap optimization evaluation, inject model.
 
             :param truth: Ground truth.
             :param pred: Predicted value.

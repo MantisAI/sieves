@@ -44,6 +44,25 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
     def inference_modes(self) -> type[InferenceMode]:
         return InferenceMode
 
+    async def _generate_async(
+        self,
+        generator: (
+            outlines.generator.SteerableGenerator
+            | outlines.generator.BlackBoxGenerator
+            | outlines.generator.AsyncBlackBoxGenerator
+        ),
+        prompt: str,
+    ) -> Result | None:
+        """Generate result async.
+
+        :param generator: Generator instance to use for generation.
+        :param prompt: Prompt to generate result for.
+        :return: Result for prompt. Results are None if corresponding prompt failed.
+        """
+        result = generator(prompt, **self._inference_kwargs)
+        assert isinstance(result, Result) or result is None
+        return result
+
     @override
     def build_executable(
         self,
@@ -73,20 +92,10 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
             def generate(prompts: list[str]) -> Iterable[Result]:
                 try:
                     results = generator.batch(prompts, **self._inference_kwargs)
-                # Batch mode is not implemented for all Outlines wrappers. Fall back to single-prompt mode in that case.
+                # Batch mode is not implemented for all Outlines wrappers. Fall back to single-prompt mode in
+                # that case.
                 except NotImplementedError:
-
-                    async def generate_async(prompt: str) -> Result | None:
-                        """Generate result async.
-
-                        :param prompt: Prompt to generate result for.
-                        :return: Result for prompt. Results are None if corresponding prompt failed.
-                        """
-                        result = generator(prompt, **self._inference_kwargs)
-                        assert isinstance(result, Result) or result is None
-                        return result
-
-                    calls = [generate_async(prompt) for prompt in prompts]
+                    calls = [self._generate_async(generator, prompt) for prompt in prompts]
                     results = asyncio.run(self._execute_async_calls(calls))
 
                 if inference_mode == InferenceMode.json:
