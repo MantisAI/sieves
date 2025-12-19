@@ -138,17 +138,17 @@ See [Ingestion Guide](https://sieves.ai/guides/ingestion) for more PDF parsing o
 
 ### Key Features
 
-**Zero-shot NLP, ready to use**
+**Zero-shot document AI, ready to use**
 - 🎯 No training required - immediate inference with zero-shot models (LLMs and local models)
 - 📋 Built-in tasks: classification, extraction, NER, summarization, sentiment analysis, PII masking, QA
 - 🔄 Unified interface for DSPy, Outlines, LangChain, GLiNER2, Transformers
 
-**Production-ready pipelines**
+**Observable pipelines**
 - 🔍 Observable execution with conditional task logic
 - 💾 Caching to avoid redundant model calls
 - 📦 Pipeline serialization and configuration management
 
-**Full NLP workflow**
+**End-to-end workflows**
 - 📄 Document parsing: Docling, Marker (optional)
 - ✂️ Text chunking: Chonkie integration
 - 🚀 Prompt optimization: DSPy MIPROv2
@@ -194,6 +194,10 @@ ingestion to model distillation, with validated structured outputs across multip
 - ❌ Use case: chat bot, RAG
 - ❌ Applications deeply coupled to LangChain/DSPy ecosystems
 - ❌ Simple one-off LLM calls without pipeline needs
+
+Check out these talks/presentations if you want to hear more:
+- [Sieves - Plug-and-Play NLP pipelines with Zero-Shot Models](https://www.youtube.com/watch?v=5i8tEvrYEyQ) at PyData Amsterdam 2025
+- [Plug-and-Play Zer-Shot NLP with Sieves](https://www.youtube.com/watch?v=9ZilTpSf5qg) at an Open Teams community even
 
 Inspired by [spaCy](https://spacy.io/) and [spacy-llm](https://github.com/explosion/spacy-llm).
 
