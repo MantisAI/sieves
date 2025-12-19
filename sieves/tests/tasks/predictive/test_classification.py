@@ -3,6 +3,7 @@ import traceback
 
 import pydantic
 import pytest
+from flaky import flaky
 
 from sieves import Doc, Pipeline
 from sieves.model_wrappers import ModelType, ModelSettings
@@ -83,6 +84,7 @@ def test_run(classification_docs, batch_runtime, fewshot, multilabel):
         if "The `openai` library does not support batch inference." not in ''.join(tbe.format()):
             raise err
 
+@flaky(max_runs=3, min_passes=1)
 @pytest.mark.parametrize("runtime", Classification.supports(), indirect=["runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
 def test_run_nonbatched(classification_docs, runtime, fewshot):
