@@ -187,7 +187,7 @@ pip install "sieves[distill]"    # Model distillation (setfit, model2vec)
 <div align="center">
 
 📖 **[Documentation](https://sieves.ai/)** •
-❓ **[Chat with the `sieves` DeepWiki entry](https://deepwiki.com/MantisAI/sieves)** •
+❓ **[Chat with the `sieves` DeepWiki](https://deepwiki.com/MantisAI/sieves)** •
 🤝 **[Discussions](https://github.com/mantisai/sieves/discussions)**
 
 </div>
