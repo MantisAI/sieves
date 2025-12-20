@@ -23,10 +23,10 @@ from sieves.model_wrappers import (
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import GliNERBridge
+from sieves.tasks.predictive.bridges import EntityWithContext, GliNERBridge
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.ner.bridges import DSPyNER, EntityWithContext, LangChainNER, OutlinesNER
+from sieves.tasks.predictive.ner.bridges import DSPyNER, LangChainNER, OutlinesNER
 
 _TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
 _TaskPromptSignature = Any
