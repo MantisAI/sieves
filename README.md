@@ -16,12 +16,17 @@
 
 `sieves` provides a type-safe abstraction for building zero-shot Document AI pipelines. It unifies the entire workflow:
 
-1.  **Ingestion**: Parsing PDFs, images, and Office docs (via Docling/Marker).
-2.  **Preprocessing**: Intelligent text chunking and windowing (via Chonkie).
-3.  **Prediction**: Zero-shot structured generation using a unified Pydantic interface.
+1.  **Ingestion**: Parsing PDFs, images, and Office docs (via [`docling`](https://github.com/docling-project/docling)).
+2.  **Preprocessing**: Intelligent text chunking and windowing (via [`chonkie`](https://github.com/chonkie-inc/chonkie)).
+3.  **Prediction**: Zero-shot structured generation using a unified Pydantic interface. Supports multiple backends:
+  - [`dspy`](https://github.com/stanfordnlp/dspy)
+  - [`langchain`](https://github.com/fastino-ai/GLiNER2)
+  - [`outlines`](https://github.com/dottxt-ai/outlines)
+  - [`gliner2`](https://github.com/fastino-ai/GLiNER2)
+  - [`transformers`](https://github.com/huggingface/transformers) zero-shot classification pipeliens
+4.  **Distillation**: Distill a specialized local model from zero-shot predictions (via [`setfit`](https://github.com/huggingface/setfit) and [`model2vec`](https://github.com/MinishLab/model2vec)).
 
 Define your task pipeline once, then swap execution engines without rewriting your pipeline logic.
-`sieves` supports **DSPy**, **Outlines**, **LangChain**, **GLiNER2**, and **Hugging Face** zero-shot pipelines.
 
 > [!WARNING]
 > `sieves` is in active development (Beta). The API is stable within minor versions, but we recommend pinning your version for production use.
@@ -117,7 +122,7 @@ id='(7)' equation='\\omega(t) = \\frac{a_0 t}{r_0} \\left( 1 + \\frac{a_0^2 t^4}
 id='(8)' equation='x(t) = x_0 + v_0 t + \\frac{1}{2} a t^2'
 ```
 
-[Read the guides](https://sieves.ai/guides/getting_started)
+**[Read the guides]**(https://sieves.ai/guides/getting_started)
 
 ---
 
