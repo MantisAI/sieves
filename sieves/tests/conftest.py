@@ -53,7 +53,7 @@ def make_model(model_type: ModelType) -> Model:
             model = ChatOpenAI(
                 api_key=os.environ['OPENROUTER_API_KEY'],
                 base_url=openrouter_api_base,
-                model="google/gemini-3-flash-preview",
+                model=openrouter_model_id,
                 temperature=0
             )
 

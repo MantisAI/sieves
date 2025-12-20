@@ -93,7 +93,10 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
         assert doc.text
         assert "InformationExtraction" in doc.results
         if mode == "single":
-            assert doc.results["InformationExtraction"] is None or isinstance(doc.results["InformationExtraction"], pydantic.BaseModel)
+            assert (
+                doc.results["InformationExtraction"] is None or
+                isinstance(doc.results["InformationExtraction"], pydantic.BaseModel)
+            )
         else:
             assert isinstance(doc.results["InformationExtraction"], list)
 
