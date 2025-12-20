@@ -1,5 +1,7 @@
 # Docling
 
+[Docling](https://github.com/DS4SD/docling) is a tool for document parsing and ingestion.
+
 Note: This task depends on optional ingestion libraries, which are not installed by default. Install them via the ingestion extra, or install the library directly.
 
 Examples:
@@ -10,4 +12,12 @@ pip install "sieves[ingestion]"   # installs ingestion deps via extra
 pip install docling
 ```
 
- ::: sieves.tasks.preprocessing.ingestion.docling_
+## Usage
+
+```python
+--8<-- "sieves/tests/docs/test_preprocessing_usage.py:docling-usage"
+```
+
+---
+
+::: sieves.tasks.preprocessing.ingestion.docling_
