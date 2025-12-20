@@ -201,7 +201,7 @@ def test_readme_quick_start_basic(small_outlines_model):
     # Use fixture for actual test
     model = small_outlines_model
 
-    # --8<-- [start:readme-quick-start]
+    # --8<-- [start:basic-classification]
     import outlines
     import transformers
     from sieves import Pipeline, tasks, Doc
@@ -225,7 +225,7 @@ def test_readme_quick_start_basic(small_outlines_model):
     results = list(pipeline([doc]))
     print(results[0].results)
     # This produces: {'Classification': [('science', 1.0), ('politics', 0.0)]}
-    # --8<-- [end:readme-quick-start]
+    # --8<-- [end:basic-classification]
 
     # Assertions for testing (not shown in docs).
     assert results[0].results is not None
