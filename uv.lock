@@ -3235,7 +3235,6 @@ dependencies = [
     { name = "datasets" },
     { name = "dspy" },
     { name = "dspy-ai" },
-    { name = "flaky" },
     { name = "gliner2" },
     { name = "jinja2" },
     { name = "json-repair" },
@@ -3262,6 +3261,7 @@ ingestion = [
 ]
 test = [
     { name = "anthropic" },
+    { name = "flaky" },
     { name = "langchain-community" },
     { name = "langchain-openai" },
     { name = "mkdocs-material" },
@@ -3282,7 +3282,7 @@ requires-dist = [
     { name = "docling", marker = "extra == 'ingestion'", specifier = ">=2,<3" },
     { name = "dspy", specifier = ">=3,<4" },
     { name = "dspy-ai", specifier = ">=3,<4" },
-    { name = "flaky", specifier = ">=3.8.1" },
+    { name = "flaky", marker = "extra == 'test'", specifier = ">=3.8.1" },
     { name = "gliner2", specifier = ">=1.2,<2" },
     { name = "jinja2", specifier = ">=3,<4" },
     { name = "json-repair", specifier = ">=0.48.0" },

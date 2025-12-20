@@ -78,7 +78,7 @@ def test_complex_serialization(example_tokenizer, small_outlines_model, tmp_path
 
 
     # --8<-- [start:serialization-complex-entity-task]
-    class PersonInfo(pydantic.BaseModel):
+    class PersonInfo(pydantic.BaseModel, frozen=True):
         name: str
         age: int | None = None
         occupation: str | None = None

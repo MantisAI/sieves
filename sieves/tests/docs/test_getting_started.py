@@ -151,7 +151,7 @@ def test_advanced_pipeline_example(example_chunker, small_outlines_model):
     )
 
     # Define the structure of information you want to extract
-    class PersonInfo(pydantic.BaseModel):
+    class PersonInfo(pydantic.BaseModel, frozen=True):
         name: str
         age: int | None = None
         occupation: str | None = None
