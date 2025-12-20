@@ -7,64 +7,16 @@ from functools import cached_property
 from typing import Any, Literal, TypeVar, override
 
 import dspy
-import gliner2.inference.engine
 import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, gliner_, langchain_, outlines_
+from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
-from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.bridges import Bridge, Entities, Entity
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
-
-
-class EntityWithContext(pydantic.BaseModel):
-    """Entity mention with text span and type."""
-
-    text: str
-    context: str
-    entity_type: str
-
-
-class Entity(pydantic.BaseModel):
-    """Class for storing entity information."""
-
-    text: str
-    start: int
-    end: int
-    entity_type: str
-
-    def __eq__(self, other: object) -> bool:
-        """Compare two entities.
-
-        :param other: Other entity to compare with.
-        :return: True if entities are equal, False otherwise.
-        """
-        if not isinstance(other, Entity):
-            return False
-        # Two entities are equal if they have the same start, end, text and entity_type
-        return (
-            self.start == other.start
-            and self.end == other.end
-            and self.text == other.text
-            and self.entity_type == other.entity_type
-        )
-
-    def __hash__(self) -> int:
-        """Compute entity hash.
-
-        :returns: Entity hash.
-        """
-        return hash((self.start, self.end, self.text, self.entity_type))
-
-
-class Entities(pydantic.BaseModel):
-    """Collection of entities with associated text."""
-
-    entities: list[Entity]
-    text: str
 
 
 class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
@@ -386,7 +338,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
         entity_types = self._entities
         LiteralType = Literal[*entity_types]  # type: ignore[valid-type]
 
-        class EntityWithContext(pydantic.BaseModel):
+        class _EntityWithContext(pydantic.BaseModel):
             text: str
             context: str
             entity_type: LiteralType
@@ -394,7 +346,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
         class Prediction(pydantic.BaseModel):
             """NER prediction."""
 
-            entities: list[EntityWithContext] = []
+            entities: list[_EntityWithContext] = []
 
         return Prediction
 
@@ -444,91 +396,3 @@ class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
     @property
     def inference_mode(self) -> langchain_.InferenceMode:
         return self._model_settings.inference_mode or langchain_.InferenceMode.structured
-
-
-class GlinerNER(NERBridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
-    """GLiNER2 bridge for NER."""
-
-    def __init__(
-        self,
-        entities: list[str] | dict[str, str],
-        task_id: str,
-        prompt_instructions: str | None,
-        model_settings: ModelSettings,
-    ):
-        """Initialize GLiNER2 NER bridge.
-
-        :param entities: Entity types to extract. Can be a list of entity type strings, or a dict mapping entity types
-            to descriptions.
-        :param task_id: Task ID.
-        :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param model_settings: Model settings including inference_mode.
-        """
-        super().__init__(
-            entities=entities,
-            task_id=task_id,
-            prompt_instructions=prompt_instructions,
-            model_settings=model_settings,
-        )
-
-    @override
-    @property
-    def prompt_signature(self) -> gliner2.inference.engine.Schema:
-        return gliner2.inference.engine.Schema().entities(entity_types=self._entities, dtype="list")
-
-    @override
-    @property
-    def _default_prompt_instructions(self) -> str:
-        return ""
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
-
-    @override
-    @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
-    def inference_mode(self) -> gliner_.InferenceMode:
-        return self._model_settings.inference_mode or gliner_.InferenceMode.entities
-
-    @override
-    def consolidate(
-        self, results: Iterable[gliner_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[gliner_.Result]:
-        results = list(results)
-
-        # Simply group results by document without trying to adjust positions
-        for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            all_entities: list[dict[str, Any]] = []
-
-            for chunk_result in doc_results:
-                if chunk_result is None:
-                    continue
-
-                all_entities.extend(
-                    [
-                        {"entity_type": entity_type, **entity_info}
-                        for entity_type in chunk_result["entities"]
-                        for entity_info in chunk_result["entities"][entity_type]
-                    ]
-                )
-
-            yield all_entities
-
-    @override
-    def integrate(self, results: Iterable[gliner_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
-        for doc_results, doc in zip(results, docs):
-            doc.results[self._task_id] = Entities(
-                entities=[
-                    Entity.model_validate({k: v for k, v in res.items() if k != "confidence"}) for res in doc_results
-                ],
-                text=doc.text,
-            )
-
-        return docs

@@ -19,6 +19,53 @@ TaskResult = TypeVar("TaskResult")
 TaskBridge = TypeVar("TaskBridge", bound="Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode]")  # type: ignore[valid-type]
 
 
+class EntityWithContext(pydantic.BaseModel):
+    """Entity mention with text span and type."""
+
+    text: str
+    context: str
+    entity_type: str
+
+
+class Entity(pydantic.BaseModel):
+    """Class for storing entity information."""
+
+    text: str
+    start: int
+    end: int
+    entity_type: str
+
+    def __eq__(self, other: object) -> bool:
+        """Compare two entities.
+
+        :param other: Other entity to compare with.
+        :return: True if entities are equal, False otherwise.
+        """
+        if not isinstance(other, Entity):
+            return False
+        # Two entities are equal if they have the same start, end, text and entity_type
+        return (
+            self.start == other.start
+            and self.end == other.end
+            and self.text == other.text
+            and self.entity_type == other.entity_type
+        )
+
+    def __hash__(self) -> int:
+        """Compute entity hash.
+
+        :returns: Entity hash.
+        """
+        return hash((self.start, self.end, self.text, self.entity_type))
+
+
+class Entities(pydantic.BaseModel):
+    """Collection of entities with associated text."""
+
+    entities: list[Entity]
+    text: str
+
+
 class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC):
     """Bridge base class."""
 
@@ -269,6 +316,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
     def integrate(self, results: Iterable[gliner_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
         for doc, result in zip(docs, results):
             match self._inference_mode:
+                # Used by: Classification
                 case gliner_.InferenceMode.classification:
                     assert hasattr(self._prompt_signature.schema, "__getitem__")
                     is_multilabel = self._prompt_signature.schema["classifications"][0]["multi_label"]
@@ -282,9 +330,21 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     else:
                         doc.results[self._task_id] = (result[0]["label"], result[0]["score"])
 
+                # Used by: NER
                 case gliner_.InferenceMode.entities:
-                    doc.results[self._task_id] = result
+                    if isinstance(result, list):
+                        # Result is a list of entity dictionaries.
+                        doc.results[self._task_id] = Entities(
+                            entities=[
+                                Entity.model_validate({k: v for k, v in res.items() if k != "confidence"})
+                                for res in result
+                            ],
+                            text=doc.text or "",
+                        )
+                    else:
+                        doc.results[self._task_id] = result
 
+                # Used by: InformationExtraction
                 case gliner_.InferenceMode.structure:
                     entity_type_name = list(result.keys())[0]
                     assert issubclass(self._prompt_signature_pydantic, pydantic.BaseModel)
@@ -296,6 +356,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                         for entity in result[entity_type_name]
                     ]
 
+                    # This covers single/multi mode for information extraction.
                     if self._mode == "multi":
                         doc.results[self._task_id] = extracted_entities
                     else:
@@ -313,6 +374,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         for doc_offset in docs_offsets:
             scores: dict[str, float] = defaultdict(lambda: 0)
             entities: dict[str, list[str] | dict[str, str | list[str]]] = {}
+            all_entities_list: list[dict[str, Any]] = []
 
             # In single mode for structure, we want to keep track of the highest confidence entity.
             highest_confidence_entity: dict[str, Any] | None = None
@@ -341,18 +403,24 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
                     case gliner_.InferenceMode.entities:
                         for entity_type in res["entities"]:
-                            if len(res["entities"][entity_type]):
-                                if entity_type not in entities:
-                                    entities[entity_type] = []
-                                relevant_entities: list[str] = entities[entity_type]
-                                relevant_entities.extend(res["entities"][entity_type])
+                            items = res["entities"][entity_type]
+                            if items:
+                                if isinstance(items[0], dict):
+                                    # Flatten into a list of entities (dicts).
+                                    for item in items:
+                                        all_entities_list.append({"entity_type": entity_type, **item})
+                                else:
+                                    if entity_type not in entities:
+                                        entities[entity_type] = []
+                                    relevant_entities: list[str] = entities[entity_type]  # type: ignore[assignment]
+                                    relevant_entities.extend(items)
 
                     case gliner_.InferenceMode.structure:
                         for entity_type in res:
                             if entity_type not in entities:
                                 entities[entity_type] = []
-                            relevant_entities: list[Any] = entities[entity_type]
-                            relevant_entities.extend(res[entity_type])
+                            relevant_entities_struct: list[Any] = entities[entity_type]  # type: ignore[assignment]
+                            relevant_entities_struct.extend(res[entity_type])
 
                             if self._mode == "single":
                                 for entity in res[entity_type]:
@@ -370,7 +438,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
             match self._inference_mode:
                 case gliner_.InferenceMode.classification:
-                    # Ensure that all labels have been assigned - GLiNER2 is somtimes negligent about this.
+                    # Ensure that all labels have been assigned - GLiNER2 is sometimes negligent about this.
                     assert hasattr(self._prompt_signature.schema, "__getitem__")
                     for label in self._prompt_signature.schema["classifications"][0]["labels"]:
                         if label not in scores:
@@ -391,5 +459,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                 case gliner_.InferenceMode.entities | gliner_.InferenceMode.structure:
                     if self._inference_mode == gliner_.InferenceMode.structure and self._mode == "single":
                         yield highest_confidence_entity or {list(res.keys())[0]: []}
+                    elif all_entities_list:
+                        yield all_entities_list
                     else:
                         yield entities
