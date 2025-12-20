@@ -12,18 +12,14 @@
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17633730.svg)](https://doi.org/10.5281/zenodo.17633730)
 
-## Unified pipelines for zero-shot Document AI.
+## Unified Pipelines for Zero-Shot Document AI.
 
 `sieves` provides a type-safe abstraction for building zero-shot Document AI pipelines. It unifies the entire workflow:
 
 1.  **Ingestion**: Parsing PDFs, images, and Office docs (via [`docling`](https://github.com/docling-project/docling)).
 2.  **Preprocessing**: Intelligent text chunking and windowing (via [`chonkie`](https://github.com/chonkie-inc/chonkie)).
-3.  **Prediction**: Zero-shot structured generation using a unified Pydantic interface. Supports multiple backends:
-  - [`dspy`](https://github.com/stanfordnlp/dspy)
-  - [`langchain`](https://github.com/fastino-ai/GLiNER2)
-  - [`outlines`](https://github.com/dottxt-ai/outlines)
-  - [`gliner2`](https://github.com/fastino-ai/GLiNER2)
-  - [`transformers`](https://github.com/huggingface/transformers) zero-shot classification pipeliens
+3.  **Prediction**: Zero-shot structured generation using a unified Pydantic interface.
+      Supports multiple backends: [`dspy`](https://github.com/stanfordnlp/dspy), [`langchain`](https://github.com/fastino-ai/GLiNER2), [`outlines`](https://github.com/dottxt-ai/outlines), [`gliner2`](https://github.com/fastino-ai/GLiNER2), [`transformers`](https://github.com/huggingface/transformers) zero-shot classification pipelines
 4.  **Distillation**: Distill a specialized local model from zero-shot predictions (via [`setfit`](https://github.com/huggingface/setfit) and [`model2vec`](https://github.com/MinishLab/model2vec)).
 
 Define your task pipeline once, then swap execution engines without rewriting your pipeline logic.
@@ -39,7 +35,7 @@ pip install sieves
 ```
 *Requires Python 3.12 (due to dependency constraints in `docling` and `pyarrow`).*
 
-**2. Basic: Text Classification** (Local Model)
+**2. Basic: text classification with a small local model**
 
 ```python
 import outlines
@@ -68,7 +64,7 @@ print(results[0].results)
 # This produces: {'Classification': [('science', 1.0), ('politics', 0.0)]}
 ```
 
-**3. Advanced: End-to-End Document AI** (Remote Model)
+**3. Advanced: End-to-end document AI with a hosted LLM**
 
 This example demonstrates the full power of `sieves`: parsing a PDF, chunking it, and extracting structured data (equations) using a remote LLM via DSPy.
 
@@ -190,8 +186,8 @@ pip install "sieves[distill]"    # Model distillation (setfit, model2vec)
 
 <div align="center">
 
-📖 **[Documentation](https://sieves.ai/guides/getting_started)** •
-🎯 **[Examples](https://sieves.ai/examples)** •
+📖 **[Documentation](https://sieves.ai/)** •
+❓ **[Chat with the `sieves` DeepWiki entry](https://deepwiki.com/MantisAI/sieves)** •
 🤝 **[Discussions](https://github.com/mantisai/sieves/discussions)**
 
 </div>
