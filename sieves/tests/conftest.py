@@ -53,7 +53,7 @@ def make_model(model_type: ModelType) -> Model:
             model = ChatOpenAI(
                 api_key=os.environ['OPENROUTER_API_KEY'],
                 base_url=openrouter_api_base,
-                model=openrouter_model_id,
+                model="google/gemini-3-flash-preview",
                 temperature=0
             )
 
@@ -65,7 +65,7 @@ def make_model(model_type: ModelType) -> Model:
         case ModelType.outlines:
             model = outlines.from_openai(
                 openai.OpenAI(base_url=openrouter_api_base, api_key=os.environ['OPENROUTER_API_KEY']),
-                "google/gemini-2.5-flash-lite-preview-09-2025"
+                openrouter_model_id
             )
 
         case _:

@@ -151,6 +151,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         prompt_signature: gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder,
         model_settings: ModelSettings,
         inference_mode: gliner_.InferenceMode,
+        mode: Literal["multi", "single"] = "multi",
     ):
         """Initialize GLiNER2 bridge.
 
@@ -161,6 +162,8 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param prompt_signature: GLiNER2 schema (list of field definitions).
         :param model_settings: Model settings including inference_mode.
+        :param mode: Extraction mode. If "multi", all occurrences of the entity are extracted. If "single", exactly one
+            (or no) entity is extracted. Only used if `inference_mode == InferenceMode.structure`, ignored otherwise.
         """
         super().__init__(
             task_id=task_id,
@@ -178,6 +181,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         )
 
         self._inference_mode = inference_mode
+        self._mode = mode
 
     @override
     @property
@@ -282,15 +286,20 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     doc.results[self._task_id] = result
 
                 case gliner_.InferenceMode.structure:
-                    assert len(result) == 1
                     entity_type_name = list(result.keys())[0]
                     assert issubclass(self._prompt_signature_pydantic, pydantic.BaseModel)
-                    doc.results[self._task_id] = [
+
+                    extracted_entities = [
                         self._prompt_signature_pydantic.model_validate(
                             {key: value["text"] for key, value in entity.items()}
                         )
                         for entity in result[entity_type_name]
                     ]
+
+                    if self._mode == "multi":
+                        doc.results[self._task_id] = extracted_entities
+                    else:
+                        doc.results[self._task_id] = extracted_entities[0] if extracted_entities else None
 
         return docs
 
@@ -304,6 +313,10 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         for doc_offset in docs_offsets:
             scores: dict[str, float] = defaultdict(lambda: 0)
             entities: dict[str, list[str] | dict[str, str | list[str]]] = {}
+
+            # In single mode for structure, we want to keep track of the highest confidence entity.
+            highest_confidence_entity: dict[str, Any] | None = None
+            max_confidence: float = -1.0
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 match self._inference_mode:
@@ -338,8 +351,22 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                         for entity_type in res:
                             if entity_type not in entities:
                                 entities[entity_type] = []
-                            relevant_entities: list[str] = entities[entity_type]
+                            relevant_entities: list[Any] = entities[entity_type]
                             relevant_entities.extend(res[entity_type])
+
+                            if self._mode == "single":
+                                for entity in res[entity_type]:
+                                    # Calculate average confidence for the entity structure.
+                                    confidences = [
+                                        field_val["confidence"]
+                                        for field_val in entity.values()
+                                        if "confidence" in field_val
+                                    ]
+                                    if confidences:
+                                        avg_conf = sum(confidences) / len(confidences)
+                                        if avg_conf > max_confidence:
+                                            max_confidence = avg_conf
+                                            highest_confidence_entity = {entity_type: [entity]}
 
             match self._inference_mode:
                 case gliner_.InferenceMode.classification:
@@ -362,4 +389,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     yield sorted_scores
 
                 case gliner_.InferenceMode.entities | gliner_.InferenceMode.structure:
-                    yield entities
+                    if self._inference_mode == gliner_.InferenceMode.structure and self._mode == "single":
+                        yield highest_confidence_entity or {list(res.keys())[0]: []}
+                    else:
+                        yield entities

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, override
+from typing import Any, Literal, override
 
 import datasets
 import dspy
@@ -33,8 +32,8 @@ _TaskResult = gliner_.Result | outlines_.Result | dspy_.Result
 _TaskBridge = GliNERBridge | DSPyInformationExtraction | LangChainInformationExtraction | OutlinesInformationExtraction
 
 
-class FewshotExample(BaseFewshotExample):
-    """Few-shot example."""
+class FewshotExampleMulti(BaseFewshotExample):
+    """Few-shot example for multi-entity extraction."""
 
     entities: list[pydantic.BaseModel]
 
@@ -42,6 +41,20 @@ class FewshotExample(BaseFewshotExample):
     @property
     def target_fields(self) -> Sequence[str]:
         return ("entities",)
+
+
+class FewshotExampleSingle(BaseFewshotExample):
+    """Few-shot example for single-entity extraction."""
+
+    entity: pydantic.BaseModel | None
+
+    @override
+    @property
+    def target_fields(self) -> Sequence[str]:
+        return ("entity",)
+
+
+FewshotExample = FewshotExampleMulti | FewshotExampleSingle
 
 
 class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -56,6 +69,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         batch_size: int = -1,
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
+        mode: Literal["multi", "single"] = "multi",
         model_settings: ModelSettings = ModelSettings(),
         condition: Callable[[Doc], bool] | None = None,
     ) -> None:
@@ -69,10 +83,13 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         :param batch_size: Batch size to use for inference. Use -1 to process all documents at once.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
+        :param mode: Extraction mode. If "multi", all occurrences of the entity are extracted. If "single", exactly one
+            (or no) entity is extracted.
         :param model_settings: Settings for structured generation.
         :param condition: Optional callable that determines whether to process each document.
         """
         self._entity_type = entity_type
+        self._mode = mode
 
         super().__init__(
             model=model,
@@ -89,11 +106,11 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         if (
             isinstance(entity_type, type)
             and issubclass(entity_type, pydantic.BaseModel)
-            and not self._entity_type.model_config.get("frozen", False)
+            and not entity_type.model_config.get("frozen", False)
         ):
-            warnings.warn(
+            raise ValueError(
                 f"Entity type provided to task {self._task_id} isn't frozen, which means that entities can't "
-                f"be deduplicated. Modify entity_type to be frozen=True."
+                f"be deduplicated and compared. Modify entity_type to be frozen=True."
             )
 
     @override
@@ -118,6 +135,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
                 prompt_signature=self._entity_type,
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.structure,
+                mode=self._mode,
             )
 
         if not issubclass(self._entity_type, pydantic.BaseModel):
@@ -137,6 +155,7 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
                 prompt_instructions=self._custom_prompt_instructions,
                 entity_type=self._entity_type,
                 model_settings=self._model_settings,
+                mode=self._mode,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
@@ -159,7 +178,22 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         return {
             **super()._state,
             "entity_type": self._entity_type,
+            "mode": self._mode,
         }
+
+    @override
+    def _validate_fewshot_examples(self) -> None:
+        example_type_error_text = "Fewshot example type mismatch: mode = {mode} requires {example_type}."
+
+        for fs_example in self._fewshot_examples or []:
+            if self._mode == "multi":
+                assert isinstance(fs_example, FewshotExampleMulti), TypeError(
+                    example_type_error_text.format(example_type=FewshotExampleMulti, mode=self._mode)
+                )
+            else:
+                assert isinstance(fs_example, FewshotExampleSingle), TypeError(
+                    example_type_error_text.format(example_type=FewshotExampleSingle, mode=self._mode)
+                )
 
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
@@ -171,12 +205,14 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
             entity_type = self._entity_type
 
         # Define metadata.
-        features = datasets.Features(
-            {
-                "text": datasets.Value("string"),
-                "entities": datasets.Sequence(PydanticToHFDatasets.model_cls_to_features(entity_type)),
-            }
-        )
+        hf_entity_type = PydanticToHFDatasets.model_cls_to_features(entity_type)
+        if self._mode == "multi":
+            features = datasets.Features(
+                {"text": datasets.Value("string"), "entities": datasets.Sequence(hf_entity_type)}
+            )
+        else:
+            features = datasets.Features({"text": datasets.Value("string"), "entity": hf_entity_type})
+
         info = datasets.DatasetInfo(
             description=f"Information extraction dataset for entity type {entity_type.__class__.__name__}. "
             f"Generated with sieves v{Config.get_version()}.",
@@ -185,23 +221,30 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
 
         # Fetch data used for generating dataset.
         try:
-            data = [
-                (doc.text, [PydanticToHFDatasets.model_to_dict(res) for res in doc.results[self._task_id]])
-                for doc in docs
-            ]
+            if self._mode == "multi":
+                data = [
+                    (doc.text, [PydanticToHFDatasets.model_to_dict(res) for res in doc.results[self._task_id]])
+                    for doc in docs
+                ]
+            else:
+                data = [
+                    (
+                        doc.text,
+                        PydanticToHFDatasets.model_to_dict(doc.results[self._task_id])
+                        if doc.results[self._task_id]
+                        else None,
+                    )
+                    for doc in docs
+                ]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
-        def generate_data() -> Iterable[dict[str, Any]]:
-            """Yield results as dicts.
-
-            :return: Results as dicts.
-            """
-            for text, entities in data:
-                yield {"text": text, "entities": entities}
-
         # Create dataset.
-        return datasets.Dataset.from_generator(generate_data, features=features, info=info)
+        return datasets.Dataset.from_list(
+            [{"text": text, ("entities" if self._mode == "multi" else "entity"): res} for text, res in data],
+            features=features,
+            info=info,
+        )
 
     @override
     def distill(
@@ -221,6 +264,11 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
     def _evaluate_optimization_example(
         self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
     ) -> float:
+        if self._mode == "single":
+            true_entity = truth.get("entity")
+            pred_entity = pred.get("entity")
+            return 1.0 if true_entity == pred_entity else 0.0
+
         def entity_to_tuple(entity: dict) -> tuple:
             """Convert entity dict to hashable tuple for comparison.
 
