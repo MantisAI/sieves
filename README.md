@@ -27,6 +27,34 @@ Define your task pipeline once, then swap execution engines without rewriting yo
 > [!WARNING]
 > `sieves` is in active development (Beta). The API is stable within minor versions, but we recommend pinning your version for production use.
 
+## Features
+
+- :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models
+- :robot: **Unified Generation Interface:** Seamlessly use multiple libraries
+  - [`dspy`](https://github.com/stanfordnlp/dspy)
+  - [`gliner2`](https://github.com/fastino-ai/GLiNER2)
+  - [`langchain`](https://github.com/langchain-ai/langchain)
+  - [`outlines`](https://github.com/dottxt-ai/outlines)
+  - [`transformer`](https://github.com/huggingface/transformers)
+- :arrow_forward: **Observable Pipelines:** Easy debugging and monitoring with conditional task execution
+- :hammer_and_wrench: **Integrated Tools:**
+  - Document parsing (optional via `ingestion` extra): [`docling`](https://github.com/DS4SD/docling), [`marker`](https://github.com/VikParuchuri/marker)
+  - Text chunking: [`chonkie`](https://github.com/chonkie-ai/chonkie)
+- :label: **Ready-to-Use Tasks:**
+  - Multi-label classification
+  - Information extraction
+  - Summarization
+  - Translation
+  - Multi-question answering
+  - Aspect-based sentiment analysis
+  - PII (personally identifiable information) anonymization
+  - Named entity recognition
+- :floppy_disk: **Persistence:** Save and load pipelines with configurations
+- :rocket: **Optimization:** Improve task performance by optimizing prompts and few-shot examples using [DSPy's MIPROv2](https://dspy-docs.vercel.app/api/optimizers/MIPROv2)
+- :teacher: **Distillation:** Fine-tune smaller, specialized models using your zero-shot results with frameworks like SetFit and Model2Vec.
+  Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for custom training.
+- :recycle: **Caching** to avoid unnecessary model calls
+
 ## Quick Start
 
 **1. Install**
