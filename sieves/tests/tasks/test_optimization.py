@@ -414,30 +414,30 @@ def test_optimization_information_extraction(optimizer) -> None:
         occupation: str
 
     examples = [
-        information_extraction.FewshotExample(
+        information_extraction.FewshotExampleMulti(
             text='Alice Johnson is a 28-year-old software engineer.',
             entities=[Person(name='Alice Johnson', age=28, occupation='software engineer')]
         ),
-        information_extraction.FewshotExample(
+        information_extraction.FewshotExampleMulti(
             text='Bob Smith, age 35, works as a teacher.',
             entities=[Person(name='Bob Smith', age=35, occupation='teacher')]
         ),
-        information_extraction.FewshotExample(
+        information_extraction.FewshotExampleMulti(
             text='The team includes Sarah Lee (42, doctor) and Mike Brown (30, lawyer).',
             entities=[
                 Person(name='Sarah Lee', age=42, occupation='doctor'),
                 Person(name='Mike Brown', age=30, occupation='lawyer'),
             ]
         ),
-        information_extraction.FewshotExample(
+        information_extraction.FewshotExampleMulti(
             text='Emma Davis is 25 and works as a designer.',
             entities=[Person(name='Emma Davis', age=25, occupation='designer')]
         ),
-        information_extraction.FewshotExample(
+        information_extraction.FewshotExampleMulti(
             text='Dr. John Williams, a 50-year-old researcher, published a new paper.',
             entities=[Person(name='Dr. John Williams', age=50, occupation='researcher')]
         ),
-        information_extraction.FewshotExample(
+        information_extraction.FewshotExampleMulti(
             text='The company hired Lisa Chen (27) as an analyst.',
             entities=[Person(name='Lisa Chen', age=27, occupation='analyst')]
         ),
