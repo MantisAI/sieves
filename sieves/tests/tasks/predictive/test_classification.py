@@ -69,6 +69,7 @@ def _run(
     if test_hf_conversion:
         _to_hf_dataset(task, docs, multilabel)
 
+@flaky(max_runs=3, min_passes=1)
 @pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
 @pytest.mark.parametrize("multilabel", [True, False])

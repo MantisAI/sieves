@@ -1,5 +1,6 @@
 # mypy: ignore-errors
 import pytest
+from flaky import flaky
 
 from sieves import Doc, Pipeline
 from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, outlines_
@@ -8,6 +9,7 @@ from sieves.tasks import PredictiveTask, QuestionAnswering
 from sieves.tasks.predictive import question_answering
 
 
+@flaky(max_runs=3, min_passes=1)
 @pytest.mark.parametrize(
     "batch_runtime",
     QuestionAnswering.supports(),

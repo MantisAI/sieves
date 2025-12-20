@@ -125,8 +125,8 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         if model_type == ModelType.gliner:
             if not isinstance(self._entity_type, gliner2.inference.engine.StructureBuilder):
                 raise TypeError(
-                    "You need to use specify `entity_type` as a `gliner2.inference.engine.StructureBuilder` "
-                    "when running with a GLiNER2 model."
+                    "You need to specify `entity_type` as a `gliner2.inference.engine.StructureBuilder` when running "
+                    "this task with a GLiNER2 model."
                 )
 
             return GliNERBridge(

@@ -132,7 +132,7 @@ uv run pytest -m "not slow"
 uv run mkdocs serve
 
 # Build static docs
-uv run mkdocs build
+uv run mkdocs build --strict
 ```
 
 ### Import & Sanity Check
@@ -177,6 +177,7 @@ uv run python -c "import sieves; print(sieves.__name__)"
    - Connects tasks to model wrappers
    - Defines prompt templates (Jinja2-based)
    - Handles output schema and parsing
+   - Specialized bridges like `GliNERBridge` can be shared across tasks
 
 6. **ModelSettings** (`sieves.model_wrappers.types.ModelSettings`)
    - Configures structured generation behavior
@@ -245,10 +246,13 @@ Enforced via CI pipeline:
    - Define `__call__` for execution
 3. Create `bridges.py`:
    - Subclass `Bridge` for each supported model wrapper
+   - Use generic bridges (e.g. `GliNERBridge`) if applicable
    - Define prompt template (Jinja2), output schema (Pydantic), extraction/parsing logic
 4. Export in `sieves/tasks/predictive/__init__.py`
 5. Add tests under `sieves/tests/tasks/predictive/`
-6. Add docs to `docs/tasks/`
+6. Add docs to `docs/tasks/`:
+   - Include usage examples with snippets from `sieves/tests/docs/`
+   - Link to third-party libraries
 
 ### Adding a New ModelWrapper
 
@@ -258,7 +262,7 @@ Enforced via CI pipeline:
 4. Advertise `inference_modes` property
 5. Add to `ModelType` enum in `model_type.py`
 6. Ensure `serialize()/deserialize()` work with `Config`
-7. Add tests and docs
+7. Add tests and docs (with snippets)
 
 ### Custom Preprocessing
 
@@ -321,6 +325,8 @@ Enforced via CI pipeline:
 - Keep patches minimal and focused; avoid unrelated refactors
 - Respect optional dependencies; gate ingestion/distillation imports behind extras (model libraries are now core)
 - Update docs (`docs/`) if you add public features
+  - Include introduction and usage examples
+  - Use snippets from `sieves/tests/docs/` to ensure code is tested
 - Write tests for new functionality
 - Consider conditional execution and error handling (`strict`) for robust pipelines
 
@@ -422,15 +428,18 @@ Then run: `uv run pytest sieves/tests/test_my_feature.py -v`
 
 Key changes that affect development (last ~2-3 months):
 
-1. **All Model wrappers as Core Dependencies** (#210) - Outlines, DSPy, LangChain, Transformers, and GLiNER2 are now included in base installation
-2. **DSPy v3 Migration** (#192) - Upgraded to DSPy v3 (breaking API changes from v2)
-3. **GliNER2 Migration** (#202) - Migrated from GliNER v1 to GLiNER2 for improved NER performance
-4. **ModelSettings Refactoring** (#194) - `inference_mode` moved into ModelSettings (simplified task init)
-5. **Conditional Task Execution** (#195) - Added `condition` parameter for filtering docs during execution
-6. **Non-strict Execution Support** (#196) - Better error handling; `strict=False` allows graceful failures
-7. **Standardized Output Fields** (#206) - Normalized descriptive/ID attribute naming across tasks
-8. **Chonkie Integration** - Token-based chunking framework now primary chunking backend
-9. **Optional Progress Bars** (#197) - Progress display now configurable per task
+1. **Information Extraction Single/Multi Mode** - Added `mode` parameter to `InformationExtraction` task for single vs multi entity extraction.
+2. **GliNERBridge Refactoring** - Consolidated NER logic into `GliNERBridge`, removing dedicated `GlinerNER` class.
+3. **Documentation Enhancements** - Standardized documentation with usage snippets (tested) and library links across all tasks and model wrappers.
+4. **All Model wrappers as Core Dependencies** (#210) - Outlines, DSPy, LangChain, Transformers, and GLiNER2 are now included in base installation
+5. **DSPy v3 Migration** (#192) - Upgraded to DSPy v3 (breaking API changes from v2)
+6. **GliNER2 Migration** (#202) - Migrated from GliNER v1 to GLiNER2 for improved NER performance
+7. **ModelSettings Refactoring** (#194) - `inference_mode` moved into ModelSettings (simplified task init)
+8. **Conditional Task Execution** (#195) - Added `condition` parameter for filtering docs during execution
+9. **Non-strict Execution Support** (#196) - Better error handling; `strict=False` allows graceful failures
+10. **Standardized Output Fields** (#206) - Normalized descriptive/ID attribute naming across tasks
+11. **Chonkie Integration** - Token-based chunking framework now primary chunking backend
+12. **Optional Progress Bars** (#197) - Progress display now configurable per task
 
 ---
 

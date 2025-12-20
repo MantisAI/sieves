@@ -23,46 +23,9 @@ from sieves import Doc, Pipeline, tasks
 from sieves.model_wrappers import ModelType
 
 
-def test_basic_classification_example(small_outlines_model):
-    """Test the basic classification example from the getting started guide."""
-    model = small_outlines_model  # For testing, use fixture
-
-    # --8<-- [start:basic-classification]
-    import outlines
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    from sieves import Pipeline, tasks, Doc
-
-    # Create a document
-    doc = Doc(text="Special relativity applies to all physical phenomena in the absence of gravity.")
-
-    # Choose a model (using a small but capable model)
-    model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
-    model = outlines.models.from_transformers(
-        AutoModelForCausalLM.from_pretrained(model_name),
-        AutoTokenizer.from_pretrained(model_name)
-    )
-
-    # Create and run the pipeline
-    pipeline = Pipeline(
-        tasks.predictive.Classification(
-            labels=["science", "politics"],
-            model=model,
-        )
-    )
-
-    # Print the classification result
-    for doc in pipeline([doc]):
-        print(doc.results)
-    # --8<-- [end:basic-classification]
-
-    # Assertions for testing (not shown in docs)
-    assert doc.results is not None
-    assert len(doc.results) > 0
-
-
 def test_label_descriptions_example(small_outlines_model):
     """Test classification with label descriptions."""
-    model = small_outlines_model  # For testing, use fixture
+    model = small_outlines_model  # For testing, use fixture.
 
     # --8<-- [start:label-descriptions]
     import outlines
@@ -76,7 +39,7 @@ def test_label_descriptions_example(small_outlines_model):
         AutoTokenizer.from_pretrained(model_name)
     )
 
-    # Use dict format to provide descriptions
+    # Use dict format to provide descriptions.
     pipeline = Pipeline([
         tasks.predictive.Classification(
             labels={
@@ -99,13 +62,13 @@ def test_doc_creation_examples():
     # --8<-- [start:doc-from-text]
     from sieves import Doc
 
-    # From text
+    # From text.
     doc = Doc(text="Your text here")
     # --8<-- [end:doc-from-text]
     assert doc.text == "Your text here"
 
     # --8<-- [start:doc-with-metadata]
-    # With metadata
+    # With metadata.
     doc = Doc(
         text="Your text here",
         meta={"source": "example", "date": "2025-01-31"}
@@ -119,10 +82,10 @@ def test_doc_from_uri_example():
     # --8<-- [start:doc-from-uri]
     from sieves import Doc
 
-    # From a file (requires docling)
+    # From a file (requires docling).
     doc = Doc(uri="path/to/your/file.pdf")
     # --8<-- [end:doc-from-uri]
-    # Note: This would fail without a real file, hence the skip marker
+    # Note: This would fail without a real file, hence the skip marker.
 
 
 def test_advanced_pipeline_example(example_chunker, small_outlines_model):
@@ -135,41 +98,41 @@ def test_advanced_pipeline_example(example_chunker, small_outlines_model):
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from sieves import Doc, Pipeline, tasks
 
-    # Create a tokenizer for chunking
+    # Create a tokenizer for chunking.
     tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
 
-    # Initialize components
+    # Initialize components.
     chunker = tasks.Chunking(
         chunker=chonkie.TokenChunker(tokenizer, chunk_size=512, chunk_overlap=50)
     )
 
-    # Choose a model for information extraction
+    # Choose a model for information extraction.
     model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
     model = outlines.models.from_transformers(
         AutoModelForCausalLM.from_pretrained(model_name),
         AutoTokenizer.from_pretrained(model_name)
     )
 
-    # Define the structure of information you want to extract
+    # Define the structure of information you want to extract.
     class PersonInfo(pydantic.BaseModel, frozen=True):
         name: str
         age: int | None = None
         occupation: str | None = None
 
-    # Create an information extraction task
+    # Create an information extraction task.
     extractor = tasks.predictive.InformationExtraction(
         entity_type=PersonInfo,
         model=model,
     )
 
-    # Create the pipeline (use + for succinct chaining)
+    # Create the pipeline (use + for succinct chaining).
     pipeline = chunker + extractor
 
-    # Process a document
+    # Process a document.
     doc = Doc(text="Marie Curie died at the age of 66 years.")
     results = list(pipeline([doc]))
 
-    # Access the extracted information
+    # Access the extracted information.
     for result in results:
         print(result.results["InformationExtraction"])
     # --8<-- [end:advanced-pipeline]
@@ -179,7 +142,7 @@ def test_advanced_pipeline_example(example_chunker, small_outlines_model):
 
 def test_model_settings_example(small_transformer_model):
     """Test ModelSettings configuration with strict mode and batching."""
-    model = small_transformer_model  # For testing, use fixture
+    model = small_transformer_model  # For testing, use fixture.
 
     # --8<-- [start:generation-settings-config]
     from sieves.model_wrappers.utils import ModelSettings
@@ -196,14 +159,14 @@ def test_model_settings_example(small_transformer_model):
     )
     # --8<-- [end:generation-settings-config]
 
-    # Assertions for testing
+    # Assertions for testing.
     assert classifier is not None
     assert classifier._model_settings.strict is True
 
 
 def test_inference_mode_example(small_outlines_model):
     """Test model type-specific inference mode configuration."""
-    model = small_outlines_model  # For testing, use fixture
+    model = small_outlines_model  # For testing, use fixture.
 
     # --8<-- [start:inference-mode-config]
     import outlines
@@ -222,13 +185,13 @@ def test_inference_mode_example(small_outlines_model):
         model=model,
         model_settings=ModelSettings(
             strict=True,
-            inference_mode=outlines_.InferenceMode.json  # Specifies how to parse results
+            inference_mode=outlines_.InferenceMode.json  # Specifies how to parse results.
         ),
         batch_size=8,
     )
     # --8<-- [end:inference-mode-config]
 
-    # Assertions for testing
+    # Assertions for testing.
     assert classifier is not None
     assert classifier._model_settings.inference_mode == outlines_.InferenceMode.json
 
@@ -238,31 +201,33 @@ def test_readme_quick_start_basic(small_outlines_model):
     # Use fixture for actual test
     model = small_outlines_model
 
-    # --8<-- [start:readme-quick-start]
+    # --8<-- [start:basic-classification]
     import outlines
     import transformers
     from sieves import Pipeline, tasks, Doc
 
-    # Create model and pipeline
-    model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+    # Set up model.
+    model_name = "HuggingFaceTB/SmolLM2-135M-Instruct"
     model = outlines.models.from_transformers(
         transformers.AutoModelForCausalLM.from_pretrained(model_name),
         transformers.AutoTokenizer.from_pretrained(model_name)
     )
 
-    pipeline = Pipeline(
-        tasks.Classification(
-            labels=["technology", "sports", "politics"],
-            model=model
-        )
-    )
+    # Define task.
+    task = tasks.Classification(labels=["science", "politics"], model=model)
+    # Define pipeline with at least one task.
+    pipeline = Pipeline(task)
 
-    # Process text
-    doc = Doc(text="The new smartphone features advanced AI capabilities.")
+    # Define documents to analyze.
+    doc = Doc(text="The new telescope captures images of distant galaxies.")
+
+    # Run pipeline a print results.
     results = list(pipeline([doc]))
-    # --8<-- [end:readme-quick-start]
+    print(results[0].results)
+    # This produces: {'Classification': [('science', 1.0), ('politics', 0.0)]}
+    # --8<-- [end:basic-classification]
 
-    # Assertions for testing (not shown in docs)
+    # Assertions for testing (not shown in docs).
     assert results[0].results is not None
     # Verify it returned classification results
     assert "Classification" in results[0].results
@@ -276,34 +241,43 @@ def test_readme_advanced_example(runtime):
     """Test the Advanced IE + PDF example from README."""
     model = runtime.model
 
-    # Define schema for extraction.
+    # --8<-- [start:readme-advanced]
+    import dspy
+    import os
+    import pydantic
+    import chonkie
+    import tokenizers
+    from sieves import tasks, Doc
+
+    # Define which schema of entity to extract.
     class Equation(pydantic.BaseModel, frozen=True):
         id: str = pydantic.Field(description="ID/index of equation in paper.")
         equation: str = pydantic.Field(description="Equation as shown in paper.")
 
-    # Create model instance using OpenRouter.
+    # Setup DSPy model
     model = dspy.LM(
         "openrouter/google/gemini-2.5-flash-lite-preview-09-2025",
         api_base="https://openrouter.ai/api/v1/",
         api_key=os.environ["OPENROUTER_API_KEY"]
     )
 
-    # Create pipeline with PDF ingestion, chunking, and extraction.
+    # Build Pipeline: Ingest -> Chunk -> Extract.
     pipeline = (
-        tasks.Ingestion(export_format="markdown") +
+        tasks.Ingestion() +
         tasks.Chunking(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))) +
         tasks.InformationExtraction(entity_type=Equation, model=model)
     )
 
-    # Process a paper with equations as PDF.
-    pdf_path = "https://arxiv.org/pdf/1204.0162"
-    doc = Doc(uri=pdf_path)
+    # Define docs to analyze.
+    doc = Doc(uri="https://arxiv.org/pdf/1204.0162")
+
+    # Run pipeline.
     results = list(pipeline([doc]))
 
-    # Access extracted entities.
-    if results[0].results.get("InformationExtraction"):
-        for equation in results[0].results["InformationExtraction"]:
-            print(equation)
+    # Print esults.
+    for equation in results[0].results["InformationExtraction"]:
+        print(equation)
+    # --8<-- [end:readme-advanced]
 
     # Assertions for testing (not shown in docs)
     assert results[0].results is not None

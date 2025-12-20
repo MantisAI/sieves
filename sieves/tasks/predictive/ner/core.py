@@ -8,6 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
+import gliner2
 import pydantic
 
 from sieves.data import Doc
@@ -22,9 +23,10 @@ from sieves.model_wrappers import (
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
+from sieves.tasks.predictive.bridges import EntityWithContext, GliNERBridge
 from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.ner.bridges import DSPyNER, EntityWithContext, GlinerNER, LangChainNER, OutlinesNER
+from sieves.tasks.predictive.ner.bridges import DSPyNER, LangChainNER, OutlinesNER
 
 _TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
 _TaskPromptSignature = Any
@@ -38,7 +40,7 @@ _TaskResult = (
     | langchain_.Result
     | outlines_.Result
 )
-_TaskBridge = DSPyNER | GlinerNER | LangChainNER | OutlinesNER
+_TaskBridge = DSPyNER | GliNERBridge | LangChainNER | OutlinesNER
 
 
 class FewshotExample(BaseFewshotExample):
@@ -134,11 +136,19 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
 
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
+        if model_type == ModelType.gliner:
+            return GliNERBridge(
+                task_id=self._task_id,
+                prompt_instructions=self._custom_prompt_instructions,
+                prompt_signature=gliner2.inference.engine.Schema().entities(entity_types=self._entities, dtype="list"),
+                model_settings=self._model_settings,
+                inference_mode=gliner_.InferenceMode.entities,
+            )
+
         bridge_types = {
             ModelType.langchain: LangChainNER,
             ModelType.outlines: OutlinesNER,
             ModelType.dspy: DSPyNER,
-            ModelType.gliner: GlinerNER,
         }
 
         try:

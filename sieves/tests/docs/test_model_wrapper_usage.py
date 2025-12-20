@@ -25,7 +25,7 @@ def test_outlines_usage():
     from sieves import tasks
 
     # Initialize an Outlines model
-    model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+    model_name = "HuggingFaceTB/SmolLM2-135M-Instruct"
     model = outlines.models.from_transformers(
         AutoModelForCausalLM.from_pretrained(model_name),
         AutoTokenizer.from_pretrained(model_name)
