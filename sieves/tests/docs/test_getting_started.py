@@ -263,7 +263,7 @@ def test_readme_advanced_example(runtime):
 
     # Build Pipeline: Ingest -> Chunk -> Extract.
     pipeline = (
-        tasks.Ingestion(export_format="markdown") +
+        tasks.Ingestion() +
         tasks.Chunking(chonkie.TokenChunker(tokenizers.Tokenizer.from_pretrained("gpt2"))) +
         tasks.InformationExtraction(entity_type=Equation, model=model)
     )
