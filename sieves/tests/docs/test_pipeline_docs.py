@@ -28,7 +28,7 @@ def test_pipeline_creation_patterns(example_chunker, small_transformer_model):
     pipe2 = t_ingest + t_chunk + t_cls
 
     # You can also chain pipelines and tasks.
-    pipe_left = Pipeline([t_ingest])
+    pipe_left = Pipeline(t_ingest)
     pipe_right = Pipeline([t_chunk, t_cls])
     pipe3 = pipe_left + pipe_right  # results in [t_ingest, t_chunk, t_cls]
 

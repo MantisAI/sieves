@@ -98,4 +98,6 @@ pipe = Pipeline([import_task, chunking_task, classification_task])
 - **All Model wrappers Supported**: Conditional execution works with all supported model libraries (DSPy, LangChain, Outlines, HuggingFace, GLiNER2, etc.)
 - **Serialization**: Non-callable condition values (like `None`) serialize naturally; callable conditions are serialized as placeholders
 
+---
+
 ::: sieves.tasks.core.Task
