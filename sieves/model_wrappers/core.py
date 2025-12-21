@@ -22,11 +22,11 @@ ModelWrapperInferenceMode = TypeVar("ModelWrapperInferenceMode", bound=enum.Enum
 class Executable(Protocol[ModelWrapperResult]):
     """Callable protocol representing a compiled prompt executable."""
 
-    def __call__(self, values: Sequence[dict[str, Any]]) -> Iterable[ModelWrapperResult | None]:
+    def __call__(self, values: Sequence[dict[str, Any]]) -> Iterable[tuple[ModelWrapperResult | None, Any]]:
         """Execute prompt executable for given values.
 
         :param values: Values to inject into prompts.
-        :return: Results for prompts.
+        :return: Tuples of (result, raw_output) for prompts.
         """
         ...
 
@@ -148,11 +148,11 @@ class PydanticModelWrapper(
 
     def _infer(
         self,
-        generator: Callable[[list[str]], Iterable[ModelWrapperResult]],
+        generator: Callable[[list[str]], Iterable[tuple[ModelWrapperResult, Any]]],
         template: jinja2.Template,
         values: Sequence[dict[str, Any]],
         fewshot_examples: Sequence[pydantic.BaseModel],
-    ) -> Iterable[ModelWrapperResult | None]:
+    ) -> Iterable[tuple[ModelWrapperResult | None, Any]]:
         """Run inference in batches with exception handling.
 
         :param generator: Callable generating responses.
@@ -174,4 +174,4 @@ class PydanticModelWrapper(
                     "chunks contain sensible information."
                 ) from err
             else:
-                yield from (None for _ in range(len(values)))
+                yield from ((None, None) for _ in range(len(values)))

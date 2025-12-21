@@ -82,14 +82,15 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
 
         generator = outlines.Generator(self._model, output_type=prompt_signature, **self._init_kwargs)
 
-        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[tuple[Result | None, Any]]:
             """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
-            :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
+            :return Iterable[tuple[Result | None, Any]]: Results for prompts. Results are None if corresponding prompt
+                failed.
             """
 
-            def generate(prompts: list[str]) -> Iterable[Result]:
+            def generate(prompts: list[str]) -> Iterable[tuple[Result, Any]]:
                 try:
                     results = generator.batch(prompts, **self._inference_kwargs)
                 # Batch mode is not implemented for all Outlines wrappers. Fall back to single-prompt mode in
@@ -104,13 +105,16 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
 
                     for result in results:
                         try:
-                            yield prompt_signature.model_validate_json(result)
+                            parsed = prompt_signature.model_validate_json(result)
+                            yield parsed, result
                         # If naive parsing fails: JSON is potentially invalid. Attempt to repair it, then try again.
                         except pydantic.ValidationError:
-                            yield prompt_signature.model_validate_json(json_repair.repair_json(result))
+                            repaired = json_repair.repair_json(result)
+                            parsed = prompt_signature.model_validate_json(repaired)
+                            yield parsed, result
 
                 else:
-                    yield from results
+                    yield from zip(results, results)
 
             yield from self._infer(
                 generate,

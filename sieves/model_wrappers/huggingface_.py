@@ -53,21 +53,23 @@ class HuggingFace(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
         # Render hypothesis template with everything but text.
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
-        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result]:
+        def execute(values: Sequence[dict[str, Any]]) -> Iterable[tuple[Result | None, Any]]:
             """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
-            :return Iterable[Result]: Results for prompts.
+            :return Iterable[tuple[Result | None, Any]]: Results for prompts.
             """
             match inference_mode:
                 case InferenceMode.zeroshot_cls:
-                    yield from self._model(
+                    results = self._model(
                         sequences=[doc_values["text"] for doc_values in values],
                         candidate_labels=prompt_signature,
                         hypothesis_template=template,
                         multi_label=True,
                         **self._inference_kwargs,
                     )
+                    for res in results:
+                        yield res, res
 
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} model wrapper.")
