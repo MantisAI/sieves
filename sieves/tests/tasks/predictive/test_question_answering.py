@@ -60,6 +60,13 @@ def test_run(qa_docs, batch_runtime, fewshot):
         assert "qa" in doc.results
         assert "qa" in doc.meta
         assert "raw" in doc.meta["qa"]
+        assert "usage" in doc.meta["qa"]
+        assert "usage" in doc.meta
+
+        print(f"Output: {doc.results['qa']}")
+        print(f"Raw output: {doc.meta['qa']['raw']}")
+        print(f"Usage: {doc.meta['qa']['usage']}")
+        print(f"Total Usage: {doc.meta['usage']}")
 
     with pytest.raises(NotImplementedError):
         pipe["qa"].distill(None, None, None, None, None, None, None, None)

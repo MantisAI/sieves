@@ -222,17 +222,18 @@ def test_readme_quick_start_basic(small_outlines_model):
     doc = Doc(text="The new telescope captures images of distant galaxies.")
 
     # Run pipeline a print results.
-    results = list(pipeline([doc]))
-    print(results[0].results)
+    docs = list(pipeline([doc]))
+    print(docs[0].results) # {'Classification': [('science', 1.0), ('politics', 0.0)]}
+    print(docs[0].meta)    # {'Classification': {'raw': ['{ "science": 1.0, "politics": 0'], 'usage': {'input_tokens': 2, 'output_tokens': 2, 'chunks': [{'input_tokens': 2, 'output_tokens': 2}]}}, 'usage': {'input_tokens': 2, 'output_tokens': 2}}
     # This produces: {'Classification': [('science', 1.0), ('politics', 0.0)]}
     # --8<-- [end:basic-classification]
 
     # Assertions for testing (not shown in docs).
-    assert results[0].results is not None
+    assert docs[0].results is not None
     # Verify it returned classification results
-    assert "Classification" in results[0].results
-    classification_result = results[0].results["Classification"]
-    assert classification_result is not None
+    assert "Classification" in docs[0].results
+    assert docs[0].results["Classification"] is not None
+    assert docs[0].meta["Classification"] is not None
 
 
 @pytest.mark.slow

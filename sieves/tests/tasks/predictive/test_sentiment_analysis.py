@@ -46,6 +46,13 @@ def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
         assert "sentiment_analysis" in doc.results
         assert "sentiment_analysis" in doc.meta
         assert "raw" in doc.meta["sentiment_analysis"]
+        assert "usage" in doc.meta["sentiment_analysis"]
+        assert "usage" in doc.meta
+
+        print(f"Output: {doc.results['sentiment_analysis']}")
+        print(f"Raw output: {doc.meta['sentiment_analysis']['raw']}")
+        print(f"Usage: {doc.meta['sentiment_analysis']['usage']}")
+        print(f"Total Usage: {doc.meta['usage']}")
 
     with pytest.raises(NotImplementedError):
         pipe["sentiment_analysis"].distill(None, None, None, None, None, None, None, None)

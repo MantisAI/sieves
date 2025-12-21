@@ -11,7 +11,7 @@ from typing import Any, Protocol, TypeVar, override
 import jinja2
 import pydantic
 
-from sieves.model_wrappers.types import ModelSettings
+from sieves.model_wrappers.types import ModelSettings, TokenUsage
 
 ModelWrapperPromptSignature = TypeVar("ModelWrapperPromptSignature")
 ModelWrapperModel = TypeVar("ModelWrapperModel")
@@ -22,11 +22,11 @@ ModelWrapperInferenceMode = TypeVar("ModelWrapperInferenceMode", bound=enum.Enum
 class Executable(Protocol[ModelWrapperResult]):
     """Callable protocol representing a compiled prompt executable."""
 
-    def __call__(self, values: Sequence[dict[str, Any]]) -> Sequence[tuple[ModelWrapperResult | None, Any]]:
+    def __call__(self, values: Sequence[dict[str, Any]]) -> Sequence[tuple[ModelWrapperResult | None, Any, TokenUsage]]:
         """Execute prompt executable for given values.
 
         :param values: Values to inject into prompts.
-        :return: Sequence of tuples containing (result, raw_output) for prompts.
+        :return: Sequence of tuples containing (result, raw_output, usage) for prompts.
         """
         ...
 
@@ -116,6 +116,33 @@ class ModelWrapper[ModelWrapperPromptSignature, ModelWrapperResult, ModelWrapper
         """
         return await asyncio.gather(*calls)
 
+    def _get_tokenizer(self) -> Any | None:
+        """Return the tokenizer instance for this model if available.
+
+        :return: Tokenizer instance or None.
+        """
+        return None
+
+    def _count_tokens(self, text: str | None, tokenizer: Any | None = None) -> int | None:
+        """Count tokens in a string using the provided or default tokenizer.
+
+        :param text: Text to count tokens for.
+        :param tokenizer: Optional tokenizer to use. If not provided, uses _get_tokenizer().
+        :return: Token count or None if no tokenizer is available.
+        """
+        if text is None:
+            return None
+
+        tokenizer = tokenizer or self._get_tokenizer()
+        if tokenizer:
+            try:
+                # Handle both standard transformers and tiktoken-style tokenizers.
+                encoded = tokenizer.encode(text)
+                return len(encoded)
+            except Exception:
+                return None
+        return None
+
 
 class PydanticModelWrapper(
     abc.ABC, ModelWrapper[ModelWrapperPromptSignature, ModelWrapperResult, ModelWrapperModel, ModelWrapperInferenceMode]
@@ -148,18 +175,18 @@ class PydanticModelWrapper(
 
     def _infer(
         self,
-        generator: Callable[[list[str]], Iterable[tuple[ModelWrapperResult, Any]]],
+        generator: Callable[[list[str]], Iterable[tuple[ModelWrapperResult, Any, TokenUsage]]],
         template: jinja2.Template,
         values: Sequence[dict[str, Any]],
         fewshot_examples: Sequence[pydantic.BaseModel],
-    ) -> Sequence[tuple[ModelWrapperResult | None, Any]]:
+    ) -> Sequence[tuple[ModelWrapperResult | None, Any, TokenUsage]]:
         """Run inference in batches with exception handling.
 
         :param generator: Callable generating responses.
         :param template: Prompt template.
         :param values: Doc values to inject.
         :param fewshot_examples: Fewshot examples.
-        :return: Sequence of tuples containing results parsed from responses and raw outputs.
+        :return: Sequence of tuples containing results parsed from responses, raw outputs, and token usage.
         """
         fewshot_examples_dict = ModelWrapper.convert_fewshot_examples(fewshot_examples)
         examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
@@ -174,4 +201,4 @@ class PydanticModelWrapper(
                     "chunks contain sensible information."
                 ) from err
             else:
-                return [(None, None) for _ in range(len(values))]
+                return [(None, None, TokenUsage()) for _ in range(len(values))]

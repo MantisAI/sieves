@@ -90,3 +90,4 @@ nav:
       - guides/custom_tasks.md
       - guides/optimization.md
       - guides/distillation.md
+      - guides/observability.md

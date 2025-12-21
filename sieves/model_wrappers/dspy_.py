@@ -11,7 +11,7 @@ import nest_asyncio
 import pydantic
 
 from sieves.model_wrappers.core import Executable, ModelWrapper
-from sieves.model_wrappers.types import ModelSettings
+from sieves.model_wrappers.types import ModelSettings, TokenUsage
 
 PromptSignature = dspy.Signature | dspy.Module
 Model = dspy.LM | dspy.BaseLM
@@ -54,7 +54,7 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
         """
         super().__init__(model, model_settings)
         cfg = model_settings.config_kwargs or {}
-        dspy.configure(lm=model, **cfg)
+        dspy.configure(lm=model, track_usage=True, **cfg)
 
         # Disable noisy LiteLLM logging.
         dspy.disable_litellm_logging()
@@ -92,11 +92,11 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
             assert issubclass(prompt_signature, dspy.Signature)
             generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
-        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any]]:
+        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any, TokenUsage]]:
             """Execute structured generation with DSPy.
 
             :params values: Values to inject into prompts.
-            :returns: Sequence of tuples containing results and history entries.
+            :returns: Sequence of tuples containing results, history entries, and token usage.
             """
             # Compile predictor with few-shot examples.
             fewshot_examples_dicts = DSPy.convert_fewshot_examples(fewshot_examples)
@@ -108,11 +108,14 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
             try:
                 gen = generator_fewshot or generator
 
-                async def call_with_meta(**kwargs: Any) -> tuple[Result, Any]:
+                async def call_with_meta(**kwargs: Any) -> tuple[Result, Any, TokenUsage]:
                     res = await gen.acall(**kwargs)
                     # Capture the last history entry from the model after call completion.
                     # This works even with concurrency because history is appended upon completion.
-                    return res, self._model.history[-1]
+                    history_entry = self._model.history[-1]
+                    usage = self._extract_usage(res, history_entry)
+
+                    return res, history_entry, usage
 
                 calls = [call_with_meta(**doc_values, **self._inference_kwargs) for doc_values in values]
                 return list(asyncio.run(self._execute_async_calls(calls)))
@@ -124,6 +127,50 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
                         "chunks contain sensible information."
                     ) from err
                 else:
-                    return [(None, None) for _ in range(len(values))]
+                    return [(None, None, TokenUsage()) for _ in range(len(values))]
 
         return execute
+
+    def _extract_usage(self, res: Result, history_entry: Any) -> TokenUsage:
+        """Extract token usage from DSPy result and history.
+
+        :param res: DSPy prediction result.
+        :param history_entry: Corresponding history entry from the LM.
+        :return: Extracted token usage.
+        """
+        usage = TokenUsage()
+
+        # Try to extract usage from the result object if available (v2.6.16+).
+        if hasattr(res, "get_lm_usage"):
+            lm_usage = res.get_lm_usage()
+            # get_lm_usage() typically returns a dict mapping model names to usage objects.
+            if lm_usage and len(lm_usage) > 0:
+                # We take the sum of all models if multiple were used.
+                usage.input_tokens = sum(u.get("prompt_tokens", 0) for u in lm_usage.values()) or None
+                usage.output_tokens = sum(u.get("completion_tokens", 0) for u in lm_usage.values()) or None
+
+        # If usage is still None, try to extract from different possible locations in the history entry.
+        # LiteLLM and different DSPy versions store this differently.
+        if usage.input_tokens is None:
+            raw_usage: Any = None
+            if "response" in history_entry and hasattr(history_entry["response"], "usage"):
+                raw_usage = history_entry["response"].usage
+            elif "usage" in history_entry:
+                raw_usage = history_entry["usage"]
+
+            if raw_usage:
+                # Check for various common key/attribute names.
+                usage.input_tokens = (
+                    getattr(raw_usage, "prompt_tokens", None)
+                    or getattr(raw_usage, "input_tokens", None)
+                    or (raw_usage.get("prompt_tokens") if isinstance(raw_usage, dict) else None)
+                    or (raw_usage.get("input_tokens") if isinstance(raw_usage, dict) else None)
+                )
+                usage.output_tokens = (
+                    getattr(raw_usage, "completion_tokens", None)
+                    or getattr(raw_usage, "output_tokens", None)
+                    or (raw_usage.get("completion_tokens") if isinstance(raw_usage, dict) else None)
+                    or (raw_usage.get("output_tokens") if isinstance(raw_usage, dict) else None)
+                )
+
+        return usage

@@ -1,10 +1,10 @@
 # Model Setup
 
-This guide explains how to set up models for use with sieves across different frameworks and providers.
+This guide explains how to set up models for use with `sieves` across different frameworks and providers.
 
 ## Overview
 
-sieves supports multiple a bunch of language model frameworks - each allowing different usage modes, pros and cons, and
+`sieves` supports multiple a bunch of language model frameworks - each allowing different usage modes, pros and cons, and
 supporting different use cases.
 
 This table attempts to capture essential properties of each supported framework, including a very coarse categorization

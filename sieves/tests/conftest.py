@@ -43,7 +43,8 @@ def make_model(model_type: ModelType) -> Model:
             model = dspy.LM(
                 f"openrouter/{openrouter_model_id}",
                 api_base=openrouter_api_base,
-                api_key=os.environ['OPENROUTER_API_KEY']
+                api_key=os.environ['OPENROUTER_API_KEY'],
+                cache=True
             )
 
         case ModelType.gliner:

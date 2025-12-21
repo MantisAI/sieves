@@ -202,7 +202,7 @@ Optimizer(
 
 ## Learning More About Optimization
 
-Sieves optimization is built on [DSPy's MIPROv2 optimizer](https://dspy-docs.vercel.app/api/optimizers/MIPROv2). For in-depth guidance on optimization techniques, training data quality, and interpreting results, we recommend exploring these external resources:
+`sieves` optimization is built on [DSPy's MIPROv2 optimizer](https://dspy-docs.vercel.app/api/optimizers/MIPROv2). For in-depth guidance on optimization techniques, training data quality, and interpreting results, we recommend exploring these external resources:
 
 ### Understanding MIPROv2
 
@@ -217,13 +217,13 @@ Sieves optimization is built on [DSPy's MIPROv2 optimizer](https://dspy-docs.ver
 - ⚙️ **Hyperparameter Tuning** - Adjusting `num_trials`, `num_candidates`, and other optimizer settings for better results
 - 🎯 **Evaluation Metrics** - Choosing the right metrics for your task (see Evaluation Metrics section above)
 
-### Sieves-Specific Integration
+### `sieves`-Specific Integration
 
-The main differences when using optimization in Sieves:
+The main differences when using optimization in `sieves`:
 
 - **Simplified API**: Use `task.optimize(optimizer)` instead of calling DSPy optimizers directly
 - **Automatic integration**: Optimized prompts and few-shot examples are automatically integrated into the task
 - **Task compatibility**: Works with all `PredictiveTask` subclasses (Classification, NER, InformationExtraction, etc.)
 - **Full parameter access**: All DSPy optimizer parameters are available via the `Optimizer` class constructor
 
-For questions specific to Sieves optimization integration, see the [Troubleshooting](#troubleshooting) section above or consult the [task-specific documentation](../tasks/predictive/classification.md) for evaluation metrics.
+For questions specific to `sieves` optimization integration, see the [Troubleshooting](#troubleshooting) section above or consult the [task-specific documentation](../tasks/predictive/classification.md) for evaluation metrics.

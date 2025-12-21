@@ -94,6 +94,13 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
         assert "InformationExtraction" in doc.results
         assert "InformationExtraction" in doc.meta
         assert "raw" in doc.meta["InformationExtraction"]
+        assert "usage" in doc.meta["InformationExtraction"]
+        assert "usage" in doc.meta
+
+        print(f"Output: {doc.results['InformationExtraction']}")
+        print(f"Raw output: {doc.meta['InformationExtraction']['raw']}")
+        print(f"Usage: {doc.meta['InformationExtraction']['usage']}")
+        print(f"Total Usage: {doc.meta['usage']}")
         if mode == "single":
             assert (
                 doc.results["InformationExtraction"] is None or

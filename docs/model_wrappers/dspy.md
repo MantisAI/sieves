@@ -1,6 +1,6 @@
 # DSPy
 
-[DSPy](https://dspy.ai/) is a framework for programming with language models. Sieves integrates with DSPy's `dspy.LM` class.
+[DSPy](https://dspy.ai/) is a framework for programming with language models. `sieves` integrates with DSPy's `dspy.LM` class.
 
 ## Usage
 

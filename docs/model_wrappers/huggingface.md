@@ -1,6 +1,6 @@
 # Hugging Face
 
-Sieves supports [Hugging Face](https://huggingface.co/) `pipelines` for zero-shot classification.
+`sieves` supports [Hugging Face](https://huggingface.co/) `pipelines` for zero-shot classification.
 
 ## Usage
 

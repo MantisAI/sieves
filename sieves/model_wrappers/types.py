@@ -23,3 +23,14 @@ class ModelSettings(pydantic.BaseModel):
     config_kwargs: dict[str, Any] | None = None
     strict: bool = True
     inference_mode: Any | None = None
+
+
+class TokenUsage(pydantic.BaseModel):
+    """Token usage for a model call.
+
+    :param input_tokens: Number of input tokens.
+    :param output_tokens: Number of output tokens.
+    """
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None

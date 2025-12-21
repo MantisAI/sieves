@@ -50,6 +50,13 @@ def test_run(summarization_docs, batch_runtime, fewshot) -> None:
         assert "Summarization" in doc.results
         assert "Summarization" in doc.meta
         assert "raw" in doc.meta["Summarization"]
+        assert "usage" in doc.meta["Summarization"]
+        assert "usage" in doc.meta
+
+        print(f"Output: {doc.results['Summarization']}")
+        print(f"Raw output: {doc.meta['Summarization']['raw']}")
+        print(f"Usage: {doc.meta['Summarization']['usage']}")
+        print(f"Total Usage: {doc.meta['usage']}")
 
     with pytest.raises(NotImplementedError):
         pipe["Summarization"].distill(None, None, None, None, None, None, None, None)

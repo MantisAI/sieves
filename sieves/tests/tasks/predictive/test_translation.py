@@ -45,6 +45,13 @@ def test_run(translation_docs, batch_runtime, fewshot) -> None:
         assert "Translation" in doc.results
         assert "Translation" in doc.meta
         assert "raw" in doc.meta["Translation"]
+        assert "usage" in doc.meta["Translation"]
+        assert "usage" in doc.meta
+
+        print(f"Output: {doc.results['Translation']}")
+        print(f"Raw output: {doc.meta['Translation']['raw']}")
+        print(f"Usage: {doc.meta['Translation']['usage']}")
+        print(f"Total Usage: {doc.meta['usage']}")
 
     with pytest.raises(NotImplementedError):
         pipe["Translation"].distill(None, None, None, None, None, None, None, None)

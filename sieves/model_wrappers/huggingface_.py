@@ -9,6 +9,7 @@ import pydantic
 import transformers
 
 from sieves.model_wrappers.core import Executable, ModelWrapper
+from sieves.model_wrappers.types import TokenUsage
 
 PromptSignature = list[str]
 Model = transformers.Pipeline
@@ -53,11 +54,11 @@ class HuggingFace(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
         # Render hypothesis template with everything but text.
         template = jinja2.Template(prompt_template).render(**({"examples": fewshot_examples_dict}))
 
-        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any]]:
+        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any, TokenUsage]]:
             """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
-            :return: Sequence of tuples containing results and raw outputs.
+            :return: Sequence of tuples containing results, raw outputs, and token usage.
             """
             match inference_mode:
                 case InferenceMode.zeroshot_cls:
@@ -68,9 +69,30 @@ class HuggingFace(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
                         multi_label=True,
                         **self._inference_kwargs,
                     )
-                    return [(res, res) for res in results]
+
+                    # Estimate token usage if tokenizer is available.
+                    tokenizer = self._get_tokenizer()
+
+                    final_results: list[tuple[Result, Any, TokenUsage]] = []
+                    for doc_values, res in zip(values, results):
+                        usage = TokenUsage(
+                            input_tokens=self._count_tokens(doc_values["text"], tokenizer),
+                            # For classification, we estimate output tokens based on the labels.
+                            output_tokens=self._count_tokens(" ".join(res["labels"]), tokenizer),
+                        )
+
+                        final_results.append((res, res, usage))
+                    return final_results
 
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} model wrapper.")
 
         return execute
+
+    @override
+    def _get_tokenizer(self) -> Any | None:
+        """Return the tokenizer instance for the HuggingFace pipeline.
+
+        :return: Tokenizer instance or None.
+        """
+        return getattr(self._model, "tokenizer", None)
