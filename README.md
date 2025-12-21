@@ -12,17 +12,27 @@
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17633730.svg)](https://doi.org/10.5281/zenodo.17633730)
 
-## Unified Pipelines for Zero-Shot Document AI.
+## A Unified Interface for Document AI Applications.
 
-`sieves` provides a type-safe abstraction for building zero-shot Document AI pipelines. It unifies the entire workflow:
+`sieves` provides a stable, framework-agnostic abstraction for building document AI pipelines.
+Just as `sqlalchemy` provides a unified interface for interchangeable database drivers, `sieves` offers a consistent API for predictive tasks while allowing you to swap the underlying language model frameworks without changing your core application logic.
+
+This approach recognizes that different LM frameworks excel at different aspects of language model development:
+*   [`outlines`](https://github.com/dottxt-ai/outlines) for high-performance, strictly constrained structured generation with local models.
+*   [`dspy`](https://github.com/stanfordnlp/dspy) for sophisticated prompt optimization and few-shot example tuning.
+*   [`langchain`](https://github.com/langchain-ai/langchain) for broad compatibility with proprietary APIs and existing ecosystems.
+*   [`gliner2`](https://github.com/fastino-ai/GLiNER2) or [`transformers`](https://github.com/huggingface/transformers) zero-shot pipelines for specialized, low-latency local inference.
+
+`sieves` unifies the entire workflow:
 
 1.  **Ingestion**: Parsing PDFs, images, and Office docs (via [`docling`](https://github.com/docling-project/docling)).
 2.  **Preprocessing**: Intelligent text chunking and windowing (via [`chonkie`](https://github.com/chonkie-inc/chonkie)).
-3.  **Prediction**: Zero-shot structured generation using a unified Pydantic interface.
+3.  **Prediction**: Zero-shot structured generation using a unified interface.
       Supports multiple backends: [`dspy`](https://github.com/stanfordnlp/dspy), [`langchain`](https://github.com/fastino-ai/GLiNER2), [`outlines`](https://github.com/dottxt-ai/outlines), [`gliner2`](https://github.com/fastino-ai/GLiNER2), [`transformers`](https://github.com/huggingface/transformers) zero-shot classification pipelines
 4.  **Distillation**: Distill a specialized local model from zero-shot predictions (via [`setfit`](https://github.com/huggingface/setfit) and [`model2vec`](https://github.com/MinishLab/model2vec)).
 
-Define your task pipeline once, then swap execution engines without rewriting your pipeline logic.
+Define your task pipeline once, then swap execution engines without rewriting your pipeline logic. Use the task library
+to skip having to define tasks from scratch.
 
 > [!WARNING]
 > `sieves` is in active development (Beta). The API is stable within minor versions, but we recommend pinning your version for production use.
