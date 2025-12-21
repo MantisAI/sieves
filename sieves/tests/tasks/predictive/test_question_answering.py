@@ -58,6 +58,8 @@ def test_run(qa_docs, batch_runtime, fewshot):
     for doc in docs:
         assert doc.text
         assert "qa" in doc.results
+        assert "qa" in doc.meta
+        assert "raw" in doc.meta["qa"]
 
     with pytest.raises(NotImplementedError):
         pipe["qa"].distill(None, None, None, None, None, None, None, None)

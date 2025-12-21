@@ -43,6 +43,8 @@ def test_run(translation_docs, batch_runtime, fewshot) -> None:
     for doc in docs:
         assert doc.text
         assert "Translation" in doc.results
+        assert "Translation" in doc.meta
+        assert "raw" in doc.meta["Translation"]
 
     with pytest.raises(NotImplementedError):
         pipe["Translation"].distill(None, None, None, None, None, None, None, None)
