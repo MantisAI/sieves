@@ -113,7 +113,7 @@ class Equation(pydantic.BaseModel, frozen=True):
 
 # Setup DSPy model.
 model = dspy.LM(
-    "openrouter/google/gemini-2.5-flash-lite-preview-09-2025",
+    "openrouter/google/gemini-3-flash-preview",
     api_base="https://openrouter.ai/api/v1/",
     api_key=os.environ["OPENROUTER_API_KEY"]
 )

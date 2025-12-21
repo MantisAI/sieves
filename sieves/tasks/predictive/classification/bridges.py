@@ -2,7 +2,7 @@
 
 import abc
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Literal, TypeVar, override
 
@@ -154,7 +154,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.confidence_per_label) == 1
             sorted_preds = sorted(
@@ -172,11 +172,10 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
     @override
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
-        results = list(results)
-
+        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[dspy_.Result]:
         # Determine label scores for chunks per document.
+        consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
             doc_results = results[doc_offset[0] : doc_offset[1]]
@@ -202,12 +201,15 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                 reverse=True,
             )
 
-            yield dspy.Prediction.from_completions(
-                {
-                    "confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
-                },
-                signature=self.prompt_signature,
+            consolidated_results.append(
+                dspy.Prediction.from_completions(
+                    {
+                        "confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
+                    },
+                    signature=self.prompt_signature,
+                )
             )
+        return consolidated_results
 
 
 class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Result, huggingface_.InferenceMode]):
@@ -278,7 +280,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
         return self._model_settings.inference_mode or huggingface_.InferenceMode.zeroshot_cls
 
     @override
-    def integrate(self, results: Iterable[huggingface_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[huggingface_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             doc.results[self._task_id] = [(label, score) for label, score in zip(result["labels"], result["scores"])]
 
@@ -289,11 +291,10 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
 
     @override
     def consolidate(
-        self, results: Iterable[huggingface_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[huggingface_.Result]:
-        results = list(results)
-
+        self, results: Sequence[huggingface_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[huggingface_.Result]:
         # Determine label scores for chunks per document.
+        consolidated_results: list[huggingface_.Result] = []
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
 
@@ -312,10 +313,13 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
                 key=lambda x: x["score"],
                 reverse=True,
             )
-            yield {
-                "labels": [rec["label"] for rec in sorted_label_scores],  # type: ignore[dict-item]
-                "scores": [rec["score"] for rec in sorted_label_scores],  # type: ignore[dict-item]
-            }
+            consolidated_results.append(
+                {
+                    "labels": [rec["label"] for rec in sorted_label_scores],  # type: ignore[dict-item]
+                    "scores": [rec["score"] for rec in sorted_label_scores],  # type: ignore[dict-item]
+                }
+            )
+        return consolidated_results
 
 
 class PydanticBasedClassification(
@@ -433,7 +437,7 @@ class PydanticBasedClassification(
         return prompt_sig
 
     @override
-    def integrate(self, results: Iterable[pydantic.BaseModel | str], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[pydantic.BaseModel | str], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             if self._multi_label:
                 assert isinstance(result, pydantic.BaseModel)
@@ -449,11 +453,10 @@ class PydanticBasedClassification(
 
     @override
     def consolidate(
-        self, results: Iterable[pydantic.BaseModel | str], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel | str]:
-        results = list(results)
-
+        self, results: Sequence[pydantic.BaseModel | str], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[pydantic.BaseModel | str]:
         # Determine label scores for chunks per document.
+        consolidated_results: list[pydantic.BaseModel | str] = []
         for doc_offset in docs_offsets:
             label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
             doc_results = results[doc_offset[0] : doc_offset[1]]
@@ -476,13 +479,16 @@ class PydanticBasedClassification(
             assert callable(prompt_signature)
 
             if self._multi_label:
-                yield prompt_signature(**avg_label_scores)
+                consolidated_results.append(prompt_signature(**avg_label_scores))
             else:
                 max_score_label = max(avg_label_scores, key=avg_label_scores.__getitem__)
-                yield prompt_signature(
-                    label=max_score_label,
-                    score=avg_label_scores[max_score_label],
+                consolidated_results.append(
+                    prompt_signature(
+                        label=max_score_label,
+                        score=avg_label_scores[max_score_label],
+                    )
                 )
+        return consolidated_results
 
 
 class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
@@ -544,7 +550,7 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
         """
 
     @override
-    def integrate(self, results: Iterable[pydantic.BaseModel | str], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[pydantic.BaseModel | str], docs: list[Doc]) -> list[Doc]:
         if self._multi_label:
             return super().integrate(results, docs)
 
@@ -554,18 +560,19 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
 
     @override
     def consolidate(
-        self, results: Iterable[pydantic.BaseModel | str], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel | str]:
+        self, results: Sequence[pydantic.BaseModel | str], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[pydantic.BaseModel | str]:
         if self._multi_label:
-            yield from super().consolidate(results, docs_offsets)
+            return super().consolidate(results, docs_offsets)
 
         else:
             # Determine label scores for chunks per document.
-            results = list(results)
+            consolidated_results: list[pydantic.BaseModel | str] = []
             for doc_offset in docs_offsets:
                 doc_results = results[doc_offset[0] : doc_offset[1]]
                 label_counts = Counter(doc_results)
-                yield label_counts.most_common()[0][0]
+                consolidated_results.append(label_counts.most_common()[0][0])
+            return consolidated_results
 
 
 class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outlines_.InferenceMode]):

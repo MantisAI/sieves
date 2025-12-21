@@ -1,7 +1,7 @@
 """Bridges for PII masking task."""
 
 import abc
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Literal, TypeVar, override
 
@@ -144,7 +144,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         """Integrate results into docs."""
         for doc, result in zip(docs, results):
             # Store masked text and PII entities in results
@@ -160,13 +160,13 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
     @override
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
+        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[dspy_.Result]:
         """Consolidate results from multiple chunks."""
-        results = list(results)
         PIIEntity = self._pii_entity_cls
 
         # Merge results for each document
+        consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
             seen_entities: set[PIIEntity] = set()  # type: ignore[valid-type]
@@ -180,10 +180,13 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
                         entities.extend(res.pii_entities)
                         seen_entities.add(entity)
 
-            yield dspy.Prediction.from_completions(
-                {"masked_text": [" ".join(masked_texts)], "pii_entities": [entities]},
-                signature=self.prompt_signature,
+            consolidated_results.append(
+                dspy.Prediction.from_completions(
+                    {"masked_text": [" ".join(masked_texts)], "pii_entities": [entities]},
+                    signature=self.prompt_signature,
+                )
             )
+        return consolidated_results
 
 
 class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
@@ -248,7 +251,7 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
         return PIIMasking
 
     @override
-    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "masked_text")
             assert hasattr(result, "pii_entities")
@@ -262,12 +265,12 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
 
     @override
     def consolidate(
-        self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel]:
-        results = list(results)
+        self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[pydantic.BaseModel]:
         PIIEntity = self._pii_entity_cls
 
         # Merge results for each document
+        consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
             seen_entities: set[PIIEntity] = set()  # type: ignore[valid-type]
@@ -287,7 +290,10 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                         entities.extend(res.pii_entities)
                         seen_entities.add(entity)
 
-            yield self.prompt_signature(masked_text=" ".join(masked_texts), pii_entities=entities)
+            consolidated_results.append(
+                self.prompt_signature(masked_text=" ".join(masked_texts), pii_entities=entities)
+            )
+        return consolidated_results
 
 
 class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):

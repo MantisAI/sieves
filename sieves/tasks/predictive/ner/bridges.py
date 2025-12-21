@@ -2,7 +2,7 @@
 
 import abc
 import re
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, Literal, TypeVar, override
 
@@ -70,14 +70,14 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         return f"{crlf}<entity_descriptions>{entity_desc_string}{crlf}</entity_descriptions>\n\t\t"
 
     @override
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
+    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
         """Extract all values from doc instances that are to be injected into the prompts.
 
         Overriding the default implementation to include the entity types in the extracted values.
         :param docs: Docs to extract values from.
-        :return Iterable[dict[str, Any]]: All values from doc instances that are to be injected into the prompts
+        :return: All values from doc instances that are to be injected into the prompts as a sequence.
         """
-        return ({"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs)
+        return [{"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs]
 
     @staticmethod
     def _find_entity_positions(
@@ -160,7 +160,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         return sorted(new_entities, key=lambda x: x.start)
 
     @override
-    def integrate(self, results: Iterable[_BridgeResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[_BridgeResult], docs: list[Doc]) -> list[Doc]:
         docs_list = list(docs)
         results_list = list(results)
 
@@ -247,10 +247,10 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
 
     @override
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
-        results = list(results)
+        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[dspy_.Result]:
         # Process each document (which may consist of multiple chunks)
+        consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
@@ -270,7 +270,10 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
                     all_entities.append(entity)
 
             # Create a consolidated result for this document
-            yield dspy.Prediction.from_completions({"entities": [all_entities]}, signature=self.prompt_signature)
+            consolidated_results.append(
+                dspy.Prediction.from_completions({"entities": [all_entities]}, signature=self.prompt_signature)
+            )
+        return consolidated_results
 
 
 class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
@@ -352,11 +355,10 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
 
     @override
     def consolidate(
-        self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel]:
-        results = list(results)
-
+        self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[pydantic.BaseModel]:
         # Process each document (which may consist of multiple chunks)
+        consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
@@ -377,7 +379,8 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
                     all_entities.append(entity)
 
             # Create a consolidated result for this document - instantiate the class with entities
-            yield self.prompt_signature(entities=all_entities)
+            consolidated_results.append(self.prompt_signature(entities=all_entities))
+        return consolidated_results
 
 
 class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):

@@ -6,6 +6,8 @@ These code blocks are referenced in docs/guides/custom_tasks.md using snippet in
 
 from __future__ import annotations
 
+from typing import Sequence
+
 import pytest
 
 
@@ -112,7 +114,8 @@ def test_custom_bridge_example():
 
         # --8<-- [start:custom-bridge-sentiment-integrate]
         # We copy the result score into our doc's results attribute.
-        def integrate(self, results: Iterable[SentimentEstimate], docs: Iterable[Doc]) -> Iterable[Doc]:
+        def integrate(self, results: Sequence[SentimentEstimate], docs: list[Doc]) -> list[Doc]:
+            """Integrate results into Doc instances."""
             for doc, result in zip(docs, results):
                 assert isinstance(result, SentimentEstimate)
                 # doc.results is a dict, with the task ID being the key to store our results under for the corresponding
@@ -125,9 +128,10 @@ def test_custom_bridge_example():
         # Consolidating multiple chunks for sentiment analysis: we compute the average score over
         # all chunks and assume this to be the sentiment score for the entire document.
         def consolidate(
-            self, results: Iterable[SentimentEstimate], docs_offsets: list[tuple[int, int]]
-        ) -> Iterable[SentimentEstimate]:
-            results = list(results)
+            self, results: Sequence[SentimentEstimate], docs_offsets: list[tuple[int, int]]
+        ) -> Sequence[SentimentEstimate]:
+            """Consolidate results for document chunks into document results."""
+            consolidated_results: list[SentimentEstimate] = []
 
             # docs_offsets contains (start, end) tuples indicating which result indices belong to which document.
             # Example: [(0, 3), (3, 5)] means doc1 uses results[0:3], doc2 uses results[3:5]
@@ -149,13 +153,14 @@ def test_custom_bridge_example():
                 # Calculate how many chunks this document has
                 num_chunks = doc_offset[1] - doc_offset[0]
 
-                yield SentimentEstimate(
+                consolidated_results.append(SentimentEstimate(
                    # Average the sentiment score across all chunks of this document
                    score=scores / num_chunks,
                    # Concatenate all chunk reasonings into a single string for the document
                    # (in production, you might want more sophisticated reasoning aggregation)
                    reasoning=str(reasonings)
-                )
+                ))
+            return consolidated_results
         # --8<-- [end:custom-bridge-sentiment-consolidate]
     # --8<-- [end:custom-bridge-sentiment]
 
@@ -241,7 +246,8 @@ def test_custom_predictive_task_example():
 
         # --8<-- [start:custom-task-predictive-bridge-methods]
         # We copy the result score into our doc's results attribute.
-        def integrate(self, results: Iterable[SentimentEstimate], docs: Iterable[Doc]) -> Iterable[Doc]:
+        def integrate(self, results: Sequence[SentimentEstimate], docs: list[Doc]) -> list[Doc]:
+            """Integrate results into Doc instances."""
             for doc, result in zip(docs, results):
                 assert isinstance(result, SentimentEstimate)
                 # doc.results is a dict, with the task ID being the key to store our results under for the corresponding
@@ -252,9 +258,10 @@ def test_custom_predictive_task_example():
         # Consolidating multiple chunks for sentiment analysis can be pretty straightforward: we compute the average over
         # all chunks and assume this to be the sentiment score for the doc.
         def consolidate(
-            self, results: Iterable[SentimentEstimate], docs_offsets: list[tuple[int, int]]
-        ) -> Iterable[SentimentEstimate]:
-            results = list(results)
+            self, results: Sequence[SentimentEstimate], docs_offsets: list[tuple[int, int]]
+        ) -> Sequence[SentimentEstimate]:
+            """Consolidate results for document chunks into document results."""
+            consolidated_results: list[SentimentEstimate] = []
 
             # Iterate over indices that determine which chunks belong to which documents.
             for doc_offset in docs_offsets:
@@ -271,12 +278,13 @@ def test_custom_predictive_task_example():
                         reasonings.append(chunk_result.reasoning)
                         scores += chunk_result.score
 
-                yield SentimentEstimate(
+                consolidated_results.append(SentimentEstimate(
                    # Average the score.
                    score=scores / (doc_offset[1] - doc_offset[0]),
                    # Concatenate all reasonings.
                    reasoning=str(reasonings)
-                )
+                ))
+            return consolidated_results
         # --8<-- [end:custom-task-predictive-bridge-methods]
 
     # --8<-- [start:custom-task-predictive-fewshot]
@@ -395,9 +403,11 @@ def test_using_custom_task_example(small_outlines_model):
 
         @cached_property
         def prompt_signature(self) -> type[pydantic.BaseModel]:
+            """Return the prompt signature."""
             return SentimentEstimate
 
-        def integrate(self, results: Iterable[SentimentEstimate], docs: Iterable[Doc]) -> Iterable[Doc]:
+        def integrate(self, results: Sequence[SentimentEstimate], docs: list[Doc]) -> list[Doc]:
+            """Integrate results into Doc instances."""
             for doc, result in zip(docs, results):
                 if result:
                     assert isinstance(result, SentimentEstimate)
@@ -405,9 +415,11 @@ def test_using_custom_task_example(small_outlines_model):
             return docs
 
         def consolidate(
-            self, results: Iterable[SentimentEstimate], docs_offsets: list[tuple[int, int]]
-        ) -> Iterable[SentimentEstimate]:
+            self, results: Sequence[SentimentEstimate], docs_offsets: list[tuple[int, int]]
+        ) -> Sequence[SentimentEstimate]:
+            """Consolidate results for document chunks into document results."""
             results = list(results)
+            consolidated_results: list[SentimentEstimate] = []
             for doc_offset in docs_offsets:
                 reasonings: list[str] = []
                 scores = 0.
@@ -416,15 +428,18 @@ def test_using_custom_task_example(small_outlines_model):
                         assert isinstance(chunk_result, SentimentEstimate)
                         reasonings.append(chunk_result.reasoning)
                         scores += chunk_result.score
-                yield SentimentEstimate(
+                consolidated_results.append(SentimentEstimate(
                    score=scores / (doc_offset[1] - doc_offset[0]),
                    reasoning=str(reasonings)
-                )
+                ))
+            return consolidated_results
 
     class FewshotExample(SentimentEstimate):
+        """Few-shot example for sentiment analysis."""
         text: str
 
     class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, OutlinesSentimentAnalysis]):
+        """Custom sentiment analysis task."""
         def __init__(self, model, task_id: str = "SentimentAnalysis", include_meta: bool = True, batch_size: int = -1,
                      prompt_instructions: str | None = None, fewshot_examples: Any = (),
                      model_settings=None):

@@ -139,15 +139,18 @@ def integrate(self, results, docs):
 **consolidate()** - Merges chunk-level results into document-level results:
 
 ```python
-def consolidate(self, results, docs_offsets):
+def consolidate(self, results: Sequence[TaskResult], docs_offsets: list[tuple[int, int]]) -> Sequence[TaskResult]:
+    """Consolidate results for document chunks into document results."""
     # Called after integrate(), once per original document
     # results = [Result1, Result2, Result3]    # All chunk results
     # docs_offsets = [(0, 2), (2, 3)]          # Chunk ranges per doc
 
+    consolidated_results = []
     for start, end in docs_offsets:
         chunk_results = results[start:end]     # Get chunks for this doc
         avg_score = sum(r.score for r in chunk_results) / len(chunk_results)
-        yield ConsolidatedResult(score=avg_score)  # One result per document
+        consolidated_results.append(ConsolidatedResult(score=avg_score))  # One result per document
+    return consolidated_results
 ```
 
 **Why separate methods?**
@@ -363,7 +366,8 @@ We can now use our sentiment analysis task like every built-in task:
 **Debug steps**:
 ```python
 # Add debug logging to your integrate() method
-def integrate(self, results, docs):
+def integrate(self, results: Sequence[TaskResult], docs: list[Doc]) -> list[Doc]:
+    """Integrate results into Doc instances."""
     for doc, result in zip(docs, results):
         if result is None:
             print(f"WARNING: Got None result for doc: {doc.text[:50]}")
@@ -371,34 +375,6 @@ def integrate(self, results, docs):
             print(f"Storing result: {result} for task {self._task_id}")
             doc.results[self._task_id] = result
     return docs
-```
-
-#### Type errors in `consolidate()`
-
-**Symptom**: `TypeError` or `AttributeError` in the consolidate method.
-
-**Possible causes**:
-
-1. **Mismatched types**: Results from integrate() don't match the type expected in consolidate()
-2. **None results not handled**: Some results may be None (from model wrapper errors)
-3. **Incorrect doc_offsets slicing**: Check that you're using `results[doc_offset[0]:doc_offset[1]]` correctly
-
-**Solution**:
-```python
-def consolidate(self, results, docs_offsets):
-    results = list(results)
-    for doc_offset in docs_offsets:
-        chunk_results = results[doc_offset[0]:doc_offset[1]]
-        # Filter out None results
-        valid_results = [r for r in chunk_results if r is not None]
-
-        if not valid_results:
-            # No valid results for this document
-            yield None
-            continue
-
-        # Your consolidation logic here
-        ...
 ```
 
 #### "Model type X is not supported" error

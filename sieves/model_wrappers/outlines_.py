@@ -82,11 +82,11 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
 
         generator = outlines.Generator(self._model, output_type=prompt_signature, **self._init_kwargs)
 
-        def execute(values: Sequence[dict[str, Any]]) -> Iterable[tuple[Result | None, Any]]:
+        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any]]:
             """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
-            :return Iterable[tuple[Result | None, Any]]: Results for prompts. Results are None if corresponding prompt
+            :return: Sequence of tuples containing results and raw outputs. Results are None if corresponding prompt
                 failed.
             """
 
@@ -116,7 +116,7 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
                 else:
                     yield from zip(results, results)
 
-            yield from self._infer(
+            return self._infer(
                 generate,
                 template,
                 values,

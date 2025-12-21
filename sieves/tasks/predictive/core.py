@@ -170,7 +170,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         """Execute the task on a set of documents.
 
         :param docs: Documents to process.
-        :return Iterable[Doc]: Processed documents.
+        :return: Processed documents as an iterable.
         """
         # 1. Compile expected prompt signatures.
         signature = self._bridge.prompt_signature
@@ -190,7 +190,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
                 break
 
             # 3. Extract values from docs to inject/render those into prompt templates.
-            docs_values = list(self._bridge.extract(docs_batch))
+            docs_values = self._bridge.extract(docs_batch)
             assert len(docs_values) == len(docs_batch)
 
             # 4. Map extracted docs values onto chunks.
@@ -203,7 +203,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
                 docs_chunks.extend(doc_chunks_values)
 
             # 5. Execute prompts per chunk.
-            results_raw = list(executable(docs_chunks))
+            results_raw = executable(docs_chunks)
             assert len(results_raw) == len(docs_chunks)
 
             # Extract metadata.
@@ -214,7 +214,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
                 raw_outputs.append(raw)
 
             # 6. Consolidate chunk results.
-            results = list(self._bridge.consolidate(results, docs_chunks_offsets))
+            results = self._bridge.consolidate(results, docs_chunks_offsets)
             assert len(results) == len(docs_batch)
 
             # 7. Integrate results into docs.

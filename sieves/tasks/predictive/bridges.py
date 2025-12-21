@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import abc
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Sequence
 from typing import Any, Literal, TypeVar, override
 
 import gliner2
@@ -160,31 +160,31 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         :return ModelWrapperInferenceMode: Inference mode.
         """
 
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
+    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
         """Extract all values from doc instances that are to be injected into the prompts.
 
         :param docs: Docs to extract values from.
-        :return Iterable[dict[str, Any]]: All values from doc instances that are to be injected into the prompts
+        :return: All values from doc instances that are to be injected into the prompts as a sequence.
         """
-        return ({"text": doc.text if doc.text else None} for doc in docs)
+        return [{"text": doc.text if doc.text else None} for doc in docs]
 
     @abc.abstractmethod
-    def integrate(self, results: Iterable[TaskResult], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[TaskResult], docs: list[Doc]) -> list[Doc]:
         """Integrate results into Doc instances.
 
         :param results: Results from prompt executable.
         :param docs: Doc instances to update.
-        :return Iterable[Doc]: Updated doc instances.
+        :return: Updated doc instances as a list.
         """
 
     @abc.abstractmethod
-    def consolidate(self, results: Iterable[TaskResult], docs_offsets: list[tuple[int, int]]) -> Iterable[TaskResult]:
+    def consolidate(self, results: Sequence[TaskResult], docs_offsets: list[tuple[int, int]]) -> Sequence[TaskResult]:
         """Consolidate results for document chunks into document results.
 
         :param results: Results per document chunk.
         :param docs_offsets: Chunk offsets per document. Chunks per document can be obtained with
             `results[docs_chunk_offsets[i][0]:docs_chunk_offsets[i][1]]`.
-        :return Iterable[_TaskResult]: Results per document.
+        :return: Results per document as a sequence.
         """
 
 
@@ -313,7 +313,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         return models[list(models.keys())[0]]
 
     @override
-    def integrate(self, results: Iterable[gliner_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[gliner_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             match self._inference_mode:
                 # Used by: Classification
@@ -366,9 +366,9 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
     @override
     def consolidate(
-        self, results: Iterable[gliner_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[gliner_.Result]:
-        results = list(results)
+        self, results: Sequence[gliner_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[gliner_.Result]:
+        consolidated_results: list[gliner_.Result] = []
 
         # Determine label scores for chunks per document.
         for doc_offset in docs_offsets:
@@ -454,12 +454,14 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                         reverse=True,
                     )
 
-                    yield sorted_scores
+                    consolidated_results.append(sorted_scores)
 
                 case gliner_.InferenceMode.entities | gliner_.InferenceMode.structure:
                     if self._inference_mode == gliner_.InferenceMode.structure and self._mode == "single":
-                        yield highest_confidence_entity or {list(res.keys())[0]: []}
+                        consolidated_results.append(highest_confidence_entity or {list(res.keys())[0]: []})
                     elif all_entities_list:
-                        yield all_entities_list
+                        consolidated_results.append(all_entities_list)
                     else:
-                        yield entities
+                        consolidated_results.append(entities)
+
+        return consolidated_results

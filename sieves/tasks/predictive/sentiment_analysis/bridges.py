@@ -1,7 +1,7 @@
 """Bridges for sentiment analysis task."""
 
 import abc
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Literal, TypeVar, override
 
@@ -93,7 +93,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.sentiment_per_aspect) == 1
             sorted_preds = sorted(
@@ -106,11 +106,10 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
 
     @override
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
-        results = list(results)
-
+        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[dspy_.Result]:
         # Determine label scores for chunks per document.
+        consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             aspect_scores: dict[str, float] = {label: 0.0 for label in self._aspects}
             doc_results = results[doc_offset[0] : doc_offset[1]]
@@ -135,12 +134,15 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
                 reverse=True,
             )
 
-            yield dspy.Prediction.from_completions(
-                {
-                    "sentiment_per_aspect": [{sls["aspect"]: sls["score"] for sls in sorted_aspect_scores}],
-                },
-                signature=self.prompt_signature,
+            consolidated_results.append(
+                dspy.Prediction.from_completions(
+                    {
+                        "sentiment_per_aspect": [{sls["aspect"]: sls["score"] for sls in sorted_aspect_scores}],
+                    },
+                    signature=self.prompt_signature,
+                )
             )
+        return consolidated_results
 
 
 class PydanticBasedSentAnalysis(
@@ -227,7 +229,7 @@ class PydanticBasedSentAnalysis(
         return prompt_sig
 
     @override
-    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             label_scores = {k: v for k, v in result.model_dump().items() if k != "reasoning"}
             doc.results[self._task_id] = sorted(
@@ -237,11 +239,10 @@ class PydanticBasedSentAnalysis(
 
     @override
     def consolidate(
-        self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel]:
-        results = list(results)
-
+        self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[pydantic.BaseModel]:
         # Determine label scores for chunks per document.
+        consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             aspect_scores: dict[str, float] = {label: 0.0 for label in self._aspects}
             doc_results = results[doc_offset[0] : doc_offset[1]]
@@ -256,9 +257,12 @@ class PydanticBasedSentAnalysis(
                     # useful?).
                     aspect_scores[aspect] += max(0, min(getattr(rec, aspect), 1))
 
-            yield self.prompt_signature(
-                **{aspect: score / (doc_offset[1] - doc_offset[0]) for aspect, score in aspect_scores.items()},
+            consolidated_results.append(
+                self.prompt_signature(
+                    **{aspect: score / (doc_offset[1] - doc_offset[0]) for aspect, score in aspect_scores.items()},
+                )
             )
+        return consolidated_results
 
 
 class OutlinesSentimentAnalysis(PydanticBasedSentAnalysis[outlines_.InferenceMode]):
