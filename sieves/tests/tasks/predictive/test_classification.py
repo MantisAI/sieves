@@ -65,6 +65,8 @@ def _run(
         assert doc.text
         assert doc
         assert "classifier" in doc.results
+        assert "classifier" in doc.meta
+        assert "raw" in doc.meta["classifier"]
 
     if test_hf_conversion:
         _to_hf_dataset(task, docs, multilabel)

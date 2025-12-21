@@ -1,7 +1,7 @@
 """Bridges for question answering task."""
 
 import abc
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, TypeVar, override
 
@@ -44,8 +44,8 @@ class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferen
         self._questions = questions
 
     @override
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None, "questions": self._questions} for doc in docs)
+    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
+        return [{"text": doc.text if doc.text else None, "questions": self._questions} for doc in docs]
 
 
 class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -94,7 +94,7 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.answers) == len(self._questions)
             doc.results[self._task_id] = result.answers
@@ -102,11 +102,10 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
 
     @override
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
-        results = list(results)
-
+        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[dspy_.Result]:
         # Merge all QAs.
+        consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
             answers: list[str] = [""] * len(self._questions)
@@ -118,7 +117,10 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
                 for i, answer in enumerate(res.answers):
                     answers[i] = f"{answers[i]} {answer}".strip()
 
-            yield dspy.Prediction.from_completions({"answers": [answers]}, signature=self.prompt_signature)
+            consolidated_results.append(
+                dspy.Prediction.from_completions({"answers": [answers]}, signature=self.prompt_signature)
+            )
+        return consolidated_results
 
 
 class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
@@ -185,7 +187,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
         return prompt_sig
 
     @override
-    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "answers")
             doc.results[self._task_id] = result.answers
@@ -193,11 +195,10 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
 
     @override
     def consolidate(
-        self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel]:
-        results = list(results)
-
+        self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[pydantic.BaseModel]:
         # Determine label scores for chunks per document.
+        consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
             answers: list[str] = [""] * len(self._questions)
@@ -210,7 +211,8 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
                 for i, answer in enumerate(rec.answers):
                     answers[i] += answer + " "
 
-            yield self.prompt_signature(answers=answers)
+            consolidated_results.append(self.prompt_signature(answers=answers))
+        return consolidated_results
 
 
 class OutlinesQA(PydanticBasedQA[outlines_.InferenceMode]):

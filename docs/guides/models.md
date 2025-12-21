@@ -208,7 +208,7 @@ import os
 model = ChatOpenAI(
     api_key=os.environ["OPENROUTER_API_KEY"],
     base_url="https://openrouter.ai/api/v1/",
-    model="google/gemini-2.5-flash-lite-preview-09-2025",
+    model="google/gemini-3-flash-preview",
     temperature=0
 )
 ```

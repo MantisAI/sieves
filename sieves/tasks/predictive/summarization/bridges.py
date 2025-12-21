@@ -1,7 +1,7 @@
 """Bridges for summarization task."""
 
 import abc
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, TypeVar, override
 
@@ -49,8 +49,13 @@ class SummarizationBridge(
         self._n_words = n_words
 
     @override
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None, "n_words": self._n_words} for doc in docs)
+    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
+        """Extract all values from doc instances that are to be injected into the prompts.
+
+        :param docs: Docs to extract values from.
+        :return: All values from doc instances that are to be injected into the prompts as a sequence.
+        """
+        return [{"text": doc.text if doc.text else None, "n_words": self._n_words} for doc in docs]
 
 
 class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -89,7 +94,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.summary) == 1
             doc.results[self._task_id] = result.summary
@@ -101,11 +106,10 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
 
     @override
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
-        results = list(results)
-
+        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[dspy_.Result]:
         # Merge all chunk translations.
+        consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             summaries: list[str] = []
 
@@ -114,10 +118,13 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
                     continue
                 summaries.append(res.summary)
 
-            yield dspy.Prediction.from_completions(
-                {"summary": ["\n".join(summaries)]},
-                signature=self.prompt_signature,
+            consolidated_results.append(
+                dspy.Prediction.from_completions(
+                    {"summary": ["\n".join(summaries)]},
+                    signature=self.prompt_signature,
+                )
             )
+        return consolidated_results
 
 
 class PydanticBasedSummarization(
@@ -171,7 +178,7 @@ class PydanticBasedSummarization(
         return Summary
 
     @override
-    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "summary")
             doc.results[self._task_id] = result.summary
@@ -182,11 +189,10 @@ class PydanticBasedSummarization(
 
     @override
     def consolidate(
-        self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel]:
-        results = list(results)
-
+        self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[pydantic.BaseModel]:
         # Determine label scores for chunks per document.
+        consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             summaries: list[str] = []
 
@@ -197,7 +203,8 @@ class PydanticBasedSummarization(
                 assert hasattr(res, "summary")
                 summaries.append(res.summary)
 
-            yield self.prompt_signature(summary="\n".join(summaries).strip())
+            consolidated_results.append(self.prompt_signature(summary="\n".join(summaries).strip()))
+        return consolidated_results
 
 
 class OutlinesSummarization(PydanticBasedSummarization[outlines_.InferenceMode]):

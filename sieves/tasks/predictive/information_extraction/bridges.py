@@ -2,7 +2,7 @@
 
 import abc
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Literal, TypeVar, override
 
@@ -106,7 +106,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             if self._mode == "multi":
                 assert len(result.completions.entities) == 1
@@ -118,12 +118,12 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
     @override
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
-        results = list(results)
+        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[dspy_.Result]:
         entity_type = self._entity_type
 
         # Merge all found entities.
+        consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             if self._mode == "multi":
                 entities: list[entity_type] = []  # type: ignore[valid-type]
@@ -139,9 +139,11 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
                             entities.append(entity)
                             seen_entities.add(entity)
 
-                yield dspy.Prediction.from_completions(
-                    {"entities": [entities]},
-                    signature=self.prompt_signature,
+                consolidated_results.append(
+                    dspy.Prediction.from_completions(
+                        {"entities": [entities]},
+                        signature=self.prompt_signature,
+                    )
                 )
 
             else:
@@ -165,10 +167,13 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
                     candidates = [e for e, count in entity_counts.items() if count == max_count]
                     winner = min(candidates, key=lambda e: first_seen[e])
 
-                yield dspy.Prediction.from_completions(
-                    {"entity": [winner]},
-                    signature=self.prompt_signature,
+                consolidated_results.append(
+                    dspy.Prediction.from_completions(
+                        {"entity": [winner]},
+                        signature=self.prompt_signature,
+                    )
                 )
+        return consolidated_results
 
 
 class PydanticBasedInformationExtraction(
@@ -257,7 +262,7 @@ class PydanticBasedInformationExtraction(
             return Entity
 
     @override
-    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             if self._mode == "multi":
                 assert hasattr(result, "entities")
@@ -270,13 +275,13 @@ class PydanticBasedInformationExtraction(
     @override
     def consolidate(
         self,
-        results: Iterable[pydantic.BaseModel],
+        results: Sequence[pydantic.BaseModel],
         docs_offsets: list[tuple[int, int]],  # type: ignore[arg-type]
-    ) -> Iterable[pydantic.BaseModel]:
-        results = list(results)
+    ) -> Sequence[pydantic.BaseModel]:
         entity_type = self._entity_type
 
         # Determine label scores for chunks per document.
+        consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             if self._mode == "multi":
                 entities: list[entity_type] = []  # type: ignore[valid-type]
@@ -293,7 +298,7 @@ class PydanticBasedInformationExtraction(
                             entities.append(entity)
                             seen_entities.add(entity)
 
-                yield self.prompt_signature(entities=entities)
+                consolidated_results.append(self.prompt_signature(entities=entities))
             else:
                 entity_counts: Counter[entity_type | None] = Counter()  # type: ignore[valid-type]
                 first_seen: dict[entity_type | None, int] = {}  # type: ignore[valid-type]
@@ -315,7 +320,8 @@ class PydanticBasedInformationExtraction(
                     candidates = [e for e, count in entity_counts.items() if count == max_count]
                     winner = min(candidates, key=lambda e: first_seen[e])
 
-                yield self.prompt_signature(entity=winner)
+                consolidated_results.append(self.prompt_signature(entity=winner))
+        return consolidated_results
 
 
 class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_.InferenceMode]):

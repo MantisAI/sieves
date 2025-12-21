@@ -1,7 +1,7 @@
 """Bridges for translation task."""
 
 import abc
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, TypeVar, override
 
@@ -49,8 +49,13 @@ class TranslationBridge(
         self._to = language
 
     @override
-    def extract(self, docs: Iterable[Doc]) -> Iterable[dict[str, Any]]:
-        return ({"text": doc.text if doc.text else None, "target_language": self._to} for doc in docs)
+    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
+        """Extract all values from doc instances that are to be injected into the prompts.
+
+        :param docs: Docs to extract values from.
+        :return: All values from doc instances that are to be injected into the prompts as a sequence.
+        """
+        return [{"text": doc.text if doc.text else None, "target_language": self._to} for doc in docs]
 
 
 class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -89,7 +94,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
-    def integrate(self, results: Iterable[dspy_.Result], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.translation) == 1
             doc.results[self._task_id] = result.translation
@@ -100,11 +105,10 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
 
     @override
     def consolidate(
-        self, results: Iterable[dspy_.Result], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[dspy_.Result]:
-        results = list(results)
-
+        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[dspy_.Result]:
         # Merge all chunk translations.
+        consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             translations: list[str] = []
 
@@ -113,10 +117,13 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
                     continue
                 translations.append(res.translation)
 
-            yield dspy.Prediction.from_completions(
-                {"translation": ["\n".join(translations)]},
-                signature=self.prompt_signature,
+            consolidated_results.append(
+                dspy.Prediction.from_completions(
+                    {"translation": ["\n".join(translations)]},
+                    signature=self.prompt_signature,
+                )
             )
+        return consolidated_results
 
 
 class PydanticBasedTranslation(
@@ -172,7 +179,7 @@ class PydanticBasedTranslation(
         return Translation
 
     @override
-    def integrate(self, results: Iterable[pydantic.BaseModel], docs: Iterable[Doc]) -> Iterable[Doc]:
+    def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "translation")
             doc.results[self._task_id] = result.translation
@@ -183,11 +190,10 @@ class PydanticBasedTranslation(
 
     @override
     def consolidate(
-        self, results: Iterable[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
-    ) -> Iterable[pydantic.BaseModel]:
-        results = list(results)
-
+        self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+    ) -> Sequence[pydantic.BaseModel]:
         # Determine label scores for chunks per document.
+        consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             translations: list[str] = []
 
@@ -198,7 +204,8 @@ class PydanticBasedTranslation(
                 assert hasattr(res, "translation")
                 translations.append(res.translation)
 
-            yield self.prompt_signature(translation="\n".join(translations))
+            consolidated_results.append(self.prompt_signature(translation="\n".join(translations)))
+        return consolidated_results
 
 
 class OutlinesTranslation(PydanticBasedTranslation[outlines_.InferenceMode]):

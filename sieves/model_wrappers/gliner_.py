@@ -2,7 +2,7 @@
 
 import enum
 import warnings
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from typing import Any, override
 
 import gliner2
@@ -54,13 +54,13 @@ class GliNER(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
         if prompt_template:
             self._model.prompt = jinja2.Template(prompt_template).render()
 
-        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result]:
+        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result, Any]]:
             """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
-            :return Iterable[Result]: Results for prompts.
+            :return: Sequence of tuples containing results and raw outputs.
             """
-            yield from self._model.batch_extract(
+            results = self._model.batch_extract(
                 texts=[val["text"] for val in values],
                 schemas=prompt_signature,
                 **(
@@ -69,5 +69,6 @@ class GliNER(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
                     | {"include_confidence": True, "include_spans": True}
                 ),
             )
+            return [(res, res) for res in results]
 
         return execute

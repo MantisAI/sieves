@@ -52,6 +52,8 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
     assert len(docs) == 2
     for doc in docs:
         assert "NER" in doc.results
+        assert "NER" in doc.meta
+        assert "raw" in doc.meta["NER"]
         assert hasattr(doc.results["NER"], "entities")
 
     with pytest.raises(NotImplementedError):

@@ -42,6 +42,8 @@ def test_run(pii_masking_docs, batch_runtime, fewshot) -> None:
     for doc in docs:
         assert doc.text
         assert "PIIMasking" in doc.results
+        assert "PIIMasking" in doc.meta
+        assert "raw" in doc.meta["PIIMasking"]
 
     with pytest.raises(NotImplementedError):
         pipe["PIIMasking"].distill(None, None, None, None, None, None, None, None)

@@ -22,11 +22,11 @@ ModelWrapperInferenceMode = TypeVar("ModelWrapperInferenceMode", bound=enum.Enum
 class Executable(Protocol[ModelWrapperResult]):
     """Callable protocol representing a compiled prompt executable."""
 
-    def __call__(self, values: Sequence[dict[str, Any]]) -> Iterable[ModelWrapperResult | None]:
+    def __call__(self, values: Sequence[dict[str, Any]]) -> Sequence[tuple[ModelWrapperResult | None, Any]]:
         """Execute prompt executable for given values.
 
         :param values: Values to inject into prompts.
-        :return: Results for prompts.
+        :return: Sequence of tuples containing (result, raw_output) for prompts.
         """
         ...
 
@@ -148,24 +148,24 @@ class PydanticModelWrapper(
 
     def _infer(
         self,
-        generator: Callable[[list[str]], Iterable[ModelWrapperResult]],
+        generator: Callable[[list[str]], Iterable[tuple[ModelWrapperResult, Any]]],
         template: jinja2.Template,
         values: Sequence[dict[str, Any]],
         fewshot_examples: Sequence[pydantic.BaseModel],
-    ) -> Iterable[ModelWrapperResult | None]:
+    ) -> Sequence[tuple[ModelWrapperResult | None, Any]]:
         """Run inference in batches with exception handling.
 
         :param generator: Callable generating responses.
         :param template: Prompt template.
         :param values: Doc values to inject.
         :param fewshot_examples: Fewshot examples.
-        :return: Results parsed from responses.
+        :return: Sequence of tuples containing results parsed from responses and raw outputs.
         """
         fewshot_examples_dict = ModelWrapper.convert_fewshot_examples(fewshot_examples)
         examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
 
         try:
-            yield from generator([template.render(**doc_values, **examples) for doc_values in values])
+            return list(generator([template.render(**doc_values, **examples) for doc_values in values]))
 
         except Exception as err:
             if self._strict:
@@ -174,4 +174,4 @@ class PydanticModelWrapper(
                     "chunks contain sensible information."
                 ) from err
             else:
-                yield from (None for _ in range(len(values)))
+                return [(None, None) for _ in range(len(values))]

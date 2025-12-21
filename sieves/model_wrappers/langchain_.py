@@ -33,7 +33,6 @@ class LangChain(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMo
         return InferenceMode
 
     @override
-    @override
     def build_executable(
         self,
         inference_mode: InferenceMode,
@@ -44,20 +43,23 @@ class LangChain(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMo
         assert isinstance(prompt_signature, type)
         cls_name = self.__class__.__name__
         template = self._create_template(prompt_template)
-        model = self._model.with_structured_output(prompt_signature)
+        model = self._model.with_structured_output(prompt_signature, include_raw=True)
 
-        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any]]:
             """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
-            :return Iterable[Result | None]: Results for prompts. Results are None if corresponding prompt failed.
+            :return: Sequence of tuples containing results and raw outputs. Results are None if corresponding prompt
+                failed.
             """
             match inference_mode:
                 case InferenceMode.structured:
 
-                    def generate(prompts: list[str]) -> Iterable[Result]:
+                    def generate(prompts: list[str]) -> Iterable[tuple[Result, Any]]:
                         try:
-                            yield from asyncio.run(model.abatch(prompts, **self._inference_kwargs))
+                            results = asyncio.run(model.abatch(prompts, **self._inference_kwargs))
+                            for res in results:
+                                yield res["parsed"], res["raw"]
 
                         except Exception as err:
                             raise RuntimeError(
@@ -69,6 +71,6 @@ class LangChain(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMo
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} model wrapper.")
 
-            yield from self._infer(generator, template, values, fewshot_examples)
+            return self._infer(generator, template, values, fewshot_examples)
 
         return execute

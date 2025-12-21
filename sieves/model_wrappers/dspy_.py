@@ -2,7 +2,7 @@
 
 import asyncio
 import enum
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from typing import Any, override
 
 import dspy
@@ -92,11 +92,11 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
             assert issubclass(prompt_signature, dspy.Signature)
             generator = inference_mode.value(signature=prompt_signature, **self._init_kwargs)
 
-        def execute(values: Sequence[dict[str, Any]]) -> Iterable[Result | None]:
+        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any]]:
             """Execute structured generation with DSPy.
 
             :params values: Values to inject into prompts.
-            :returns: Results for prompts.
+            :returns: Sequence of tuples containing results and history entries.
             """
             # Compile predictor with few-shot examples.
             fewshot_examples_dicts = DSPy.convert_fewshot_examples(fewshot_examples)
@@ -107,8 +107,15 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
 
             try:
                 gen = generator_fewshot or generator
-                calls = [gen.acall(**doc_values, **self._inference_kwargs) for doc_values in values]
-                yield from asyncio.run(self._execute_async_calls(calls))
+
+                async def call_with_meta(**kwargs: Any) -> tuple[Result, Any]:
+                    res = await gen.acall(**kwargs)
+                    # Capture the last history entry from the model after call completion.
+                    # This works even with concurrency because history is appended upon completion.
+                    return res, self._model.history[-1]
+
+                calls = [call_with_meta(**doc_values, **self._inference_kwargs) for doc_values in values]
+                return list(asyncio.run(self._execute_async_calls(calls)))
 
             except Exception as err:
                 if self._strict:
@@ -117,6 +124,6 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
                         "chunks contain sensible information."
                     ) from err
                 else:
-                    yield from [None] * len(values)
+                    return [(None, None) for _ in range(len(values))]
 
         return execute
