@@ -140,11 +140,8 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
 
         return execute
 
+    @override
     def _get_tokenizer(self) -> Any | None:
-        """Fetch the tokenizer from the model or a fallback.
-
-        :return: Tokenizer instance if found, else None.
-        """
         # Outlines models usually have a tokenizer, but some wrappers (like OpenAI) might hide it.
         tokenizer = getattr(self._model, "tokenizer", None)
         if not tokenizer and hasattr(self._model, "model"):

@@ -247,12 +247,12 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
             task_output_tokens = sum(output_tokens_list) if output_tokens_list else None
 
             if self._include_meta:
-                # Include per-chunk usage in raw meta.
                 doc.meta[self._task_id] = {
                     "raw": raw_outputs[start:end],
                     "usage": {
                         "input_tokens": task_input_tokens,
                         "output_tokens": task_output_tokens,
+                        # Include per-chunk usage in raw meta.
                         "chunks": [u.model_dump() for u in doc_usages],
                     },
                 }

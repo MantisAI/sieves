@@ -97,12 +97,4 @@ For local models or frameworks that don't expose native counts, `sieves` uses th
 
 If a local tokenizer is not available (e.g., when using a remote API via Outlines without a local weight clone), `sieves` will attempt to fall back to `tiktoken` (for OpenAI-compatible models) or return `None`.
 
----
-
-## Best Practices
-
-*   **Production Monitoring**: Use `doc.meta['usage']` to monitor API costs in real-time.
-*   **Prompt Engineering**: Compare `input_tokens` across different `prompt_instructions` or few-shot examples to optimize for context window limits.
-*   **Debugging**: If a task fails to parse, check the `raw` metadata to see if the model produced an invalid format or an error message.
-
 ```

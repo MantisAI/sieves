@@ -91,8 +91,4 @@ class HuggingFace(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
 
     @override
     def _get_tokenizer(self) -> Any | None:
-        """Return the tokenizer instance for the HuggingFace pipeline.
-
-        :return: Tokenizer instance or None.
-        """
         return getattr(self._model, "tokenizer", None)

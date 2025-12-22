@@ -87,11 +87,8 @@ class GliNER(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
 
         return execute
 
+    @override
     def _get_tokenizer(self) -> Any | None:
-        """Fetch the tokenizer from the model or its processor.
-
-        :return: Tokenizer instance if found, else None.
-        """
         # GLiNER2 models usually have a tokenizer accessible through the processor.
         tokenizer = getattr(self._model, "tokenizer", None)
         if not tokenizer and hasattr(self._model, "processor"):

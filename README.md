@@ -103,7 +103,7 @@ docs = list(pipeline([doc]))
 print(docs[0].results) # {'Classification': [('science', 1.0), ('politics', 0.0)]}
 # The `meta` field contains more information helpful for observability and debugging, such as raw model output and token count information.
 print(docs[0].meta)    # {'Classification': {
-                       #    'raw': ['{ "science": 1.0, "politics": 0'],
+                       #    'raw': ['{ "science": 1.0, "politics": 0 }'],
                        #    'usage': {'input_tokens': 2, 'output_tokens': 2, 'chunks': [{'input_tokens': 2, 'output_tokens': 2}]}}, 'usage': {'input_tokens': 2, 'output_tokens': 2}
                        #  }
 ```
