@@ -152,3 +152,61 @@ def test_pydantic_to_hf() -> None:
     assert isinstance(features["b"].feature["value"]["sub_models"].feature, datasets.Features)
     assert isinstance(features["b"].feature["value"]["sub_models"].feature["c"], datasets.Value)
     assert features["b"].feature["value"]["sub_models"].feature["c"].dtype == "int32"
+
+
+def test_pydantic_to_hf_nested_and_optional() -> None:
+    """Test nested and optional models in PydanticToHFDatasets."""
+
+    # Nested models in list
+    class SubModel(pydantic.BaseModel):
+        x: int
+
+    class MainModelList(pydantic.BaseModel):
+        subs: list[SubModel]
+
+    model_list = MainModelList(subs=[SubModel(x=1), SubModel(x=2)])
+    features_list = PydanticToHFDatasets.model_cls_to_features(MainModelList)
+    result_list = PydanticToHFDatasets.model_to_dict(model_list)
+    assert result_list == {"subs": [{"x": 1}, {"x": 2}]}
+    ds_list = datasets.Dataset.from_list([result_list], features=features_list)
+    assert ds_list[0] == {"subs": {"x": [1, 2]}}
+
+    # Nested models in dict
+    class MainModelDict(pydantic.BaseModel):
+        subs: dict[str, SubModel]
+
+    model_dict = MainModelDict(subs={"a": SubModel(x=1), "b": SubModel(x=2)})
+    features_dict = PydanticToHFDatasets.model_cls_to_features(MainModelDict)
+    result_dict = PydanticToHFDatasets.model_to_dict(model_dict)
+    assert result_dict == {"subs": [{"key": "a", "value": {"x": 1}}, {"key": "b", "value": {"x": 2}}]}
+    ds_dict = datasets.Dataset.from_list([result_dict], features=features_dict)
+    assert ds_dict[0] == {"subs": {"key": ["a", "b"], "value": [{"x": 1}, {"x": 2}]}}
+
+    # Optional nested model
+    class MainModelOptional(pydantic.BaseModel):
+        sub: SubModel | None
+
+    model_opt = MainModelOptional(sub=SubModel(x=1))
+    features_opt = PydanticToHFDatasets.model_cls_to_features(MainModelOptional)
+    assert isinstance(features_opt["sub"], datasets.Features)
+    result_opt = PydanticToHFDatasets.model_to_dict(model_opt)
+    assert result_opt == {"sub": {"x": 1}}
+    ds_opt = datasets.Dataset.from_list([result_opt], features=features_opt)
+    assert ds_opt[0] == {"sub": {"x": 1}}
+
+    # Deeply nested objects
+    class Level3(pydantic.BaseModel):
+        val: int
+
+    class Level2(pydantic.BaseModel):
+        l3: Level3
+
+    class Level1(pydantic.BaseModel):
+        l2: list[Level2]
+
+    model_deep = Level1(l2=[Level2(l3=Level3(val=42))])
+    features_deep = PydanticToHFDatasets.model_cls_to_features(Level1)
+    result_deep = PydanticToHFDatasets.model_to_dict(model_deep)
+    assert result_deep == {"l2": [{"l3": {"val": 42}}]}
+    ds_deep = datasets.Dataset.from_list([result_deep], features=features_deep)
+    assert ds_deep[0] == {"l2": {"l3": [{"val": 42}]}}
