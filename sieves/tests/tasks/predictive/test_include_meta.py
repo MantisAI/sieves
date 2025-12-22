@@ -24,10 +24,14 @@ def test_include_meta_toggle(classification_docs, include_meta, runtime):
     results = list(pipe(docs))
 
     for doc in results:
+        print(f"Output: {doc.results[task_id]}")
         if include_meta:
             assert task_id in doc.meta
             assert "raw" in doc.meta[task_id]
             assert isinstance(doc.meta[task_id]["raw"], list)
             assert len(doc.meta[task_id]["raw"]) > 0
+            print(f"Raw output: {doc.meta[task_id]['raw']}")
+            print(f"Task Usage: {doc.meta[task_id]['usage']}")
+            print(f"Total Usage: {doc.meta['usage']}")
         else:
             assert task_id not in doc.meta

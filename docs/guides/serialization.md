@@ -117,11 +117,11 @@ The configuration file contains:
 **Solution**: Check the YAML file to see which parameters are marked as placeholders:
 
 ```python
-# Read the config to see what placeholders exist
+# Read the config to see what placeholders exist.
 import yaml
 with open("pipeline.yml", "r") as f:
     config = yaml.safe_load(f)
-    print(config)  # Look for "is_placeholder: true" entries
+    print(config)  # Look for "is_placeholder: true" entries.
 ```
 
 Provide `init_params` for each task that has placeholders:
@@ -130,17 +130,17 @@ Provide `init_params` for each task that has placeholders:
 loaded_pipeline = Pipeline.load(
     "pipeline.yml",
     [
-        {"model": your_model},           # Task 0 placeholders
-        {"tokenizer": your_tokenizer},   # Task 1 placeholders
+        {"model": your_model},           # Task 0 placeholders.
+        {"tokenizer": your_tokenizer},   # Task 1 placeholders.
     ]
 )
 ```
 
 #### Version compatibility warnings
 
-**Symptom**: Warning about sieves version mismatch when loading pipelines.
+**Symptom**: Warning about `sieves` version mismatch when loading pipelines.
 
-**Cause**: The pipeline was saved with a different version of sieves than you're currently using.
+**Cause**: The pipeline was saved with a different version of `sieves` than you're currently using.
 
 **Impact**:
 
@@ -149,10 +149,10 @@ loaded_pipeline = Pipeline.load(
 
 **Solution**:
 ```bash
-# Install the version that was used to create the pipeline
-pip install sieves==0.11.1  # Match the version in the YAML
+# Install the version that was used to create the pipeline.
+pip install sieves==0.11.1  # Match the version in the YAML.
 
-# Or: Update the pipeline by re-saving it with the current version
+# Or: Update the pipeline by re-saving it with the current version.
 pipeline.dump("pipeline_updated.yml")
 ```
 
@@ -165,12 +165,12 @@ pipeline.dump("pipeline_updated.yml")
 **Solution**: Mark these as placeholders by ensuring they're provided during pipeline creation, then supply them again during load:
 
 ```python
-# When creating the pipeline
+# When creating the pipeline.
 custom_task = MyCustomTask(complex_object=my_object)
 pipeline = Pipeline([custom_task])
-pipeline.dump("pipeline.yml")  # complex_object becomes a placeholder
+pipeline.dump("pipeline.yml")  # complex_object becomes a placeholder.
 
-# When loading
+# When loading.
 loaded = Pipeline.load("pipeline.yml", [{"complex_object": my_object}])
 ```
 
@@ -178,17 +178,17 @@ loaded = Pipeline.load("pipeline.yml", [{"complex_object": my_object}])
 
 **Symptom**: Loaded pipeline doesn't have model weights.
 
-**Cause**: sieves doesn't save model weights in configuration files (they're too large).
+**Cause**: `sieves` doesn't save model weights in configuration files (they're too large).
 
 **Solution**: Always provide fresh model instances in `init_params`:
 
 ```python
-# Load the model separately (weights will be downloaded/loaded)
+# Load the model separately (weights will be downloaded/loaded).
 model = outlines.models.transformers(
     "HuggingFaceTB/SmolLM-135M-Instruct"
 )
 
-# Then load the pipeline with the model
+# Then load the pipeline with the model.
 loaded = Pipeline.load("pipeline.yml", [{"model": model}])
 ```
 
@@ -201,14 +201,14 @@ loaded = Pipeline.load("pipeline.yml", [{"model": model}])
 **Solution**: Specify explicit task IDs when creating tasks:
 
 ```python
-# When creating
+# When creating.
 classifier = tasks.Classification(
     labels=["science", "politics"],
     model=model,
-    task_id="my_classifier"  # Explicit ID
+    task_id="my_classifier"  # Explicit ID.
 )
 
-# The results will always be in doc.results["my_classifier"]
+# The results will always be in doc.results["my_classifier"].
 ```
 
 ### Best Practices
@@ -217,7 +217,7 @@ classifier = tasks.Classification(
 2. **Document init_params**: Add comments explaining what placeholders need
 3. **Test load immediately**: After saving, try loading to catch serialization issues
 4. **Separate model loading**: Keep model initialization code separate from pipeline config
-5. **Use version pinning**: Pin sieves version in requirements.txt for reproducibility
+5. **Use version pinning**: Pin `sieves` version in requirements.txt for reproducibility
 
 ## Related Guides
 

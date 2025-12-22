@@ -67,6 +67,13 @@ def _run(
         assert "classifier" in doc.results
         assert "classifier" in doc.meta
         assert "raw" in doc.meta["classifier"]
+        assert "usage" in doc.meta["classifier"]
+        assert "usage" in doc.meta
+
+        print(f"Output: {doc.results['classifier']}")
+        print(f"Raw output: {doc.meta['classifier']['raw']}")
+        print(f"Usage: {doc.meta['classifier']['usage']}")
+        print(f"Total Usage: {doc.meta['usage']}")
 
     if test_hf_conversion:
         _to_hf_dataset(task, docs, multilabel)

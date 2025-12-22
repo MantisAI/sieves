@@ -156,7 +156,7 @@ def consolidate(self, results: Sequence[TaskResult], docs_offsets: list[tuple[in
 **Why separate methods?**
 
 - Documents may exceed model context limits (e.g., 100-page PDFs vs 8K token limit)
-- Sieves automatically splits long documents into chunks for processing
+- `sieves` automatically splits long documents into chunks for processing
 - `integrate()` handles per-chunk results (stores immediately, no processing)
 - `consolidate()` aggregates chunks back into per-document results (averaging, voting, etc.)
 

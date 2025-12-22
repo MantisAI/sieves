@@ -54,7 +54,13 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
         assert "NER" in doc.results
         assert "NER" in doc.meta
         assert "raw" in doc.meta["NER"]
-        assert hasattr(doc.results["NER"], "entities")
+        assert "usage" in doc.meta["NER"]
+        assert "usage" in doc.meta
+
+        print(f"Output: {doc.results['NER']}")
+        print(f"Raw output: {doc.meta['NER']['raw']}")
+        print(f"Usage: {doc.meta['NER']['usage']}")
+        print(f"Total Usage: {doc.meta['usage']}")
 
     with pytest.raises(NotImplementedError):
         pipe["NER"].distill(None, None, None, None, None, None, None, None)

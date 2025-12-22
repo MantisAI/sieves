@@ -18,7 +18,7 @@ import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, ModelWrapper, ModelWrapperInferenceMode  # noqa: F401
-from sieves.model_wrappers.types import ModelSettings
+from sieves.model_wrappers.types import ModelSettings, TokenUsage
 from sieves.model_wrappers.utils import init_model_wrapper
 from sieves.serialization import Config
 from sieves.tasks import optimization
@@ -207,11 +207,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
             assert len(results_raw) == len(docs_chunks)
 
             # Extract metadata.
-            results: list[Any] = []
-            raw_outputs: list[Any] = []
-            for res, raw in results_raw:
-                results.append(res)
-                raw_outputs.append(raw)
+            results, raw_outputs, usages = (list(t) for t in zip(*results_raw))
 
             # 6. Consolidate chunk results.
             results = self._bridge.consolidate(results, docs_chunks_offsets)
@@ -220,12 +216,57 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
             # 7. Integrate results into docs.
             docs_batch = self._bridge.integrate(results, docs_batch)
 
-            # 8. Integrate raw outputs into docs.
-            if self._include_meta:
-                for i, (start, end) in enumerate(docs_chunks_offsets):
-                    docs_batch[i].meta[self._task_id] = {"raw": raw_outputs[start:end]}  # type: ignore[non-subscriptable]
+            # 8. Integrate raw outputs and token usage into docs.
+            self._integrate_usage(docs_batch, usages, docs_chunks_offsets, raw_outputs)
 
             yield from docs_batch
+
+    def _integrate_usage(
+        self,
+        docs_batch: list[Doc],
+        usages: Sequence[TokenUsage],
+        docs_chunks_offsets: list[tuple[int, int]],
+        raw_outputs: Sequence[Any],
+    ) -> None:
+        """Integrate raw outputs and token usage into document instances.
+
+        :param docs_batch: Current batch of documents.
+        :param usages: Token usage per chunk.
+        :param docs_chunks_offsets: Mapping of chunks to documents.
+        :param raw_outputs: Raw model outputs per chunk.
+        """
+        for i, (start, end) in enumerate(docs_chunks_offsets):
+            doc = docs_batch[i]
+            doc_usages = usages[start:end]
+
+            # Aggregate usage for this task.
+            input_tokens_list = [u.input_tokens for u in doc_usages if u.input_tokens is not None]
+            output_tokens_list = [u.output_tokens for u in doc_usages if u.output_tokens is not None]
+
+            task_input_tokens = sum(input_tokens_list) if input_tokens_list else None
+            task_output_tokens = sum(output_tokens_list) if output_tokens_list else None
+
+            if self._include_meta:
+                doc.meta[self._task_id] = {
+                    "raw": raw_outputs[start:end],
+                    "usage": {
+                        "input_tokens": task_input_tokens,
+                        "output_tokens": task_output_tokens,
+                        # Include per-chunk usage in raw meta.
+                        "chunks": [u.model_dump() for u in doc_usages],
+                    },
+                }
+
+            # Update top-level usage.
+            usage = doc.meta.get("usage", {"input_tokens": None, "output_tokens": None})
+            if task_input_tokens is not None:
+                current_input = usage.get("input_tokens")
+                usage["input_tokens"] = (current_input or 0) + task_input_tokens
+            if task_output_tokens is not None:
+                current_output = usage.get("output_tokens")
+                usage["output_tokens"] = (current_output or 0) + task_output_tokens
+
+            doc.meta["usage"] = usage
 
     @property
     def fewshot_examples(self) -> Sequence[FewshotExample]:

@@ -1,6 +1,6 @@
 # Outlines
 
-[Outlines](https://dottxt-ai.github.io/outlines/) provides structured text generation. Sieves works with Outlines models created via `outlines.models`.
+[Outlines](https://dottxt-ai.github.io/outlines/) provides structured text generation. `sieves` works with Outlines models created via `outlines.models`.
 
 ## Usage
 

@@ -1,6 +1,6 @@
 # LangChain
 
-Sieves supports [LangChain](https://www.langchain.com/)'s Chat Models (e.g., `ChatOpenAI`, `ChatAnthropic`) for structured output.
+`sieves` supports [LangChain](https://www.langchain.com/)'s Chat Models (e.g., `ChatOpenAI`, `ChatAnthropic`) for structured output.
 
 ## Usage
 

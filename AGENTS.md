@@ -306,14 +306,20 @@ Enforced via CI pipeline:
 
 ## Observability & Serialization
 
-- **Logging:** Loguru integrated; logs task execution and model wrapper calls
+- **Logging:** `loguru` integrated; logs task execution and model wrapper calls.
+- **Raw Model Outputs:** Captured in `doc.meta[task_id]['raw']` as a list of raw responses per chunk when `include_meta=True` (default).
+- **Token Usage Tracking:**
+  - Tracked across the entire pipeline and aggregated in `doc.meta['usage']`.
+  - Also available per task in `doc.meta[task_id]['usage']`.
+  - Includes `input_tokens` and `output_tokens`.
+  - Uses native metadata for DSPy/LangChain and approximate estimation for other backends.
 - **Pipeline persistence:**
   ```python
-  pipe.dump("pipeline.yml")                        # Save config
-  loaded = Pipeline.load("pipeline.yml", task_kwargs)  # Reload with model kwargs
+  pipe.dump("pipeline.yml")                        # Save config.
+  loaded = Pipeline.load("pipeline.yml", task_kwargs)  # Reload with model kwargs.
   ```
-- **Document persistence:** Use pickle (models not serialized)
-- **Config format:** YAML-compatible via `sieves.serialization.Config`
+- **Document persistence:** Use pickle (models not serialized).
+- **Config format:** YAML-compatible via `sieves.serialization.Config`.
 
 ---
 
@@ -428,7 +434,8 @@ Then run: `uv run pytest sieves/tests/test_my_feature.py -v`
 
 Key changes that affect development (last ~2-3 months):
 
-1. **Information Extraction Single/Multi Mode** - Added `mode` parameter to `InformationExtraction` task for single vs multi entity extraction.
+1. **Token Counting and Raw Output Observability** - Implemented comprehensive token usage tracking (input/output) and raw model response capturing in `doc.meta`. Usage is aggregated per-task and per-document.
+2. **Information Extraction Single/Multi Mode** - Added `mode` parameter to `InformationExtraction` task for single vs multi entity extraction.
 2. **GliNERBridge Refactoring** - Consolidated NER logic into `GliNERBridge`, removing dedicated `GlinerNER` class.
 3. **Documentation Enhancements** - Standardized documentation with usage snippets (tested) and library links across all tasks and model wrappers.
 4. **All Model wrappers as Core Dependencies** (#210) - Outlines, DSPy, LangChain, Transformers, and GLiNER2 are now included in base installation

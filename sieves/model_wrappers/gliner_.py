@@ -10,6 +10,7 @@ import jinja2
 import pydantic
 
 from sieves.model_wrappers.core import Executable, ModelWrapper
+from sieves.model_wrappers.types import TokenUsage
 
 PromptSignature = gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder
 Model = gliner2.GLiNER2
@@ -54,11 +55,11 @@ class GliNER(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
         if prompt_template:
             self._model.prompt = jinja2.Template(prompt_template).render()
 
-        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result, Any]]:
+        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result, Any, TokenUsage]]:
             """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
-            :return: Sequence of tuples containing results and raw outputs.
+            :return: Sequence of tuples containing results, raw outputs, and token usage.
             """
             results = self._model.batch_extract(
                 texts=[val["text"] for val in values],
@@ -69,6 +70,28 @@ class GliNER(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
                     | {"include_confidence": True, "include_spans": True}
                 ),
             )
-            return [(res, res) for res in results]
+
+            # Estimate token usage if tokenizer is available.
+            tokenizer = self._get_tokenizer()
+
+            final_results: list[tuple[Result, Any, TokenUsage]] = []
+            # Estimate token counts.
+            for val, res in zip(values, results):
+                usage = TokenUsage(
+                    input_tokens=self._count_tokens(val["text"], tokenizer),
+                    output_tokens=self._count_tokens(str(res), tokenizer),
+                )
+
+                final_results.append((res, res, usage))
+            return final_results
 
         return execute
+
+    @override
+    def _get_tokenizer(self) -> Any | None:
+        # GLiNER2 models usually have a tokenizer accessible through the processor.
+        tokenizer = getattr(self._model, "tokenizer", None)
+        if not tokenizer and hasattr(self._model, "processor"):
+            tokenizer = getattr(self._model.processor, "tokenizer", None)
+
+        return tokenizer

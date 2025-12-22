@@ -10,6 +10,7 @@ import nest_asyncio
 import pydantic
 
 from sieves.model_wrappers.core import Executable, PydanticModelWrapper
+from sieves.model_wrappers.types import TokenUsage
 
 nest_asyncio.apply()
 
@@ -45,21 +46,27 @@ class LangChain(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMo
         template = self._create_template(prompt_template)
         model = self._model.with_structured_output(prompt_signature, include_raw=True)
 
-        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any]]:
+        def execute(values: Sequence[dict[str, Any]]) -> Sequence[tuple[Result | None, Any, TokenUsage]]:
             """Execute prompts with model wrapper for given values.
 
             :param values: Values to inject into prompts.
-            :return: Sequence of tuples containing results and raw outputs. Results are None if corresponding prompt
-                failed.
+            :return: Sequence of tuples containing results, raw outputs, and token usage. Results are None if
+                corresponding prompt failed.
             """
             match inference_mode:
                 case InferenceMode.structured:
 
-                    def generate(prompts: list[str]) -> Iterable[tuple[Result, Any]]:
+                    def generate(prompts: list[str]) -> Iterable[tuple[Result, Any, TokenUsage]]:
                         try:
                             results = asyncio.run(model.abatch(prompts, **self._inference_kwargs))
                             for res in results:
-                                yield res["parsed"], res["raw"]
+                                usage = TokenUsage()
+                                raw = res["raw"]
+                                if hasattr(raw, "usage_metadata") and raw.usage_metadata:
+                                    usage.input_tokens = raw.usage_metadata.get("input_tokens")
+                                    usage.output_tokens = raw.usage_metadata.get("output_tokens")
+
+                                yield res["parsed"], raw, usage
 
                         except Exception as err:
                             raise RuntimeError(
