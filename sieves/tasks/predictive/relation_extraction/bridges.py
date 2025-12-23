@@ -121,7 +121,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
 
         class _RelationEntityWithContext(pydantic.BaseModel):
             text: str
-            context: str
+            context: str | None = None
             entity_type: AllowedEntityType
 
         class _RelationTripletWithContext(pydantic.BaseModel):
