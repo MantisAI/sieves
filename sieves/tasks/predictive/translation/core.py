@@ -14,16 +14,16 @@ from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.translation.bridges import (
-    DSPyTranslation,
-    LangChainTranslation,
-    OutlinesTranslation,
-)
-from sieves.tasks.predictive.translation.schemas import (
+from sieves.tasks.predictive.schemas.translation import (
     FewshotExample,
     _TaskModel,
     _TaskPromptSignature,
     _TaskResult,
+)
+from sieves.tasks.predictive.translation.bridges import (
+    DSPyTranslation,
+    LangChainTranslation,
+    OutlinesTranslation,
 )
 
 _TaskBridge = DSPyTranslation | LangChainTranslation | OutlinesTranslation

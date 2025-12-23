@@ -1,7 +1,7 @@
 """NER task."""
 
 from sieves.tasks.predictive.ner.core import NER
-from sieves.tasks.predictive.ner.schemas import (
+from sieves.tasks.predictive.schemas.ner import (
     FewshotExample,
     Result,
     _TaskPromptSignature,

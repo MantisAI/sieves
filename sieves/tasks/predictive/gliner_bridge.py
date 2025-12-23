@@ -13,6 +13,17 @@ from sieves.data import Doc
 from sieves.model_wrappers import gliner_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.schemas.classification import ResultMultiLabel, ResultSingleLabel
+from sieves.tasks.predictive.schemas.information_extraction import ResultMulti, ResultSingle
+from sieves.tasks.predictive.schemas.ner import Entity
+from sieves.tasks.predictive.schemas.ner import Result as NERResult
+from sieves.tasks.predictive.schemas.relation_extraction import (
+    RelationEntity,
+    RelationTriplet,
+)
+from sieves.tasks.predictive.schemas.relation_extraction import (
+    Result as RelationResult,
+)
 
 
 class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
@@ -82,8 +93,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
     def prompt_signature_pydantic(self) -> type[pydantic.BaseModel] | None:
         """Return Pydantic model representation of GLiNER2 schema.
 
-        Returns:
-            Pydantic model representation of GLiNER2 schema.
+        :return: Pydantic model representation of GLiNER2 schema.
         """
         return self._prompt_signature_pydantic
 
@@ -97,8 +107,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
         If the schema is a structure with more than one entry, a wrapper class `Schema` is created.
 
-        Returns:
-            Pydantic model representation of GLiNER2 schema.
+        :return: Pydantic model representation of GLiNER2 schema.
         """
         if isinstance(self._prompt_signature, gliner2.inference.engine.StructureBuilder):
             field_metadata = self._prompt_signature.schema._field_metadata
@@ -114,7 +123,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                 classes[class_name] = {}
             classes[class_name][field_name] = meta
 
-        # Create models for each class
+        # Create models for each class.
         models: dict[str, type[pydantic.BaseModel]] = {}
         for class_name, fields in classes.items():
             field_definitions = {}
@@ -141,11 +150,6 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
     @override
     def integrate(self, results: Sequence[gliner_.Result], docs: list[Doc]) -> list[Doc]:
-        from sieves.tasks.predictive.classification.schemas import ResultMultiLabel, ResultSingleLabel
-        from sieves.tasks.predictive.information_extraction.schemas import ResultMulti, ResultSingle
-        from sieves.tasks.predictive.ner.schemas import Entity
-        from sieves.tasks.predictive.ner.schemas import Result as NERResult
-
         for doc, result in zip(docs, results):
             match self._inference_mode:
                 # Used by: Classification
@@ -154,7 +158,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     is_multilabel = self._prompt_signature.schema["classifications"][0]["multi_label"]
 
                     if is_multilabel:
-                        label_scores = []
+                        label_scores: list[tuple[str, float]] = []
                         for res in sorted(result, key=lambda x: x["score"], reverse=True):
                             assert isinstance(res, dict)
                             label_scores.append((res["label"], res["score"]))
@@ -199,6 +203,35 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             entity=extracted_entities[0] if extracted_entities else None
                         )
 
+                # Used by: RelationExtraction
+                case gliner_.InferenceMode.relations:
+                    triplets: list[RelationTriplet] = []
+                    # GliNER2 relations output is a dict mapping task ids to relation types to lists of triplets:
+                    # {'task_id': {'relation_type': [{'head': {...}, 'tail': {...}}, ...]}}  # noqa: ERA001
+                    relation_data = result.get(self._task_id, {})
+                    assert isinstance(relation_data, dict)
+
+                    for rel_type, triplets_list in relation_data.items():
+                        for triplet_data in triplets_list:
+                            triplets.append(
+                                RelationTriplet(
+                                    head=RelationEntity(
+                                        text=triplet_data["head"]["text"],
+                                        entity_type=triplet_data["head"]["type"],
+                                        start=triplet_data["head"]["start"],
+                                        end=triplet_data["head"]["end"],
+                                    ),
+                                    relation=rel_type,
+                                    tail=RelationEntity(
+                                        text=triplet_data["tail"]["text"],
+                                        entity_type=triplet_data["tail"]["type"],
+                                        start=triplet_data["tail"]["start"],
+                                        end=triplet_data["tail"]["end"],
+                                    ),
+                                )
+                            )
+                    doc.results[self._task_id] = RelationResult(triplets=triplets)
+
         return docs
 
     @override
@@ -209,7 +242,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
         # Determine label scores for chunks per document.
         for doc_offset in docs_offsets:
-            scores: dict[str, float] = defaultdict(lambda: 0)
+            scores: dict[Any, float] = defaultdict(lambda: 0.0)
             entities: dict[str, list[str] | dict[str, str | list[str]]] = {}
             all_entities_list: list[dict[str, Any]] = []
 
@@ -275,6 +308,25 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                                             max_confidence = avg_conf
                                             highest_confidence_entity = {entity_type: [entity]}
 
+                    case gliner_.InferenceMode.relations:
+                        # Collect all triplets from all chunks for this document.
+                        # Simple unification for now.
+                        relation_data = res.get(self._task_id, {})
+                        assert isinstance(relation_data, dict)
+
+                        for rel_type, triplets_list in relation_data.items():
+                            for triplet in triplets_list:
+                                key = (
+                                    triplet["head"]["text"],
+                                    rel_type,
+                                    triplet["tail"]["text"],
+                                    triplet["head"]["start"],
+                                    triplet["tail"]["start"],
+                                )
+                                if key not in scores:  # Use scores dict as a seen set for convenience.
+                                    scores[key] = 1.0
+                                    all_entities_list.append({"relation": rel_type, **triplet})
+
             match self._inference_mode:
                 case gliner_.InferenceMode.classification:
                     # Ensure that all labels have been assigned - GLiNER2 is sometimes negligent about this.
@@ -295,7 +347,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
                     consolidated_results.append(sorted_scores)
 
-                case gliner_.InferenceMode.entities | gliner_.InferenceMode.structure:
+                case gliner_.InferenceMode.entities | gliner_.InferenceMode.structure | gliner_.InferenceMode.relations:
                     if self._inference_mode == gliner_.InferenceMode.structure and self._mode == "single":
                         consolidated_results.append(highest_confidence_entity or {list(res.keys())[0]: []})
                     elif all_entities_list:

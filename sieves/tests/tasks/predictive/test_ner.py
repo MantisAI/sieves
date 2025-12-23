@@ -7,7 +7,7 @@ from sieves.model_wrappers import ModelType, ModelSettings
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import ner
-from sieves.tasks.predictive.ner.schemas import EntityWithContext
+from sieves.tasks.predictive.schemas.ner import EntityWithContext
 
 
 

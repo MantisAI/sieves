@@ -1,7 +1,7 @@
 """Information extraction task."""
 
 from sieves.tasks.predictive.information_extraction.core import InformationExtraction
-from sieves.tasks.predictive.information_extraction.schemas import (
+from sieves.tasks.predictive.schemas.information_extraction import (
     FewshotExampleMulti,
     FewshotExampleSingle,
     ResultMulti,

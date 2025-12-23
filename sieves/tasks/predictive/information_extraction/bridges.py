@@ -14,7 +14,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
-from sieves.tasks.predictive.information_extraction.schemas import ResultMulti, ResultSingle
+from sieves.tasks.predictive.schemas.information_extraction import ResultMulti, ResultSingle
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")

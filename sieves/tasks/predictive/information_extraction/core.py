@@ -23,7 +23,7 @@ from sieves.tasks.predictive.information_extraction.bridges import (
     LangChainInformationExtraction,
     OutlinesInformationExtraction,
 )
-from sieves.tasks.predictive.information_extraction.schemas import (
+from sieves.tasks.predictive.schemas.information_extraction import (
     FewshotExampleMulti,
     FewshotExampleSingle,
     _TaskModel,

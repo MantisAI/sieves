@@ -20,7 +20,7 @@ from sieves.tasks.predictive.pii_masking.bridges import (
     LangChainPIIMasking,
     OutlinesPIIMasking,
 )
-from sieves.tasks.predictive.pii_masking.schemas import (
+from sieves.tasks.predictive.schemas.pii_masking import (
     FewshotExample,
     _TaskModel,
     _TaskPromptSignature,

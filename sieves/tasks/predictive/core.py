@@ -23,7 +23,7 @@ from sieves.serialization import Config
 from sieves.tasks import optimization
 from sieves.tasks.core import Task
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.schemas import (
+from sieves.tasks.predictive.schemas.core import (
     EvaluationSignature,
     FewshotExample,
     TaskBridge,

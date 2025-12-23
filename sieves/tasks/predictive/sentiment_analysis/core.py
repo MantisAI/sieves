@@ -15,16 +15,16 @@ from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.sentiment_analysis.bridges import (
-    DSPySentimentAnalysis,
-    LangChainSentimentAnalysis,
-    OutlinesSentimentAnalysis,
-)
-from sieves.tasks.predictive.sentiment_analysis.schemas import (
+from sieves.tasks.predictive.schemas.sentiment_analysis import (
     FewshotExample,
     _TaskModel,
     _TaskPromptSignature,
     _TaskResult,
+)
+from sieves.tasks.predictive.sentiment_analysis.bridges import (
+    DSPySentimentAnalysis,
+    LangChainSentimentAnalysis,
+    OutlinesSentimentAnalysis,
 )
 
 _TaskBridge = DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSentimentAnalysis

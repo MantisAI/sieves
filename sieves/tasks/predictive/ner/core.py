@@ -18,7 +18,7 @@ from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.gliner_bridge import GliNERBridge
 from sieves.tasks.predictive.ner.bridges import DSPyNER, LangChainNER, OutlinesNER
-from sieves.tasks.predictive.ner.schemas import (
+from sieves.tasks.predictive.schemas.ner import (
     FewshotExample,
     _TaskModel,
     _TaskPromptSignature,

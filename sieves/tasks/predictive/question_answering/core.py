@@ -19,7 +19,7 @@ from sieves.tasks.predictive.question_answering.bridges import (
     LangChainQA,
     OutlinesQA,
 )
-from sieves.tasks.predictive.question_answering.schemas import (
+from sieves.tasks.predictive.schemas.question_answering import (
     FewshotExample,
     _TaskModel,
     _TaskPromptSignature,

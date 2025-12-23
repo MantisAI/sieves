@@ -23,7 +23,9 @@ from sieves.tasks.predictive.classification.bridges import (
     LangChainClassification,
     OutlinesClassification,
 )
-from sieves.tasks.predictive.classification.schemas import (
+from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.predictive.gliner_bridge import GliNERBridge
+from sieves.tasks.predictive.schemas.classification import (
     FewshotExampleMultiLabel,
     FewshotExampleSingleLabel,
     ResultMultiLabel,
@@ -32,8 +34,6 @@ from sieves.tasks.predictive.classification.schemas import (
     _TaskPromptSignature,
     _TaskResult,
 )
-from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.gliner_bridge import GliNERBridge
 
 _TaskBridge = (
     DSPyClassification | GliNERBridge | LangChainClassification | HuggingFaceClassification | OutlinesClassification
