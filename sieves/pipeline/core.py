@@ -128,12 +128,14 @@ class Pipeline:
                 # Update cache.
                 self._cache_stats["misses"] += 1
                 processed_doc = next(processed_docs)
+                processed_doc.meta["cached"] = False
 
                 if self._use_cache:
                     self._cache[doc_cache_id] = processed_doc
             else:
                 self._cache_stats["hits"] += 1
-                processed_doc = self._cache[doc_cache_id]
+                processed_doc = copy.deepcopy(self._cache[doc_cache_id])
+                processed_doc.meta["cached"] = True
 
             if show_progress:
                 assert progress_bar is not None

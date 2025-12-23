@@ -233,6 +233,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             if "label" in entry:
                                 scores[entry["label"]] += entry["confidence"]
                             else:
+                                assert isinstance(entry, dict)
                                 keys = list(entry.keys())
                                 assert len(keys) == 1, "Composite GliNER2 schemas are not supported."
                                 for label, confidence in entry[keys[0]]:
@@ -262,6 +263,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             if self._mode == "single":
                                 for entity in res[entity_type]:
                                     # Calculate average confidence for the entity structure.
+                                    assert isinstance(entity, dict)
                                     confidences = [
                                         field_val["confidence"]
                                         for field_val in entity.values()

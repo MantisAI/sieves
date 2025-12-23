@@ -97,10 +97,9 @@ pipeline = Pipeline(task)
 doc = Doc(text="The new telescope captures images of distant galaxies.")
 
 # Run pipeline and print results.
-results = list(pipeline([doc]))
 docs = list(pipeline([doc]))
-# The `results` field contains the structured task output.
-print(docs[0].results) # {'Classification': [('science', 1.0), ('politics', 0.0)]}
+# The `results` field contains the structured task output as a unified Pydantic model.
+print(docs[0].results["Classification"]) # ResultMultiLabel(label_scores=[('science', 1.0), ('politics', 0.0)])
 # The `meta` field contains more information helpful for observability and debugging, such as raw model output and token count information.
 print(docs[0].meta)    # {'Classification': {
                        #    'raw': ['{ "science": 1.0, "politics": 0 }'],
@@ -147,8 +146,8 @@ doc = Doc(uri="https://arxiv.org/pdf/1204.0162")
 # Run pipeline.
 results = list(pipeline([doc]))
 
-# Print esults.
-for equation in results[0].results["InformationExtraction"]:
+# Print results.
+for equation in results[0].results["InformationExtraction"].entities:
     print(equation)
 ```
 This gives us:
