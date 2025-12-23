@@ -45,13 +45,14 @@ markdown_extensions:
       dedent_subsections: true
 
 nav:
-  - Home:
-    - index.md
-    - about.md
+  - index.md
+  - setup.md
   - API:
     - pipeline.md
     - doc.md
-    - bridge.md
+    - Bridges:
+      - bridge.md
+      - gliner_bridge.md
     - Tasks:
       - tasks/task.md
       - Preprocessing:

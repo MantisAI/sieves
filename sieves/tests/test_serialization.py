@@ -13,6 +13,7 @@ from sieves.model_wrappers import ModelType
 from sieves.serialization import Config
 from sieves.tasks import preprocessing
 from sieves.tasks.predictive import classification
+from sieves.tasks.predictive.classification import ResultMultiLabel
 from sieves.tests.conftest import make_model
 
 
@@ -109,7 +110,9 @@ def test_serialization_pipeline(dummy_docs, batch_runtime, tokenizer):
         # Run restored pipeline.
         docs = list(loaded_pipe(dummy_docs))
         assert len(docs) == 2
-        assert len(docs[0].results["classifier"])
+        res = docs[0].results["classifier"]
+        assert isinstance(res, ResultMultiLabel)
+        assert len(res.label_scores)
 
         # Compare loaded pipe config with original one.
         assert loaded_pipe.serialize().model_dump() == config_model_dump

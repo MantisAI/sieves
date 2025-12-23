@@ -14,6 +14,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.information_extraction.schemas import ResultMulti, ResultSingle
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -110,10 +111,10 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         for doc, result in zip(docs, results):
             if self._mode == "multi":
                 assert len(result.completions.entities) == 1
-                doc.results[self._task_id] = result.completions.entities[0]
+                doc.results[self._task_id] = ResultMulti(entities=result.completions.entities[0])
             else:
                 assert len(result.completions.entity) == 1
-                doc.results[self._task_id] = result.completions.entity[0]
+                doc.results[self._task_id] = ResultSingle(entity=result.completions.entity[0])
         return docs
 
     @override
@@ -266,10 +267,10 @@ class PydanticBasedInformationExtraction(
         for doc, result in zip(docs, results):
             if self._mode == "multi":
                 assert hasattr(result, "entities")
-                doc.results[self._task_id] = result.entities
+                doc.results[self._task_id] = ResultMulti(entities=result.entities)
             else:
                 assert hasattr(result, "entity")
-                doc.results[self._task_id] = result.entity
+                doc.results[self._task_id] = ResultSingle(entity=result.entity)
         return docs
 
     @override

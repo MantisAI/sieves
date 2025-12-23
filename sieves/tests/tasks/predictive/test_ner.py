@@ -7,7 +7,7 @@ from sieves.model_wrappers import ModelType, ModelSettings
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import ner
-from sieves.tasks.predictive.ner.core import EntityWithContext
+from sieves.tasks.predictive.ner.schemas import EntityWithContext
 
 
 
@@ -52,6 +52,10 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
     assert len(docs) == 2
     for doc in docs:
         assert "NER" in doc.results
+
+        # Verify unified result types.
+        assert isinstance(doc.results["NER"], ner.Result)
+
         assert "NER" in doc.meta
         assert "raw" in doc.meta["NER"]
         assert "usage" in doc.meta["NER"]

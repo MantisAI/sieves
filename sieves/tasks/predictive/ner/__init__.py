@@ -1,5 +1,11 @@
 """NER task."""
 
-from .core import NER, EntityWithContext, FewshotExample, _TaskPromptSignature, _TaskResult
+from sieves.tasks.predictive.ner.core import NER
+from sieves.tasks.predictive.ner.schemas import (
+    FewshotExample,
+    Result,
+    _TaskPromptSignature,
+    _TaskResult,
+)
 
-__all__ = ["EntityWithContext", "NER", "FewshotExample", "_TaskResult", "_TaskPromptSignature"]
+__all__ = ["NER", "FewshotExample", "Result", "_TaskResult", "_TaskPromptSignature"]

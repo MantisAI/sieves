@@ -8,7 +8,16 @@ The `Summarization` task generates concise summaries of the documents.
 --8<-- "sieves/tests/docs/test_task_usage.py:summarization-usage"
 ```
 
+## Results
+
+The `Summarization` task returns a unified `Result` object containing the `summary`.
+
+```python
+--8<-- "sieves/tasks/predictive/summarization/schemas.py:Result"
+```
+
 ---
 
 ::: sieves.tasks.predictive.summarization.core
 ::: sieves.tasks.predictive.summarization.bridges
+::: sieves.tasks.predictive.summarization.schemas

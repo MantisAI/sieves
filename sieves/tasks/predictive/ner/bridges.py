@@ -13,7 +13,8 @@ import pydantic
 from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
-from sieves.tasks.predictive.bridges import Bridge, Entities, Entity
+from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.ner.schemas import Entity, Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -171,11 +172,11 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
                 # Process entities from result if available
                 entities_with_position = self._find_entity_positions(doc_text, result)
                 # Create a new result with the updated entities
-                new_result = Entities(text=doc_text, entities=entities_with_position)
+                new_result = Result(text=doc_text, entities=entities_with_position)
                 doc.results[self._task_id] = new_result
             else:
                 # Default empty result
-                doc.results[self._task_id] = Entities(text=doc_text, entities=[])
+                doc.results[self._task_id] = Result(text=doc_text, entities=[])
 
         return docs_list
 

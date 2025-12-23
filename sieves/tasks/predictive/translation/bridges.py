@@ -13,6 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.translation.schemas import Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -97,10 +98,12 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.translation) == 1
-            doc.results[self._task_id] = result.translation
+            res = Result(translation=result.translation)
+            doc.results[self._task_id] = res
 
             if self._overwrite:
-                doc.text = result.translation
+                doc.text = res.translation
+
         return docs
 
     @override
@@ -119,7 +122,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {"translation": ["\n".join(translations)]},
+                    {"translation": [" ".join(translations).strip()]},
                     signature=self.prompt_signature,
                 )
             )
@@ -182,10 +185,11 @@ class PydanticBasedTranslation(
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "translation")
-            doc.results[self._task_id] = result.translation
+            res = Result(translation=result.translation)
+            doc.results[self._task_id] = res
 
             if self._overwrite:
-                doc.text = result.translation
+                doc.text = res.translation
         return docs
 
     @override

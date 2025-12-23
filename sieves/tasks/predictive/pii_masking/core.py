@@ -1,49 +1,33 @@
 """Allows masking of PII (Personally Identifiable Information) in text documents."""
 
+from __future__ import annotations
+
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import Any, override
 
 import datasets
 import dspy
-import pydantic
 
 from sieves.data.doc import Doc
-from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
+from sieves.model_wrappers import ModelType
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.pii_masking.bridges import (
     DSPyPIIMasking,
     LangChainPIIMasking,
     OutlinesPIIMasking,
 )
+from sieves.tasks.predictive.pii_masking.schemas import (
+    FewshotExample,
+    _TaskModel,
+    _TaskPromptSignature,
+    _TaskResult,
+)
 
-_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult = pydantic.BaseModel | dspy_.Result
 _TaskBridge = DSPyPIIMasking | LangChainPIIMasking | OutlinesPIIMasking
-
-
-class PIIEntity(pydantic.BaseModel, frozen=True):
-    """PII entity."""
-
-    entity_type: str
-    text: str
-
-
-class FewshotExample(BaseFewshotExample):
-    """Example for PII masking few-shot prompting."""
-
-    masked_text: str
-    pii_entities: list[PIIEntity]
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return "masked_text", "pii_entities"
 
 
 class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -182,7 +166,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
 
         # Fetch data used for generating dataset.
         try:
-            data = [(doc.text, doc.results[self._task_id]["masked_text"]) for doc in docs]
+            data = [(doc.text, doc.results[self._task_id].masked_text) for doc in docs]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 

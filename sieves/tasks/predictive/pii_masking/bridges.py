@@ -13,6 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.pii_masking.schemas import PIIEntity, Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -89,13 +90,12 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         pii_types = self._pii_types
         PIIType = Literal[*pii_types] if pii_types else str  # type: ignore[invalid-type-form]
 
-        class PIIEntity(pydantic.BaseModel, frozen=True):
+        class PIIEntityRuntime(PIIEntity):
             """PII entity."""
 
             entity_type: PIIType  # type: ignore[valid-type]
-            text: str
 
-        return PIIEntity
+        return PIIEntityRuntime
 
 
 class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -148,10 +148,10 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
         """Integrate results into docs."""
         for doc, result in zip(docs, results):
             # Store masked text and PII entities in results
-            doc.results[self._task_id] = {
-                "masked_text": result.masked_text,
-                "pii_entities": result.pii_entities,
-            }
+            res = Result(
+                masked_text=result.masked_text, pii_entities=[PIIEntity.model_validate(e) for e in result.pii_entities]
+            )
+            doc.results[self._task_id] = res
 
             if self._overwrite:
                 doc.text = result.masked_text
@@ -182,7 +182,7 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {"masked_text": [" ".join(masked_texts)], "pii_entities": [entities]},
+                    {"masked_text": [" ".join(masked_texts).strip()], "pii_entities": [entities]},
                     signature=self.prompt_signature,
                 )
             )
@@ -256,7 +256,9 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
             assert hasattr(result, "masked_text")
             assert hasattr(result, "pii_entities")
             # Store masked text and PII entities in results
-            doc.results[self._task_id] = {"masked_text": result.masked_text, "pii_entities": result.pii_entities}
+            doc.results[self._task_id] = Result(
+                masked_text=result.masked_text, pii_entities=[PIIEntity.model_validate(e) for e in result.pii_entities]
+            )
 
             if self._overwrite:
                 doc.text = result.masked_text
@@ -291,7 +293,7 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                         seen_entities.add(entity)
 
             consolidated_results.append(
-                self.prompt_signature(masked_text=" ".join(masked_texts), pii_entities=entities)
+                self.prompt_signature(masked_text=" ".join(masked_texts).strip(), pii_entities=entities)
             )
         return consolidated_results
 

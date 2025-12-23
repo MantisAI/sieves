@@ -13,6 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.question_answering.schemas import Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -96,29 +97,34 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            assert len(result.answers) == len(self._questions)
-            doc.results[self._task_id] = result.answers
+            assert len(result.completions.answers) == 1
+            doc.results[self._task_id] = Result(answers=result.answers)
         return docs
 
     @override
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        # Merge all QAs.
+        # Determine label scores for chunks per document.
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
+            answers_per_question: list[list[str]] = [[] for _ in self._questions]
             doc_results = results[doc_offset[0] : doc_offset[1]]
-            answers: list[str] = [""] * len(self._questions)
 
             for res in doc_results:
                 if res is None:
                     continue
-
                 for i, answer in enumerate(res.answers):
-                    answers[i] = f"{answers[i]} {answer}".strip()
+                    answers_per_question[i].append(answer)
+
+            # Join answers for each question across chunks.
+            joined_answers = [" ".join(answers).strip() for answers in answers_per_question]
 
             consolidated_results.append(
-                dspy.Prediction.from_completions({"answers": [answers]}, signature=self.prompt_signature)
+                dspy.Prediction.from_completions(
+                    {"answers": [joined_answers]},
+                    signature=self.prompt_signature,
+                )
             )
         return consolidated_results
 
@@ -190,7 +196,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "answers")
-            doc.results[self._task_id] = result.answers
+            doc.results[self._task_id] = Result(answers=result.answers)
         return docs
 
     @override

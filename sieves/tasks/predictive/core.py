@@ -10,75 +10,27 @@ import sys
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Generic, Self
+from typing import Any, Generic
 
 import datasets
 import dspy
-import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelType, ModelWrapper, ModelWrapperInferenceMode  # noqa: F401
+from sieves.model_wrappers import ModelType, ModelWrapperInferenceMode  # noqa: F401
 from sieves.model_wrappers.types import ModelSettings, TokenUsage
 from sieves.model_wrappers.utils import init_model_wrapper
 from sieves.serialization import Config
 from sieves.tasks import optimization
 from sieves.tasks.core import Task
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import TaskBridge, TaskPromptSignature, TaskResult
+from sieves.tasks.predictive.schemas import (
+    EvaluationSignature,
+    FewshotExample,
+    TaskBridge,
+    TaskPromptSignature,
+    TaskResult,
+)
 from sieves.tasks.types import Model
-
-
-class EvaluationSignature(dspy.Signature):
-    """Evaluate similarity between ground truth and predicted outputs."""
-
-    target_fields: str = dspy.InputField(desc="Names of output fields being compared.")
-    ground_truth: str = dspy.InputField(desc="Ground truth output values.")
-    prediction: str = dspy.InputField(desc="Predicted output values.")
-
-    similarity_score: float = dspy.OutputField(
-        desc="Similarity score between 0.0 and 1.0, where 1.0 means identical and 0.0 means completely different."
-    )
-
-
-class FewshotExample(pydantic.BaseModel):
-    """Few-shot example.
-
-    :params text: Input text.
-    """
-
-    text: str
-
-    @property
-    def input_fields(self) -> Sequence[str]:
-        """Defines which fields are inputs.
-
-        :return: Sequence of field names.
-        """
-        return ("text",)
-
-    @property
-    @abc.abstractmethod
-    def target_fields(self) -> Sequence[str]:
-        """Define which fields are targets, i.e. the end results the task aims to produce.
-
-        :return: Sequence of field names.
-        """
-
-    def to_dspy(self) -> dspy.Example:
-        """Convert to `dspy.Example`.
-
-        :returns: Example as `dspy.Example`.
-        """
-        return dspy.Example(**ModelWrapper.convert_fewshot_examples([self])[0]).with_inputs(*self.input_fields)
-
-    @classmethod
-    def from_dspy(cls, example: dspy.Example) -> Self:
-        """Convert from `dspy.Example`.
-
-        :param example: Example as `dspy.Example`.
-        :returns: Example as `FewshotExample`.
-        """
-        return cls(**example)
 
 
 class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task, abc.ABC):

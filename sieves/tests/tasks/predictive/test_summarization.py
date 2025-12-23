@@ -48,6 +48,10 @@ def test_run(summarization_docs, batch_runtime, fewshot) -> None:
     for doc in docs:
         assert doc.text
         assert "Summarization" in doc.results
+
+        # Verify unified result types.
+        assert isinstance(doc.results["Summarization"], summarization.Result)
+
         assert "Summarization" in doc.meta
         assert "raw" in doc.meta["Summarization"]
         assert "usage" in doc.meta["Summarization"]

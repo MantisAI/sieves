@@ -7,42 +7,26 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
-import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
+from sieves.model_wrappers import ModelType
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.question_answering.bridges import (
     DSPyQA,
     LangChainQA,
     OutlinesQA,
 )
+from sieves.tasks.predictive.question_answering.schemas import (
+    FewshotExample,
+    _TaskModel,
+    _TaskPromptSignature,
+    _TaskResult,
+)
 
-_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult = pydantic.BaseModel | dspy_.Result
 _TaskBridge = DSPyQA | LangChainQA | OutlinesQA
-
-
-class FewshotExample(BaseFewshotExample):
-    """Few-shot example with questions and answers for a context."""
-
-    questions: tuple[str, ...] | list[str]
-    answers: tuple[str, ...] | list[str]
-
-    @override
-    @property
-    def input_fields(self) -> Sequence[str]:
-        return "text", "questions"
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return ("answers",)
 
 
 class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -138,7 +122,7 @@ class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
 
         # Fetch data used for generating dataset.
         try:
-            data = [(doc.text, doc.results[self._task_id]) for doc in docs]
+            data = [(doc.text, doc.results[self._task_id].answers) for doc in docs]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 

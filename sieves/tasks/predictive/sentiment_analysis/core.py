@@ -8,46 +8,26 @@ from typing import Any, override
 
 import datasets
 import dspy
-import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
+from sieves.model_wrappers import ModelType
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.sentiment_analysis.bridges import (
     DSPySentimentAnalysis,
     LangChainSentimentAnalysis,
     OutlinesSentimentAnalysis,
 )
+from sieves.tasks.predictive.sentiment_analysis.schemas import (
+    FewshotExample,
+    _TaskModel,
+    _TaskPromptSignature,
+    _TaskResult,
+)
 
-_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult = str | pydantic.BaseModel | dspy_.Result
 _TaskBridge = DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSentimentAnalysis
-
-
-class FewshotExample(BaseFewshotExample):
-    """Few-shot example with per-aspect sentiment scores."""
-
-    sentiment_per_aspect: dict[str, float]
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return ("sentiment_per_aspect",)
-
-    @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> FewshotExample:
-        """Validate that 'overall' exists and all scores are in [0, 1]."""
-        assert "overall" in self.sentiment_per_aspect, ValueError(
-            "'overall' score has to be given in `sentiment_per_aspect` dict."
-        )
-        if any([conf for conf in self.sentiment_per_aspect.values() if not 0 <= conf <= 1]):
-            raise ValueError("Sentiment score has to be between 0 and 1.")
-        return self
 
 
 class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -156,7 +136,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
         # Fetch data used for generating dataset.
         aspects = self._aspects
         try:
-            data = [(doc.text, doc.results[self._task_id]) for doc in docs]
+            data = [(doc.text, doc.results[self._task_id].sentiment_per_aspect) for doc in docs]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
@@ -165,8 +145,7 @@ class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskB
 
             :return: Results as dicts.
             """
-            for text, result in data:
-                scores = {sent_score[0]: sent_score[1] for sent_score in result}
+            for text, scores in data:
                 yield {"text": text, "aspect": [scores[aspect] for aspect in aspects]}
 
         # Create dataset.

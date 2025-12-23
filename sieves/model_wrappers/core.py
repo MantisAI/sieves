@@ -138,9 +138,14 @@ class ModelWrapper[ModelWrapperPromptSignature, ModelWrapperResult, ModelWrapper
             try:
                 # Handle both standard transformers and tiktoken-style tokenizers.
                 encoded = tokenizer.encode(text)
-                return len(encoded)
             except Exception:
                 return None
+
+            # `transformers` tokenizers will have the token IDs nested.
+            try:
+                return len(encoded[0][0])
+            except Exception:
+                return len(encoded)
         return None
 
 

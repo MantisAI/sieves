@@ -7,37 +7,26 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
-import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelType, dspy_, langchain_, outlines_
+from sieves.model_wrappers import ModelType
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.summarization.bridges import (
     DSPySummarization,
     LangChainSummarization,
     OutlinesSummarization,
 )
+from sieves.tasks.predictive.summarization.schemas import (
+    FewshotExample,
+    _TaskModel,
+    _TaskPromptSignature,
+    _TaskResult,
+)
 
-_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult = outlines_.Result | dspy_.Result
 _TaskBridge = DSPySummarization | LangChainSummarization | OutlinesSummarization
-
-
-class FewshotExample(BaseFewshotExample):
-    """Few-shot example with a target summary."""
-
-    n_words: int
-    summary: str
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return ("summary",)
 
 
 class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -135,7 +124,7 @@ class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridg
 
         # Fetch data used for generating dataset.
         try:
-            data = [(doc.text, doc.results[self._task_id]) for doc in docs]
+            data = [(doc.text, doc.results[self._task_id].summary) for doc in docs]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 

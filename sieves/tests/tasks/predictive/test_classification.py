@@ -65,6 +65,13 @@ def _run(
         assert doc.text
         assert doc
         assert "classifier" in doc.results
+
+        # Verify unified result types.
+        if multilabel:
+            assert isinstance(doc.results["classifier"], classification.ResultMultiLabel)
+        else:
+            assert isinstance(doc.results["classifier"], classification.ResultSingleLabel)
+
         assert "classifier" in doc.meta
         assert "raw" in doc.meta["classifier"]
         assert "usage" in doc.meta["classifier"]

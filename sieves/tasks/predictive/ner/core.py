@@ -9,50 +9,23 @@ from typing import Any, override
 import datasets
 import dspy
 import gliner2
-import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import (
-    ModelType,
-    dspy_,
-    gliner_,
-    huggingface_,
-    langchain_,
-    outlines_,
-)
+from sieves.model_wrappers import ModelType
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import EntityWithContext, GliNERBridge
-from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.predictive.gliner_bridge import GliNERBridge
 from sieves.tasks.predictive.ner.bridges import DSPyNER, LangChainNER, OutlinesNER
-
-_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = Any
-_TaskResult = (
-    list[tuple[str, int, int]]
-    | list[tuple[str, str, int, int]]
-    | pydantic.BaseModel
-    | dspy_.Result
-    | gliner_.Result
-    | huggingface_.Result
-    | langchain_.Result
-    | outlines_.Result
+from sieves.tasks.predictive.ner.schemas import (
+    FewshotExample,
+    _TaskModel,
+    _TaskPromptSignature,
+    _TaskResult,
 )
+
 _TaskBridge = DSPyNER | GliNERBridge | LangChainNER | OutlinesNER
-
-
-class FewshotExample(BaseFewshotExample):
-    """Few‑shot example with entities annotated in text."""
-
-    text: str
-    entities: list[EntityWithContext]
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return ("entities",)
 
 
 class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
@@ -137,6 +110,8 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         if model_type == ModelType.gliner:
+            from sieves.model_wrappers import gliner_
+
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,

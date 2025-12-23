@@ -5,4 +5,3 @@ A `Bridge` acts as an intermediary between a `Task` and a `ModelWrapper`. It is 
 ---
 
 ::: sieves.tasks.predictive.bridges.Bridge
-::: sieves.tasks.predictive.bridges.GliNERBridge

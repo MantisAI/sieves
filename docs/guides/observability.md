@@ -88,7 +88,7 @@ for i, chunk_usage in enumerate(task_meta['usage']['chunks']):
 For backends like **DSPy** and **LangChain**, `sieves` extracts token counts directly from the model provider's metadata (e.g., OpenAI or Anthropic response headers). This is the most accurate form of tracking.
 
 !!! note "DSPy Caching"
-    DSPy's internal caching may return 0 or `None` for tokens if a result is retrieved from the local cache rather than the remote API.
+    DSPy manages its own internal caching layer. When a result is retrieved from DSPy's local cache rather than a remote API, token counts will be reported as `None`.
 
 ### Approximate Estimation (Outlines, HuggingFace, GliNER)
 For local models or frameworks that don't expose native counts, `sieves` uses the model's own **tokenizer** to estimate usage:

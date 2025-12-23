@@ -5,22 +5,24 @@ The `Classification` task categorizes documents into predefined labels.
 ## Usage
 
 ### Simple List of Labels
-
-You can provide a simple list of strings as labels.
-
-```python
---8<-- "sieves/tests/docs/test_task_usage.py:classification-list"
-```
-
-### Labels with Descriptions (Recommended)
-
-Providing descriptions for each label helps the model understand the nuances of your classification scheme, often leading to better accuracy.
-
+...
 ```python
 --8<-- "sieves/tests/docs/test_task_usage.py:classification-dict"
 ```
+
+## Results
+
+The `Classification` task returns a unified result schema regardless of the model backend used.
+
+```python
+--8<-- "sieves/tasks/predictive/classification/schemas.py:Result"
+```
+
+- When `multi_label=True` (default): results are of type `ResultMultiLabel`, containing a list of `(label, score)` tuples.
+- When `multi_label=False`: results are of type `ResultSingleLabel`, containing a single `label` and `score`.
 
 ---
 
 ::: sieves.tasks.predictive.classification.core
 ::: sieves.tasks.predictive.classification.bridges
+::: sieves.tasks.predictive.classification.schemas

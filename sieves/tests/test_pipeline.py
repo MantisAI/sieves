@@ -69,6 +69,8 @@ def test_caching(batch_runtime) -> None:
     docs = list(pipe(docs))
     assert pipe._cache_stats == {"hits": 9, "misses": 1, "total": 10, "unique": 1}
     assert len(docs) == n_docs
+    assert docs[0].meta["cached"] is False
+    assert all(doc.meta["cached"] is True for doc in docs[1:])
 
     # Test that uniqueness filtering works while preserving sequence of Docs.
 
@@ -78,6 +80,9 @@ def test_caching(batch_runtime) -> None:
     assert docs[0].text == docs[2].text == text_science
     assert docs[1].text == text_politics
     assert pipe._cache_stats == {"hits": 1, "misses": 2, "total": 3, "unique": 2}
+    assert docs[0].meta["cached"] is False
+    assert docs[1].meta["cached"] is False
+    assert docs[2].meta["cached"] is True
 
     # Compare uncached with cached mode with identical documents.
 
@@ -97,6 +102,10 @@ def test_caching(batch_runtime) -> None:
     assert len(uncached_docs) == len(cached_docs) == n_docs
     assert cached_pipe._cache_stats == {"hits": 9, "misses": 1, "total": 10, "unique": 1}
     assert uncached_pipe._cache_stats == {"hits": 0, "misses": 10, "total": 10, "unique": 0}
+    assert uncached_docs[0].meta["cached"] is False
+    assert all(doc.meta["cached"] is False for doc in uncached_docs)
+    assert cached_docs[0].meta["cached"] is False
+    assert all(doc.meta["cached"] is True for doc in cached_docs[1:])
     # Relaxed speed-up requirement: cached pipe should be faster that uncached pipe.
     # This can be a bit flaky, but 3x is usually on the safer side.
     assert cached_time * 3 < uncached_time

@@ -1,5 +1,11 @@
-"""Information extraction task."""
+"""Translation task."""
 
-from .core import FewshotExample, Translation, _TaskPromptSignature, _TaskResult
+from sieves.tasks.predictive.translation.core import Translation
+from sieves.tasks.predictive.translation.schemas import (
+    FewshotExample,
+    Result,
+    _TaskPromptSignature,
+    _TaskResult,
+)
 
-__all__ = ["Translation", "FewshotExample", "_TaskResult", "_TaskPromptSignature"]
+__all__ = ["Translation", "FewshotExample", "Result", "_TaskResult", "_TaskPromptSignature"]

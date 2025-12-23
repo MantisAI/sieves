@@ -8,6 +8,7 @@ from typing import Any, Literal, override
 import json_repair
 import outlines
 import pydantic
+import tiktoken
 from outlines.models import AsyncBlackBoxModel, BlackBoxModel, SteerableModel
 
 from sieves.model_wrappers.core import Executable, PydanticModelWrapper
@@ -150,8 +151,6 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
         # Fall back to tiktoken for remote OpenAI-compatible models if no tokenizer found.
         if not tokenizer:
             try:
-                import tiktoken
-
                 # Default to o200k_base for newer models if specific model encoding not found.
                 tokenizer = tiktoken.get_encoding("o200k_base")
             except ImportError:

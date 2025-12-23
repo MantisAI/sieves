@@ -42,8 +42,11 @@ def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
     assert len(docs) == 2
     for doc in docs:
         assert doc.text
-        assert doc.results["sentiment_analysis"]
         assert "sentiment_analysis" in doc.results
+
+        # Verify unified result types.
+        assert isinstance(doc.results["sentiment_analysis"], sentiment_analysis.Result)
+
         assert "sentiment_analysis" in doc.meta
         assert "raw" in doc.meta["sentiment_analysis"]
         assert "usage" in doc.meta["sentiment_analysis"]
