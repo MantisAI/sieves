@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - A document-centric pipeline (`Pipeline`) with caching and serialization
 - Preprocessing tasks (document ingestion, text chunking)
-- Predictive tasks (classification, NER, information extraction, QA, summarization, translation, sentiment analysis, PII masking)
+- Predictive tasks (classification, NER, information extraction, relation extraction, QA, summarization, translation, sentiment analysis, PII masking)
 - A unified model interface over structured-generation frameworks (Outlines, DSPy, Instructor, LangChain, Transformers, Ollama, GLiNER, etc.)
 - Postprocessing and model distillation helpers
 
@@ -32,7 +32,7 @@ sieves/                    # Core library
 ├── data/                  # Document model (Doc class)
 ├── pipeline/              # Pipeline orchestration and caching
 ├── tasks/                 # Preprocessing, predictive, and postprocessing tasks
-│   ├── predictive/        # 8 task types (classification, NER, IE, etc.)
+│   ├── predictive/        # 9 task types (classification, NER, IE, RE, etc.)
 │   └── preprocessing/     # Ingestion and chunking
 ├── model_wrappers/        # Unified interface to structured generation backends
 └── serialization/         # Config and persistence helpers
@@ -436,17 +436,18 @@ Key changes that affect development (last ~2-3 months):
 
 1. **Token Counting and Raw Output Observability** - Implemented comprehensive token usage tracking (input/output) and raw model response capturing in `doc.meta`. Usage is aggregated per-task and per-document.
 2. **Information Extraction Single/Multi Mode** - Added `mode` parameter to `InformationExtraction` task for single vs multi entity extraction.
-2. **GliNERBridge Refactoring** - Consolidated NER logic into `GliNERBridge`, removing dedicated `GlinerNER` class.
-3. **Documentation Enhancements** - Standardized documentation with usage snippets (tested) and library links across all tasks and model wrappers.
-4. **All Model wrappers as Core Dependencies** (#210) - Outlines, DSPy, LangChain, Transformers, and GLiNER2 are now included in base installation
-5. **DSPy v3 Migration** (#192) - Upgraded to DSPy v3 (breaking API changes from v2)
-6. **GliNER2 Migration** (#202) - Migrated from GliNER v1 to GLiNER2 for improved NER performance
-7. **ModelSettings Refactoring** (#194) - `inference_mode` moved into ModelSettings (simplified task init)
-8. **Conditional Task Execution** (#195) - Added `condition` parameter for filtering docs during execution
-9. **Non-strict Execution Support** (#196) - Better error handling; `strict=False` allows graceful failures
-10. **Standardized Output Fields** (#206) - Normalized descriptive/ID attribute naming across tasks
-11. **Chonkie Integration** - Token-based chunking framework now primary chunking backend
-12. **Optional Progress Bars** (#197) - Progress display now configurable per task
+3. **GliNERBridge Refactoring** - Consolidated NER logic into `GliNERBridge`, removing dedicated `GlinerNER` class.
+4. **Documentation Enhancements** - Standardized documentation with usage snippets (tested) and library links across all tasks and model wrappers.
+5. **All Model wrappers as Core Dependencies** (#210) - Outlines, DSPy, LangChain, Transformers, and GLiNER2 are now included in base installation
+6. **DSPy v3 Migration** (#192) - Upgraded to DSPy v3 (breaking API changes from v2)
+7. **Relation Extraction Task** - Added `RelationExtraction` task supporting DSPy, LangChain, Outlines, and GLiNER2.
+8. **GliNER2 Migration** (#202) - Migrated from GliNER v1 to GLiNER2 for improved NER performance
+9. **ModelSettings Refactoring** (#194) - `inference_mode` moved into ModelSettings (simplified task init)
+10. **Conditional Task Execution** (#195) - Added `condition` parameter for filtering docs during execution
+11. **Non-strict Execution Support** (#196) - Better error handling; `strict=False` allows graceful failures
+12. **Standardized Output Fields** (#206) - Normalized descriptive/ID attribute naming across tasks
+13. **Chonkie Integration** - Token-based chunking framework now primary chunking backend
+14. **Optional Progress Bars** (#197) - Progress display now configurable per task
 
 ---
 

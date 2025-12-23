@@ -12,10 +12,14 @@
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17633730.svg)](https://doi.org/10.5281/zenodo.17633730)
 
-## A Unified Interface for Document AI Applications.
+## A Unified Interface for Document AI.
 
-`sieves` provides a stable, framework-agnostic abstraction for building document AI pipelines.
-Just as `sqlalchemy` provides a unified interface for interchangeable database drivers, `sieves` offers a consistent API for predictive tasks while allowing you to swap the underlying language model frameworks without changing your core application logic.
+`sieves` provides a **framework-agnostic abstraction for building document AI pipelines**.
+
+It decouples business logic from the underlying language model framework. By combining a
+ready-to-use task library with declarative design, `sieves` lets you focus on what data you need rather than how to
+extract it. Its consistent, type-safe API allows you to swap language model frameworks without having to rewrite your
+application logic.
 
 This approach recognizes that different LM frameworks excel at different aspects of language model development:
 *   [`outlines`](https://github.com/dottxt-ai/outlines) for high-performance, strictly constrained structured generation with local models.
