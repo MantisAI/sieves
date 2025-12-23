@@ -13,11 +13,11 @@ The `QuestionAnswering` task answers questions based on the content of the docum
 The `QuestionAnswering` task returns a unified `Result` object containing a list of `answers` corresponding to the input questions.
 
 ```python
---8<-- "sieves/tasks/predictive/question_answering/schemas.py:Result"
+--8<-- "sieves/tasks/predictive/schemas/question_answering.py:Result"
 ```
 
 ---
 
 ::: sieves.tasks.predictive.question_answering.core
 ::: sieves.tasks.predictive.question_answering.bridges
-::: sieves.tasks.predictive.question_answering.schemas
+::: sieves.tasks.predictive.schemas.question_answering

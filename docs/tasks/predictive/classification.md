@@ -15,7 +15,7 @@ The `Classification` task categorizes documents into predefined labels.
 The `Classification` task returns a unified result schema regardless of the model backend used.
 
 ```python
---8<-- "sieves/tasks/predictive/classification/schemas.py:Result"
+--8<-- "sieves/tasks/predictive/schemas/classification.py:Result"
 ```
 
 - When `multi_label=True` (default): results are of type `ResultMultiLabel`, containing a list of `(label, score)` tuples.
@@ -25,4 +25,4 @@ The `Classification` task returns a unified result schema regardless of the mode
 
 ::: sieves.tasks.predictive.classification.core
 ::: sieves.tasks.predictive.classification.bridges
-::: sieves.tasks.predictive.classification.schemas
+::: sieves.tasks.predictive.schemas.classification

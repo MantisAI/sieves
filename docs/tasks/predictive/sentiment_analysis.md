@@ -13,11 +13,11 @@ The `SentimentAnalysis` task determines the sentiment of the text (e.g., positiv
 The `SentimentAnalysis` task returns a unified `Result` object containing a `sentiment_per_aspect` dictionary.
 
 ```python
---8<-- "sieves/tasks/predictive/sentiment_analysis/schemas.py:Result"
+--8<-- "sieves/tasks/predictive/schemas/sentiment_analysis.py:Result"
 ```
 
 ---
 
 ::: sieves.tasks.predictive.sentiment_analysis.core
 ::: sieves.tasks.predictive.sentiment_analysis.bridges
-::: sieves.tasks.predictive.sentiment_analysis.schemas
+::: sieves.tasks.predictive.schemas.sentiment_analysis

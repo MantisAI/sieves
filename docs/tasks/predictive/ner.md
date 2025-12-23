@@ -25,11 +25,11 @@ Providing descriptions for each entity type helps the model understand exactly w
 The `NER` task returns a unified `Result` object (an alias for `Entities`) containing a list of `Entity` objects and the source text.
 
 ```python
---8<-- "sieves/tasks/predictive/ner/schemas.py:Result"
+--8<-- "sieves/tasks/predictive/schemas/ner.py:Result"
 ```
 
 ---
 
 ::: sieves.tasks.predictive.ner.core
 ::: sieves.tasks.predictive.ner.bridges
-::: sieves.tasks.predictive.ner.schemas
+::: sieves.tasks.predictive.schemas.ner

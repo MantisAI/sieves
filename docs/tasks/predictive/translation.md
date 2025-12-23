@@ -13,11 +13,11 @@ The `Translation` task translates documents into a target language.
 The `Translation` task returns a unified `Result` object containing the `translation`.
 
 ```python
---8<-- "sieves/tasks/predictive/translation/schemas.py:Result"
+--8<-- "sieves/tasks/predictive/schemas/translation.py:Result"
 ```
 
 ---
 
 ::: sieves.tasks.predictive.translation.core
 ::: sieves.tasks.predictive.translation.bridges
-::: sieves.tasks.predictive.translation.schemas
+::: sieves.tasks.predictive.schemas.translation
