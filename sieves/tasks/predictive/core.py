@@ -23,7 +23,7 @@ from sieves.serialization import Config
 from sieves.tasks import optimization
 from sieves.tasks.core import Task
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.schemas import (
+from sieves.tasks.predictive.schemas.core import (
     EvaluationSignature,
     FewshotExample,
     TaskBridge,
@@ -246,7 +246,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
 
         :param config: Config to generate instance from.
         :param kwargs: Values to inject into loaded config.
-        :return PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]: Deserialized PredictiveTask instance.
+        :return PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]: Deserialized PredictiveTask instance.
         """
         init_dict = config.to_init_dict(cls, **kwargs)
         init_dict["model_settings"] = ModelSettings.model_validate(init_dict["model_settings"])

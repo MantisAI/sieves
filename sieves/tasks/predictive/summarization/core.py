@@ -14,28 +14,28 @@ from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.predictive.schemas.summarization import (
+    FewshotExample,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
+)
 from sieves.tasks.predictive.summarization.bridges import (
     DSPySummarization,
     LangChainSummarization,
     OutlinesSummarization,
 )
-from sieves.tasks.predictive.summarization.schemas import (
-    FewshotExample,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
-)
 
 _TaskBridge = DSPySummarization | LangChainSummarization | OutlinesSummarization
 
 
-class Summarization(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Summarize documents to a target length using structured model wrappers."""
 
     def __init__(
         self,
         n_words: int,
-        model: _TaskModel,
+        model: TaskModel,
         task_id: str | None = None,
         include_meta: bool = True,
         batch_size: int = -1,

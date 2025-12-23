@@ -20,7 +20,7 @@ from sieves.model_wrappers import (
 )
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
-from sieves.tasks.predictive.classification.schemas import ResultMultiLabel, ResultSingleLabel
+from sieves.tasks.predictive.schemas.classification import ResultMultiLabel, ResultSingleLabel
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")

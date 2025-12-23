@@ -23,12 +23,12 @@ from sieves.tasks.predictive.information_extraction.bridges import (
     LangChainInformationExtraction,
     OutlinesInformationExtraction,
 )
-from sieves.tasks.predictive.information_extraction.schemas import (
+from sieves.tasks.predictive.schemas.information_extraction import (
     FewshotExampleMulti,
     FewshotExampleSingle,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
@@ -37,13 +37,13 @@ _TaskBridge = GliNERBridge | DSPyInformationExtraction | LangChainInformationExt
 FewshotExample = FewshotExampleMulti | FewshotExampleSingle
 
 
-class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Information extraction task."""
 
     def __init__(
         self,
         entity_type: type[pydantic.BaseModel] | gliner2.inference.engine.StructureBuilder,
-        model: _TaskModel,
+        model: TaskModel,
         task_id: str | None = None,
         include_meta: bool = True,
         batch_size: int = -1,

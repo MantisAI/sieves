@@ -23,17 +23,17 @@ from sieves.tasks.predictive.classification.bridges import (
     LangChainClassification,
     OutlinesClassification,
 )
-from sieves.tasks.predictive.classification.schemas import (
+from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.predictive.gliner_bridge import GliNERBridge
+from sieves.tasks.predictive.schemas.classification import (
     FewshotExampleMultiLabel,
     FewshotExampleSingleLabel,
     ResultMultiLabel,
     ResultSingleLabel,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
 )
-from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.gliner_bridge import GliNERBridge
 
 _TaskBridge = (
     DSPyClassification | GliNERBridge | LangChainClassification | HuggingFaceClassification | OutlinesClassification
@@ -42,7 +42,7 @@ _TaskBridge = (
 FewshotExample = FewshotExampleMultiLabel | FewshotExampleSingleLabel
 
 
-class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Predictive task for text classification.
 
     Examples:
@@ -68,7 +68,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
     def __init__(
         self,
         labels: Sequence[str] | dict[str, str],
-        model: _TaskModel,
+        model: TaskModel,
         task_id: str | None = None,
         include_meta: bool = True,
         batch_size: int = -1,

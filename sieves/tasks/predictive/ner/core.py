@@ -18,17 +18,17 @@ from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.gliner_bridge import GliNERBridge
 from sieves.tasks.predictive.ner.bridges import DSPyNER, LangChainNER, OutlinesNER
-from sieves.tasks.predictive.ner.schemas import (
+from sieves.tasks.predictive.schemas.ner import (
     FewshotExample,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
 )
 
 _TaskBridge = DSPyNER | GliNERBridge | LangChainNER | OutlinesNER
 
 
-class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Extract named entities from text using various model wrappers.
 
     Examples:
@@ -56,7 +56,7 @@ class NER(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
     def __init__(
         self,
         entities: Sequence[str] | dict[str, str] | None = None,
-        model: _TaskModel | None = None,
+        model: TaskModel | None = None,
         task_id: str | None = None,
         include_meta: bool = True,
         batch_size: int = -1,

@@ -53,6 +53,7 @@ to skip having to define tasks from scratch.
 - :label: **Ready-to-Use Tasks:**
   - Multi-label classification
   - Information extraction
+  - Relation extraction
   - Summarization
   - Translation
   - Multi-question answering

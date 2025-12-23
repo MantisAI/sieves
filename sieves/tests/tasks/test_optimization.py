@@ -6,6 +6,7 @@ import pytest
 from sieves import ModelSettings
 from sieves.model_wrappers import ModelType
 from sieves.tasks.optimization import Optimizer
+from sieves.tasks.predictive import schemas
 from sieves.tasks.predictive import (
     classification,
     sentiment_analysis,
@@ -211,42 +212,42 @@ def test_optimization_ner(optimizer) -> None:
         ner.FewshotExample(
             text='John Smith visited Paris last week.',
             entities=[
-                ner.schemas.EntityWithContext(text='John Smith', context='visited Paris', entity_type='PERSON'),
-                ner.schemas.EntityWithContext(text='Paris', context='John Smith visited', entity_type='LOCATION'),
+                schemas.ner.EntityWithContext(text='John Smith', context='visited Paris', entity_type='PERSON'),
+                schemas.ner.EntityWithContext(text='Paris', context='John Smith visited', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='Apple CEO Tim Cook announced new products.',
             entities=[
-                ner.schemas.EntityWithContext(text='Tim Cook', context='Apple CEO', entity_type='PERSON'),
+                schemas.ner.EntityWithContext(text='Tim Cook', context='Apple CEO', entity_type='PERSON'),
             ]
         ),
         ner.FewshotExample(
             text='The meeting in London was attended by Sarah Johnson.',
             entities=[
-                ner.schemas.EntityWithContext(text='London', context='meeting in', entity_type='LOCATION'),
-                ner.schemas.EntityWithContext(text='Sarah Johnson', context='attended by', entity_type='PERSON'),
+                schemas.ner.EntityWithContext(text='London', context='meeting in', entity_type='LOCATION'),
+                schemas.ner.EntityWithContext(text='Sarah Johnson', context='attended by', entity_type='PERSON'),
             ]
         ),
         ner.FewshotExample(
             text='Berlin is the capital of Germany.',
             entities=[
-                ner.schemas.EntityWithContext(text='Berlin', context='capital of Germany', entity_type='LOCATION'),
+                schemas.ner.EntityWithContext(text='Berlin', context='capital of Germany', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='Maria Rodriguez traveled to Tokyo.',
             entities=[
-                ner.schemas.EntityWithContext(
+                schemas.ner.EntityWithContext(
                     text='Maria Rodriguez', context='traveled to Tokyo', entity_type='PERSON'
                 ),
-                ner.schemas.EntityWithContext(text='Tokyo', context='Maria Rodriguez traveled', entity_type='LOCATION'),
+                schemas.ner.EntityWithContext(text='Tokyo', context='Maria Rodriguez traveled', entity_type='LOCATION'),
             ]
         ),
         ner.FewshotExample(
             text='The conference in New York was successful.',
             entities=[
-                ner.schemas.EntityWithContext(text='New York', context='conference in', entity_type='LOCATION'),
+                schemas.ner.EntityWithContext(text='New York', context='conference in', entity_type='LOCATION'),
             ]
         ),
     ]

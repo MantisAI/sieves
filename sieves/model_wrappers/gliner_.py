@@ -23,6 +23,7 @@ class InferenceMode(enum.Enum):
     classification = 1
     entities = 2
     structure = 3
+    relations = 4
 
 
 class GliNER(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):

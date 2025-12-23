@@ -19,23 +19,23 @@ from sieves.tasks.predictive.question_answering.bridges import (
     LangChainQA,
     OutlinesQA,
 )
-from sieves.tasks.predictive.question_answering.schemas import (
+from sieves.tasks.predictive.schemas.question_answering import (
     FewshotExample,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
 )
 
 _TaskBridge = DSPyQA | LangChainQA | OutlinesQA
 
 
-class QuestionAnswering(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Answer questions about a text using structured model wrappers."""
 
     def __init__(
         self,
         questions: list[str],
-        model: _TaskModel,
+        model: TaskModel,
         task_id: str | None = None,
         include_meta: bool = True,
         batch_size: int = -1,

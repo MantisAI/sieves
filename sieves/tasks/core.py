@@ -11,7 +11,6 @@ from sieves.data import Doc
 from sieves.serialization import Attribute, Config
 
 if TYPE_CHECKING:
-    # Imported only for type checking to avoid import cycles at runtime.
     from sieves.pipeline import Pipeline
 
 

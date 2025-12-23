@@ -226,3 +226,11 @@ def ner_docs() -> list[Doc]:
         Doc(text="John studied data science in Barcelona and lives with Jaume"),
         Doc(text="Maria studied computer engineering in Madrid and works with Carlos"),
     ]
+
+
+@pytest.fixture(scope="session")
+def relation_extraction_docs() -> list[Doc]:
+    return [
+        Doc(text="Henri Dunant founded the Red Cross in Geneva."),
+        Doc(text="Eglantyne Jebb founded Save the Children in London."),
+    ]

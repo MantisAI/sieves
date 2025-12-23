@@ -118,6 +118,7 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
                     return res, history_entry, usage
 
                 calls = [call_with_meta(**doc_values, **self._inference_kwargs) for doc_values in values]
+
                 return list(asyncio.run(self._execute_async_calls(calls)))
 
             except Exception as err:

@@ -14,28 +14,28 @@ from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.predictive.schemas.translation import (
+    FewshotExample,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
+)
 from sieves.tasks.predictive.translation.bridges import (
     DSPyTranslation,
     LangChainTranslation,
     OutlinesTranslation,
 )
-from sieves.tasks.predictive.translation.schemas import (
-    FewshotExample,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
-)
 
 _TaskBridge = DSPyTranslation | LangChainTranslation | OutlinesTranslation
 
 
-class Translation(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Translate documents into a target language using structured model wrappers."""
 
     def __init__(
         self,
         to: str,
-        model: _TaskModel,
+        model: TaskModel,
         task_id: str | None = None,
         include_meta: bool = True,
         batch_size: int = -1,

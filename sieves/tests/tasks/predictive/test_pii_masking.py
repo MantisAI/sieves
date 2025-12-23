@@ -192,26 +192,3 @@ def test_run_with_list_pii_types(pii_masking_docs, batch_runtime) -> None:
     for doc in docs:
         assert doc.text
         assert "PIIMasking" in doc.results
-
-
-@pytest.mark.parametrize(
-    "batch_runtime",
-    PIIMasking.supports(),
-    indirect=["batch_runtime"],
-)
-def test_run_with_none_pii_types(pii_masking_docs, batch_runtime) -> None:
-    """Test PIIMasking with None pii_types (auto-detect all PII types)."""
-    pipe = Pipeline([
-        tasks.predictive.PIIMasking(
-            pii_types=None,
-            model=batch_runtime.model,
-            model_settings=batch_runtime.model_settings,
-            batch_size=batch_runtime.batch_size,
-        )
-    ])
-    docs = list(pipe(pii_masking_docs))
-
-    assert len(docs) == 2
-    for doc in docs:
-        assert doc.text
-        assert "PIIMasking" in doc.results

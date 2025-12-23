@@ -31,7 +31,8 @@ class EvaluationSignature(dspy.Signature):
 class FewshotExample(pydantic.BaseModel):
     """Few-shot example.
 
-    :params text: Input text.
+    Attributes:
+        text: Input text.
     """
 
     text: str
