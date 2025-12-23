@@ -16,14 +16,10 @@ class RelationEntity(pydantic.BaseModel, frozen=True):
     Attributes:
         text: Surface text of the entity.
         entity_type: Type of the entity.
-        start: Character start offset.
-        end: Character end offset.
     """
 
     text: str
     entity_type: str
-    start: int
-    end: int
 
 
 class RelationTriplet(pydantic.BaseModel, frozen=True):

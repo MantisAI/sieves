@@ -217,16 +217,12 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                                 RelationTriplet(
                                     head=RelationEntity(
                                         text=triplet_data["head"]["text"],
-                                        entity_type=triplet_data["head"]["type"],
-                                        start=triplet_data["head"]["start"],
-                                        end=triplet_data["head"]["end"],
+                                        entity_type="UNKNOWN",
                                     ),
                                     relation=rel_type,
                                     tail=RelationEntity(
                                         text=triplet_data["tail"]["text"],
-                                        entity_type=triplet_data["tail"]["type"],
-                                        start=triplet_data["tail"]["start"],
-                                        end=triplet_data["tail"]["end"],
+                                        entity_type="UNKNOWN",
                                     ),
                                 )
                             )
@@ -311,7 +307,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     case gliner_.InferenceMode.relations:
                         # Collect all triplets from all chunks for this document.
                         # Simple unification for now.
-                        relation_data = res.get(self._task_id, {})
+                        relation_data = res.get(self._task_id) or res.get("relation_extraction", {})
                         assert isinstance(relation_data, dict)
 
                         for rel_type, triplets_list in relation_data.items():
@@ -351,7 +347,15 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     if self._inference_mode == gliner_.InferenceMode.structure and self._mode == "single":
                         consolidated_results.append(highest_confidence_entity or {list(res.keys())[0]: []})
                     elif all_entities_list:
-                        consolidated_results.append(all_entities_list)
+                        if self._inference_mode == gliner_.InferenceMode.relations:
+                            # Reconstruct the dict structure for integrate.
+                            reconstructed: dict[str, list[Any]] = defaultdict(list)
+                            for item in all_entities_list:
+                                rel_type = item.pop("relation")
+                                reconstructed[rel_type].append(item)
+                            consolidated_results.append({self._task_id: dict(reconstructed)})
+                        else:
+                            consolidated_results.append(all_entities_list)
                     else:
                         consolidated_results.append(entities)
 

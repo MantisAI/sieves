@@ -140,8 +140,6 @@ class RelationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _Task
             {
                 "text": datasets.Value("string"),
                 "entity_type": datasets.Value("string"),
-                "start": datasets.Value("int32"),
-                "end": datasets.Value("int32"),
             }
         )
         triplet_feature = datasets.Features(
