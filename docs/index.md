@@ -16,7 +16,7 @@ valuable for rapid prototyping scenarios where structured output is needed but t
 There are two more key components that you only need to know if you're a maintainer or want to create your own tasks for
 `sieves`:
 
-1**`ModelWrapper`**: Backend implementations that power the tasks (outlines, dspy, langchain, etc.)
+1. **`ModelWrapper`**: Backend implementations that power the tasks (outlines, dspy, langchain, etc.)
 2. **`Bridge`**: Connectors between Tasks and Model wrappers
 
 ---
