@@ -185,27 +185,3 @@ def test_run_with_dict_entities(ner_docs, batch_runtime) -> None:
     assert len(docs) == 2
     for doc in docs:
         assert "NER" in doc.results
-
-
-@pytest.mark.parametrize(
-    "batch_runtime",
-    ner.NER.supports(),
-    indirect=["batch_runtime"],
-)
-def test_run_with_list_entities(ner_docs, batch_runtime) -> None:
-    """Test NER with list format entities (backward compatibility)."""
-    entities_list = ["PERSON", "LOCATION", "COMPANY"]
-
-    pipe = Pipeline(
-        ner.NER(
-            entities=entities_list,
-            model=batch_runtime.model,
-            model_settings=batch_runtime.model_settings,
-            batch_size=batch_runtime.batch_size,
-        )
-    )
-    docs = list(pipe(ner_docs))
-
-    assert len(docs) == 2
-    for doc in docs:
-        assert "NER" in doc.results

@@ -17,9 +17,9 @@ from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.schemas.sentiment_analysis import (
     FewshotExample,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
 )
 from sieves.tasks.predictive.sentiment_analysis.bridges import (
     DSPySentimentAnalysis,
@@ -30,12 +30,12 @@ from sieves.tasks.predictive.sentiment_analysis.bridges import (
 _TaskBridge = DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSentimentAnalysis
 
 
-class SentimentAnalysis(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Estimate per‑aspect and overall sentiment for a document."""
 
     def __init__(
         self,
-        model: _TaskModel,
+        model: TaskModel,
         model_settings: ModelSettings = ModelSettings(),
         aspects: tuple[str, ...] = tuple(),
         task_id: str | None = None,

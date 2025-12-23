@@ -4,8 +4,8 @@ from sieves.tasks.predictive.ner.core import NER
 from sieves.tasks.predictive.schemas.ner import (
     FewshotExample,
     Result,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskPromptSignature,
+    TaskResult,
 )
 
-__all__ = ["NER", "FewshotExample", "Result", "_TaskResult", "_TaskPromptSignature"]
+__all__ = ["NER", "FewshotExample", "Result", "TaskResult", "TaskPromptSignature"]

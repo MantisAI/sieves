@@ -104,11 +104,11 @@ class FewshotExample(BaseFewshotExample):
         return ("entities",)
 
 
-_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = (
+TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
+TaskPromptSignature = (
     type[dspy.Signature]
     | type[pydantic.BaseModel]
     | gliner2.inference.engine.Schema
     | gliner2.inference.engine.StructureBuilder
 )
-_TaskResult = Result
+TaskResult = Result

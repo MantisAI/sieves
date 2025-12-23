@@ -226,6 +226,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                                     ),
                                 )
                             )
+
                     doc.results[self._task_id] = RelationResult(triplets=triplets)
 
         return docs

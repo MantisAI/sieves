@@ -22,15 +22,15 @@ from sieves.tasks.predictive.pii_masking.bridges import (
 )
 from sieves.tasks.predictive.schemas.pii_masking import (
     FewshotExample,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
 )
 
 _TaskBridge = DSPyPIIMasking | LangChainPIIMasking | OutlinesPIIMasking
 
 
-class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Task for masking PII (Personally Identifiable Information) in text documents.
 
     Examples:
@@ -59,7 +59,7 @@ class PIIMasking(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge])
 
     def __init__(
         self,
-        model: _TaskModel,
+        model: TaskModel,
         pii_types: Sequence[str] | dict[str, str] | None = None,
         mask_placeholder: str = "[MASKED]",
         task_id: str | None = None,

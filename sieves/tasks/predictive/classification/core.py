@@ -30,9 +30,9 @@ from sieves.tasks.predictive.schemas.classification import (
     FewshotExampleSingleLabel,
     ResultMultiLabel,
     ResultSingleLabel,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
 )
 
 _TaskBridge = (
@@ -42,7 +42,7 @@ _TaskBridge = (
 FewshotExample = FewshotExampleMultiLabel | FewshotExampleSingleLabel
 
 
-class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Predictive task for text classification.
 
     Examples:
@@ -68,7 +68,7 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
     def __init__(
         self,
         labels: Sequence[str] | dict[str, str],
-        model: _TaskModel,
+        model: TaskModel,
         task_id: str | None = None,
         include_meta: bool = True,
         batch_size: int = -1,

@@ -96,12 +96,12 @@ class ResultMultiLabel(pydantic.BaseModel):
 # --8<-- [end:Result]
 
 
-_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | huggingface_.Model | outlines_.Model
-_TaskPromptSignature = (
+TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | huggingface_.Model | outlines_.Model
+TaskPromptSignature = (
     type[dspy.Signature]
     | type[pydantic.BaseModel]
     | gliner2.inference.engine.Schema
     | gliner2.inference.engine.StructureBuilder
     | list[str]
 )
-_TaskResult = ResultSingleLabel | ResultMultiLabel
+TaskResult = ResultSingleLabel | ResultMultiLabel

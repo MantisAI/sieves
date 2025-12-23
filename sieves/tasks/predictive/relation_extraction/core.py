@@ -24,21 +24,21 @@ from sieves.tasks.predictive.relation_extraction.bridges import (
 )
 from sieves.tasks.predictive.schemas.relation_extraction import (
     FewshotExample,
-    _TaskModel,
-    _TaskPromptSignature,
-    _TaskResult,
+    TaskModel,
+    TaskPromptSignature,
+    TaskResult,
 )
 
 _TaskBridge = GliNERBridge | DSPyRelationExtraction | LangChainRelationExtraction | OutlinesRelationExtraction
 
 
-class RelationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBridge]):
+class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Extract relations between entities in text."""
 
     def __init__(
         self,
         relations: Sequence[str] | dict[str, str],
-        model: _TaskModel,
+        model: TaskModel,
         entity_types: Sequence[str] | dict[str, str] | None = None,
         task_id: str | None = None,
         include_meta: bool = True,

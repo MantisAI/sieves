@@ -52,6 +52,6 @@ class Result(pydantic.BaseModel):
 # --8<-- [end:Result]
 
 
-_TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = type[dspy.Signature] | type[pydantic.BaseModel]
-_TaskResult = Result
+TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
+TaskPromptSignature = type[dspy.Signature] | type[pydantic.BaseModel]
+TaskResult = Result
