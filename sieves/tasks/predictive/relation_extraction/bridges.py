@@ -57,22 +57,23 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
             overwrite=False,
             model_settings=model_settings,
         )
+
         if isinstance(relations, dict):
             self._relations: list[str] = list(relations.keys())
             self._relation_descriptions: dict[str, str] = relations
         else:
-            self._relations = relations
-            self._relation_descriptions = {}
+            self._relations: list[str] = relations
+            self._relation_descriptions: dict[str, str] = {}
+
+        self._entity_types: list[str] | None = None
+        self._entity_type_descriptions: dict[str, str] = {}
 
         if isinstance(entity_types, dict):
-            self._entity_types: list[str] | None = list(entity_types.keys())
-            self._entity_type_descriptions: dict[str, str] = entity_types
+            self._entity_types = list(entity_types.keys())
+            self._entity_type_descriptions = entity_types
         elif entity_types is not None:
             self._entity_types = entity_types
-            self._entity_type_descriptions = {}
-        else:
-            self._entity_types = None
-            self._entity_type_descriptions = {}
+            self._entity_type_descriptions: dict[str, str] = {}
 
     def _get_relation_descriptions(self) -> str:
         """Return relation descriptions as a string.
@@ -97,6 +98,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         """
         if self._entity_types is None:
             return "Unbounded"
+
         descs: list[str] = []
         for et in self._entity_types:
             if et in self._entity_type_descriptions:
@@ -106,35 +108,31 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
                 )
             else:
                 descs.append(et)
+
         return "\n\t\t\t".join(descs)
 
-    def _get_dynamic_signature_models(self) -> tuple[type[pydantic.BaseModel], type[pydantic.BaseModel]]:
-        """Create dynamic models for entities and triplets with strict type constraints.
+    def _get_dynamic_relation_triple_model(self) -> type[pydantic.BaseModel]:
+        """Create dynamic model for triplets with strict type constraints.
 
-        :return: A tuple of (EntityModel, TripletModel).
+        :return: Triplet model.
         """
         AllowedEntityType = Literal[*self._entity_types] if self._entity_types else str  # type: ignore[valid-type]
         AllowedRelationType = Literal[*self._relations] if self._relations else str  # type: ignore[valid-type]
 
-        EntityModel = pydantic.create_model(
-            f"_RelationEntityWithContext_{self._task_id}",
-            text=(str, ...),
-            context=(str, ...),
-            entity_type=(AllowedEntityType, ...),
-            __module__=__name__,
-        )
-        EntityModel.__doc__ = RelationEntityWithContext.__doc__
+        class _RelationEntityWithContext(pydantic.BaseModel):
+            text: str
+            context: str
+            entity_type: AllowedEntityType
 
-        TripletModel = pydantic.create_model(
-            f"_RelationTripletWithContext_{self._task_id}",
-            head=(EntityModel, ...),
-            relation=(AllowedRelationType, ...),
-            tail=(EntityModel, ...),
-            __module__=__name__,
-        )
-        TripletModel.__doc__ = RelationTripletWithContext.__doc__
+        class _RelationTripletWithContext(pydantic.BaseModel):
+            head: _RelationEntityWithContext
+            relation: AllowedRelationType
+            tail: _RelationEntityWithContext
 
-        return EntityModel, TripletModel
+        _RelationEntityWithContext.__doc__ = RelationEntityWithContext.__doc__
+        _RelationTripletWithContext.__doc__ = RelationTripletWithContext.__doc__
+
+        return _RelationTripletWithContext
 
     def _process_triplets(self, raw_triplets: list[Any]) -> list[RelationTriplet]:
         """Convert raw triplets from model to RelationTriplet objects.
@@ -174,10 +172,12 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         docs_offsets: list[tuple[int, int]],
     ) -> Sequence[list[Any]]:
         consolidated: list[list[Any]] = []
+
         for start, end in docs_offsets:
             doc_results = results[start:end]
             all_triplets: list[Any] = []
             seen: set[tuple[str, str, str]] = set()
+
             for res in doc_results:
                 if res and hasattr(res, "triplets"):
                     for triplet in res.triplets:
@@ -186,13 +186,13 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
                         if key not in seen:
                             all_triplets.append(triplet)
                             seen.add(key)
+
             consolidated.append(all_triplets)
+
         return consolidated
 
 
-class DSPyRelationExtraction(
-    RelationExtractionBridge[dspy_.PromptSignature, dspy_.Result | list[Any], dspy_.InferenceMode]
-):
+class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for relation extraction."""
 
     @override
@@ -224,11 +224,11 @@ class DSPyRelationExtraction(
     @override
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        _, TripletModel = self._get_dynamic_signature_models()
+        _RelationTripletWithContext = self._get_dynamic_relation_triple_model()
 
         class RelationExtraction(dspy.Signature):
             text: str = dspy.InputField()
-            triplets: list[TripletModel] = dspy.OutputField()  # type: ignore[valid-type]
+            triplets: list[_RelationTripletWithContext] = dspy.OutputField()  # type: ignore[valid-type]
 
         RelationExtraction.__doc__ = jinja2.Template(self._prompt_instructions).render()
         RelationExtraction.model_rebuild()
@@ -284,10 +284,10 @@ class PydanticBasedRelationExtraction(
     @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
-        _, TripletModel = self._get_dynamic_signature_models()
+        _RelationTripletWithContext = self._get_dynamic_relation_triple_model()
 
         class RelationExtraction(pydantic.BaseModel):
-            triplets: list[TripletModel]  # type: ignore[valid-type]
+            triplets: list[_RelationTripletWithContext]  # type: ignore[valid-type]
 
         return RelationExtraction
 
