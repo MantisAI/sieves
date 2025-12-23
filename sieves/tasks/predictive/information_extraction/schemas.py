@@ -35,6 +35,7 @@ class FewshotExampleSingle(BaseFewshotExample):
         return ("entity",)
 
 
+# --8<-- [start:Result]
 class ResultSingle(pydantic.BaseModel):
     """Result of a single-entity extraction task."""
 
@@ -45,6 +46,9 @@ class ResultMulti(pydantic.BaseModel):
     """Result of a multi-entity extraction task."""
 
     entities: list[pydantic.BaseModel]
+
+
+# --8<-- [end:Result]
 
 
 _TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model

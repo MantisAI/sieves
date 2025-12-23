@@ -29,10 +29,14 @@ class FewshotExample(BaseFewshotExample):
         return ("answers",)
 
 
+# --8<-- [start:Result]
 class Result(pydantic.BaseModel):
     """Result of a question-answering task."""
 
     answers: list[str]
+
+
+# --8<-- [end:Result]
 
 
 _TaskModel = dspy_.Model | langchain_.Model | outlines_.Model

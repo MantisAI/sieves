@@ -51,11 +51,15 @@ class Entity(pydantic.BaseModel):
         return hash((self.start, self.end, self.text, self.entity_type))
 
 
+# --8<-- [start:Result]
 class Result(pydantic.BaseModel):
     """Collection of entities with associated text."""
 
     entities: list[Entity]
     text: str
+
+
+# --8<-- [end:Result]
 
 
 class FewshotExample(BaseFewshotExample):

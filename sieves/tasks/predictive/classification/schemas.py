@@ -55,6 +55,7 @@ class FewshotExampleSingleLabel(BaseFewshotExample):
         return self
 
 
+# --8<-- [start:Result]
 class ResultSingleLabel(pydantic.BaseModel):
     """Result of a single-label classification task."""
 
@@ -66,6 +67,9 @@ class ResultMultiLabel(pydantic.BaseModel):
     """Result of a multi-label classification task."""
 
     label_scores: list[tuple[str, float]]
+
+
+# --8<-- [end:Result]
 
 
 _TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | huggingface_.Model | outlines_.Model

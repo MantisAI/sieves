@@ -33,10 +33,14 @@ class FewshotExample(BaseFewshotExample):
         return self
 
 
+# --8<-- [start:Result]
 class Result(pydantic.BaseModel):
     """Result of a sentiment analysis task."""
 
     sentiment_per_aspect: dict[str, float]
+
+
+# --8<-- [end:Result]
 
 
 _TaskModel = dspy_.Model | langchain_.Model | outlines_.Model

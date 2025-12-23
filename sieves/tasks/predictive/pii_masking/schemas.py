@@ -31,11 +31,15 @@ class FewshotExample(BaseFewshotExample):
         return "masked_text", "pii_entities"
 
 
+# --8<-- [start:Result]
 class Result(pydantic.BaseModel):
     """Result of a PII masking task."""
 
     masked_text: str
     pii_entities: list[PIIEntity]
+
+
+# --8<-- [end:Result]
 
 
 _TaskModel = dspy_.Model | langchain_.Model | outlines_.Model

@@ -24,10 +24,14 @@ class FewshotExample(BaseFewshotExample):
         return ("summary",)
 
 
+# --8<-- [start:Result]
 class Result(pydantic.BaseModel):
     """Result of a summarization task."""
 
     summary: str
+
+
+# --8<-- [end:Result]
 
 
 _TaskModel = dspy_.Model | langchain_.Model | outlines_.Model
