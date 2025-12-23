@@ -9,74 +9,35 @@ from typing import Any, override
 
 import datasets
 import dspy
-import gliner2.inference.engine
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelType, dspy_, gliner_, huggingface_, langchain_, outlines_
+from sieves.model_wrappers import ModelType
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.distillation_import import model2vec, setfit
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import GliNERBridge
 from sieves.tasks.predictive.classification.bridges import (
     DSPyClassification,
     HuggingFaceClassification,
     LangChainClassification,
     OutlinesClassification,
 )
-from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
+from sieves.tasks.predictive.classification.schemas import (
+    FewshotExampleMultiLabel,
+    FewshotExampleSingleLabel,
+    ResultMultiLabel,
+    ResultSingleLabel,
+    _TaskModel,
+    _TaskPromptSignature,
+    _TaskResult,
+)
 from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.predictive.gliner_bridge import GliNERBridge
 
-_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | huggingface_.Model | outlines_.Model
-_TaskPromptSignature = gliner_.PromptSignature | pydantic.BaseModel | dspy_.PromptSignature
-_TaskResult = str | pydantic.BaseModel | dspy_.Result | huggingface_.Result | gliner_.Result
 _TaskBridge = (
     DSPyClassification | GliNERBridge | LangChainClassification | HuggingFaceClassification | OutlinesClassification
 )
-
-
-class FewshotExampleMultiLabel(BaseFewshotExample):
-    """Few‑shot example for multi‑label classification with per‑label confidences."""
-
-    confidence_per_label: dict[str, float]
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return ("confidence_per_label",)
-
-    @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> FewshotExampleMultiLabel:
-        """Validate that confidences lie within [0, 1]."""
-        if any([conf for conf in self.confidence_per_label.values() if not 0 <= conf <= 1]):
-            raise ValueError("Confidence has to be between 0 and 1.")
-        return self
-
-
-class FewshotExampleSingleLabel(BaseFewshotExample):
-    """Few‑shot example for single‑label classification with a global confidence."""
-
-    label: str
-    confidence: float
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return ("label", "confidence")
-
-    @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> FewshotExampleSingleLabel:
-        """Check confidence value.
-
-        Return:
-            FewshotExampleSingleLabel instance.
-
-        """
-        if not (0 <= self.confidence <= 1):
-            raise ValueError("Confidence has to be between 0 and 1.")
-        return self
-
 
 FewshotExample = FewshotExampleMultiLabel | FewshotExampleSingleLabel
 
@@ -166,6 +127,10 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         labels = self._label_descriptions if self._label_descriptions else self._labels
 
         if model_type == ModelType.gliner:
+            import gliner2.inference.engine
+
+            from sieves.model_wrappers import gliner_
+
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
@@ -253,10 +218,6 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
     def _result_to_scores(result: Any) -> dict[str, float]:
         """Normalize a single result to a mapping of label → score.
 
-        Supports lists of pairs, a single (label, score) pair, a plain
-        string label (assumes score 1.0), or a Pydantic model with
-        attributes ``label`` and optional ``score``.
-
         :params result: One result value from ``doc.results``.
 
         :return: Mapping from label to score.
@@ -264,6 +225,13 @@ class Classification(PredictiveTask[_TaskPromptSignature, _TaskResult, _TaskBrid
         :raises TypeError: If the result has an unsupported type or shape.
 
         """
+        if isinstance(result, ResultMultiLabel):
+            return {str(label): float(score) for label, score in result.label_scores}
+
+        if isinstance(result, ResultSingleLabel):
+            return {result.label: result.score}
+
+        # Legacy handling if any.
         if isinstance(result, list) and all(isinstance(item, list | tuple) and len(item) == 2 for item in result):
             return {str(label): float(score) for label, score in result}
 

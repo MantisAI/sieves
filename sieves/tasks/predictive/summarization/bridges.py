@@ -13,6 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.summarization.schemas import Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -97,10 +98,11 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.summary) == 1
-            doc.results[self._task_id] = result.summary
+            res = Result(summary=result.summary)
+            doc.results[self._task_id] = res
 
             if self._overwrite:
-                doc.text = result.summary
+                doc.text = res.summary
 
         return docs
 
@@ -120,7 +122,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {"summary": ["\n".join(summaries)]},
+                    {"summary": ["\n".join(summaries).strip()]},
                     signature=self.prompt_signature,
                 )
             )
@@ -181,10 +183,11 @@ class PydanticBasedSummarization(
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "summary")
-            doc.results[self._task_id] = result.summary
+            res = Result(summary=result.summary)
+            doc.results[self._task_id] = res
 
             if self._overwrite:
-                doc.text = result.summary
+                doc.text = res.summary
         return docs
 
     @override

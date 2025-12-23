@@ -13,6 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.sentiment_analysis.schemas import Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -96,12 +97,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.sentiment_per_aspect) == 1
-            sorted_preds = sorted(
-                ((aspect, score) for aspect, score in result.completions.sentiment_per_aspect[0].items()),
-                key=lambda x: x[1],
-                reverse=True,
-            )
-            doc.results[self._task_id] = sorted_preds
+            doc.results[self._task_id] = Result(sentiment_per_aspect=result.completions.sentiment_per_aspect[0])
         return docs
 
     @override
@@ -232,9 +228,7 @@ class PydanticBasedSentAnalysis(
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             label_scores = {k: v for k, v in result.model_dump().items() if k != "reasoning"}
-            doc.results[self._task_id] = sorted(
-                ((aspect, score) for aspect, score in label_scores.items()), key=lambda x: x[1], reverse=True
-            )
+            doc.results[self._task_id] = Result(sentiment_per_aspect=label_scores)
         return docs
 
     @override

@@ -20,6 +20,7 @@ from sieves.model_wrappers import (
 )
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.classification.schemas import ResultMultiLabel, ResultSingleLabel
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -162,11 +163,12 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                 key=lambda x: x[1],
                 reverse=True,
             )
-            doc.results[self._task_id] = sorted_preds
 
-            if not self._multi_label:
+            if self._multi_label:
+                doc.results[self._task_id] = ResultMultiLabel(label_scores=sorted_preds)
+            else:
                 if isinstance(sorted_preds, list) and len(sorted_preds) > 0:
-                    doc.results[self._task_id] = sorted_preds[0]
+                    doc.results[self._task_id] = ResultSingleLabel(label=sorted_preds[0][0], score=sorted_preds[0][1])
 
         return docs
 
@@ -282,11 +284,12 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     @override
     def integrate(self, results: Sequence[huggingface_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            doc.results[self._task_id] = [(label, score) for label, score in zip(result["labels"], result["scores"])]
-
-            if not self._multi_label:
-                if isinstance(doc.results[self._task_id], list) and len(doc.results[self._task_id]) > 0:
-                    doc.results[self._task_id] = doc.results[self._task_id][0]
+            label_scores = [(label, score) for label, score in zip(result["labels"], result["scores"])]
+            if self._multi_label:
+                doc.results[self._task_id] = ResultMultiLabel(label_scores=label_scores)
+            else:
+                if len(label_scores) > 0:
+                    doc.results[self._task_id] = ResultSingleLabel(label=label_scores[0][0], score=label_scores[0][1])
         return docs
 
     @override
@@ -442,12 +445,13 @@ class PydanticBasedClassification(
             if self._multi_label:
                 assert isinstance(result, pydantic.BaseModel)
                 label_scores = result.model_dump()
-                doc.results[self._task_id] = sorted(
+                sorted_label_scores = sorted(
                     ((label, score) for label, score in label_scores.items()), key=lambda x: x[1], reverse=True
                 )
+                doc.results[self._task_id] = ResultMultiLabel(label_scores=sorted_label_scores)
             else:
                 assert hasattr(result, "label") and hasattr(result, "score")
-                doc.results[self._task_id] = (result.label, result.score)
+                doc.results[self._task_id] = ResultSingleLabel(label=result.label, score=result.score)
 
         return docs
 
@@ -555,7 +559,13 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
             return super().integrate(results, docs)
 
         for doc, result in zip(docs, results):
-            doc.results[self._task_id] = result
+            # Outlines choice mode returns just the label string.
+            if isinstance(result, str):
+                doc.results[self._task_id] = ResultSingleLabel(label=result, score=1.0)
+            else:
+                # Fallback for other pydantic-based bridges.
+                assert hasattr(result, "label")
+                doc.results[self._task_id] = ResultSingleLabel(label=result.label, score=getattr(result, "score", 1.0))
         return docs
 
     @override

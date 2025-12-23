@@ -43,6 +43,10 @@ def test_run(translation_docs, batch_runtime, fewshot) -> None:
     for doc in docs:
         assert doc.text
         assert "Translation" in doc.results
+
+        # Verify unified result types.
+        assert isinstance(doc.results["Translation"], translation.Result)
+
         assert "Translation" in doc.meta
         assert "raw" in doc.meta["Translation"]
         assert "usage" in doc.meta["Translation"]

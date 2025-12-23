@@ -1,5 +1,6 @@
 """PII masking."""
 
-from .core import FewshotExample, PIIEntity, PIIMasking
+from sieves.tasks.predictive.pii_masking.core import PIIMasking
+from sieves.tasks.predictive.pii_masking.schemas import FewshotExample, PIIEntity, Result
 
-__all__ = ["FewshotExample", "PIIEntity", "PIIMasking"]
+__all__ = ["FewshotExample", "PIIEntity", "PIIMasking", "Result"]

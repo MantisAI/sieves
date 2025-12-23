@@ -92,6 +92,13 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
     for doc in docs:
         assert doc.text
         assert "InformationExtraction" in doc.results
+
+        # Verify unified result types.
+        if mode == "multi":
+            assert isinstance(doc.results["InformationExtraction"], information_extraction.ResultMulti)
+        else:
+            assert isinstance(doc.results["InformationExtraction"], information_extraction.ResultSingle)
+
         assert "InformationExtraction" in doc.meta
         assert "raw" in doc.meta["InformationExtraction"]
         assert "usage" in doc.meta["InformationExtraction"]
@@ -103,12 +110,11 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
         print(f"Total Usage: {doc.meta['usage']}")
         if mode == "single":
             assert (
-                doc.results["InformationExtraction"] is None or
-                isinstance(doc.results["InformationExtraction"], pydantic.BaseModel)
+                doc.results["InformationExtraction"].entity is None or
+                isinstance(doc.results["InformationExtraction"].entity, pydantic.BaseModel)
             )
         else:
-            assert isinstance(doc.results["InformationExtraction"], list)
-
+            assert isinstance(doc.results["InformationExtraction"].entities, list)
     with pytest.raises(NotImplementedError):
         pipe["InformationExtraction"].distill(None, None, None, None, None, None, None, None)
 

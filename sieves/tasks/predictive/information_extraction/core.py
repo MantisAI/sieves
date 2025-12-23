@@ -12,47 +12,27 @@ import gliner2.inference.engine
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelType, dspy_, gliner_, langchain_, outlines_
+from sieves.model_wrappers import ModelType
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
-from sieves.tasks.predictive.bridges import GliNERBridge
-from sieves.tasks.predictive.core import FewshotExample as BaseFewshotExample
 from sieves.tasks.predictive.core import PredictiveTask
+from sieves.tasks.predictive.gliner_bridge import GliNERBridge
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
     LangChainInformationExtraction,
     OutlinesInformationExtraction,
 )
+from sieves.tasks.predictive.information_extraction.schemas import (
+    FewshotExampleMulti,
+    FewshotExampleSingle,
+    _TaskModel,
+    _TaskPromptSignature,
+    _TaskResult,
+)
 from sieves.tasks.utils import PydanticToHFDatasets
 
-_TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
-_TaskPromptSignature = pydantic.BaseModel | dspy_.PromptSignature | gliner_.PromptSignature
-_TaskResult = gliner_.Result | outlines_.Result | dspy_.Result
 _TaskBridge = GliNERBridge | DSPyInformationExtraction | LangChainInformationExtraction | OutlinesInformationExtraction
-
-
-class FewshotExampleMulti(BaseFewshotExample):
-    """Few-shot example for multi-entity extraction."""
-
-    entities: list[pydantic.BaseModel]
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return ("entities",)
-
-
-class FewshotExampleSingle(BaseFewshotExample):
-    """Few-shot example for single-entity extraction."""
-
-    entity: pydantic.BaseModel | None
-
-    @override
-    @property
-    def target_fields(self) -> Sequence[str]:
-        return ("entity",)
-
 
 FewshotExample = FewshotExampleMulti | FewshotExampleSingle
 
@@ -128,6 +108,8 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
                     "You need to specify `entity_type` as a `gliner2.inference.engine.StructureBuilder` when running "
                     "this task with a GLiNER2 model."
                 )
+
+            from sieves.model_wrappers import gliner_
 
             return GliNERBridge(
                 task_id=self._task_id,
@@ -223,15 +205,15 @@ class InformationExtraction(PredictiveTask[_TaskPromptSignature, _TaskResult, _T
         try:
             if self._mode == "multi":
                 data = [
-                    (doc.text, [PydanticToHFDatasets.model_to_dict(res) for res in doc.results[self._task_id]])
+                    (doc.text, [PydanticToHFDatasets.model_to_dict(res) for res in doc.results[self._task_id].entities])
                     for doc in docs
                 ]
             else:
                 data = [
                     (
                         doc.text,
-                        PydanticToHFDatasets.model_to_dict(doc.results[self._task_id])
-                        if doc.results[self._task_id]
+                        PydanticToHFDatasets.model_to_dict(doc.results[self._task_id].entity)
+                        if doc.results[self._task_id].entity
                         else None,
                     )
                     for doc in docs

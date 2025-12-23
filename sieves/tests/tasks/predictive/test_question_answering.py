@@ -58,6 +58,10 @@ def test_run(qa_docs, batch_runtime, fewshot):
     for doc in docs:
         assert doc.text
         assert "qa" in doc.results
+
+        # Verify unified result types.
+        assert isinstance(doc.results["qa"], question_answering.Result)
+
         assert "qa" in doc.meta
         assert "raw" in doc.meta["qa"]
         assert "usage" in doc.meta["qa"]
