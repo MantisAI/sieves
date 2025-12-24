@@ -166,7 +166,7 @@ id='(7)' equation='\\omega(t) = \\frac{a_0 t}{r_0} \\left( 1 + \\frac{a_0^2 t^4}
 id='(8)' equation='x(t) = x_0 + v_0 t + \\frac{1}{2} a t^2'
 ```
 
-**[Read the guides]**(https://sieves.ai/guides/getting_started)
+**[Read the guides](https://sieves.ai/guides/getting_started)**
 
 ---
 
