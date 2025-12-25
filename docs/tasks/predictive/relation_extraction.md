@@ -12,6 +12,10 @@ The `RelationExtraction` task performs joint entity and relation extraction, ide
 
 The `RelationExtraction` task returns a unified `Result` object containing a list of `RelationTriplet` objects.
 
+Each triplet includes a confidence score:
+- **GLiNER2**: Always present and derived from logits.
+- **LLMs**: Self-reported and may be `None` if not provided by the model.
+
 ```python
 --8<-- "sieves/tasks/predictive/schemas/relation_extraction.py:Result"
 ```

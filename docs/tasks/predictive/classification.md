@@ -21,6 +21,8 @@ The `Classification` task returns a unified result schema regardless of the mode
 - When `mode == 'multi'` (default): results are of type `ResultMultiLabel`, containing a list of `(label, score)` tuples.
 - When `mode == 'single'`: results are of type `ResultSingleLabel`, containing a single `label` and `score`.
 
+Confidence scores are always present for `transformers` and `gliner2` models. For **LLMs**, scores are self-reported and may be `None`.
+
 ---
 
 ::: sieves.tasks.predictive.classification.core

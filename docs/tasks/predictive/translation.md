@@ -10,7 +10,9 @@ The `Translation` task translates documents into a target language.
 
 ## Results
 
-The `Translation` task returns a unified `Result` object containing the `translation`.
+The `Translation` task returns a unified `Result` object containing the `translation` and a confidence `score`.
+
+Confidence scores are self-reported by **LLMs** and may be `None`.
 
 ```python
 --8<-- "sieves/tasks/predictive/schemas/translation.py:Result"

@@ -15,9 +15,11 @@ class FewshotExample(BaseFewshotExample):
     Attributes:
         text: Input text.
         translation: Translated text.
+        score: Confidence score.
     """
 
     translation: str
+    score: float | None = None
 
     @property
     def target_fields(self) -> tuple[str, ...]:
@@ -34,9 +36,11 @@ class Result(pydantic.BaseModel):
 
     Attributes:
         translation: Translated text.
+        score: Confidence score.
     """
 
     translation: str
+    score: float | None = None
 
 
 # --8<-- [end:Result]

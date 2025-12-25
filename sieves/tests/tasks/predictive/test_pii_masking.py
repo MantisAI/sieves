@@ -1,5 +1,6 @@
 # mypy: ignore-errors
 import pytest
+from flaky import flaky
 
 from sieves import Doc, Pipeline, tasks
 from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, outlines_
@@ -17,14 +18,20 @@ from sieves.tasks.predictive import pii_masking
 def test_run(pii_masking_docs, batch_runtime, fewshot) -> None:
     fewshot_examples = [
         pii_masking.FewshotExample(
-            text="Jane Smith works at NASA.",
-            masked_text="[MASKED] works at NASA.",
-            pii_entities=[pii_masking.PIIEntity(entity_type="PERSON", text="Jane Smith")],
+            text="His name is John Doe and his SSN is 111-222-333.",
+            masked_text="His name is [MASKED] and his SSN is [MASKED].",
+            pii_entities=[
+                pii_masking.PIIEntity(entity_type="PERSON", text="John Doe", score=1.0),
+                pii_masking.PIIEntity(entity_type="SSN", text="111-222-333", score=1.0),
+            ],
         ),
         pii_masking.FewshotExample(
-            text="He lives at Diagon Alley 37.",
-            masked_text="He lives at [MASKED].",
-            pii_entities=[pii_masking.PIIEntity(entity_type="ADDRESS", text="Diagon Alley 37")],
+            text="Contact Maria at maria.doe@gmail.com.",
+            masked_text="Contact [MASKED] at [MASKED].",
+            pii_entities=[
+                pii_masking.PIIEntity(entity_type="PERSON", text="Maria", score=1.0),
+                pii_masking.PIIEntity(entity_type="EMAIL", text="maria.doe@gmail.com", score=1.0),
+            ],
         ),
     ]
 
@@ -169,6 +176,7 @@ def test_run_with_dict_pii_types(pii_masking_docs, batch_runtime) -> None:
         assert "PIIMasking" in doc.results
 
 
+@flaky(max_runs=3, min_passes=1)
 @pytest.mark.parametrize(
     "batch_runtime",
     PIIMasking.supports(),

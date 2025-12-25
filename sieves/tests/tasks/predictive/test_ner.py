@@ -23,17 +23,17 @@ def test_run(ner_docs, batch_runtime, fewshot) -> None:
         ner.FewshotExample(
             text="John studied data science in Barcelona and lives with Jaume",
             entities=[
-                EntityWithContext(text="John", context="John studied data", entity_type="PERSON"),
-                EntityWithContext(text="Barcelona", context="science in Barcelona", entity_type="LOCATION"),
-                EntityWithContext(text="Jaume", context="lives with Jaume", entity_type="PERSON"),
+                EntityWithContext(text="John", context="John studied data", entity_type="PERSON", score=1.0),
+                EntityWithContext(text="Barcelona", context="science in Barcelona", entity_type="LOCATION", score=1.0),
+                EntityWithContext(text="Jaume", context="lives with Jaume", entity_type="PERSON", score=1.0),
             ],
         ),
         ner.FewshotExample(
             text="Maria studied computer engineering in Madrid and works with Carlos",
             entities=[
-                EntityWithContext(text="Maria", context="Maria studied computer", entity_type="PERSON"),
-                EntityWithContext(text="Madrid", context="engineering in Madrid and works", entity_type="LOCATION"),
-                EntityWithContext(text="Carlos", context="works with Carlos", entity_type="PERSON"),
+                EntityWithContext(text="Maria", context="Maria studied computer", entity_type="PERSON", score=1.0),
+                EntityWithContext(text="Madrid", context="engineering in Madrid and works", entity_type="LOCATION", score=1.0),
+                EntityWithContext(text="Carlos", context="works with Carlos", entity_type="PERSON", score=1.0),
             ],
         ),
     ]

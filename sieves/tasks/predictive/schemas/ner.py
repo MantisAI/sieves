@@ -17,11 +17,13 @@ class EntityWithContext(pydantic.BaseModel):
         text: Entity text.
         context: Context around entity.
         entity_type: Type of entity.
+        score: Confidence score.
     """
 
     text: str
     context: str
     entity_type: str
+    score: float | None = None
 
 
 class Entity(pydantic.BaseModel):
@@ -32,12 +34,14 @@ class Entity(pydantic.BaseModel):
         start: Start offset.
         end: End offset.
         entity_type: Type of entity.
+        score: Confidence score.
     """
 
     text: str
     start: int
     end: int
     entity_type: str
+    score: float | None = None
 
     def __eq__(self, other: object) -> bool:
         """Compare two entities.

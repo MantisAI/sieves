@@ -13,13 +13,14 @@ from sieves.tasks.predictive import SentimentAnalysis, sentiment_analysis
 def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
     fewshot_examples = [
         sentiment_analysis.FewshotExample(
-            text="The food was perfect, the service only ok.",
-            sentiment_per_aspect={"food": 1.0, "service": 0.5, "overall": 0.8},
+            text="Beautiful dishes, haven't eaten so well in a long time.",
+            sentiment_per_aspect={"overall": 1.0, "food": 1.0, "service": 0.5},
+            score=1.0,
         ),
         sentiment_analysis.FewshotExample(
-            text="The service was amazing - they take excellent care of their customers. The food was despicable "
-            "though, I strongly recommend not to go.",
-            sentiment_per_aspect={"food": 0.1, "service": 1.0, "overall": 0.3},
+            text="Horrible place. Service is unfriendly, food overpriced and bland.",
+            sentiment_per_aspect={"overall": 0.0, "food": 0.0, "service": 0.0},
+            score=1.0,
         ),
     ]
 
@@ -37,8 +38,14 @@ def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
     for doc in results:
         assert "SentimentAnalysis" in doc.results
         res = doc.results["SentimentAnalysis"]
+
         assert isinstance(res, sentiment_analysis.Result)
         assert len(res.sentiment_per_aspect) == 3
         for aspect, score in res.sentiment_per_aspect.items():
             assert aspect in ["food", "service", "overall"]
             assert isinstance(score, float)
+
+        print(f"Output: {doc.results['SentimentAnalysis']}")
+        print(f"Raw output: {doc.meta['SentimentAnalysis']['raw']}")
+        print(f"Usage: {doc.meta['SentimentAnalysis']['usage']}")
+        print(f"Total Usage: {doc.meta['usage']}")

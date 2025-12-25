@@ -71,6 +71,23 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
+    def _validate_fewshot_examples(self) -> None:
+        """Validate that questions, answers and scores have the same length.
+
+        :raises ValueError: If lengths don't match.
+        """
+        for i, example in enumerate(self._fewshot_examples):
+            if len(example.questions) != len(example.answers):
+                raise ValueError(
+                    f"Length mismatch in few-shot example {i}: {len(example.questions)} questions "
+                    f"vs {len(example.answers)} answers."
+                )
+            if example.scores is not None and len(example.scores) != len(example.answers):
+                raise ValueError(
+                    f"Length mismatch in few-shot example {i}: {len(example.answers)} answers "
+                    f"vs {len(example.scores)} scores."
+                )
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
@@ -112,7 +129,11 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
-            {"text": datasets.Value("string"), "answers": datasets.Sequence(datasets.Value("string"))}
+            {
+                "text": datasets.Value("string"),
+                "answers": datasets.Sequence(datasets.Value("string")),
+                "scores": datasets.Sequence(datasets.Value("float32")),
+            }
         )
         info = datasets.DatasetInfo(
             description=f"Question-answering dataset with questions {self._questions}. Generated with sieves "
@@ -122,7 +143,12 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
 
         # Fetch data used for generating dataset.
         try:
-            data = [(doc.text, doc.results[self._task_id].answers) for doc in docs]
+            data: list[tuple[str, list[str], list[float]]] = []
+            for doc in docs:
+                result = doc.results[self._task_id]
+                answers = [qa.answer for qa in result.qa_pairs]
+                scores = [qa.score if qa.score is not None else 1.0 for qa in result.qa_pairs]
+                data.append((doc.text, answers, scores))
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
@@ -131,8 +157,8 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
 
             :return: Results as dicts.
             """
-            for text, answers in data:
-                yield {"text": text, "answers": answers}
+            for text, answers, scores in data:
+                yield {"text": text, "answers": answers, "scores": scores}
 
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)

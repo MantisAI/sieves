@@ -59,6 +59,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
         A score of 1.0 means that the sentiment in the text with respect to this aspect is extremely positive.
         0 means the opposite, 0.5 means neutral.
         Sentiment per aspect should always be between 0 and 1.
+        Also provide an overall confidence score between 0.0 and 1.0 for the sentiment analysis.
         """
 
     @override
@@ -83,6 +84,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
             sentiment_per_aspect: dict[AspectType, float] = dspy.OutputField(
                 description="Sentiment in this text with respect to the corresponding aspect."
             )
+            score: float = dspy.OutputField(description="Overall confidence score between 0.0 and 1.0.")
 
         SentimentAnalysis.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
@@ -97,7 +99,10 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.sentiment_per_aspect) == 1
-            doc.results[self._task_id] = Result(sentiment_per_aspect=result.completions.sentiment_per_aspect[0])
+            doc.results[self._task_id] = Result(
+                sentiment_per_aspect=result.completions.sentiment_per_aspect[0],
+                score=getattr(result, "score", None),
+            )
         return docs
 
     @override
@@ -109,6 +114,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
         for doc_offset in docs_offsets:
             aspect_scores: dict[str, float] = {label: 0.0 for label in self._aspects}
             doc_results = results[doc_offset[0] : doc_offset[1]]
+            confidence_scores: list[float] = []
 
             for res in doc_results:
                 if res is None:
@@ -120,6 +126,8 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
                     # useful?).
                     aspect_scores[label] += max(0, min(score, 1))
+                if hasattr(res, "score") and res.score is not None:
+                    confidence_scores.append(res.score)
 
             sorted_aspect_scores: list[dict[str, str | float]] = sorted(
                 (
@@ -134,6 +142,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
                 dspy.Prediction.from_completions(
                     {
                         "sentiment_per_aspect": [{sls["aspect"]: sls["score"] for sls in sorted_aspect_scores}],
+                        "score": [sum(confidence_scores) / len(confidence_scores) if confidence_scores else None],
                     },
                     signature=self.prompt_signature,
                 )
@@ -159,6 +168,7 @@ class PydanticBasedSentAnalysis(
         A score of 1.0 means that the sentiment in the text with respect to this aspect is extremely positive.
         0 means the opposite, 0.5 means neutral.
         The sentiment score per aspect should ALWAYS be between 0 and 1.
+        Also provide an overall confidence score between 0.0 and 1.0 for the sentiment analysis.
 
         The output for two aspects ASPECT_1 and ASPECT_2 should look like this:
         <output>
@@ -172,6 +182,7 @@ class PydanticBasedSentAnalysis(
                     <sentiment>SENTIMENT_SCORE_2</sentiment>
                 <aspect_sentiment>
             </aspect_sentiments>
+            <score>CONFIDENCE_SCORE</score>
         </output>
         """
         )
@@ -194,6 +205,7 @@ class PydanticBasedSentAnalysis(
                             </aspect_sentiment>
                         {% endfor -%}
                         </aspect_sentiments>
+                        <score>{{ example.score }}</score>
                     </output>
                 </example>
             {% endfor %}
@@ -214,11 +226,13 @@ class PydanticBasedSentAnalysis(
     @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
+        fields = {aspect: (float, ...) for aspect in self._aspects}
+        fields["score"] = (float | None, None)
         prompt_sig = pydantic.create_model(  # type: ignore[no-matching-overload]
             "SentimentAnalysis",
             __base__=pydantic.BaseModel,
             __doc__="Sentiment analysis of specified text.",
-            **{aspect: (float, ...) for aspect in self._aspects},
+            **fields,
         )
 
         assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
@@ -227,8 +241,8 @@ class PydanticBasedSentAnalysis(
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            label_scores = {k: v for k, v in result.model_dump().items() if k != "reasoning"}
-            doc.results[self._task_id] = Result(sentiment_per_aspect=label_scores)
+            label_scores = {k: v for k, v in result.model_dump().items() if k not in ["reasoning", "score"]}
+            doc.results[self._task_id] = Result(sentiment_per_aspect=label_scores, score=getattr(result, "score", None))
         return docs
 
     @override
@@ -240,6 +254,7 @@ class PydanticBasedSentAnalysis(
         for doc_offset in docs_offsets:
             aspect_scores: dict[str, float] = {label: 0.0 for label in self._aspects}
             doc_results = results[doc_offset[0] : doc_offset[1]]
+            confidence_scores: list[float] = []
 
             for rec in doc_results:
                 if rec is None:
@@ -250,10 +265,13 @@ class PydanticBasedSentAnalysis(
                     # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
                     # useful?).
                     aspect_scores[aspect] += max(0, min(getattr(rec, aspect), 1))
+                if hasattr(rec, "score") and rec.score is not None:
+                    confidence_scores.append(rec.score)
 
             consolidated_results.append(
                 self.prompt_signature(
                     **{aspect: score / (doc_offset[1] - doc_offset[0]) for aspect, score in aspect_scores.items()},
+                    score=sum(confidence_scores) / len(confidence_scores) if confidence_scores else None,
                 )
             )
         return consolidated_results

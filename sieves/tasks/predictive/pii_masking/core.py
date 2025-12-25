@@ -158,7 +158,12 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
-        features = datasets.Features({"text": datasets.Value("string"), "masked_text": datasets.Value("string")})
+        features = datasets.Features(
+            {
+                "text": datasets.Value("string"),
+                "masked_text": datasets.Value("string"),
+            }
+        )
         info = datasets.DatasetInfo(
             description=f"PII masking dataset. Generated with sieves v{Config.get_version()}.",
             features=features,

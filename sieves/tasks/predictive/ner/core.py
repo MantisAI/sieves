@@ -178,6 +178,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                             "start": datasets.Value("int32"),
                             "end": datasets.Value("int32"),
                             "entity_type": datasets.Value("string"),
+                            "score": datasets.Value("float32"),
                         }
                     )
                 ),
@@ -214,6 +215,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                             "start": entity.start,
                             "end": entity.end,
                             "entity_type": entity.entity_type,
+                            "score": getattr(entity, "score", None),
                         }
                     )
 

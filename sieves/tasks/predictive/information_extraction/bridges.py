@@ -1,7 +1,6 @@
 """Bridges for information extraction task."""
 
 import abc
-from collections import Counter
 from collections.abc import Sequence
 from functools import cached_property
 from typing import Literal, TypeVar, override
@@ -15,6 +14,7 @@ from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, 
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.schemas.information_extraction import ResultMulti, ResultSingle
+from sieves.tasks.predictive.utils import consolidate_entities_multi, consolidate_entities_single
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -59,10 +59,18 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     @property
     def _default_prompt_instructions(self) -> str:
         if self._mode == "multi":
-            return "Find all occurences of this kind of entitity within the text."
+            return (
+                "Find all occurences of this kind of entitity within the text. For each entity found, also provide "
+                "a confidence score between 0.0 and 1.0 in the 'score' field. "
+                "The `score` field must be provided regardless of whether or not potentially given fewshot examples "
+                "have it."
+            )
         return (
             "Find the single most relevant entitity within the text. If no such entitity exists, return null. Return "
-            "exactly one entity with all its fields, NOT just a string."
+            "exactly one entity with all its fields, NOT just a string. Also provide a confidence score between 0.0 "
+            "and 1.0 in the 'score' field."
+            "The `score` field must be provided regardless of whether or not potentially given fewshot examples "
+            "have it."
         )
 
     @override
@@ -82,20 +90,20 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
         if self._mode == "multi":
 
-            class Entities(dspy.Signature):  # type: ignore[misc]
+            class InformationExtractionMulti(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to extract entities from.")
                 entities: list[extraction_type] = dspy.OutputField(description="Entities to extract from text.")  # type: ignore[valid-type]
 
-            cls = Entities
+            cls = InformationExtractionMulti
         else:
 
-            class Entity(dspy.Signature):  # type: ignore[misc]
+            class InformationExtractionSingle(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to extract entity from.")
                 entity: extraction_type | None = dspy.OutputField(  # type: ignore[valid-type]
                     description="The single entity to extract from text. Should NOT be a list."
                 )
 
-            cls = Entity
+            cls = InformationExtractionSingle
 
         cls.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
@@ -111,66 +119,53 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         for doc, result in zip(docs, results):
             if self._mode == "multi":
                 assert len(result.completions.entities) == 1
-                doc.results[self._task_id] = ResultMulti(entities=result.completions.entities[0])
+                doc.results[self._task_id] = ResultMulti(
+                    entities=result.completions.entities[0],
+                )
             else:
                 assert len(result.completions.entity) == 1
-                doc.results[self._task_id] = ResultSingle(entity=result.completions.entity[0])
+                doc.results[self._task_id] = ResultSingle(
+                    entity=result.completions.entity[0],
+                )
         return docs
 
     @override
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        entity_type = self._entity_type
-
         # Merge all found entities.
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             if self._mode == "multi":
-                entities: list[entity_type] = []  # type: ignore[valid-type]
-                seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
-
+                entities: list[pydantic.BaseModel] = []
                 for res in results[doc_offset[0] : doc_offset[1]]:
                     if res is None:
                         continue
                     assert len(res.completions.entities) == 1
-                    # Ensure not to add duplicate entities.
-                    for entity in res.completions.entities[0]:
-                        if entity not in seen_entities:
-                            entities.append(entity)
-                            seen_entities.add(entity)
+                    entities.extend(res.completions.entities[0])
+
+                consolidated_entities = consolidate_entities_multi(entities)
 
                 consolidated_results.append(
                     dspy.Prediction.from_completions(
-                        {"entities": [entities]},
+                        {"entities": [consolidated_entities]},
                         signature=self.prompt_signature,
                     )
                 )
 
             else:
-                entity_counts: Counter[entity_type | None] = Counter()  # type: ignore[valid-type]
-                first_seen: dict[entity_type | None, int] = {}  # type: ignore[valid-type]
-
+                entities_with_indices: list[tuple[pydantic.BaseModel | None, int]] = []
                 for i, res in enumerate(results[doc_offset[0] : doc_offset[1]]):
                     if res is None:
                         continue
                     assert len(res.completions.entity) == 1
-                    entity = res.completions.entity[0]
-                    entity_counts[entity] += 1
-                    if entity not in first_seen:
-                        first_seen[entity] = i
+                    entities_with_indices.append((res.completions.entity[0], i))
 
-                if not entity_counts:
-                    winner = None
-                else:
-                    # Majority voting, pick first encountered in case of ties.
-                    max_count = max(entity_counts.values())
-                    candidates = [e for e, count in entity_counts.items() if count == max_count]
-                    winner = min(candidates, key=lambda e: first_seen[e])
+                winner_entity = consolidate_entities_single(entities_with_indices)
 
                 consolidated_results.append(
                     dspy.Prediction.from_completions(
-                        {"entity": [winner]},
+                        {"entity": [winner_entity]},
                         signature=self.prompt_signature,
                     )
                 )
@@ -188,11 +183,13 @@ class PydanticBasedInformationExtraction(
     def _default_prompt_instructions(self) -> str:
         if self._mode == "multi":
             return """
-            Find all occurences of this kind of entitity within the text.
+            Find all occurences of this kind of entitity within the text. For each entity found, also provide
+            a confidence score between 0.0 and 1.0 in the 'score' field.
             """
         return """
         Find the single most relevant entitity within the text. If no such entitity exists, return null. Return exactly
-        one entity with all its fields, NOT just a string.
+        one entity with all its fields, NOT just a string. Also provide a confidence score between 0.0 and 1.0 in the
+        'score' field.
         """
 
     @override
@@ -245,22 +242,22 @@ class PydanticBasedInformationExtraction(
 
         if self._mode == "multi":
 
-            class Entities(pydantic.BaseModel, frozen=True):
+            class InformationExtractionMulti(pydantic.BaseModel, frozen=True):
                 """Entities to extract from text."""
 
                 entities: list[entity_type]  # type: ignore[valid-type]
 
-            return Entities
+            return InformationExtractionMulti
         else:
 
-            class Entity(pydantic.BaseModel, frozen=True):
+            class InformationExtractionSingle(pydantic.BaseModel, frozen=True):
                 """Entity to extract from text."""
 
                 entity: entity_type | None = pydantic.Field(  # type: ignore[valid-type]
                     description="The single entity to extract from text. Should NOT be a list."
                 )
 
-            return Entity
+            return InformationExtractionSingle
 
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
@@ -279,49 +276,29 @@ class PydanticBasedInformationExtraction(
         results: Sequence[pydantic.BaseModel],
         docs_offsets: list[tuple[int, int]],  # type: ignore[arg-type]
     ) -> Sequence[pydantic.BaseModel]:
-        entity_type = self._entity_type
-
         # Determine label scores for chunks per document.
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             if self._mode == "multi":
-                entities: list[entity_type] = []  # type: ignore[valid-type]
-                seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
-
+                entities: list[pydantic.BaseModel] = []
                 for res in results[doc_offset[0] : doc_offset[1]]:
                     if res is None:
                         continue  # type: ignore[unreachable]
-
                     assert hasattr(res, "entities")
-                    # Ensure not to add duplicate entities.
-                    for entity in res.entities:
-                        if entity not in seen_entities:
-                            entities.append(entity)
-                            seen_entities.add(entity)
+                    entities.extend(res.entities)
 
-                consolidated_results.append(self.prompt_signature(entities=entities))
+                consolidated_entities = consolidate_entities_multi(entities)
+                consolidated_results.append(self.prompt_signature(entities=consolidated_entities))
             else:
-                entity_counts: Counter[entity_type | None] = Counter()  # type: ignore[valid-type]
-                first_seen: dict[entity_type | None, int] = {}  # type: ignore[valid-type]
-
+                entities_with_indices: list[tuple[pydantic.BaseModel | None, int]] = []
                 for i, res in enumerate(results[doc_offset[0] : doc_offset[1]]):
                     if res is None:
                         continue  # type: ignore[unreachable]
                     assert hasattr(res, "entity")
-                    entity = res.entity
-                    entity_counts[entity] += 1
-                    if entity not in first_seen:
-                        first_seen[entity] = i
+                    entities_with_indices.append((res.entity, i))
 
-                if not entity_counts:
-                    winner = None
-                else:
-                    # Majority voting, pick first encountered in case of ties.
-                    max_count = max(entity_counts.values())
-                    candidates = [e for e, count in entity_counts.items() if count == max_count]
-                    winner = min(candidates, key=lambda e: first_seen[e])
-
-                consolidated_results.append(self.prompt_signature(entity=winner))
+                winner_entity = consolidate_entities_single(entities_with_indices)
+                consolidated_results.append(self.prompt_signature(entity=winner_entity))
         return consolidated_results
 
 

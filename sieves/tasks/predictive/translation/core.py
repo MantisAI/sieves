@@ -112,7 +112,13 @@ class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
-        features = datasets.Features({"text": datasets.Value("string"), "translation": datasets.Value("string")})
+        features = datasets.Features(
+            {
+                "text": datasets.Value("string"),
+                "translation": datasets.Value("string"),
+                "score": datasets.Value("float32"),
+            }
+        )
         info = datasets.DatasetInfo(
             description=f"Translation dataset with target language {self._to}."
             f"Generated with sieves v{Config.get_version()}.",
@@ -121,7 +127,9 @@ class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
         # Fetch data used for generating dataset.
         try:
-            data = [(doc.text, doc.results[self._task_id].translation) for doc in docs]
+            data = [
+                (doc.text, doc.results[self._task_id].translation, doc.results[self._task_id].score) for doc in docs
+            ]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
@@ -130,8 +138,8 @@ class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
             :return: Results as dicts.
             """
-            for text, translation in data:
-                yield {"text": text, "translation": translation}
+            for text, translation, score in data:
+                yield {"text": text, "translation": translation, "score": score}
 
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)

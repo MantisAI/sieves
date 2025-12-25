@@ -136,14 +136,16 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                 field_type = list[inner_field_type] if dtype == "list" else inner_field_type
                 field_definitions[field_name] = (field_type, ...)
 
+            # Add score field to the model.
+            field_definitions["score"] = (float | None, None)
+
             model = pydantic.create_model(class_name, **field_definitions)
             models[class_name] = model
 
         # Create wrapper "Schema" model with lowercase attribute names if more than one structure is present.
         if len(models) > 1:
             raise TypeError(
-                "Composite GliNER2 schemas are not supported. Use a single structure/entitity/classification per Sieves"
-                " task."
+                "Composite GliNER2 schemas are not supported. Use a single structure/entitity/classification per task."
             )
 
         return models[list(models.keys())[0]]
@@ -175,7 +177,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                         # Result is a list of entity dictionaries.
                         doc.results[self._task_id] = NERResult(
                             entities=[
-                                Entity.model_validate({k: v for k, v in res.items() if k != "confidence"})
+                                Entity.model_validate({k if k != "confidence" else "score": v for k, v in res.items()})
                                 for res in result
                             ],
                             text=doc.text or "",
@@ -188,12 +190,15 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     entity_type_name = list(result.keys())[0]
                     assert issubclass(self._prompt_signature_pydantic, pydantic.BaseModel)
 
-                    extracted_entities = [
-                        self._prompt_signature_pydantic.model_validate(
-                            {key: value["text"] for key, value in entity.items()}
-                        )
-                        for entity in result[entity_type_name]
-                    ]
+                    extracted_entities: list[pydantic.BaseModel] = []
+                    for entity in result[entity_type_name]:
+                        # Map fields and include score.
+                        entity_data = {key: value["text"] for key, value in entity.items()}
+                        # Calculate average confidence across all fields.
+                        confidences = [v["confidence"] for v in entity.values() if "confidence" in v]
+                        entity_data["score"] = sum(confidences) / len(confidences) if confidences else None
+
+                        extracted_entities.append(self._prompt_signature_pydantic.model_validate(entity_data))
 
                     # This covers single/multi mode for information extraction.
                     if self._mode == "multi":
@@ -224,6 +229,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                                         text=triplet_data["tail"]["text"],
                                         entity_type="UNKNOWN",
                                     ),
+                                    score=triplet_data.get("confidence"),
                                 )
                             )
 
@@ -288,7 +294,13 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             if entity_type not in entities:
                                 entities[entity_type] = []
                             relevant_entities_struct: list[Any] = entities[entity_type]  # type: ignore[assignment]
-                            relevant_entities_struct.extend(res[entity_type])
+
+                            # Add entities from this chunk.
+                            for entity in res[entity_type]:
+                                # If single mode: we already have logic to track max_confidence below.
+                                # But we also need to store all entities for general structure if not single?
+                                # Actually, GLiNER structure mode output is a bit different.
+                                relevant_entities_struct.append(entity)
 
                             if self._mode == "single":
                                 for entity in res[entity_type]:
@@ -303,6 +315,8 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                                         avg_conf = sum(confidences) / len(confidences)
                                         if avg_conf > max_confidence:
                                             max_confidence = avg_conf
+                                            # We need to preserve the confidence in the structure
+                                            # so that integrate can pick it up.
                                             highest_confidence_entity = {entity_type: [entity]}
 
                     case gliner_.InferenceMode.relations:

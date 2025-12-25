@@ -27,6 +27,7 @@ from sieves.tasks.predictive.schemas.relation_extraction import (
     RelationTripletWithContext,
     Result,
 )
+from sieves.tasks.predictive.utils import consolidate_entities_multi
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -116,8 +117,27 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
 
         :return: Triplet model.
         """
-        AllowedEntityType = Literal[*self._entity_types] if self._entity_types else str  # type: ignore[valid-type]
-        AllowedRelationType = Literal[*self._relations] if self._relations else str  # type: ignore[valid-type]
+        # Create a list of allowed types including lowercase variations to be more robust.
+        entity_types_list: list[str] = []
+        if self._entity_types:
+            for et in self._entity_types:
+                entity_types_list.append(et)
+                if et.lower() not in entity_types_list:
+                    entity_types_list.append(et.lower())
+                if et.upper() not in entity_types_list:
+                    entity_types_list.append(et.upper())
+
+        relations_list: list[str] = []
+        if self._relations:
+            for rel in self._relations:
+                relations_list.append(rel)
+                if rel.lower() not in relations_list:
+                    relations_list.append(rel.lower())
+                if rel.upper() not in relations_list:
+                    relations_list.append(rel.upper())
+
+        AllowedEntityType = Literal[*entity_types_list] if entity_types_list else str  # type: ignore[valid-type]
+        AllowedRelationType = Literal[*relations_list] if relations_list else str  # type: ignore[valid-type]
 
         class _RelationEntityWithContext(pydantic.BaseModel):
             text: str
@@ -128,6 +148,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
             head: _RelationEntityWithContext
             relation: AllowedRelationType
             tail: _RelationEntityWithContext
+            score: float | None = None
 
         _RelationEntityWithContext.__doc__ = RelationEntityWithContext.__doc__
         _RelationTripletWithContext.__doc__ = RelationTripletWithContext.__doc__
@@ -153,6 +174,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
                     head=RelationEntity(text=head_text, entity_type=head_type),
                     relation=getattr(raw, "relation", ""),
                     tail=RelationEntity(text=tail_text, entity_type=tail_type),
+                    score=getattr(raw, "score", None),
                 )
             )
         return processed
@@ -170,24 +192,19 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         self,
         results: Sequence[_BridgeResult],
         docs_offsets: list[tuple[int, int]],
-    ) -> Sequence[list[Any]]:
-        consolidated: list[list[Any]] = []
+    ) -> Sequence[list[pydantic.BaseModel]]:
+        consolidated: list[list[pydantic.BaseModel]] = []
 
         for start, end in docs_offsets:
             doc_results = results[start:end]
-            all_triplets: list[Any] = []
-            seen: set[tuple[str, str, str]] = set()
+            triplets: list[pydantic.BaseModel] = []
 
             for res in doc_results:
                 if res and hasattr(res, "triplets"):
-                    for triplet in res.triplets:
-                        # Use a simple key for deduplication within the bridge's internal format.
-                        key = (getattr(triplet.head, "text", ""), triplet.relation, getattr(triplet.tail, "text", ""))
-                        if key not in seen:
-                            all_triplets.append(triplet)
-                            seen.add(key)
+                    triplets.extend(res.triplets)
 
-            consolidated.append(all_triplets)
+            consolidated_triplets = consolidate_entities_multi(triplets)
+            consolidated.append(consolidated_triplets)
 
         return consolidated
 
@@ -209,6 +226,7 @@ class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dsp
         - head: the subject entity (text, type)
         - relation: the type of relation
         - tail: the object entity (text, type)
+        - score: a confidence score between 0.0 and 1.0
         """
 
     @override
@@ -253,7 +271,7 @@ class PydanticBasedRelationExtraction(
         Extract relations between entities in the text.
         Relations: {self._relations}
         Entity Types: {self._entity_types or "Any"}
-        Return a list of triplets with head, relation, and tail.
+        Return a list of triplets with head, relation, tail, and a confidence score between 0.0 and 1.0.
         """
 
     @override

@@ -25,23 +25,37 @@ def test_run(relation_extraction_docs, batch_runtime, fewshot) -> None:
 
     fewshot_examples = [
         relation_extraction.FewshotExample(
-            text="Clara Barton founded the American Red Cross.",
+            text="Henri Dunant founded the Red Cross in Geneva.",
             triplets=[
                 RelationTriplet(
-                    head=RelationEntity(text="Clara Barton", entity_type="PERSON"),
+                    head=RelationEntity(text="Henri Dunant", entity_type="PERSON"),
                     relation="founded",
-                    tail=RelationEntity(text="American Red Cross", entity_type="ORGANIZATION"),
-                )
+                    tail=RelationEntity(text="Red Cross", entity_type="ORG"),
+                    score=1.0,
+                ),
+                RelationTriplet(
+                    head=RelationEntity(text="Red Cross", entity_type="ORG"),
+                    relation="located_in",
+                    tail=RelationEntity(text="Geneva", entity_type="LOC"),
+                    score=1.0,
+                ),
             ],
         ),
         relation_extraction.FewshotExample(
-            text="Irving Stowe founded Greenpeace.",
+            text="Eglantyne Jebb founded Save the Children in London.",
             triplets=[
                 RelationTriplet(
-                    head=RelationEntity(text="Irving Stowe", entity_type="PERSON"),
+                    head=RelationEntity(text="Eglantyne Jebb", entity_type="PERSON"),
                     relation="founded",
-                    tail=RelationEntity(text="Greenpeace", entity_type="ORGANIZATION"),
-                )
+                    tail=RelationEntity(text="Save the Children", entity_type="ORG"),
+                    score=1.0,
+                ),
+                RelationTriplet(
+                    head=RelationEntity(text="Save the Children", entity_type="ORG"),
+                    relation="located_in",
+                    tail=RelationEntity(text="London", entity_type="LOC"),
+                    score=1.0,
+                ),
             ],
         ),
     ]
@@ -83,7 +97,7 @@ def test_run(relation_extraction_docs, batch_runtime, fewshot) -> None:
             assert isinstance(triplet.head, relation_extraction.RelationEntity)
             assert isinstance(triplet.tail, relation_extraction.RelationEntity)
             assert isinstance(triplet.relation, str)
-            assert triplet.relation in ["works_for", "located_in", "founded"]
+            assert triplet.relation.lower() in ["works_for", "located_in", "founded"]
 
             # Verify content.
             assert triplet.head.text in doc.text

@@ -15,9 +15,11 @@ class FewshotExample(BaseFewshotExample):
     Attributes:
         text: Input text.
         summary: Summary of text.
+        score: Confidence score.
     """
 
     summary: str
+    score: float | None = None
 
     @property
     def target_fields(self) -> tuple[str, ...]:
@@ -34,9 +36,11 @@ class Result(pydantic.BaseModel):
 
     Attributes:
         summary: Summary of text.
+        score: Confidence score.
     """
 
     summary: str
+    score: float | None = None
 
 
 # --8<-- [end:Result]

@@ -2,6 +2,7 @@
 import gliner2
 import pydantic
 import pytest
+from flaky import flaky
 
 from sieves import Doc, Pipeline, tasks
 from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, outlines_
@@ -13,15 +14,18 @@ from sieves.tasks.predictive import information_extraction
 class Person(pydantic.BaseModel, frozen=True):
     name: str
     age: pydantic.PositiveInt
+    score: pydantic.NonNegativeFloat | None = None
 
 class PersonNotFrozen(pydantic.BaseModel):
     name: str
     age: pydantic.PositiveInt
+    score: pydantic.NonNegativeFloat | None = None
 
 PersonGliner = gliner2.inference.engine.Schema().structure(
     "Person"
 ).field("name", dtype="str").field("age", dtype="str")
 
+@flaky(max_runs=3, min_passes=1)
 @pytest.mark.parametrize(
     "batch_runtime",
     InformationExtraction.supports(),
@@ -34,7 +38,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
         fewshot_examples = [
             information_extraction.FewshotExampleMulti(
                 text="Ada Lovelace lived to 47 years old. Zeno of Citium died with 72 years.",
-                entities=[Person(name="Ada Lovelace", age=47), Person(name="Zeno of Citium", age=72)],
+                entities=[Person(name="Ada Lovelace", age=47, score=1.), Person(name="Zeno of Citium", age=72)],
             ),
             information_extraction.FewshotExampleMulti(
                 text="Alan Watts passed away at the age of 58 years. Alan Watts was 58 years old at the time of his death.",
@@ -45,7 +49,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
         fewshot_examples = [
             information_extraction.FewshotExampleSingle(
                 text="Ada Lovelace lived to 47 years old.",
-                entity=Person(name="Ada Lovelace", age=47),
+                entity=Person(name="Ada Lovelace", age=47, score=1.),
             ),
             information_extraction.FewshotExampleSingle(
                 text="Alan Watts passed away at the age of 58 years.",

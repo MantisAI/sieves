@@ -37,6 +37,27 @@ _TaskBridge = GliNERBridge | DSPyInformationExtraction | LangChainInformationExt
 FewshotExample = FewshotExampleMulti | FewshotExampleSingle
 
 
+def _wrap_with_score(entity_type: type[pydantic.BaseModel]) -> type[pydantic.BaseModel]:
+    """Create a subclass of the provided entity type that includes a score field.
+
+    :param entity_type: The Pydantic model class to wrap.
+    :return: A new Pydantic model class with a score field.
+    """
+    if hasattr(entity_type, "score"):
+        return entity_type
+
+    class ScoredEntity(entity_type):  # type: ignore[valid-type, misc]
+        """Entity with an additional confidence score."""
+
+        score: float | None = pydantic.Field(
+            default=None, description="Confidence score for the extraction, between 0 and 1."
+        )
+
+    ScoredEntity.__name__ = entity_type.__name__
+
+    return ScoredEntity
+
+
 class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Information extraction task."""
 
@@ -70,6 +91,11 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         """
         self._entity_type = entity_type
         self._mode = mode
+        self._scored_entity_type = (
+            _wrap_with_score(entity_type)
+            if isinstance(entity_type, type) and issubclass(entity_type, pydantic.BaseModel)
+            else entity_type
+        )
 
         super().__init__(
             model=model,
@@ -135,7 +161,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
             bridge = bridge_types[model_type](
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                entity_type=self._entity_type,
+                entity_type=self._scored_entity_type,
                 model_settings=self._model_settings,
                 mode=self._mode,
             )
@@ -167,7 +193,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
     def _validate_fewshot_examples(self) -> None:
         example_type_error_text = "Fewshot example type mismatch: mode = {mode} requires {example_type}."
 
-        for fs_example in self._fewshot_examples or []:
+        for i, fs_example in enumerate(self._fewshot_examples or []):
             if self._mode == "multi":
                 assert isinstance(fs_example, FewshotExampleMulti), TypeError(
                     example_type_error_text.format(example_type=FewshotExampleMulti, mode=self._mode)
@@ -179,12 +205,13 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
 
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
-        # If we're using GLiNER2: fetch Pydantic prompt signature representation.
+        # Use the scored entity type for the dataset schema.
+        entity_type = self._scored_entity_type
         if isinstance(self._bridge, GliNERBridge):
+            # GliNER already uses a generated scored model from GliNERBridge.schema_to_pydantic()
+            # which we will update in the next step.
             entity_type = self._bridge.prompt_signature_pydantic
             assert entity_type is not None
-        else:
-            entity_type = self._entity_type
 
         # Define metadata.
         hf_entity_type = PydanticToHFDatasets.model_cls_to_features(entity_type)
@@ -196,7 +223,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
             features = datasets.Features({"text": datasets.Value("string"), "entity": hf_entity_type})
 
         info = datasets.DatasetInfo(
-            description=f"Information extraction dataset for entity type {entity_type.__class__.__name__}. "
+            description=f"Information extraction dataset for entity type {entity_type.__name__}. "
             f"Generated with sieves v{Config.get_version()}.",
             features=features,
         )
@@ -223,7 +250,13 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
 
         # Create dataset.
         return datasets.Dataset.from_list(
-            [{"text": text, ("entities" if self._mode == "multi" else "entity"): res} for text, res in data],
+            [
+                {
+                    "text": text,
+                    ("entities" if self._mode == "multi" else "entity"): res,
+                }
+                for text, res in data
+            ],
             features=features,
             info=info,
         )
@@ -249,7 +282,14 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         if self._mode == "single":
             true_entity = truth.get("entity")
             pred_entity = pred.get("entity")
-            return 1.0 if true_entity == pred_entity else 0.0
+            base_accuracy = 1.0 if true_entity == pred_entity else 0.0
+
+            # If score is available in both truth and pred, incorporate it into the metric.
+            if "score" in truth and truth["score"] is not None and "score" in pred and pred["score"] is not None:
+                score_accuracy = 1 - abs(truth["score"] - max(min(pred["score"], 1), 0))
+                return (base_accuracy + score_accuracy) / 2
+
+            return base_accuracy
 
         def entity_to_tuple(entity: dict) -> tuple:
             """Convert entity dict to hashable tuple for comparison.
@@ -271,4 +311,15 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
 
         precision = len(true_entities & pred_entities) / len(pred_entities) if pred_entities else 0
         recall = len(true_entities & pred_entities) / len(true_entities)
-        return 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+        # If scores are available, incorporate them.
+        if "scores" in truth and truth["scores"] is not None and "scores" in pred and pred["scores"] is not None:
+            # Simple averaging of score similarities for matched entities is complex here due to set-based matching.
+            # We'll just average the overall entity f1 with a score similarity metric.
+            true_avg_score = sum(truth["scores"]) / len(truth["scores"]) if truth["scores"] else 0
+            pred_avg_score = sum(pred["scores"]) / len(pred["scores"]) if pred["scores"] else 0
+            score_accuracy = 1 - abs(true_avg_score - max(min(pred_avg_score, 1), 0))
+            return (f1 + score_accuracy) / 2
+
+        return f1
