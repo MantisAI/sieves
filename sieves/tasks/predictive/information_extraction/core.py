@@ -198,11 +198,6 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 assert isinstance(fs_example, FewshotExampleMulti), TypeError(
                     example_type_error_text.format(example_type=FewshotExampleMulti, mode=self._mode)
                 )
-                if fs_example.scores is not None and len(fs_example.scores) != len(fs_example.entities):
-                    raise ValueError(
-                        f"Length mismatch in few-shot example {i}: {len(fs_example.entities)} entities "
-                        f"vs {len(fs_example.scores)} scores."
-                    )
             else:
                 assert isinstance(fs_example, FewshotExampleSingle), TypeError(
                     example_type_error_text.format(example_type=FewshotExampleSingle, mode=self._mode)

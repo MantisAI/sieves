@@ -4,6 +4,10 @@ The `InformationExtraction` task allows for structured data extraction from docu
 
 ## Usage
 
+!!! note "Fewshot examples and confidence scores"
+    If you use few-shot examples and want your model to provided scores, you should include them in your examples. This
+    makes it easier for the model to understand what's expected.
+
 ### Multi-Entity Extraction (Default)
 
 By default, the task operates in `mode="multi"`, finding all instances of the specified entity.
