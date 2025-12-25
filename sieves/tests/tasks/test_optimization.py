@@ -674,8 +674,20 @@ def test_optimization_question_answering(optimizer) -> None:
 
     # Test LLM-based evaluation
     score = task._evaluate_optimization_example(
-        truth=dspy.Example(text='', reasoning='', questions=questions, answers=['Climate change', 'Scientists']),
-        pred=dspy.Prediction(text='', reasoning='', questions=questions, answers=['Global warming', 'Researchers']),
+        truth=dspy.Example(
+            text='',
+            reasoning='',
+            questions=questions,
+            answers=['Climate change', 'Scientists'],
+            scores=None
+        ),
+        pred=dspy.Prediction(
+            text='',
+            reasoning='',
+            questions=questions,
+            answers=['Global warming', 'Researchers'],
+            scores=None
+        ),
         trace=None,
         model=optimizer.model
     )

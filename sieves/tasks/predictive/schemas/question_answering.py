@@ -59,13 +59,14 @@ class FewshotExample(BaseFewshotExample):
 
         :returns: Example as `dspy.Example`.
         """
+        scores = self.scores or [None] * len(self.answers)
         qa_pairs = [
             QuestionAnswer(
                 question=q,
                 answer=a,
                 score=s,
             )
-            for q, a, s in zip(self.questions, self.answers, self.scores)
+            for q, a, s in zip(self.questions, self.answers, scores)
         ]
         return dspy.Example(text=self.text, questions=self.questions, qa_pairs=qa_pairs).with_inputs(*self.input_fields)
 
