@@ -37,7 +37,7 @@ The `InformationExtraction` task produces unified results based on the chosen mo
 
 ### Confidence Scores
 
-To provide confidence scores for user-defined entity types, Sieves automatically creates a subclass of your provided Pydantic model that includes a `score` field.
+To provide confidence scores for user-defined entity types, `sieves` automatically creates a subclass of your provided Pydantic model that includes a `score` field.
 
 The instances returned in the results will have this additional attribute:
 
@@ -54,7 +54,7 @@ print(result.score)  # Confidence score between 0 and 1, or None for some LLM ou
 
 While confidence scores are always present for **GLiNER2** models, they are self-reported and optional for **LLMs** (DSPy, Outlines, LangChain).
 
-If your original model already contains a `score` field, Sieves will use it as-is without further modification.
+If your original model already contains a `score` field, `sieves` will use it as-is without further modification.
 
 ---
 

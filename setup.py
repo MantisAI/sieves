@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Setup script for the Sieves package."""
+"""Setup script for the `sieves` package."""
 
 if __name__ == "__main__":
     from setuptools import find_packages, setup

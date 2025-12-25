@@ -100,7 +100,7 @@ pipe = Pipeline([import_task, chunking_task, classification_task])
 
 ## Confidence Values
 
-All predictive tasks in Sieves return confidence values alongside their predictions. These values represent the model's certainty in its output.
+All predictive tasks in `sieves` return confidence values alongside their predictions. These values represent the model's certainty in its output.
 
 - **Transformers & GLiNER2**: Confidence scores are always present as they are derived from model logits.
 - **LLMs (DSPy, LangChain, Outlines)**: Confidence scores are self-reported by the model and may occasionally be `None` if the model fails to provide them in the requested format.
