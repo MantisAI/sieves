@@ -96,7 +96,7 @@ def test_advanced_pipeline_example(example_chunker, small_outlines_model):
     import tokenizers
     import pydantic
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from sieves import Doc, Pipeline, tasks
+    from sieves import Doc, tasks
 
     # Create a tokenizer for chunking.
     tokenizer = tokenizers.Tokenizer.from_pretrained("bert-base-uncased")
@@ -107,7 +107,7 @@ def test_advanced_pipeline_example(example_chunker, small_outlines_model):
     )
 
     # Choose a model for information extraction.
-    model_name = "HuggingFaceTB/SmolLM-135M-Instruct"
+    model_name = "HuggingFaceTB/SmolLM2-135M-Instruct"
     model = outlines.models.from_transformers(
         AutoModelForCausalLM.from_pretrained(model_name),
         AutoTokenizer.from_pretrained(model_name)
