@@ -1,7 +1,6 @@
 """Bridges for information extraction task."""
 
 import abc
-from collections import Counter
 from collections.abc import Sequence
 from functools import cached_property
 from typing import Literal, TypeVar, override
@@ -15,6 +14,7 @@ from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, 
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.schemas.information_extraction import ResultMulti, ResultSingle
+from sieves.tasks.predictive.utils import consolidate_entities_multi, consolidate_entities_single
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -133,45 +133,18 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        entity_type = self._entity_type
-
         # Merge all found entities.
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             if self._mode == "multi":
-                # We need to deduplicate entities and average their scores.
-                # Since entity_type is frozen, we can use it as a dict key.
-                # However, the 'score' field might differ. We exclude it for deduplication.
-
-                # entities_map: entity_without_score -> list of scores
-                entities_map: dict[entity_type, list[float]] = {}  # type: ignore[valid-type]
-
+                entities: list[pydantic.BaseModel] = []
                 for res in results[doc_offset[0] : doc_offset[1]]:
                     if res is None:
                         continue
                     assert len(res.completions.entities) == 1
-                    for entity in res.completions.entities[0]:
-                        assert isinstance(entity, pydantic.BaseModel)
+                    entities.extend(res.completions.entities[0])
 
-                        # Create a copy without score for deduplication key.
-                        # This works if model_copy and update are available (Pydantic v2).
-                        if hasattr(entity, "model_copy"):
-                            key = entity.model_copy(update={"score": None})
-                        else:
-                            key = entity
-
-                        if key not in entities_map:
-                            entities_map[key] = []
-                        if getattr(entity, "score", None) is not None:
-                            entities_map[key].append(entity.score)
-
-                consolidated_entities: list[pydantic.BaseModel] = []
-                for entity_base, scores in entities_map.items():
-                    avg_score = sum(scores) / len(scores) if scores else None
-                    if hasattr(entity_base, "model_copy"):
-                        consolidated_entities.append(entity_base.model_copy(update={"score": avg_score}))
-                    else:
-                        consolidated_entities.append(entity_base)
+                consolidated_entities = consolidate_entities_multi(entities)
 
                 consolidated_results.append(
                     dspy.Prediction.from_completions(
@@ -181,44 +154,14 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
                 )
 
             else:
-                entity_counts: Counter[entity_type | None] = Counter()  # type: ignore[valid-type]
-                first_seen: dict[entity_type | None, int] = {}  # type: ignore[valid-type]
-                scores_per_entity: dict[entity_type | None, list[float]] = {}  # type: ignore[valid-type]
-
+                entities_with_indices: list[tuple[pydantic.BaseModel | None, int]] = []
                 for i, res in enumerate(results[doc_offset[0] : doc_offset[1]]):
                     if res is None:
                         continue
                     assert len(res.completions.entity) == 1
-                    entity = res.completions.entity[0]
+                    entities_with_indices.append((res.completions.entity[0], i))
 
-                    # Deduplicate key by removing score.
-                    if entity is not None and hasattr(entity, "model_copy"):
-                        key = entity.model_copy(update={"score": None})
-                    else:
-                        key = entity
-
-                    entity_counts[key] += 1
-                    if key not in first_seen:
-                        first_seen[key] = i
-                    if key not in scores_per_entity:
-                        scores_per_entity[key] = []
-                    if entity is not None and getattr(entity, "score", None) is not None:
-                        scores_per_entity[key].append(entity.score)
-
-                if not entity_counts:
-                    winner_entity = None
-                else:
-                    # Pick winner by majority.
-                    max_count = max(entity_counts.values())
-                    candidates = [e for e, count in entity_counts.items() if count == max_count]
-                    winner_key = min(candidates, key=lambda e: first_seen[e])
-
-                    if winner_key is None:
-                        winner_entity = None
-                    else:
-                        scores = scores_per_entity[winner_key]
-                        avg_score = sum(scores) / len(scores) if scores else None
-                        winner_entity = winner_key.model_copy(update={"score": avg_score})
+                winner_entity = consolidate_entities_single(entities_with_indices)
 
                 consolidated_results.append(
                     dspy.Prediction.from_completions(
@@ -333,82 +276,28 @@ class PydanticBasedInformationExtraction(
         results: Sequence[pydantic.BaseModel],
         docs_offsets: list[tuple[int, int]],  # type: ignore[arg-type]
     ) -> Sequence[pydantic.BaseModel]:
-        entity_type = self._entity_type
-
         # Determine label scores for chunks per document.
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             if self._mode == "multi":
-                # entities_map: entity_without_score -> list of scores
-                entities_map: dict[entity_type, list[float]] = {}  # type: ignore[valid-type]
-
+                entities: list[pydantic.BaseModel] = []
                 for res in results[doc_offset[0] : doc_offset[1]]:
                     if res is None:
                         continue  # type: ignore[unreachable]
-
                     assert hasattr(res, "entities")
-                    for entity in res.entities:
-                        # Deduplicate key by removing score.
-                        if hasattr(entity, "model_copy"):
-                            key = entity.model_copy(update={"score": None})
-                        else:
-                            key = entity
+                    entities.extend(res.entities)
 
-                        if key not in entities_map:
-                            entities_map[key] = []
-                        if getattr(entity, "score", None) is not None:
-                            entities_map[key].append(entity.score)
-
-                consolidated_entities: list[pydantic.BaseModel] = []
-                for entity_base, scores in entities_map.items():
-                    avg_score = sum(scores) / len(scores) if scores else None
-                    if hasattr(entity_base, "model_copy"):
-                        consolidated_entities.append(entity_base.model_copy(update={"score": avg_score}))
-                    else:
-                        consolidated_entities.append(entity_base)
-
+                consolidated_entities = consolidate_entities_multi(entities)
                 consolidated_results.append(self.prompt_signature(entities=consolidated_entities))
             else:
-                entity_counts: Counter[entity_type | None] = Counter()  # type: ignore[valid-type]
-                first_seen: dict[entity_type | None, int] = {}  # type: ignore[valid-type]
-                scores_per_entity: dict[entity_type | None, list[float]] = {}  # type: ignore[valid-type]
-
+                entities_with_indices: list[tuple[pydantic.BaseModel | None, int]] = []
                 for i, res in enumerate(results[doc_offset[0] : doc_offset[1]]):
                     if res is None:
                         continue  # type: ignore[unreachable]
                     assert hasattr(res, "entity")
-                    entity = res.entity
-                    assert isinstance(entity, pydantic.BaseModel)
+                    entities_with_indices.append((res.entity, i))
 
-                    # Deduplicate key by removing score.
-                    if entity is not None and hasattr(entity, "model_copy"):
-                        key = entity.model_copy(update={"score": None})
-                    else:
-                        key = entity
-
-                    entity_counts[key] += 1
-                    if key not in first_seen:
-                        first_seen[key] = i
-                    if key not in scores_per_entity:
-                        scores_per_entity[key] = []
-                    if entity is not None and getattr(entity, "score", None) is not None:
-                        scores_per_entity[key].append(entity.score)
-
-                if not entity_counts:
-                    winner_entity = None
-                else:
-                    # Pick winner by majority.
-                    max_count = max(entity_counts.values())
-                    candidates = [e for e, count in entity_counts.items() if count == max_count]
-                    winner_key = min(candidates, key=lambda e: first_seen[e])
-
-                    if winner_key is None:
-                        winner_entity = None
-                    else:
-                        scores = scores_per_entity[winner_key]
-                        avg_score = sum(scores) / len(scores) if scores else None
-                        winner_entity = winner_key.model_copy(update={"score": avg_score})
-
+                winner_entity = consolidate_entities_single(entities_with_indices)
                 consolidated_results.append(self.prompt_signature(entity=winner_entity))
         return consolidated_results
 

@@ -14,6 +14,7 @@ from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, 
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.schemas.pii_masking import PIIEntity, Result
+from sieves.tasks.predictive.utils import consolidate_entities_multi
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -175,28 +176,24 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
         """Consolidate results from multiple chunks."""
-        PIIEntity = self._pii_entity_cls
-
-        # Merge results for each document
+        # Merge results for each document.
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
-            seen_entities: set[PIIEntity] = set()  # type: ignore[valid-type]
-            entities: list[PIIEntity] = []  # type: ignore[valid-type]
+            entities: list[pydantic.BaseModel] = []
             masked_texts: list[str] = []
 
             for res in doc_results:
                 masked_texts.append(res.masked_text)
-                for entity in res.pii_entities:
-                    if entity not in seen_entities:
-                        entities.append(entity)
-                        seen_entities.add(entity)
+                entities.extend(res.pii_entities)
+
+            consolidated_entities = consolidate_entities_multi(entities)
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
                     {
                         "masked_text": [" ".join(masked_texts).strip()],
-                        "pii_entities": [entities],
+                        "pii_entities": [consolidated_entities],
                     },
                     signature=self.prompt_signature,
                 )
@@ -286,14 +283,11 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
     def consolidate(
         self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel]:
-        PIIEntity = self._pii_entity_cls
-
-        # Merge results for each document
+        # Merge results for each document.
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
-            seen_entities: set[PIIEntity] = set()  # type: ignore[valid-type]
-            entities: list[PIIEntity] = []  # type: ignore[valid-type]
+            entities: list[pydantic.BaseModel] = []
             masked_texts: list[str] = []
 
             for res in doc_results:
@@ -304,15 +298,14 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                 assert hasattr(res, "pii_entities")
 
                 masked_texts.append(res.masked_text)
-                for entity in res.pii_entities:
-                    if entity not in seen_entities:
-                        entities.append(entity)
-                        seen_entities.add(entity)
+                entities.extend(res.pii_entities)
+
+            consolidated_entities = consolidate_entities_multi(entities)
 
             consolidated_results.append(
                 self.prompt_signature(
                     masked_text=" ".join(masked_texts).strip(),
-                    pii_entities=entities,
+                    pii_entities=consolidated_entities,
                 )
             )
         return consolidated_results

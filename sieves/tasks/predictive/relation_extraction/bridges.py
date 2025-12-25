@@ -27,6 +27,7 @@ from sieves.tasks.predictive.schemas.relation_extraction import (
     RelationTripletWithContext,
     Result,
 )
+from sieves.tasks.predictive.utils import consolidate_entities_multi
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -191,46 +192,19 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         self,
         results: Sequence[_BridgeResult],
         docs_offsets: list[tuple[int, int]],
-    ) -> Sequence[list[Any]]:
-        consolidated: list[list[Any]] = []
+    ) -> Sequence[list[pydantic.BaseModel]]:
+        consolidated: list[list[pydantic.BaseModel]] = []
 
         for start, end in docs_offsets:
             doc_results = results[start:end]
-            triplets_map: dict[tuple[str, str, str], list[Any]] = {}
+            triplets: list[pydantic.BaseModel] = []
 
             for res in doc_results:
                 if res and hasattr(res, "triplets"):
-                    for triplet in res.triplets:
-                        # Use a simple key for deduplication within the bridge's internal format.
-                        # Using lower() to make it more robust to model variations in case.
-                        head_text = getattr(triplet.head, "text", "")
-                        tail_text = getattr(triplet.tail, "text", "")
-                        key = (head_text.lower(), triplet.relation.lower(), tail_text.lower())
-                        if key not in triplets_map:
-                            triplets_map[key] = []
-                        triplets_map[key].append(triplet)
+                    triplets.extend(res.triplets)
 
-            all_triplets: list[Any] = []
-            for triplet_list in triplets_map.values():
-                first_triplet = triplet_list[0]
-                scores = [getattr(t, "score", None) for t in triplet_list if getattr(t, "score", None) is not None]
-
-                if scores:
-                    # Update score with average if multiple scores available.
-                    # We create a new instance to avoid modifying the original if it's shared.
-                    avg_score = sum(scores) / len(scores)
-                    if hasattr(first_triplet, "model_copy"):
-                        triplet_to_add = first_triplet.model_copy(update={"score": avg_score})
-                    else:
-                        # Fallback for non-pydantic or older dspy objects if any.
-                        triplet_to_add = first_triplet
-                        if hasattr(triplet_to_add, "score"):
-                            triplet_to_add.score = avg_score
-                    all_triplets.append(triplet_to_add)
-                else:
-                    all_triplets.append(first_triplet)
-
-            consolidated.append(all_triplets)
+            consolidated_triplets = consolidate_entities_multi(triplets)
+            consolidated.append(consolidated_triplets)
 
         return consolidated
 

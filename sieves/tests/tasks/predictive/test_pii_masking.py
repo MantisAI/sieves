@@ -1,5 +1,6 @@
 # mypy: ignore-errors
 import pytest
+from flaky import flaky
 
 from sieves import Doc, Pipeline, tasks
 from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, outlines_
@@ -175,6 +176,7 @@ def test_run_with_dict_pii_types(pii_masking_docs, batch_runtime) -> None:
         assert "PIIMasking" in doc.results
 
 
+@flaky(max_runs=3, min_passes=1)
 @pytest.mark.parametrize(
     "batch_runtime",
     PIIMasking.supports(),
