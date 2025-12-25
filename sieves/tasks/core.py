@@ -7,8 +7,11 @@ import itertools
 from collections.abc import Callable, Iterable, Iterator
 from typing import TYPE_CHECKING, Any
 
+import dspy
+
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config
+from sieves.tasks.predictive.evaluation import TaskEvaluationReport
 
 if TYPE_CHECKING:
     from sieves.pipeline import Pipeline
@@ -93,6 +96,15 @@ class Task(abc.ABC):
         :param docs: Docs to process.
         :return: Processed docs.
         """
+
+    def evaluate(self, docs: Iterable[Doc], judge: dspy.LM | None = None) -> TaskEvaluationReport:
+        """Evaluate task performance.
+
+        :param docs: Documents to evaluate.
+        :param judge: Optional judge model for evaluation.
+        :return: Evaluation report.
+        """
+        raise NotImplementedError(f"Evaluation not implemented for task {self.__class__.__name__}")
 
     def __add__(self, other: Task | Pipeline) -> Pipeline:
         """Chain this task with another task or pipeline using the ``+`` operator.

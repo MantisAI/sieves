@@ -5,7 +5,7 @@ from sieves import Pipeline, Doc
 from sieves.model_wrappers import ModelType, ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.predictive import relation_extraction
-from sieves.tasks.predictive.schemas.relation_extraction import RelationEntity, RelationTriplet
+from sieves.tasks.predictive.schemas.relation_extraction import RelationEntity, RelationTriplet, Result
 from sieves.tests.conftest import _make_runtime
 
 
@@ -253,5 +253,71 @@ def test_gliner_warning() -> None:
             relations=relations,
             model=batch_runtime_gliner.model,
             entity_types=["PERSON"],
-            task_id="re"
+            task_id="re",
         )
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.gliner], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for relation extraction without running pipeline."""
+    task = relation_extraction.RelationExtraction(
+        relations=["founded", "located_in"], model=batch_runtime.model, task_id="re"
+    )
+
+    # 1. Full overlap
+    doc_full = Doc(text="Henri founded Red Cross in Geneva.")
+    res_full = Result(triplets=[
+        RelationTriplet(
+            head=RelationEntity(text="Henri", entity_type="PERSON"),
+            relation="founded",
+            tail=RelationEntity(text="Red Cross", entity_type="ORG")
+        ),
+        RelationTriplet(
+            head=RelationEntity(text="Red Cross", entity_type="ORG"),
+            relation="located_in",
+            tail=RelationEntity(text="Geneva", entity_type="LOC")
+        )
+    ])
+    doc_full.results["re"] = res_full
+    doc_full.gold["re"] = res_full
+    report_full = task.evaluate([doc_full])
+    assert report_full.metrics["score"] == 1.0
+
+    # 2. Partial overlap
+    doc_partial = Doc(text="Henri founded Red Cross in Geneva.")
+    # Pred has both
+    res_pred = res_full
+    # Gold has only one
+    res_gold = Result(triplets=[
+        RelationTriplet(
+            head=RelationEntity(text="Henri", entity_type="PERSON"),
+            relation="founded",
+            tail=RelationEntity(text="Red Cross", entity_type="ORG")
+        )
+    ])
+    doc_partial.results["re"] = res_pred
+    doc_partial.gold["re"] = res_gold
+    report_partial = task.evaluate([doc_partial])
+    # TP=1 (founded), FP=1 (located_in), FN=0 -> Precision=0.5, Recall=1.0 -> F1=0.666...
+    assert 0.6 < report_partial.metrics["score"] < 0.7
+
+    # 3. No overlap
+    doc_none = Doc(text="Henri founded Red Cross.")
+    res_none_pred = Result(triplets=[
+        RelationTriplet(
+            head=RelationEntity(text="Henri", entity_type="PERSON"),
+            relation="founded",
+            tail=RelationEntity(text="Red Cross", entity_type="ORG")
+        )
+    ])
+    res_none_gold = Result(triplets=[
+        RelationTriplet(
+            head=RelationEntity(text="Eglantyne", entity_type="PERSON"),
+            relation="founded",
+            tail=RelationEntity(text="Save the Children", entity_type="ORG")
+        )
+    ])
+    doc_none.results["re"] = res_none_pred
+    doc_none.gold["re"] = res_none_gold
+    report_none = task.evaluate([doc_none])
+    assert report_none.metrics["score"] == 0.0

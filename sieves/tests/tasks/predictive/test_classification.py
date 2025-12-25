@@ -25,11 +25,11 @@ def _run(
         fewshot_examples = [
             classification.FewshotExampleMultiLabel(
                 text="On the properties of hydrogen atoms and red dwarfs.",
-                confidence_per_label={"science": 1.0, "politics": 0.0},
+                score_per_label={"science": 1.0, "politics": 0.0},
             ),
             classification.FewshotExampleMultiLabel(
                 text="A parliament is elected by casting votes.",
-                confidence_per_label={"science": 0, "politics": 1.0},
+                score_per_label={"science": 0, "politics": 1.0},
             ),
         ]
     else:
@@ -37,12 +37,12 @@ def _run(
             classification.FewshotExampleSingleLabel(
                 text="On the properties of hydrogen atoms and red dwarfs.",
                 label="science",
-                confidence=1.0,
+                score=1.0,
             ),
             classification.FewshotExampleSingleLabel(
                 text="A parliament is elected by casting votes.",
                 label="politics",
-                confidence=1.0,
+                score=1.0,
             ),
         ]
 
@@ -231,26 +231,26 @@ def test_labels_validation(batch_runtime) -> None:
     )
 
 
-def test_fewshot_example_singlelabel_confidence() -> None:
-    """Test that the confidence of a fewshot example is correctly validated."""
+def test_fewshot_example_singlelabel_score() -> None:
+    """Test that the score of a fewshot example is correctly validated."""
     classification.FewshotExampleSingleLabel(
         text="...",
         label="science",
-        confidence=1.0,
+        score=1.0,
     )
 
     with pytest.raises(ValueError):
         classification.FewshotExampleSingleLabel(
             text="...",
             label="science",
-            confidence=2.0,
+            score=2.0,
         )
 
     with pytest.raises(ValueError):
         classification.FewshotExampleSingleLabel(
             text="...",
             label="science",
-            confidence=-2.0,
+            score=-2.0,
         )
 
 
@@ -317,3 +317,51 @@ def test_inference_mode_override(batch_runtime) -> None:
     )
 
     assert task._bridge.inference_mode == dummy
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.huggingface], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for classification without running pipeline."""
+    labels = ["science", "politics"]
+    task = Classification(labels=labels, model=batch_runtime.model, task_id="clf", mode="single")
+
+    # 1. Full overlap
+    doc_full = Doc(text="Text about science.")
+    doc_full.results["clf"] = classification.ResultSingleLabel(label="science", score=0.9)
+    doc_full.gold["clf"] = "science"
+
+    report_full = task.evaluate([doc_full])
+    assert report_full.metrics["score"] == 1.0
+
+    # 2. No overlap
+    doc_none = Doc(text="Text about science.")
+    doc_none.results["clf"] = classification.ResultSingleLabel(label="politics", score=0.9)
+    doc_none.gold["clf"] = "science"
+    report_none = task.evaluate([doc_none])
+    assert report_none.metrics["score"] == 0.0
+
+    # 3. Multi-label partial overlap
+    task_multi = Classification(labels=labels, model=batch_runtime.model, task_id="clf_multi", mode="multi")
+    doc_partial = Doc(text="Text about science and politics.")
+    # Prediction: science=0.9, politics=0.1
+    # Gold: science=1.0, politics=1.0 (both are true)
+    doc_partial.results["clf_multi"] = classification.ResultMultiLabel(label_scores=[("science", 0.9), ("politics", 0.1)])
+    doc_partial.gold["clf_multi"] = classification.ResultMultiLabel(label_scores=[("science", 1.0), ("politics", 1.0)])
+
+    report_partial = task_multi.evaluate([doc_partial])
+    # Multi-label evaluation uses 1 - abs(gold - pred) averaged over labels
+    # Label science: 1 - abs(1.0 - 0.9) = 0.9
+    # Label politics: 1 - abs(1.0 - 0.1) = 0.1
+    # Average: (0.9 + 0.1) / 2 = 0.5
+    assert report_partial.metrics["score"] == 0.5
+
+    # 4. Multi-label full overlap
+    doc_multi_full = Doc(text="Text about science and politics.")
+    doc_multi_full.results["clf_multi"] = classification.ResultMultiLabel(
+        label_scores=[("science", 1.0), ("politics", 1.0)]
+    )
+    doc_multi_full.gold["clf_multi"] = classification.ResultMultiLabel(
+        label_scores=[("science", 1.0), ("politics", 1.0)]
+    )
+    report_multi_full = task_multi.evaluate([doc_multi_full])
+    assert report_multi_full.metrics["score"] == 1.0

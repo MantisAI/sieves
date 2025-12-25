@@ -7,6 +7,7 @@ from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, o
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, QuestionAnswering
 from sieves.tasks.predictive import question_answering
+from sieves.tasks.predictive.schemas.question_answering import Result, QuestionAnswer
 
 
 @flaky(max_runs=3, min_passes=1)
@@ -171,3 +172,45 @@ def test_inference_mode_override(batch_runtime) -> None:
     )
 
     assert task._bridge.inference_mode == dummy
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.dspy], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for QA using a real judge."""
+    task = question_answering.QuestionAnswering(
+        questions=["What is 1+1?"], model=batch_runtime.model, task_id="qa"
+    )
+
+    # 1. Full overlap
+    doc_full = Doc(text="1+1 equals 2")
+    res_full = Result(qa_pairs=[QuestionAnswer(question="What is 1+1?", answer="2")])
+    doc_full.results["qa"] = res_full
+    doc_full.gold["qa"] = res_full
+    report_full = task.evaluate([doc_full], judge=batch_runtime.model)
+    assert report_full.metrics["score"] > 0.8
+
+    # 2. No overlap
+    doc_none = Doc(text="1+1 equals 2")
+    doc_none.results["qa"] = Result(qa_pairs=[QuestionAnswer(question="What is 1+1?", answer="It is a sunny day.")])
+    doc_none.gold["qa"] = res_full
+    report_none = task.evaluate([doc_none], judge=batch_runtime.model)
+    assert report_none.metrics["score"] < 0.6
+
+    # 3. Partial overlap (one correct, one incorrect)
+    task_multi = question_answering.QuestionAnswering(
+        questions=["What is 1+1?", "What is 2+2?"], model=batch_runtime.model, task_id="qa_multi"
+    )
+    doc_partial = Doc(text="1+1 is 2 and 2+2 is 4")
+    # Pred: 2 and 5
+    doc_partial.results["qa_multi"] = Result(qa_pairs=[
+        QuestionAnswer(question="What is 1+1?", answer="2"),
+        QuestionAnswer(question="What is 2+2?", answer="5")
+    ])
+    # Gold: 2 and 4
+    doc_partial.gold["qa_multi"] = Result(qa_pairs=[
+        QuestionAnswer(question="What is 1+1?", answer="2"),
+        QuestionAnswer(question="What is 2+2?", answer="4")
+    ])
+    report_partial = task_multi.evaluate([doc_partial], judge=batch_runtime.model)
+    # Expected to be somewhere in the middle
+    assert 0.2 < report_partial.metrics["score"] < 0.8

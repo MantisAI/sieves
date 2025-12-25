@@ -186,12 +186,12 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 assert isinstance(fs_example, FewshotExampleMultiLabel), TypeError(
                     example_type_error_text.format(example_type=FewshotExampleMultiLabel, mode=self._mode)
                 )
-                if any([label not in self._labels for label in fs_example.confidence_per_label]) or not all(
-                    [label in fs_example.confidence_per_label for label in self._labels]
+                if any([label not in self._labels for label in fs_example.score_per_label]) or not all(
+                    [label in fs_example.score_per_label for label in self._labels]
                 ):
                     raise ValueError(
                         label_error_text.format(
-                            task_id=self.id, labels=self._labels, example_labels=fs_example.confidence_per_label.keys()
+                            task_id=self.id, labels=self._labels, example_labels=fs_example.score_per_label.keys()
                         )
                     )
             else:
@@ -405,19 +405,28 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         return datasets.Dataset.from_list(data, features=features, info=info)
 
     @override
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
+    def _task_result_to_dspy_dict(self, result: Any) -> dict[str, Any]:
+        scores = self._result_to_scores(result)
+        if self._mode == "multi":
+            return {"score_per_label": scores}
+        else:
+            # For single label, it returns a dict with one key.
+            label = list(scores.keys())[0]
+            score = scores[label]
+            return {"label": label, "score": score}
+
+    @override
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
         if self._mode == "single":
-            return 1 - abs(truth["confidence"] - pred["confidence"]) if truth["label"] == pred["label"] else 0
+            return 1.0 if truth["label"] == pred["label"] else 0.0
 
         # For multi-label: compute label-wise accuracy as
-        # 1 - abs(true confidence for label - predicted confidence for label)
+        # 1 - abs(true score for label - predicted score for label)
         # and normalize the sum of label-wise accuracies over all labels.
         accuracy = 0
-        for label, confidence in truth["confidence_per_label"].items():
-            if label in pred["confidence_per_label"]:
-                pred_confidence = max(min(pred["confidence_per_label"][label], 1), 0)
-                accuracy += 1 - abs(confidence - pred_confidence)
+        for label, score in truth["score_per_label"].items():
+            if label in pred["score_per_label"]:
+                pred_score = max(min(pred["score_per_label"][label], 1), 0)
+                accuracy += 1 - abs(score - pred_score)
 
-        return accuracy / len(truth["confidence_per_label"])
+        return accuracy / len(truth["score_per_label"])

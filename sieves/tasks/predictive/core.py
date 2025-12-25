@@ -23,6 +23,7 @@ from sieves.serialization import Config
 from sieves.tasks import optimization
 from sieves.tasks.core import Task
 from sieves.tasks.distillation.types import DistillationFramework
+from sieves.tasks.predictive.evaluation import TaskEvaluationReport
 from sieves.tasks.predictive.schemas.core import (
     EvaluationSignature,
     FewshotExample,
@@ -253,6 +254,52 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
 
         return cls(**init_dict)
 
+    def evaluate(self, docs: Iterable[Doc], judge: dspy.LM | None = None) -> TaskEvaluationReport:
+        """Evaluate task performance using DSPy-based evaluation.
+
+        :param docs: Documents to evaluate.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Evaluation report.
+        """
+        scores: list[float] = []
+        failures: list[Doc] = []
+
+        for doc in docs:
+            if self.id not in doc.gold:
+                raise KeyError(f"Document missing gold data for task {self.id}")
+            if self.id not in doc.results:
+                continue
+
+            # Convert result and gold to DSPy representation
+            truth = dspy.Example(**self._task_result_to_dspy_dict(doc.gold[self.id]))
+            pred = dspy.Prediction(**self._task_result_to_dspy_dict(doc.results[self.id]))
+
+            # Call internal evaluation logic
+            score = self._evaluate_dspy_example(truth, pred, trace=None, model=judge)
+            scores.append(score)
+
+            if score < 0.5:
+                failures.append(doc)
+
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        return TaskEvaluationReport(
+            metrics={"score": avg_score},
+            task_id=self.id,
+            failures=failures,
+        )
+
+    def _task_result_to_dspy_dict(self, result: Any) -> dict[str, Any]:
+        """Convert a task result or gold data to a dictionary suitable for DSPy evaluation.
+
+        :param result: Task result or gold data.
+        :return: Dictionary representation.
+        """
+        if hasattr(result, "model_dump"):
+            return result.model_dump(serialize_as_any=True)
+        if isinstance(result, dict):
+            return result
+        return {"output": result}
+
     @abc.abstractmethod
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         """Create Hugging Face datasets.Dataset from docs.
@@ -336,10 +383,8 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         except KeyError as err:
             raise KeyError(f"DSPy bridge not available for task {self.__class__.__name__}.") from err
 
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
-        """Evaluate DSPy example for optimization.
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
+        """Evaluate DSPy example for optimization or evaluation.
 
         By default this implements an LLM-based evaluation that uses the model that drives optimization to compare
         results. Where possible this should be replaced by a targeted, deterministic evaluation.
@@ -350,9 +395,19 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         :param trace: Optional trace information.
         :return: Metric value between 0.0 and 1.0.
         :raises KeyError: If target fields are missing from truth or prediction.
-        :raises ValueError: If similarity score cannot be parsed from LLM response.
+        :raises ValueError: If similarity score cannot be parsed from LLM response or no judge model provided.
         """
-        target_fields = list(self._fewshot_examples[0].target_fields)
+        if model is None:
+            raise ValueError(
+                f"No judge model provided for task {self.__class__.__name__}. "
+                "Generative tasks require a DSPy LM judge for evaluation."
+            )
+
+        if self._fewshot_examples:
+            target_fields = list(self._fewshot_examples[0].target_fields)
+        else:
+            # Fallback to all fields in truth that are not input fields
+            target_fields = [k for k in truth.keys() if k not in ("text",)]
 
         # Filter truth and pred to only include target fields.
         truth_filtered: dict[str, Any] = {}
@@ -421,7 +476,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
             :raises KeyError: If target fields are missing from truth or prediction.
             :raises ValueError: If similarity score cannot be parsed from LLM response.
             """
-            return self._evaluate_optimization_example(truth, pred, trace, model=optimizer.model)
+            return self._evaluate_dspy_example(truth, pred, trace, model=optimizer.model)
 
         if verbose:
             best_prompt, best_examples = optimizer(signature, dspy_examples, _pred_eval, verbose=verbose)

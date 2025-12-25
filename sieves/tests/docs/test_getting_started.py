@@ -196,6 +196,34 @@ def test_inference_mode_example(small_outlines_model):
     assert classifier._model_settings.inference_mode == outlines_.InferenceMode.json
 
 
+def test_evaluation_example(small_transformer_model):
+    """Test evaluation example for documentation."""
+    model = small_transformer_model
+
+    # --8<-- [start:evaluation-basic]
+    from sieves import Doc, Pipeline, tasks
+
+    # 1. Setup a pipeline.
+    task = tasks.Classification(labels=["science", "politics"], model=model, task_id="clf")
+    pipeline = Pipeline(task)
+
+    # 2. Prepare test documents with ground-truth (gold) data.
+    doc = Doc(text="The telescope discovered a new galaxy.")
+    doc.gold["clf"] = "science"  # Set expected output for task 'clf'
+
+    # 3. Run inference.
+    docs = list(pipeline([doc]))
+
+    # 4. Evaluate performance.
+    report = pipeline.evaluate(docs)
+
+    # Print results.
+    print(report["clf"].metrics)  # e.g., {'score': 0.94}
+    # --8<-- [end:evaluation-basic]
+
+    assert 0.9 <= report["clf"].metrics["score"] <= 1.0
+
+
 def test_readme_quick_start_basic(small_outlines_model):
     """Test the Quick Start Classification example from README."""
     # Use fixture for actual test

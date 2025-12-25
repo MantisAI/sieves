@@ -42,8 +42,8 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param labels: Labels to classify. Can be a list of label strings, or a dict mapping labels to descriptions.
-        :param mode: If 'multi'', task returns confidence scores for all specified labels. If 'single', task returns
-            most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
+        :param mode: If 'multi'', task returns scores for all specified labels. If 'single', task returns
+        most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
             accuracy.
         :param model_settings: Model settings.
         """
@@ -90,9 +90,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         if self._mode == "multi":
             return f"""
             Multi-label classification of the provided text given the labels {self._labels}.
-            For each label, provide the confidence with which you believe that the provided text should be assigned
-            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
-            opposite. Confidence per label should always be between 0 and 1. Confidence across lables does not have to
+            For each label, provide the score with which you believe that the provided text should be assigned
+            this label. A score of 1.0 means that this text should absolutely be assigned this label. 0 means the
+            opposite. Score per label should always be between 0 and 1. Score across lables does not have to
             add up to 1.
 
             {self._get_label_descriptions()}
@@ -100,7 +100,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
         return f"""
         Single-label classification of the provided text given the labels {self._labels}.
-        Return the label that is the best fit for the provided text with the corresponding confidence.
+        Return the label that is the best fit for the provided text with the corresponding score.
         Exactly one label must be returned. Provide label as simple string, not as list.
         {self._get_label_descriptions()}
         """
@@ -125,8 +125,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
             class MultiLabelTextClassification(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to classify.")
-                confidence_per_label: dict[LabelType, float] = dspy.OutputField(
-                    description="Confidence per label that text should be classified with this label."
+                score_per_label: dict[LabelType, float] = dspy.OutputField(
+                    description="Score per label that text should be classified with this label."
                 )
 
             cls = MultiLabelTextClassification
@@ -139,8 +139,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                     description="Correct label for the provided text. You MUST NOT provide a list for this attribute. "
                     "This a single label. Do not wrap this label in []."
                 )
-                confidence: float = dspy.OutputField(
-                    description="Confidence that this label is correct as a float between 0 and 1."
+                score: float = dspy.OutputField(
+                    description="Score that this label is correct as a float between 0 and 1."
                 )
 
             cls = SingleLabelTextClassification
@@ -157,9 +157,9 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            assert len(result.completions.confidence_per_label) == 1
+            assert len(result.completions.score_per_label) == 1
             sorted_preds = sorted(
-                ((label, score) for label, score in result.completions.confidence_per_label[0].items()),
+                ((label, score) for label, score in result.completions.score_per_label[0].items()),
                 key=lambda x: x[1],
                 reverse=True,
             )
@@ -189,10 +189,10 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                 # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                 # but this fails occasionally with some models and feels too strict.
                 if self._mode == "multi":
-                    for label, score in res.confidence_per_label.items():
+                    for label, score in res.score_per_label.items():
                         label_scores[label] += max(0, min(score, 1))
                 else:
-                    label_scores[res.label] += max(0, min(res.confidence, 1))
+                    label_scores[res.label] += max(0, min(res.score, 1))
 
             sorted_label_scores: list[dict[str, str | float]] = sorted(
                 (
@@ -206,7 +206,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
             consolidated_results.append(
                 dspy.Prediction.from_completions(
                     {
-                        "confidence_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
+                        "score_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
                     },
                     signature=self.prompt_signature,
                 )
@@ -238,7 +238,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
                     <example>
                         <text>{{ example.text }}</text>
                         <output>
-                            {%- for l, s in example.confidence_per_label.items() %}
+                            {%- for l, s in example.score_per_label.items() %}
                             <label_score>
                                 <label>{{ l }}</label><
                                 score>{{ s }}</score>
@@ -250,21 +250,20 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
             """
 
         return """
-        {% if examples|length > 0 -%}
+            {% if examples|length > 0 -%}
 
-        Examples:
-        <examples>
-        {%- for example in examples %}
-            <example>
-                <text>{{ example.text }}</text>
-                <output>
-                    <label>{{ example.label }}</label><score>{{ example.confidence }}</score>
-                </output>
-            </example>
-        {% endfor -%}
-        </examples>
-        {% endif -%}
-        """
+                Examples:
+                <examples>
+                {%- for example in examples %}
+                    <example>
+                        <text>{{ example.text }}</text>
+                        <output>
+                            <label>{{ example.label }}</label><score>{{ example.score }}</score>
+                        </output>
+                    </example>
+                {% endfor %}</examples>
+            {% endif %}
+            """
 
     @override
     @property
@@ -339,15 +338,15 @@ class PydanticBasedClassification(
             Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
             {self._get_label_descriptions()}"""
                 + """
-            For each label, provide the confidence with which you believe that the provided text should be assigned
-            this label. A confidence of 1.0 means that this text should absolutely be assigned this label. 0 means the
-            opposite. Confidence per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision.
+            For each label, provide the score with which you believe that the provided text should be assigned
+            this label. A score of 1.0 means that this text should absolutely be assigned this label. 0 means the
+            opposite. Score per label should ALWAYS be between 0 and 1. Provide the reasoning for your decision.
 
             The output for two labels LABEL_1 and LABEL_2 should look like this:
             <output>
                 <reasoning>REASONING</reasoning>
-                <label_score><label>LABEL_1</label><score>CONFIDENCE_SCORE_1</score></label_score>
-                <label_score><label>LABEL_2</label><score>CONFIDENCE_SCORE_2</score></label_score>
+                <label_score><label>LABEL_1</label><score>SCORE_1</score></label_score>
+                <label_score><label>LABEL_2</label><score>SCORE_2</score></label_score>
             </output>
             """
             )
@@ -355,14 +354,14 @@ class PydanticBasedClassification(
         return f"""
         Classify the provided text. Your classification match one of these labels: {",".join(self._labels)}.
         {self._get_label_descriptions()}
-        Also provide a confidence score reflecting how likely it is that your chosen label is the correct
+        Also provide a score reflecting how likely it is that your chosen label is the correct
         fit for the text.
 
         The output for two labels LABEL_1 and LABEL_2 should look like this:
         <output>
             <reasoning>REASONING</reasoning>
             <label>LABEL_1</label>
-            <score>CONFIDENCE_SCORE_1</score>
+            <score>SCORE_1</score>
         </output>
         """
 
@@ -379,7 +378,7 @@ class PydanticBasedClassification(
                         <text>{{ example.text }}</text>
                         <output>
                             <reasoning>{{ example.reasoning }}</reasoning>
-                            {%- for l, s in example.confidence_per_label.items() %}
+                            {%- for l, s in example.score_per_label.items() %}
                             <label_score><label>{{ l }}</label><score>{{ s }}</score></label_score>{% endfor %}
                         </output>
                     </example>
@@ -397,7 +396,7 @@ class PydanticBasedClassification(
                     <output>
                         <reasoning>{{ example.reasoning }}</reasoning>
                         <label>{{ example.label }}</label>
-                        <score>{{ example.confidence }}</score>
+                        <score>{{ example.score }}</score>
                     </output>
                 </example>
             {% endfor %}</examples>

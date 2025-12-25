@@ -6,6 +6,7 @@ from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, o
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import translation
+from sieves.tasks.predictive.schemas.translation import Result
 
 
 @pytest.mark.parametrize(
@@ -142,3 +143,31 @@ def test_inference_mode_override(batch_runtime) -> None:
     )
 
     assert task._bridge.inference_mode == dummy
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.dspy], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for translation using a real judge."""
+    task = translation.Translation(to="Spanish", model=batch_runtime.model, task_id="trans")
+
+    # 1. Full overlap
+    doc_full = Doc(text="Hello world")
+    res_full = Result(translation="Hola mundo", score=1.0)
+    doc_full.results["trans"] = res_full
+    doc_full.gold["trans"] = res_full
+    report_full = task.evaluate([doc_full], judge=batch_runtime.model)
+    assert report_full.metrics["score"] > 0.8
+
+    # 2. No overlap
+    doc_none = Doc(text="Hello world")
+    doc_none.results["trans"] = Result(translation="Adiós mundo", score=1.0)
+    doc_none.gold["trans"] = Result(translation="Hola mundo", score=1.0)
+    report_none = task.evaluate([doc_none], judge=batch_runtime.model)
+    assert report_none.metrics["score"] < 0.6
+
+    # 3. Partial overlap
+    doc_partial = Doc(text="Hello world")
+    doc_partial.results["trans"] = Result(translation="Hola", score=1.0)
+    doc_partial.gold["trans"] = Result(translation="Hola mundo", score=1.0)
+    report_partial = task.evaluate([doc_partial], judge=batch_runtime.model)
+    assert 0.3 < report_partial.metrics["score"] < 0.8

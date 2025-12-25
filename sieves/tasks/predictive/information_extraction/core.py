@@ -276,9 +276,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         raise NotImplementedError
 
     @override
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
         if self._mode == "single":
             true_entity = truth.get("entity")
             pred_entity = pred.get("entity")

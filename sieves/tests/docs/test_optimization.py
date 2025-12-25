@@ -31,22 +31,22 @@ def test_basic_optimization_example(small_dspy_model):
         FewshotExampleSingleLabel(
             text="New smartphone released",
             label="technology",
-            confidence=1.0
+            score=1.0
         ),
         FewshotExampleSingleLabel(
             text="Senate votes on bill",
             label="politics",
-            confidence=1.0
+            score=1.0
         ),
         FewshotExampleSingleLabel(
             text="Football match results",
             label="sports",
-            confidence=1.0
+            score=1.0
         ),
         FewshotExampleSingleLabel(
             text="Software update available",
             label="technology",
-            confidence=1.0
+            score=1.0
         ),
     ]
     # --8<-- [end:optimization-training-data]

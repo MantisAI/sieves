@@ -193,9 +193,7 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
         raise NotImplementedError
 
     @override
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
         # Compute triplet-level F1 score based on (head_text, relation, tail_text) triples.
         # Use lowercase for robust matching.
         true_triplets = {

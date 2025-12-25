@@ -28,6 +28,10 @@ dependencies = [
     "sentencepiece<1",
     "json-repair>=0.48.0",
     "openai>=1.109.1,<2",
+    "evaluate>=0.4.5",
+    "pytest>=7.4.4",
+    "langchain-openai>=1.1.6",
+    "flaky>=3.8.1",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
