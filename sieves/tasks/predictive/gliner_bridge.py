@@ -155,9 +155,9 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                 # Used by: Classification
                 case gliner_.InferenceMode.classification:
                     assert hasattr(self._prompt_signature.schema, "__getitem__")
-                    is_multilabel = self._prompt_signature.schema["classifications"][0]["multi_label"]
+                    mode = self._prompt_signature.schema["classifications"][0]["mode"]
 
-                    if is_multilabel:
+                    if mode == "multi":
                         label_scores: list[tuple[str, float]] = []
                         for res in sorted(result, key=lambda x: x["score"], reverse=True):
                             assert isinstance(res, dict)

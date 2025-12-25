@@ -220,7 +220,7 @@ def _(batch_size, data_sampled, model):
     crisis_label_classifier = tasks.Classification(
         task_id="crisis_label_classifier",
         labels=data_sampled.label.unique(),
-        multi_label=False,
+        mode='single',
         model=model,
         batch_size=batch_size,
     )
@@ -249,7 +249,7 @@ def _(Doc, batch_size, data_sampled, model, tasks):
     crisis_type_classifier = tasks.Classification(
         task_id="crisis_type_classifier",
         labels=data_sampled.crisis_type.unique(),
-        multi_label=False,
+        mode='single',
         model=model,
         condition=related_to_crisis,
         batch_size=batch_size,

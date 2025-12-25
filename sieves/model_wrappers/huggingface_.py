@@ -66,7 +66,7 @@ class HuggingFace(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
                         sequences=[doc_values["text"] for doc_values in values],
                         candidate_labels=prompt_signature,
                         hypothesis_template=template,
-                        multi_label=True,
+                        mode="multi",
                         **self._inference_kwargs,
                     )
 

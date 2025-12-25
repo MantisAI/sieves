@@ -1,5 +1,6 @@
 # mypy: ignore-errors
 import traceback
+from typing import Literal
 
 import pydantic
 import pytest
@@ -14,10 +15,13 @@ from sieves.tests.conftest import Runtime
 
 
 def _run(
-    runtime: Runtime, docs: list[Doc], fewshot: bool, multilabel: bool = True, test_hf_conversion: bool = False
+    runtime: Runtime, docs: list[Doc],
+    fewshot: bool,
+    mode: Literal['multi', 'single'] = 'multi',
+    test_hf_conversion: bool = False
 ) -> None:
     """Tests whether the classification task works as expected."""
-    if multilabel:
+    if mode == 'multi':
         fewshot_examples = [
             classification.FewshotExampleMultiLabel(
                 text="On the properties of hydrogen atoms and red dwarfs.",
@@ -54,7 +58,7 @@ def _run(
         model=runtime.model,
         model_settings=runtime.model_settings,
         batch_size=runtime.batch_size,
-        multi_label=multilabel,
+        mode=mode,
         **fewshot_args,
     )
     pipe = Pipeline(task)
@@ -67,7 +71,8 @@ def _run(
         assert "classifier" in doc.results
 
         # Verify unified result types.
-        if multilabel:
+        if mode == 'multi':
+            print(doc.results["classifier"])
             assert isinstance(doc.results["classifier"], classification.ResultMultiLabel)
         else:
             assert isinstance(doc.results["classifier"], classification.ResultSingleLabel)
@@ -83,15 +88,15 @@ def _run(
         print(f"Total Usage: {doc.meta['usage']}")
 
     if test_hf_conversion:
-        _to_hf_dataset(task, docs, multilabel)
+        _to_hf_dataset(task, docs, mode)
 
 @flaky(max_runs=3, min_passes=1)
 @pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
-@pytest.mark.parametrize("multilabel", [True, False])
-def test_run(classification_docs, batch_runtime, fewshot, multilabel):
+@pytest.mark.parametrize("mode", ['multi', 'single'])
+def test_run(classification_docs, batch_runtime, fewshot, mode):
     try:
-        _run(batch_runtime, classification_docs, fewshot, multilabel, test_hf_conversion=fewshot is True)
+        _run(batch_runtime, classification_docs, fewshot, mode, test_hf_conversion=fewshot is True)
     except RuntimeError as err:
         # Outlines via OpenRouter/OpenAI API cannot deal with `Literal`s, hence classification may fail.
         # This is tolerable, but we should keep an eye on this and remove this fallback once possible.
@@ -108,19 +113,19 @@ def test_run_nonbatched(classification_docs, runtime, fewshot):
     _run(runtime, classification_docs, fewshot, test_hf_conversion=False)
 
 
-def _to_hf_dataset(task: Classification, docs: list[Doc], multi_label: bool) -> None:
+def _to_hf_dataset(task: Classification, docs: list[Doc], mode: Literal['single', 'multi']) -> None:
     """Tests whether conversion to HF dataset works as expected.
 
     :param task: Classification task instance.
     :param docs: List of documents to convert.
-    :param multi_label: Whether the task is multi-label.
+    :param mode: Task mode.
     """
     dataset = task.to_hf_dataset(docs)
     assert all([key in dataset.features for key in ("text", "labels")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
     for rec in dataset_records:
-        if multi_label:
+        if mode == 'multi':
             assert isinstance(rec["labels"], list)
             assert all(
                 [isinstance(v, int) for v in rec["labels"]]
