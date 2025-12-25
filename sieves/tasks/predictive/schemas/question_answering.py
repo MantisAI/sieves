@@ -68,6 +68,7 @@ class FewshotExample(BaseFewshotExample):
             )
             for q, a, s in zip(self.questions, self.answers, scores)
         ]
+
         return dspy.Example(text=self.text, questions=self.questions, qa_pairs=qa_pairs).with_inputs(*self.input_fields)
 
 

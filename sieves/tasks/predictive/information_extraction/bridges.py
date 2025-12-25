@@ -165,7 +165,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
                         if getattr(entity, "score", None) is not None:
                             entities_map[key].append(entity.score)
 
-                consolidated_entities = []
+                consolidated_entities: list[pydantic.BaseModel] = []
                 for entity_base, scores in entities_map.items():
                     avg_score = sum(scores) / len(scores) if scores else None
                     if hasattr(entity_base, "model_copy"):
@@ -359,7 +359,7 @@ class PydanticBasedInformationExtraction(
                         if getattr(entity, "score", None) is not None:
                             entities_map[key].append(entity.score)
 
-                consolidated_entities = []
+                consolidated_entities: list[pydantic.BaseModel] = []
                 for entity_base, scores in entities_map.items():
                     avg_score = sum(scores) / len(scores) if scores else None
                     if hasattr(entity_base, "model_copy"):

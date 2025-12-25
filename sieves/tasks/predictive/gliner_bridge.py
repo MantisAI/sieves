@@ -145,8 +145,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         # Create wrapper "Schema" model with lowercase attribute names if more than one structure is present.
         if len(models) > 1:
             raise TypeError(
-                "Composite GliNER2 schemas are not supported. Use a single structure/entitity/classification per Sieves"
-                " task."
+                "Composite GliNER2 schemas are not supported. Use a single structure/entitity/classification per task."
             )
 
         return models[list(models.keys())[0]]

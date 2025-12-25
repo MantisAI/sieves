@@ -100,7 +100,7 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
         # Determine label scores for chunks per document.
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
-            # Map question -> (list of answers, list of scores)
+            # Map question -> (list of answers, list of scores).
             qa_map: dict[str, tuple[list[str], list[float]]] = {q: ([], []) for q in self._questions}
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
@@ -114,7 +114,7 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
                         if qa.score is not None:
                             qa_map[qa.question][1].append(qa.score)
 
-            # Reconstruct QuestionAnswer objects.
+            # Reconstruct `QuestionAnswer` objects.
             consolidated_qa_pairs: list[QuestionAnswer] = []
             for question in self._questions:
                 answers, scores = qa_map[question]
@@ -215,7 +215,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
         # Determine label scores for chunks per document.
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
-            # Map question -> (list of answers, list of scores)
+            # Map question -> (list of answers, list of scores).
             qa_map: dict[str, tuple[list[str], list[float]]] = {q: ([], []) for q in self._questions}
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
@@ -230,7 +230,7 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
                         if qa.score is not None:
                             qa_map[qa.question][1].append(qa.score)
 
-            # Reconstruct QuestionAnswer objects.
+            # Reconstruct `QuestionAnswer` objects.
             consolidated_qa_pairs: list[QuestionAnswer] = []
             for question in self._questions:
                 answers, scores = qa_map[question]

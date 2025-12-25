@@ -117,7 +117,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         :return: Triplet model.
         """
         # Create a list of allowed types including lowercase variations to be more robust.
-        entity_types_list = []
+        entity_types_list: list[str] = []
         if self._entity_types:
             for et in self._entity_types:
                 entity_types_list.append(et)
@@ -126,7 +126,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
                 if et.upper() not in entity_types_list:
                     entity_types_list.append(et.upper())
 
-        relations_list = []
+        relations_list: list[str] = []
         if self._relations:
             for rel in self._relations:
                 relations_list.append(rel)

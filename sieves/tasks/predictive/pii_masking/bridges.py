@@ -48,16 +48,18 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
             overwrite=overwrite,
             model_settings=model_settings,
         )
+
         self._mask_placeholder = mask_placeholder
+        self._pii_types: list[str] | None = None
+        self._pii_type_descriptions: dict[str, str] = {}
+
         if isinstance(pii_types, dict):
             self._pii_types = list(pii_types.keys())
             self._pii_type_descriptions = pii_types
         elif pii_types is not None:
             self._pii_types = pii_types
             self._pii_type_descriptions = {}
-        else:
-            self._pii_types = None
-            self._pii_type_descriptions = {}
+
         self._pii_entity_cls = self._create_pii_entity_cls()
 
     def _get_pii_type_descriptions(self) -> str:
