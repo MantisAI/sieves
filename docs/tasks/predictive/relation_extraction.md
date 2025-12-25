@@ -27,6 +27,18 @@ Each `RelationTriplet` consists of:
 
 A `RelationEntity` includes the surface `text`, `entity_type`, and character `start`/`end` offsets.
 
+## Evaluation
+
+Performance of the relation extraction task can be measured using the `.evaluate()` method.
+
+- **Metric**: Triplet-level F1-score. Triplets are matched based on the head entity text, the relation type, and the tail entity text.
+- **Requirement**: Each document must have ground-truth triplets stored in `doc.gold[task_id]`.
+
+```python
+report = task.evaluate(docs)
+print(f"Relation F1-Score: {report.metrics['score']}")
+```
+
 ---
 
 ::: sieves.tasks.predictive.relation_extraction.core

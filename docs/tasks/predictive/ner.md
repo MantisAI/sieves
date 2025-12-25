@@ -32,6 +32,18 @@ Each entity includes a confidence score:
 --8<-- "sieves/tasks/predictive/schemas/ner.py:Result"
 ```
 
+## Evaluation
+
+Performance of the NER task can be measured using the `.evaluate()` method.
+
+- **Metric**: Entity-level F1-score. Entities are matched based on their text span (start/end offsets) and type.
+- **Requirement**: Each document must have ground-truth entities stored in `doc.gold[task_id]`.
+
+```python
+report = task.evaluate(docs)
+print(f"NER F1-Score: {report.metrics['score']}")
+```
+
 ---
 
 ::: sieves.tasks.predictive.ner.core

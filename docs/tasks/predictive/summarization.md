@@ -18,6 +18,20 @@ Confidence scores are self-reported by **LLMs** and may be `None`.
 --8<-- "sieves/tasks/predictive/schemas/summarization.py:Result"
 ```
 
+## Evaluation
+
+Because summarization is a generative task, evaluation requires a "judge" model to assess semantic similarity.
+
+- **Metric**: Model-based similarity score (0.0 to 1.0) provided by a DSPy judge.
+- **Requirement**: Each document must have a ground-truth summary stored in `doc.gold[task_id]`.
+- **Judge**: You must provide a `dspy.LM` instance to the `evaluate()` method.
+
+```python
+# Use an LLM as a judge to evaluate the summaries
+report = task.evaluate(docs, judge=dspy_judge)
+print(f"Summary Similarity: {report.metrics['score']}")
+```
+
 ---
 
 ::: sieves.tasks.predictive.summarization.core

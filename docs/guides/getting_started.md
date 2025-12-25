@@ -93,3 +93,17 @@ To specify an inference mode (model type-specific):
 ```python title="ModelWrapper-specific inference mode configuration"
 --8<-- "sieves/tests/docs/test_getting_started.py:inference-mode-config"
 ```
+
+## Evaluating Your Pipeline
+
+`sieves` provides built-in support for measuring the performance of your tasks against ground-truth data.
+
+To evaluate a task, you must provide the expected results in the `.gold` field of your `Doc` objects. The evaluation engine then compares the model's `.results` with your `.gold` data.
+
+```python title="Basic pipeline evaluation"
+--8<-- "sieves/tests/docs/test_getting_started.py:evaluation-basic"
+```
+
+Different tasks use different evaluation strategies:
+- **Deterministic Metrics**: Tasks like Classification and NER use standard metrics (e.g., Accuracy, F1-score) to provide precise measurements.
+- **Model-based Evaluation**: Generative tasks like Summarization and Translation require a "judge" model (a `dspy.LM` instance) to assess semantic quality.

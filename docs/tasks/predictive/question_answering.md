@@ -18,6 +18,19 @@ Confidence scores are self-reported by **LLMs** and may be `None` if the model f
 --8<-- "sieves/tasks/predictive/schemas/question_answering.py:Result"
 ```
 
+## Evaluation
+
+Performance of the Question Answering task is assessed using a "judge" model.
+
+- **Metric**: Model-based similarity score (0.0 to 1.0) provided by a DSPy judge, averaged across all question-answer pairs.
+- **Requirement**: Each document must have ground-truth answers stored in `doc.gold[task_id]`.
+- **Judge**: You must provide a `dspy.LM` instance to the `evaluate()` method.
+
+```python
+report = task.evaluate(docs, judge=dspy_judge)
+print(f"QA Score: {report.metrics['score']}")
+```
+
 ---
 
 ::: sieves.tasks.predictive.question_answering.core

@@ -14,11 +14,20 @@ The `SentimentAnalysis` task returns a unified `Result` object containing a `sen
 
 Confidence scores are self-reported by **LLMs** and may be `None`.
 
+## Evaluation
+
+Performance of sentiment analysis can be measured using the `.evaluate()` method.
+
+- **Metric**: Average similarity (1 - absolute error) across all sentiment aspects.
+- **Requirement**: Each document must have ground-truth sentiment scores stored in `doc.gold[task_id]`.
+
 ```python
---8<-- "sieves/tasks/predictive/schemas/sentiment_analysis.py:Result"
+report = task.evaluate(docs)
+print(f"Sentiment Score: {report.metrics['score']}")
 ```
 
 ---
+
 
 ::: sieves.tasks.predictive.sentiment_analysis.core
 ::: sieves.tasks.predictive.sentiment_analysis.bridges

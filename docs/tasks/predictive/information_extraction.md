@@ -56,6 +56,18 @@ While confidence scores are always present for **GLiNER2** models, they are self
 
 If your original model already contains a `score` field, `sieves` will use it as-is without further modification.
 
+## Evaluation
+
+The performance of information extraction can be measured using the `.evaluate()` method.
+
+- **Metric**: For `single` mode, the score is binary (match or mismatch). For `multi` mode, the score is the entity-level F1-score across all extracted entities.
+- **Requirement**: Each document must have ground-truth entities (matching your schema) stored in `doc.gold[task_id]`.
+
+```python
+report = task.evaluate(docs)
+print(f"IE Score: {report.metrics['score']}")
+```
+
 ---
 
 ::: sieves.tasks.predictive.information_extraction.core

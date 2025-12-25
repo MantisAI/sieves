@@ -23,6 +23,18 @@ The `Classification` task returns a unified result schema regardless of the mode
 
 Confidence scores are always present for `transformers` and `gliner2` models. For **LLMs**, scores are self-reported and may be `None`.
 
+## Evaluation
+
+You can evaluate the performance of your classifier using the `.evaluate()` method.
+
+- **Metric**: For single-label classification, the score is binary (1.0 for a match, 0.0 for a mismatch). For multi-label, the score is the average similarity (1 - absolute error) across all labels.
+- **Requirement**: Each document must have its ground-truth label stored in `doc.gold[task_id]`.
+
+```python
+report = task.evaluate(docs)
+print(f"Classification Score: {report.metrics['score']}")
+```
+
 ---
 
 ::: sieves.tasks.predictive.classification.core

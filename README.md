@@ -65,6 +65,7 @@ to skip having to define tasks from scratch.
   - PII (personally identifiable information) anonymization
   - Named entity recognition
 - :floppy_disk: **Persistence:** Save and load pipelines with configurations
+- :chart_with_upwards_trend: **Evaluation:** Measure pipeline and task performance against ground-truth data with deterministic metrics or LLM-based judging.
 - :rocket: **Optimization:** Improve task performance by optimizing prompts and few-shot examples using [DSPy's MIPROv2](https://dspy-docs.vercel.app/api/optimizers/MIPROv2)
 - :teacher: **Distillation:** Fine-tune smaller, specialized models using your zero-shot results with frameworks like SetFit and Model2Vec.
   Export results as HuggingFace [`Dataset`](https://github.com/huggingface/datasets) for custom training.

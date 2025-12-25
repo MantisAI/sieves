@@ -16,6 +16,18 @@ The `PIIMasking` task returns a unified `Result` object containing the `masked_t
 --8<-- "sieves/tasks/predictive/schemas/pii_masking.py:Result"
 ```
 
+## Evaluation
+
+Performance of the PII masking task can be measured using the `.evaluate()` method.
+
+- **Metric**: Entity-level F1-score. PII entities are matched based on their text span (start/end offsets) and type.
+- **Requirement**: Each document must have ground-truth PII entities stored in `doc.gold[task_id]`.
+
+```python
+report = task.evaluate(docs)
+print(f"PII F1-Score: {report.metrics['score']}")
+```
+
 ---
 
 ::: sieves.tasks.predictive.pii_masking.core
