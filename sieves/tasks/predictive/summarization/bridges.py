@@ -65,7 +65,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return "Summary of a longer text."
+        return "Summary of a longer text. Also provide a confidence score between 0.0 and 1.0."
 
     @override
     @property
@@ -84,6 +84,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
             text: str = dspy.InputField(description="Text to summarize.")
             n_words: str = dspy.InputField(description="Number of words to approximately use for summary.")
             summary: str = dspy.OutputField(description="Summary of text.")
+            score: float = dspy.OutputField(description="Confidence score between 0.0 and 1.0.")
 
         Summary.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
@@ -98,7 +99,7 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.summary) == 1
-            res = Result(summary=result.summary)
+            res = Result(summary=result.summary, score=getattr(result, "score", None))
             doc.results[self._task_id] = res
 
             if self._overwrite:
@@ -114,15 +115,21 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             summaries: list[str] = []
+            scores: list[float] = []
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
                     continue
                 summaries.append(res.summary)
+                if hasattr(res, "score") and res.score is not None:
+                    scores.append(res.score)
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {"summary": ["\n".join(summaries).strip()]},
+                    {
+                        "summary": ["\n".join(summaries).strip()],
+                        "score": [sum(scores) / len(scores) if scores else None],
+                    },
                     signature=self.prompt_signature,
                 )
             )
@@ -140,6 +147,7 @@ class PydanticBasedSummarization(
     def _default_prompt_instructions(self) -> str:
         return """
         Your goal is to summarize a text. This summary should be around {{ max_n }} words.
+        Also provide a confidence score between 0.0 and 1.0 for the summary.
         """
 
     @override
@@ -154,6 +162,7 @@ class PydanticBasedSummarization(
                 <summary>
                 {{ example.summary }}
                 </summary>
+                <score>{{ example.score }}</score>
             {% endfor -%}
             </examples>
         {% endif -%}
@@ -176,6 +185,7 @@ class PydanticBasedSummarization(
             """Summary of the specified text."""
 
             summary: str
+            score: float | None = None
 
         return Summary
 
@@ -183,7 +193,7 @@ class PydanticBasedSummarization(
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "summary")
-            res = Result(summary=result.summary)
+            res = Result(summary=result.summary, score=getattr(result, "score", None))
             doc.results[self._task_id] = res
 
             if self._overwrite:
@@ -198,6 +208,7 @@ class PydanticBasedSummarization(
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             summaries: list[str] = []
+            scores: list[float] = []
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
@@ -205,8 +216,15 @@ class PydanticBasedSummarization(
 
                 assert hasattr(res, "summary")
                 summaries.append(res.summary)
+                if hasattr(res, "score") and res.score is not None:
+                    scores.append(res.score)
 
-            consolidated_results.append(self.prompt_signature(summary="\n".join(summaries).strip()))
+            consolidated_results.append(
+                self.prompt_signature(
+                    summary="\n".join(summaries).strip(),
+                    score=sum(scores) / len(scores) if scores else None,
+                )
+            )
         return consolidated_results
 
 

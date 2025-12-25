@@ -59,10 +59,18 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     @property
     def _default_prompt_instructions(self) -> str:
         if self._mode == "multi":
-            return "Find all occurences of this kind of entitity within the text."
+            return (
+                "Find all occurences of this kind of entitity within the text. For each entity found, also provide "
+                "a confidence score between 0.0 and 1.0 in the 'score' field. "
+                "The `score` field must be provided regardless of whether or not potentially given fewshot examples "
+                "have it."
+            )
         return (
             "Find the single most relevant entitity within the text. If no such entitity exists, return null. Return "
-            "exactly one entity with all its fields, NOT just a string."
+            "exactly one entity with all its fields, NOT just a string. Also provide a confidence score between 0.0 "
+            "and 1.0 in the 'score' field."
+            "The `score` field must be provided regardless of whether or not potentially given fewshot examples "
+            "have it."
         )
 
     @override
@@ -82,20 +90,20 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
         if self._mode == "multi":
 
-            class Entities(dspy.Signature):  # type: ignore[misc]
+            class InformationExtractionMulti(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to extract entities from.")
                 entities: list[extraction_type] = dspy.OutputField(description="Entities to extract from text.")  # type: ignore[valid-type]
 
-            cls = Entities
+            cls = InformationExtractionMulti
         else:
 
-            class Entity(dspy.Signature):  # type: ignore[misc]
+            class InformationExtractionSingle(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to extract entity from.")
                 entity: extraction_type | None = dspy.OutputField(  # type: ignore[valid-type]
                     description="The single entity to extract from text. Should NOT be a list."
                 )
 
-            cls = Entity
+            cls = InformationExtractionSingle
 
         cls.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
@@ -111,10 +119,14 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         for doc, result in zip(docs, results):
             if self._mode == "multi":
                 assert len(result.completions.entities) == 1
-                doc.results[self._task_id] = ResultMulti(entities=result.completions.entities[0])
+                doc.results[self._task_id] = ResultMulti(
+                    entities=result.completions.entities[0],
+                )
             else:
                 assert len(result.completions.entity) == 1
-                doc.results[self._task_id] = ResultSingle(entity=result.completions.entity[0])
+                doc.results[self._task_id] = ResultSingle(
+                    entity=result.completions.entity[0],
+                )
         return docs
 
     @override
@@ -127,22 +139,43 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             if self._mode == "multi":
-                entities: list[entity_type] = []  # type: ignore[valid-type]
-                seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
+                # We need to deduplicate entities and average their scores.
+                # Since entity_type is frozen, we can use it as a dict key.
+                # However, the 'score' field might differ. We exclude it for deduplication.
+
+                # entities_map: entity_without_score -> list of scores
+                entities_map: dict[entity_type, list[float]] = {}  # type: ignore[valid-type]
 
                 for res in results[doc_offset[0] : doc_offset[1]]:
                     if res is None:
                         continue
                     assert len(res.completions.entities) == 1
-                    # Ensure not to add duplicate entities.
                     for entity in res.completions.entities[0]:
-                        if entity not in seen_entities:
-                            entities.append(entity)
-                            seen_entities.add(entity)
+                        assert isinstance(entity, pydantic.BaseModel)
+
+                        # Create a copy without score for deduplication key.
+                        # This works if model_copy and update are available (Pydantic v2).
+                        if hasattr(entity, "model_copy"):
+                            key = entity.model_copy(update={"score": None})
+                        else:
+                            key = entity
+
+                        if key not in entities_map:
+                            entities_map[key] = []
+                        if getattr(entity, "score", None) is not None:
+                            entities_map[key].append(entity.score)
+
+                consolidated_entities = []
+                for entity_base, scores in entities_map.items():
+                    avg_score = sum(scores) / len(scores) if scores else None
+                    if hasattr(entity_base, "model_copy"):
+                        consolidated_entities.append(entity_base.model_copy(update={"score": avg_score}))
+                    else:
+                        consolidated_entities.append(entity_base)
 
                 consolidated_results.append(
                     dspy.Prediction.from_completions(
-                        {"entities": [entities]},
+                        {"entities": [consolidated_entities]},
                         signature=self.prompt_signature,
                     )
                 )
@@ -150,27 +183,46 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
             else:
                 entity_counts: Counter[entity_type | None] = Counter()  # type: ignore[valid-type]
                 first_seen: dict[entity_type | None, int] = {}  # type: ignore[valid-type]
+                scores_per_entity: dict[entity_type | None, list[float]] = {}  # type: ignore[valid-type]
 
                 for i, res in enumerate(results[doc_offset[0] : doc_offset[1]]):
                     if res is None:
                         continue
                     assert len(res.completions.entity) == 1
                     entity = res.completions.entity[0]
-                    entity_counts[entity] += 1
-                    if entity not in first_seen:
-                        first_seen[entity] = i
+
+                    # Deduplicate key by removing score.
+                    if entity is not None and hasattr(entity, "model_copy"):
+                        key = entity.model_copy(update={"score": None})
+                    else:
+                        key = entity
+
+                    entity_counts[key] += 1
+                    if key not in first_seen:
+                        first_seen[key] = i
+                    if key not in scores_per_entity:
+                        scores_per_entity[key] = []
+                    if entity is not None and getattr(entity, "score", None) is not None:
+                        scores_per_entity[key].append(entity.score)
 
                 if not entity_counts:
-                    winner = None
+                    winner_entity = None
                 else:
-                    # Majority voting, pick first encountered in case of ties.
+                    # Pick winner by majority.
                     max_count = max(entity_counts.values())
                     candidates = [e for e, count in entity_counts.items() if count == max_count]
-                    winner = min(candidates, key=lambda e: first_seen[e])
+                    winner_key = min(candidates, key=lambda e: first_seen[e])
+
+                    if winner_key is None:
+                        winner_entity = None
+                    else:
+                        scores = scores_per_entity[winner_key]
+                        avg_score = sum(scores) / len(scores) if scores else None
+                        winner_entity = winner_key.model_copy(update={"score": avg_score})
 
                 consolidated_results.append(
                     dspy.Prediction.from_completions(
-                        {"entity": [winner]},
+                        {"entity": [winner_entity]},
                         signature=self.prompt_signature,
                     )
                 )
@@ -188,11 +240,13 @@ class PydanticBasedInformationExtraction(
     def _default_prompt_instructions(self) -> str:
         if self._mode == "multi":
             return """
-            Find all occurences of this kind of entitity within the text.
+            Find all occurences of this kind of entitity within the text. For each entity found, also provide
+            a confidence score between 0.0 and 1.0 in the 'score' field.
             """
         return """
         Find the single most relevant entitity within the text. If no such entitity exists, return null. Return exactly
-        one entity with all its fields, NOT just a string.
+        one entity with all its fields, NOT just a string. Also provide a confidence score between 0.0 and 1.0 in the
+        'score' field.
         """
 
     @override
@@ -245,22 +299,22 @@ class PydanticBasedInformationExtraction(
 
         if self._mode == "multi":
 
-            class Entities(pydantic.BaseModel, frozen=True):
+            class InformationExtractionMulti(pydantic.BaseModel, frozen=True):
                 """Entities to extract from text."""
 
                 entities: list[entity_type]  # type: ignore[valid-type]
 
-            return Entities
+            return InformationExtractionMulti
         else:
 
-            class Entity(pydantic.BaseModel, frozen=True):
+            class InformationExtractionSingle(pydantic.BaseModel, frozen=True):
                 """Entity to extract from text."""
 
                 entity: entity_type | None = pydantic.Field(  # type: ignore[valid-type]
                     description="The single entity to extract from text. Should NOT be a list."
                 )
 
-            return Entity
+            return InformationExtractionSingle
 
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
@@ -285,43 +339,77 @@ class PydanticBasedInformationExtraction(
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             if self._mode == "multi":
-                entities: list[entity_type] = []  # type: ignore[valid-type]
-                seen_entities: set[entity_type] = set()  # type: ignore[valid-type]
+                # entities_map: entity_without_score -> list of scores
+                entities_map: dict[entity_type, list[float]] = {}  # type: ignore[valid-type]
 
                 for res in results[doc_offset[0] : doc_offset[1]]:
                     if res is None:
                         continue  # type: ignore[unreachable]
 
                     assert hasattr(res, "entities")
-                    # Ensure not to add duplicate entities.
                     for entity in res.entities:
-                        if entity not in seen_entities:
-                            entities.append(entity)
-                            seen_entities.add(entity)
+                        # Deduplicate key by removing score.
+                        if hasattr(entity, "model_copy"):
+                            key = entity.model_copy(update={"score": None})
+                        else:
+                            key = entity
 
-                consolidated_results.append(self.prompt_signature(entities=entities))
+                        if key not in entities_map:
+                            entities_map[key] = []
+                        if getattr(entity, "score", None) is not None:
+                            entities_map[key].append(entity.score)
+
+                consolidated_entities = []
+                for entity_base, scores in entities_map.items():
+                    avg_score = sum(scores) / len(scores) if scores else None
+                    if hasattr(entity_base, "model_copy"):
+                        consolidated_entities.append(entity_base.model_copy(update={"score": avg_score}))
+                    else:
+                        consolidated_entities.append(entity_base)
+
+                consolidated_results.append(self.prompt_signature(entities=consolidated_entities))
             else:
                 entity_counts: Counter[entity_type | None] = Counter()  # type: ignore[valid-type]
                 first_seen: dict[entity_type | None, int] = {}  # type: ignore[valid-type]
+                scores_per_entity: dict[entity_type | None, list[float]] = {}  # type: ignore[valid-type]
 
                 for i, res in enumerate(results[doc_offset[0] : doc_offset[1]]):
                     if res is None:
                         continue  # type: ignore[unreachable]
                     assert hasattr(res, "entity")
                     entity = res.entity
-                    entity_counts[entity] += 1
-                    if entity not in first_seen:
-                        first_seen[entity] = i
+                    assert isinstance(entity, pydantic.BaseModel)
+
+                    # Deduplicate key by removing score.
+                    if entity is not None and hasattr(entity, "model_copy"):
+                        key = entity.model_copy(update={"score": None})
+                    else:
+                        key = entity
+
+                    entity_counts[key] += 1
+                    if key not in first_seen:
+                        first_seen[key] = i
+                    if key not in scores_per_entity:
+                        scores_per_entity[key] = []
+                    if entity is not None and getattr(entity, "score", None) is not None:
+                        scores_per_entity[key].append(entity.score)
 
                 if not entity_counts:
-                    winner = None
+                    winner_entity = None
                 else:
-                    # Majority voting, pick first encountered in case of ties.
+                    # Pick winner by majority.
                     max_count = max(entity_counts.values())
                     candidates = [e for e, count in entity_counts.items() if count == max_count]
-                    winner = min(candidates, key=lambda e: first_seen[e])
+                    winner_key = min(candidates, key=lambda e: first_seen[e])
 
-                consolidated_results.append(self.prompt_signature(entity=winner))
+                    if winner_key is None:
+                        winner_entity = None
+                    else:
+                        scores = scores_per_entity[winner_key]
+                        avg_score = sum(scores) / len(scores) if scores else None
+                        winner_entity = winner_key.model_copy(update={"score": avg_score})
+
+                consolidated_results.append(self.prompt_signature(entity=winner_entity))
         return consolidated_results
 
 

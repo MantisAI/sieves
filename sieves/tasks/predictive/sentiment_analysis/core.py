@@ -125,7 +125,11 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
-            {"text": datasets.Value("string"), "aspect": datasets.Sequence(datasets.Value("float32"))}
+            {
+                "text": datasets.Value("string"),
+                "aspect": datasets.Sequence(datasets.Value("float32")),
+                "score": datasets.Value("float32"),
+            }
         )
         info = datasets.DatasetInfo(
             description=f"Aspect-based sentiment analysis dataset with aspects {self._aspects}. Generated with sieves "
@@ -136,7 +140,14 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
         # Fetch data used for generating dataset.
         aspects = self._aspects
         try:
-            data = [(doc.text, doc.results[self._task_id].sentiment_per_aspect) for doc in docs]
+            data = [
+                (
+                    doc.text,
+                    doc.results[self._task_id].sentiment_per_aspect,
+                    doc.results[self._task_id].score,
+                )
+                for doc in docs
+            ]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
@@ -145,8 +156,8 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
 
             :return: Results as dicts.
             """
-            for text, scores in data:
-                yield {"text": text, "aspect": [scores[aspect] for aspect in aspects]}
+            for text, scores, score in data:
+                yield {"text": text, "aspect": [scores[aspect] for aspect in aspects], "score": score}
 
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)
@@ -177,4 +188,11 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
                 pred_sentiment = max(min(pred["sentiment_per_aspect"][aspect], 1), 0)
                 accuracy += 1 - abs(sentiment - pred_sentiment)
 
-        return accuracy / len(truth["sentiment_per_aspect"])
+        base_accuracy = accuracy / len(truth["sentiment_per_aspect"])
+
+        # If score is available in both truth and pred, incorporate it into the metric.
+        if "score" in truth and truth["score"] is not None and "score" in pred and pred["score"] is not None:
+            score_accuracy = 1 - abs(truth["score"] - max(min(pred["score"], 1), 0))
+            return (base_accuracy + score_accuracy) / 2
+
+        return base_accuracy

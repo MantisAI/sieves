@@ -15,10 +15,12 @@ class PIIEntity(pydantic.BaseModel, frozen=True):
     Attributes:
         entity_type: Type of PII.
         text: Entity text.
+        score: Confidence score.
     """
 
     entity_type: str
     text: str
+    score: float | None = None
 
 
 class FewshotExample(BaseFewshotExample):

@@ -24,8 +24,9 @@ def test_run(qa_docs, batch_runtime, fewshot):
             space and time, and the related entities of energy and force. Physics is one of the most fundamental
             scientific disciplines. A scientist who specializes in the field of physics is called a physicist.
             """,
-            questions=("What's a scientist called who specializes in the field of physics?",),
-            answers=("A physicist.",),
+            questions=["What's a scientist called who specializes in the field of physics?"],
+            answers=["A physicist."],
+            scores=[1.0],
         ),
         question_answering.FewshotExample(
             text="""
@@ -34,8 +35,9 @@ def test_run(qa_docs, batch_runtime, fewshot):
             populations. They usually specialize in a particular branch (e.g., molecular biology, zoology, and
             evolutionary biology) of biology and have a specific research focus (e.g., studying malaria or cancer).
             """,
-            questions=("What are biologists interested in?",),
-            answers=("Studying life on earth.",),
+            questions=["What are biologists interested in?"],
+            answers=["Studying life."],
+            scores=[1.0],
         ),
     ]
 
@@ -85,12 +87,13 @@ def _to_hf_dataset(task: QuestionAnswering, docs: list[Doc]) -> None:
     :param docs: List of documents to convert.
     """
     dataset = task.to_hf_dataset(docs)
-    assert all([key in dataset.features for key in ("text", "answers")])
+    assert all([key in dataset.features for key in ("text", "answers", "scores")])
     assert len(dataset) == 2
     dataset_records = list(dataset)
     for rec in dataset_records:
         assert isinstance(rec["text"], str)
         assert isinstance(rec["answers"], list)
+        assert isinstance(rec["scores"], list)
 
     with pytest.raises(KeyError):
         task.to_hf_dataset([Doc(text="This is a dummy text.")])

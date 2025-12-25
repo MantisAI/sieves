@@ -109,6 +109,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
             entity_text = getattr(entity_with_context, "text", "")
             context = getattr(entity_with_context, "context", None)
             entity_type = getattr(entity_with_context, "entity_type", "")
+            score = getattr(entity_with_context, "score", None)
 
             if not entity_text:
                 continue
@@ -120,6 +121,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
                         start=-1,
                         end=-1,
                         entity_type=entity_type,
+                        score=score,
                     )
                 )
                 continue
@@ -150,6 +152,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
                         start=start,
                         end=end,
                         entity_type=entity_type,
+                        score=score,
                     )
 
                     # Only add if this exact position hasn't been filled yet
@@ -197,6 +200,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         - if the same entity appears multiple times in the text, each occurrence is listed separately with its
         own context
         - the entity type from the provided list of entity types. Only entities of the specified types are included.
+        - a confidence score between 0.0 and 1.0 for each entity found.
         {entity_info}
         """
 
@@ -227,6 +231,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
                 "MUST be present in the context string exactly as it appears in the text."
             )
             entity_type: LiteralType = dspy.OutputField(description="The type of entity")
+            score: float = dspy.OutputField(description="Confidence score between 0.0 and 1.0")
 
         class Prediction(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to extract entities from")
@@ -295,6 +300,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
           DO NOT include the entire text as context. DO NOT include words that are not present in the original text
           as introductory words (Eg. 'Text:' before context string).
         - Specify which type of entity it is (must be one of the provided entity types)
+        - Provide a confidence score between 0.0 and 1.0 for the extraction.
 
         IMPORTANT:
         - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
@@ -316,6 +322,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
                             <text>{{ entity.text }}</text>
                             <context>{{ entity.context }}</context>
                             <entity_type>{{ entity.entity_type }}</entity_type>
+                            <score>{{ entity.score }}</score>
                         </entity>
                         {%- endfor %}
                     </entities>
@@ -346,6 +353,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
             text: str
             context: str
             entity_type: LiteralType
+            score: float | None = None
 
         class Prediction(pydantic.BaseModel):
             """NER prediction."""

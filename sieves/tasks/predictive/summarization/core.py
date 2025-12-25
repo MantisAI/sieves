@@ -116,7 +116,9 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
         # Define metadata.
-        features = datasets.Features({"text": datasets.Value("string"), "summary": datasets.Value("string")})
+        features = datasets.Features(
+            {"text": datasets.Value("string"), "summary": datasets.Value("string"), "score": datasets.Value("float32")}
+        )
         info = datasets.DatasetInfo(
             description=f"Summarization dataset. Generated with sieves v{Config.get_version()}.",
             features=features,
@@ -124,7 +126,7 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
 
         # Fetch data used for generating dataset.
         try:
-            data = [(doc.text, doc.results[self._task_id].summary) for doc in docs]
+            data = [(doc.text, doc.results[self._task_id].summary, doc.results[self._task_id].score) for doc in docs]
         except KeyError as err:
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
@@ -133,8 +135,8 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
 
             :return: Results as dicts.
             """
-            for text, summary in data:
-                yield {"text": text, "summary": summary}
+            for text, summary, score in data:
+                yield {"text": text, "summary": summary, "score": score}
 
         # Create dataset.
         return datasets.Dataset.from_generator(generate_data, features=features, info=info)

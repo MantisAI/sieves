@@ -10,7 +10,9 @@ The `QuestionAnswering` task answers questions based on the content of the docum
 
 ## Results
 
-The `QuestionAnswering` task returns a unified `Result` object containing a list of `answers` corresponding to the input questions.
+The `QuestionAnswering` task returns a unified `Result` object containing a list of `qa_pairs`. Each pair couples the input question with its predicted answer and a confidence score.
+
+Confidence scores are self-reported by **LLMs** and may be `None` if the model fails to provide them.
 
 ```python
 --8<-- "sieves/tasks/predictive/schemas/question_answering.py:Result"

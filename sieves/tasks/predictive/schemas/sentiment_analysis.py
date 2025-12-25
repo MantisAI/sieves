@@ -15,9 +15,11 @@ class FewshotExample(BaseFewshotExample):
     Attributes:
         text: Input text.
         sentiment_per_aspect: Mapping of aspects to sentiments.
+        score: Confidence score for the sentiment assessment.
     """
 
     sentiment_per_aspect: dict[str, float]
+    score: float | None = None
 
     @property
     def target_fields(self) -> tuple[str, ...]:
@@ -25,7 +27,7 @@ class FewshotExample(BaseFewshotExample):
 
         :return: Target fields.
         """
-        return ("sentiment_per_aspect",)
+        return ("sentiment_per_aspect", "score")
 
 
 # --8<-- [start:Result]
@@ -34,9 +36,11 @@ class Result(pydantic.BaseModel):
 
     Attributes:
         sentiment_per_aspect: Mapping of aspects to sentiments.
+        score: Overall confidence score for the sentiment assessment.
     """
 
     sentiment_per_aspect: dict[str, float]
+    score: float | None = None
 
 
 # --8<-- [end:Result]

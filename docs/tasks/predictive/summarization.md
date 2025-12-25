@@ -10,7 +10,9 @@ The `Summarization` task generates concise summaries of the documents.
 
 ## Results
 
-The `Summarization` task returns a unified `Result` object containing the `summary`.
+The `Summarization` task returns a unified `Result` object containing the `summary` and a confidence `score`.
+
+Confidence scores are self-reported by **LLMs** and may be `None`.
 
 ```python
 --8<-- "sieves/tasks/predictive/schemas/summarization.py:Result"

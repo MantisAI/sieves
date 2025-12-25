@@ -65,7 +65,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return "Translate this text into the target language."
+        return "Translate this text into the target language. Also provide a confidence score between 0.0 and 1.0."
 
     @override
     @property
@@ -84,6 +84,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
             text: str = dspy.InputField()
             target_language: str = dspy.InputField()
             translation: str = dspy.OutputField()
+            score: float = dspy.OutputField(description="Confidence score between 0.0 and 1.0.")
 
         Translation.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
@@ -98,7 +99,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.translation) == 1
-            res = Result(translation=result.translation)
+            res = Result(translation=result.translation, score=getattr(result, "score", None))
             doc.results[self._task_id] = res
 
             if self._overwrite:
@@ -114,15 +115,21 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
             translations: list[str] = []
+            scores: list[float] = []
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
                     continue
                 translations.append(res.translation)
+                if hasattr(res, "score") and res.score is not None:
+                    scores.append(res.score)
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {"translation": [" ".join(translations).strip()]},
+                    {
+                        "translation": [" ".join(translations).strip()],
+                        "score": [sum(scores) / len(scores) if scores else None],
+                    },
                     signature=self.prompt_signature,
                 )
             )
@@ -139,7 +146,7 @@ class PydanticBasedTranslation(
     @property
     def _default_prompt_instructions(self) -> str:
         return """
-        Translate into {{ target_language }}.
+        Translate into {{ target_language }}. Also provide a confidence score between 0.0 and 1.0 for the translation.
         """
 
     @override
@@ -155,6 +162,7 @@ class PydanticBasedTranslation(
                     <translation>
                     {{ example.translation }}
                     </translation>
+                    <score>{{ example.score }}</score>
                 </example>
             {% endfor -%}
             </examples>
@@ -178,6 +186,7 @@ class PydanticBasedTranslation(
             """Translation."""
 
             translation: str
+            score: float | None = None
 
         return Translation
 
@@ -185,7 +194,7 @@ class PydanticBasedTranslation(
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "translation")
-            res = Result(translation=result.translation)
+            res = Result(translation=result.translation, score=getattr(result, "score", None))
             doc.results[self._task_id] = res
 
             if self._overwrite:
@@ -200,6 +209,7 @@ class PydanticBasedTranslation(
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             translations: list[str] = []
+            scores: list[float] = []
 
             for res in results[doc_offset[0] : doc_offset[1]]:
                 if res is None:
@@ -207,8 +217,15 @@ class PydanticBasedTranslation(
 
                 assert hasattr(res, "translation")
                 translations.append(res.translation)
+                if hasattr(res, "score") and res.score is not None:
+                    scores.append(res.score)
 
-            consolidated_results.append(self.prompt_signature(translation="\n".join(translations)))
+            consolidated_results.append(
+                self.prompt_signature(
+                    translation="\n".join(translations),
+                    score=sum(scores) / len(scores) if scores else None,
+                )
+            )
         return consolidated_results
 
 

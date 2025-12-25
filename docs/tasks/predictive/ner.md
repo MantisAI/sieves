@@ -24,6 +24,10 @@ Providing descriptions for each entity type helps the model understand exactly w
 
 The `NER` task returns a unified `Result` object (an alias for `Entities`) containing a list of `Entity` objects and the source text.
 
+Each entity includes a confidence score:
+- **GLiNER2**: Always present and derived from logits.
+- **LLMs**: Self-reported and may be `None` if not provided by the model.
+
 ```python
 --8<-- "sieves/tasks/predictive/schemas/ner.py:Result"
 ```

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
+import dspy
 import gliner2
 
 from sieves.data import Doc
@@ -147,6 +148,7 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
                 "head": entity_feature,
                 "relation": datasets.Value("string"),
                 "tail": entity_feature,
+                "score": datasets.Value("float32"),
             }
         )
         features = datasets.Features({"text": datasets.Value("string"), "triplets": datasets.Sequence(triplet_feature)})
@@ -166,6 +168,7 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
                             "head": triplet.head.model_dump(),
                             "relation": triplet.relation,
                             "tail": triplet.tail.model_dump(),
+                            "score": triplet.score,
                         }
                     )
                 data.append({"text": doc.text, "triplets": triplets})
@@ -188,3 +191,37 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
         seed: int | None = None,
     ) -> None:
         raise NotImplementedError
+
+    @override
+    def _evaluate_optimization_example(
+        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
+    ) -> float:
+        # Compute triplet-level F1 score based on (head_text, relation, tail_text) triples.
+        # Use lowercase for robust matching.
+        true_triplets = {
+            (t["head"]["text"].lower(), t["relation"].lower(), t["tail"]["text"].lower()) for t in truth["triplets"]
+        }
+        pred_triplets = {
+            (t["head"]["text"].lower(), t["relation"].lower(), t["tail"]["text"].lower())
+            for t in pred.get("triplets", [])
+        }
+
+        if not true_triplets:
+            base_f1 = 1.0 if not pred_triplets else 0.0
+        else:
+            precision = len(true_triplets & pred_triplets) / len(pred_triplets) if pred_triplets else 0
+            recall = len(true_triplets & pred_triplets) / len(true_triplets)
+            base_f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+        # If score is available, incorporate it.
+        if "triplets" in truth and "triplets" in pred:
+            true_scores = [t.get("score") for t in truth["triplets"] if t.get("score") is not None]
+            pred_scores = [t.get("score") for t in pred["triplets"] if t.get("score") is not None]
+
+            if true_scores and pred_scores:
+                true_avg = sum(true_scores) / len(true_scores)
+                pred_avg = sum(pred_scores) / len(pred_scores)
+                score_accuracy = 1 - abs(true_avg - max(min(pred_avg, 1), 0))
+                return (base_f1 + score_accuracy) / 2
+
+        return base_f1

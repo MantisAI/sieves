@@ -98,6 +98,18 @@ pipe = Pipeline([import_task, chunking_task, classification_task])
 - **All Model wrappers Supported**: Conditional execution works with all supported model libraries (DSPy, LangChain, Outlines, HuggingFace, GLiNER2, etc.)
 - **Serialization**: Non-callable condition values (like `None`) serialize naturally; callable conditions are serialized as placeholders
 
+## Confidence Values
+
+All predictive tasks in Sieves return confidence values alongside their predictions. These values represent the model's certainty in its output.
+
+- **Transformers & GLiNER2**: Confidence scores are always present as they are derived from model logits.
+- **LLMs (DSPy, LangChain, Outlines)**: Confidence scores are self-reported by the model and may occasionally be `None` if the model fails to provide them in the requested format.
+
+### Calibration Note
+
+!!! warning "LLM Confidence Calibration"
+    When using an LLM (Large Language Model) as the underlying model (e.g., through DSPy, LangChain, or Outlines), the reported confidence scores should be interpreted with caution. LLMs are often poorly calibrated, meaning their self-reported confidence may not accurately reflect the actual probability of the prediction being correct. These scores are best used for relative ranking or as a heuristic rather than as absolute probabilities.
+
 ---
 
 ::: sieves.tasks.core.Task

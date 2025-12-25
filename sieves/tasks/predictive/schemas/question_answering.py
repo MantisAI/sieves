@@ -9,6 +9,20 @@ from sieves.model_wrappers import dspy_, langchain_, outlines_
 from sieves.tasks.predictive.schemas.core import FewshotExample as BaseFewshotExample
 
 
+class QuestionAnswer(pydantic.BaseModel):
+    """Question, answer, and confidence score.
+
+    Attributes:
+        question: Question asked.
+        answer: Answer to the question.
+        score: Confidence score.
+    """
+
+    question: str
+    answer: str
+    score: float | None = None
+
+
 class FewshotExample(BaseFewshotExample):
     """Few-shot example with questions and answers for a context.
 
@@ -16,10 +30,13 @@ class FewshotExample(BaseFewshotExample):
         text: Input text.
         questions: Questions asked.
         answers: Expected answers.
+        scores: Confidence scores for answers.
     """
 
-    questions: tuple[str, ...] | list[str]
-    answers: tuple[str, ...] | list[str]
+    text: str
+    questions: list[str]
+    answers: list[str]
+    scores: list[float] | None = None
 
     @property
     def input_fields(self) -> tuple[str, ...]:
@@ -35,7 +52,22 @@ class FewshotExample(BaseFewshotExample):
 
         :return: Target fields.
         """
-        return ("answers",)
+        return ("answers", "scores")
+
+    def to_dspy(self) -> dspy.Example:
+        """Convert to `dspy.Example` with qa_pairs.
+
+        :returns: Example as `dspy.Example`.
+        """
+        qa_pairs = [
+            QuestionAnswer(
+                question=q,
+                answer=a,
+                score=s,
+            )
+            for q, a, s in zip(self.questions, self.answers, self.scores)
+        ]
+        return dspy.Example(text=self.text, questions=self.questions, qa_pairs=qa_pairs).with_inputs(*self.input_fields)
 
 
 # --8<-- [start:Result]
@@ -43,10 +75,10 @@ class Result(pydantic.BaseModel):
     """Result of a question-answering task.
 
     Attributes:
-        answers: List of answers.
+        qa_pairs: List of question-answer pairs.
     """
 
-    answers: list[str]
+    qa_pairs: list[QuestionAnswer]
 
 
 # --8<-- [end:Result]

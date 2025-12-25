@@ -21,6 +21,7 @@ def test_run(summarization_docs, batch_runtime, fewshot) -> None:
             "fourteen.",
             n_words=6,
             summary="They counted from one to fourteen.",
+            score=1.0,
         ),
         summarization.FewshotExample(
             text="Next in order were the Boeotians, led by Peneleos, Leitus, Arcesilaus, Prothoenor, and Clonius. "
@@ -30,6 +31,7 @@ def test_run(summarization_docs, batch_runtime, fewshot) -> None:
             " Schedius and Epistrophus, sons of Iphitus the son of Naubolus. These had forty ships…",
             n_words=10,
             summary="Boeotians, Orchomenians, and Phocians sailed to Troy with many ships.",
+            score=1.0,
         ),
     ]
 

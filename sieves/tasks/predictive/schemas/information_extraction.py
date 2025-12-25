@@ -16,9 +16,11 @@ class FewshotExampleMulti(BaseFewshotExample):
     Attributes:
         text: Input text.
         entities: List of entities.
+        scores: Confidence scores for each entity.
     """
 
     entities: list[pydantic.BaseModel]
+    scores: list[float] | None = None
 
     @property
     def target_fields(self) -> tuple[str, ...]:
@@ -26,7 +28,7 @@ class FewshotExampleMulti(BaseFewshotExample):
 
         :return: Target fields.
         """
-        return ("entities",)
+        return ("entities", "scores")
 
 
 class FewshotExampleSingle(BaseFewshotExample):
@@ -35,9 +37,11 @@ class FewshotExampleSingle(BaseFewshotExample):
     Attributes:
         text: Input text.
         entity: Extracted entity.
+        score: Confidence score for the entity.
     """
 
     entity: pydantic.BaseModel | None
+    score: float | None = None
 
     @property
     def target_fields(self) -> tuple[str, ...]:
@@ -45,7 +49,7 @@ class FewshotExampleSingle(BaseFewshotExample):
 
         :return: Target fields.
         """
-        return ("entity",)
+        return ("entity", "score")
 
 
 # --8<-- [start:Result]

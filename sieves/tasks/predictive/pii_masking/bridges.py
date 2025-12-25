@@ -87,8 +87,16 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
 
         :returns: PII entity class.
         """
-        pii_types = self._pii_types
-        PIIType = Literal[*pii_types] if pii_types else str  # type: ignore[invalid-type-form]
+        pii_types_list = []
+        if self._pii_types:
+            for pt in self._pii_types:
+                pii_types_list.append(pt)
+                if pt.lower() not in pii_types_list:
+                    pii_types_list.append(pt.lower())
+                if pt.upper() not in pii_types_list:
+                    pii_types_list.append(pt.upper())
+
+        PIIType = Literal[*pii_types_list] if pii_types_list else str  # type: ignore[invalid-type-form]
 
         class PIIEntityRuntime(PIIEntity):
             """PII entity."""
@@ -109,7 +117,8 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
         pii_type_info = self._get_pii_type_descriptions() if self._pii_type_descriptions else ""
         return (
             f"Identify and mask {pii_types_desc} in the given text. Replace each PII instance with "
-            f"'{self._mask_placeholder}'.\n{pii_type_info}"
+            f"'{self._mask_placeholder}'. Provide a confidence score between 0.0 and 1.0 for each entity "
+            f"found.\n{pii_type_info}"
         )
 
     @override
@@ -149,7 +158,8 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
         for doc, result in zip(docs, results):
             # Store masked text and PII entities in results
             res = Result(
-                masked_text=result.masked_text, pii_entities=[PIIEntity.model_validate(e) for e in result.pii_entities]
+                masked_text=result.masked_text,
+                pii_entities=[PIIEntity.model_validate(e) for e in result.pii_entities],
             )
             doc.results[self._task_id] = res
 
@@ -177,12 +187,15 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
                 masked_texts.append(res.masked_text)
                 for entity in res.pii_entities:
                     if entity not in seen_entities:
-                        entities.extend(res.pii_entities)
+                        entities.append(entity)
                         seen_entities.add(entity)
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {"masked_text": [" ".join(masked_texts).strip()], "pii_entities": [entities]},
+                    {
+                        "masked_text": [" ".join(masked_texts).strip()],
+                        "pii_entities": [entities],
+                    },
                     signature=self.prompt_signature,
                 )
             )
@@ -205,6 +218,7 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
         {{%- endif %}}
         {pii_type_info}
         Replace each instance of PII with "{{{{ mask_placeholder }}}}".
+        Provide a confidence score between 0.0 and 1.0 for each entity found.
         """
 
     @override
@@ -257,7 +271,8 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
             assert hasattr(result, "pii_entities")
             # Store masked text and PII entities in results
             doc.results[self._task_id] = Result(
-                masked_text=result.masked_text, pii_entities=[PIIEntity.model_validate(e) for e in result.pii_entities]
+                masked_text=result.masked_text,
+                pii_entities=[PIIEntity.model_validate(e) for e in result.pii_entities],
             )
 
             if self._overwrite:
@@ -289,11 +304,14 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                 masked_texts.append(res.masked_text)
                 for entity in res.pii_entities:
                     if entity not in seen_entities:
-                        entities.extend(res.pii_entities)
+                        entities.append(entity)
                         seen_entities.add(entity)
 
             consolidated_results.append(
-                self.prompt_signature(masked_text=" ".join(masked_texts).strip(), pii_entities=entities)
+                self.prompt_signature(
+                    masked_text=" ".join(masked_texts).strip(),
+                    pii_entities=entities,
+                )
             )
         return consolidated_results
 

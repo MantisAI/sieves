@@ -13,7 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
-from sieves.tasks.predictive.schemas.question_answering import Result
+from sieves.tasks.predictive.schemas.question_answering import QuestionAnswer, Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -55,7 +55,7 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return """Multi-question answering."""
+        return """Multi-question answering. Also provide a confidence score between 0.0 and 1.0 for each answer."""
 
     @override
     @property
@@ -70,19 +70,11 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     @override
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        n_questions = len(self._questions)
-
         class QuestionAnswering(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to use for question answering.")
-            questions: tuple[str, ...] = dspy.InputField(
-                description="Questions to answer based on the text.", min_length=n_questions, max_length=n_questions
-            )
-            answers: tuple[str, ...] = dspy.OutputField(
-                description="Answers to questions, in the same sequence as the questions. Each answer corresponds to "
-                "exactly one of the specified questions. Answer 1 answers question 1, answer 2 answers "
-                "question 2 etc.",
-                min_length=n_questions,
-                max_length=n_questions,
+            questions: list[str] = dspy.InputField(description="Questions to answer based on the text.")
+            qa_pairs: list[QuestionAnswer] = dspy.OutputField(
+                description="List of question-answer pairs, including confidence scores."
             )
 
         QuestionAnswering.__doc__ = jinja2.Template(self._prompt_instructions).render()
@@ -97,8 +89,8 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            assert len(result.completions.answers) == 1
-            doc.results[self._task_id] = Result(answers=result.answers)
+            assert len(result.completions.qa_pairs) == 1
+            doc.results[self._task_id] = Result(qa_pairs=result.qa_pairs)
         return docs
 
     @override
@@ -108,21 +100,35 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
         # Determine label scores for chunks per document.
         consolidated_results: list[dspy_.Result] = []
         for doc_offset in docs_offsets:
-            answers_per_question: list[list[str]] = [[] for _ in self._questions]
+            # Map question -> (list of answers, list of scores)
+            qa_map: dict[str, tuple[list[str], list[float]]] = {q: ([], []) for q in self._questions}
             doc_results = results[doc_offset[0] : doc_offset[1]]
 
             for res in doc_results:
                 if res is None:
                     continue
-                for i, answer in enumerate(res.answers):
-                    answers_per_question[i].append(answer)
 
-            # Join answers for each question across chunks.
-            joined_answers = [" ".join(answers).strip() for answers in answers_per_question]
+                for qa in res.qa_pairs:
+                    if qa.question in qa_map:
+                        qa_map[qa.question][0].append(qa.answer)
+                        if qa.score is not None:
+                            qa_map[qa.question][1].append(qa.score)
+
+            # Reconstruct QuestionAnswer objects.
+            consolidated_qa_pairs: list[QuestionAnswer] = []
+            for question in self._questions:
+                answers, scores = qa_map[question]
+                consolidated_qa_pairs.append(
+                    QuestionAnswer(
+                        question=question,
+                        answer=" ".join(answers).strip(),
+                        score=sum(scores) / len(scores) if scores else None,
+                    )
+                )
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {"answers": [joined_answers]},
+                    {"qa_pairs": [consolidated_qa_pairs]},
                     signature=self.prompt_signature,
                 )
             )
@@ -137,7 +143,8 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
     def _default_prompt_instructions(self) -> str:
         return """
         Use the given text to answer the following questions. Ensure you answer each question exactly once. Prefix each
-        question with the number of the corresponding question.
+        question with the number of the corresponding question. Also provide a confidence score between 0.0 and 1.0
+        for each answer.
         """
 
     @override
@@ -154,14 +161,19 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
                     {% endfor -%}
                     </questions>
                     <output>
-                        <answers>
-                        {% for a in example.answers %}  <answer>{{ loop.index }}. {{ a }}</answer>
+                        <qa_pairs>
+                        {% for i in range(example.questions|length) %}
+                            <qa_pair>
+                                <question>{{ example.questions[i] }}</question>
+                                <answer>{{ example.answers[i] }}</answer>
+                                <score>{{ example.scores[i] if example.scores else "" }}</score>
+                            </qa_pair>
                         {% endfor -%}
-                        <answers>
+                        </qa_pairs>
                     </output>
                 </example>
             {% endfor %}
-            <examples>
+            </examples>
         {% endif -%}
         """
 
@@ -182,21 +194,18 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
     @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
-        prompt_sig = pydantic.create_model(
-            "QuestionAnswering",
-            __base__=pydantic.BaseModel,
-            __doc__="Question answering of specified text.",
-            answers=(pydantic.conlist(str, min_length=len(self._questions), max_length=len(self._questions)), ...),
-        )
+        class QuestionAnswering(pydantic.BaseModel, frozen=True):
+            """Question answering output."""
 
-        assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
-        return prompt_sig
+            qa_pairs: list[QuestionAnswer]
+
+        return QuestionAnswering
 
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            assert hasattr(result, "answers")
-            doc.results[self._task_id] = Result(answers=result.answers)
+            assert hasattr(result, "qa_pairs")
+            doc.results[self._task_id] = Result(qa_pairs=result.qa_pairs)
         return docs
 
     @override
@@ -206,18 +215,34 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
         # Determine label scores for chunks per document.
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
+            # Map question -> (list of answers, list of scores)
+            qa_map: dict[str, tuple[list[str], list[float]]] = {q: ([], []) for q in self._questions}
             doc_results = results[doc_offset[0] : doc_offset[1]]
-            answers: list[str] = [""] * len(self._questions)
 
             for rec in doc_results:
                 if rec is None:
                     continue  # type: ignore[unreachable]
 
-                assert hasattr(rec, "answers")
-                for i, answer in enumerate(rec.answers):
-                    answers[i] += answer + " "
+                assert hasattr(rec, "qa_pairs")
+                for qa in rec.qa_pairs:
+                    if qa.question in qa_map:
+                        qa_map[qa.question][0].append(qa.answer)
+                        if qa.score is not None:
+                            qa_map[qa.question][1].append(qa.score)
 
-            consolidated_results.append(self.prompt_signature(answers=answers))
+            # Reconstruct QuestionAnswer objects.
+            consolidated_qa_pairs: list[QuestionAnswer] = []
+            for question in self._questions:
+                answers, scores = qa_map[question]
+                consolidated_qa_pairs.append(
+                    QuestionAnswer(
+                        question=question,
+                        answer=" ".join(answers).strip(),
+                        score=sum(scores) / len(scores) if scores else None,
+                    )
+                )
+
+            consolidated_results.append(self.prompt_signature(qa_pairs=consolidated_qa_pairs))
         return consolidated_results
 
 

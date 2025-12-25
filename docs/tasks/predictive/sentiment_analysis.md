@@ -10,7 +10,9 @@ The `SentimentAnalysis` task determines the sentiment of the text (e.g., positiv
 
 ## Results
 
-The `SentimentAnalysis` task returns a unified `Result` object containing a `sentiment_per_aspect` dictionary.
+The `SentimentAnalysis` task returns a unified `Result` object containing a `sentiment_per_aspect` dictionary and an overall confidence `score`.
+
+Confidence scores are self-reported by **LLMs** and may be `None`.
 
 ```python
 --8<-- "sieves/tasks/predictive/schemas/sentiment_analysis.py:Result"

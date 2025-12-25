@@ -20,11 +20,13 @@ def test_run(translation_docs, batch_runtime, fewshot) -> None:
             text="The sun is shining today.",
             to="Spanish",
             translation="El sol brilla hoy.",
+            score=1.0,
         ),
         translation.FewshotExample(
             text="There's a lot of fog today",
             to="Spanish",
             translation="Hay mucha niebla hoy.",
+            score=1.0,
         ),
     ]
 

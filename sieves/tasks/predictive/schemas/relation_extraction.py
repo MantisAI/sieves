@@ -29,11 +29,13 @@ class RelationTriplet(pydantic.BaseModel, frozen=True):
         head: The subject entity.
         relation: The type of relation.
         tail: The object entity.
+        score: Confidence score.
     """
 
     head: RelationEntity
     relation: str
     tail: RelationEntity
+    score: float | None = None
 
 
 # --8<-- [start:Result]
@@ -71,11 +73,13 @@ class RelationTripletWithContext(pydantic.BaseModel):
         head: The head entity with context.
         relation: The relation type.
         tail: The tail entity with context.
+        score: Confidence score.
     """
 
     head: RelationEntityWithContext
     relation: str
     tail: RelationEntityWithContext
+    score: float | None = None
 
 
 class FewshotExample(BaseFewshotExample):
