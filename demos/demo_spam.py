@@ -141,7 +141,7 @@ def _(model):
 
     classifier = tasks.Classification(
         labels=["spam", "not spam"],
-        multi_label=False,
+        mode='single',
         model=model,
     )
     summarizer = tasks.Summarization(n_words=10, model=model)

@@ -91,14 +91,14 @@ def test_optimization_classification(optimizer) -> None:
     ]
 
     task_single_label = classification.Classification(
-        multi_label=False,
+        mode='single',
         labels=["fruit", "vegetable"],
         fewshot_examples=examples_single_label,
         model=optimizer.model,
         model_settings=ModelSettings(),
     )
     task_multi_label = classification.Classification(
-        multi_label=True,
+        mode='multi',
         labels=["comedy", "scifi"],
         fewshot_examples=examples_multi_label,
         model=optimizer.model,

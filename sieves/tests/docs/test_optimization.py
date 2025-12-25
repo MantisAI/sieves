@@ -61,7 +61,7 @@ def test_basic_optimization_example(small_dspy_model):
         },
         model=model,
         fewshot_examples=examples,
-        multi_label=False,
+        mode='single',
         model_settings=ModelSettings(),
     )
     # --8<-- [end:optimization-task-setup]

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, override
+from typing import Any, Literal, override
 
 import datasets
 import dspy
@@ -74,7 +74,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         batch_size: int = -1,
         prompt_instructions: str | None = None,
         fewshot_examples: Sequence[FewshotExample] = (),
-        multi_label: bool = True,
+        mode: Literal["single", "multi"] = "multi",
         model_settings: ModelSettings = ModelSettings(),
         condition: Callable[[Doc], bool] | None = None,
     ) -> None:
@@ -90,7 +90,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         :param batch_size: Batch size to use for inference. Use -1 to process all documents at once.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
-        :param multi_label: If True, task returns confidence scores for all specified labels. If False, task returns
+        :param mode: If 'multi', task returns confidence scores for all specified labels. If 'single', task returns
             most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
             accuracy.
         :param model_settings: Model settings.
@@ -102,7 +102,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         else:
             self._labels = list(labels)
             self._label_descriptions = {}
-        self._multi_label = multi_label
+        self._mode = mode
 
         super().__init__(
             model=model,
@@ -137,7 +137,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 prompt_signature=gliner2.inference.engine.Schema().classification(
                     task="classification",
                     labels=labels,
-                    multi_label=self._multi_label,
+                    mode=self._mode,
                 ),
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.classification,
@@ -158,7 +158,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 labels=labels,
-                multi_label=self._multi_label,
+                mode=self._mode,
                 model_settings=self._model_settings,
             )
         except KeyError as err:
@@ -179,12 +179,12 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         label_error_text = (
             "Label mismatch: {task_id} has labels {labels}. Few-shot examples have labels {example_labels}."
         )
-        example_type_error_text = "Fewshot example type mismatch: multi_label = {multi_label} requires {example_type}."
+        example_type_error_text = "Fewshot example type mismatch: mode = {mode} requires {example_type}."
 
         for fs_example in self._fewshot_examples or []:
-            if self._multi_label:
+            if self._mode == "multi":
                 assert isinstance(fs_example, FewshotExampleMultiLabel), TypeError(
-                    example_type_error_text.format(example_type=FewshotExampleMultiLabel, multi_label=self._multi_label)
+                    example_type_error_text.format(example_type=FewshotExampleMultiLabel, mode=self._mode)
                 )
                 if any([label not in self._labels for label in fs_example.confidence_per_label]) or not all(
                     [label in fs_example.confidence_per_label for label in self._labels]
@@ -196,9 +196,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                     )
             else:
                 assert isinstance(fs_example, FewshotExampleSingleLabel), TypeError(
-                    example_type_error_text.format(
-                        example_type=FewshotExampleSingleLabel, multi_label=self._multi_label
-                    )
+                    example_type_error_text.format(example_type=FewshotExampleSingleLabel, mode=self._mode)
                 )
                 if fs_example.label not in self._labels:
                     raise ValueError(
@@ -283,7 +281,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 default_init_kwargs: dict[str, Any] = {}
                 metric_kwargs: dict[str, Any] = {}
 
-                if self._multi_label:
+                if self._mode == "multi":
                     default_init_kwargs["multi_target_strategy"] = "multi-output"
                     metric_kwargs = {"average": "macro"}
 
@@ -369,7 +367,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         data: list[dict[str, str | list[bool]]] = []
 
         # Define metadata and features (multi-hot across declared labels for multi-label).
-        if self._multi_label:
+        if self._mode == "multi":
             features = datasets.Features(
                 {"text": datasets.Value("string"), "labels": datasets.Sequence(datasets.Value("bool"))}
             )
@@ -380,7 +378,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
 
         info = datasets.DatasetInfo(
             description=(
-                f"{'Multi-label' if self._multi_label else 'Single-label'} classification dataset with labels "
+                f"{'Multi-label' if self._mode == 'multi' else 'Single-label'} classification dataset with labels "
                 f"{self._labels}. Generated with sieves v{Config.get_version()}."
             ),
             features=features,
@@ -391,7 +389,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 scores = Classification._result_to_scores(doc.results[self._task_id])
 
                 # If multi-label: store one-hot representation.
-                if self._multi_label:
+                if self._mode == "multi":
                     result_normalized = [int(scores.get(label, 0.0) >= threshold) for label in self._labels]  # type: ignore[no-matching-overload]
                 # If single-label: get single-label result as is.
                 else:
@@ -410,7 +408,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
     def _evaluate_optimization_example(
         self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
     ) -> float:
-        if not self._multi_label:
+        if self._mode == "single":
             return 1 - abs(truth["confidence"] - pred["confidence"]) if truth["label"] == pred["label"] else 0
 
         # For multi-label: compute label-wise accuracy as

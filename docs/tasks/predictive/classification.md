@@ -18,8 +18,8 @@ The `Classification` task returns a unified result schema regardless of the mode
 --8<-- "sieves/tasks/predictive/schemas/classification.py:Result"
 ```
 
-- When `multi_label=True` (default): results are of type `ResultMultiLabel`, containing a list of `(label, score)` tuples.
-- When `multi_label=False`: results are of type `ResultSingleLabel`, containing a single `label` and `score`.
+- When `mode == 'multi'` (default): results are of type `ResultMultiLabel`, containing a list of `(label, score)` tuples.
+- When `mode == 'single'`: results are of type `ResultSingleLabel`, containing a single `label` and `score`.
 
 ---
 

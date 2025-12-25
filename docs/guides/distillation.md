@@ -291,7 +291,7 @@ The distillation process automatically handles both classification modes:
 task = Classification(
     labels=["technology", "politics", "sports"],
     model=model,
-    multi_label=False,
+    mode='single',
 )
 ```
 

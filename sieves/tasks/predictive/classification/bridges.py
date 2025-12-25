@@ -34,7 +34,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         task_id: str,
         prompt_instructions: str | None,
         labels: list[str] | dict[str, str],
-        multi_label: bool,
+        mode: Literal["single", "multi"],
         model_settings: ModelSettings,
     ):
         """Initialize ClassificationBridge.
@@ -42,7 +42,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param labels: Labels to classify. Can be a list of label strings, or a dict mapping labels to descriptions.
-        :param multi_label: If True, task returns confidence scores for all specified labels. If False, task returns
+        :param mode: If 'multi'', task returns confidence scores for all specified labels. If 'single', task returns
             most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
             accuracy.
         :param model_settings: Model settings.
@@ -59,7 +59,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         else:
             self._labels = labels
             self._label_descriptions = {}
-        self._multi_label = multi_label
+        self._mode = mode
 
     def _get_label_descriptions(self) -> str:
         """Return a string with the label descriptions.
@@ -87,7 +87,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        if self._multi_label:
+        if self._mode == "multi":
             return f"""
             Multi-label classification of the provided text given the labels {self._labels}.
             For each label, provide the confidence with which you believe that the provided text should be assigned
@@ -121,7 +121,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         labels = self._labels
         LabelType = Literal[*labels]  # type: ignore[valid-type]
 
-        if self._multi_label:
+        if self._mode == "multi":
 
             class MultiLabelTextClassification(dspy.Signature):  # type: ignore[misc]
                 text: str = dspy.InputField(description="Text to classify.")
@@ -164,7 +164,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
                 reverse=True,
             )
 
-            if self._multi_label:
+            if self._mode == "multi":
                 doc.results[self._task_id] = ResultMultiLabel(label_scores=sorted_preds)
             else:
                 if isinstance(sorted_preds, list) and len(sorted_preds) > 0:
@@ -188,7 +188,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
                 # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
                 # but this fails occasionally with some models and feels too strict.
-                if self._multi_label:
+                if self._mode == "multi":
                     for label, score in res.confidence_per_label.items():
                         label_scores[label] += max(0, min(score, 1))
                 else:
@@ -228,7 +228,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     @override
     @property
     def _prompt_example_template(self) -> str | None:
-        if self._multi_label:
+        if self._mode == "multi":
             return """
             {% if examples|length > 0 -%}
 
@@ -285,7 +285,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     def integrate(self, results: Sequence[huggingface_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             label_scores = [(label, score) for label, score in zip(result["labels"], result["scores"])]
-            if self._multi_label:
+            if self._mode == "multi":
                 doc.results[self._task_id] = ResultMultiLabel(label_scores=label_scores)
             else:
                 if len(label_scores) > 0:
@@ -333,7 +333,7 @@ class PydanticBasedClassification(
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        if self._multi_label:
+        if self._mode == "multi":
             return (
                 f"""
             Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
@@ -369,7 +369,7 @@ class PydanticBasedClassification(
     @override
     @property
     def _prompt_example_template(self) -> str | None:
-        if self._multi_label:
+        if self._mode == "multi":
             return """
             {% if examples|length > 0 -%}
                 Examples:
@@ -417,7 +417,7 @@ class PydanticBasedClassification(
     @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel] | list[str]:
-        if self._multi_label:
+        if self._mode == "multi":
             prompt_sig = pydantic.create_model(  # type: ignore[no-matching-overload]
                 "MultilabelClassification",
                 __base__=pydantic.BaseModel,
@@ -442,7 +442,7 @@ class PydanticBasedClassification(
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel | str], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            if self._multi_label:
+            if self._mode == "multi":
                 assert isinstance(result, pydantic.BaseModel)
                 label_scores = result.model_dump()
                 sorted_label_scores = sorted(
@@ -471,7 +471,7 @@ class PydanticBasedClassification(
 
                 # We clamp the score to 0 <= x <= 1. Alternatively we could force this in the prompt signature, but
                 # this fails occasionally with some models and feels too strict.
-                if self._multi_label:
+                if self._mode == "multi":
                     for label in self._labels:
                         label_scores[label] += max(0, min(getattr(res, label), 1))
                 else:
@@ -482,7 +482,7 @@ class PydanticBasedClassification(
             assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
             assert callable(prompt_signature)
 
-            if self._multi_label:
+            if self._mode == "multi":
                 consolidated_results.append(prompt_signature(**avg_label_scores))
             else:
                 max_score_label = max(avg_label_scores, key=avg_label_scores.__getitem__)
@@ -510,12 +510,12 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
     @override
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel] | list[str]:
-        return super().prompt_signature if self._multi_label else self._labels
+        return super().prompt_signature if self._mode == "multi" else self._labels
 
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        if self._multi_label:
+        if self._mode == "multi":
             return super()._default_prompt_instructions
 
         return f"""
@@ -534,7 +534,7 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
     @override
     @property
     def _prompt_example_template(self) -> str | None:
-        if self._multi_label:
+        if self._mode == "multi":
             return super()._prompt_example_template
 
         return """
@@ -555,7 +555,7 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
 
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel | str], docs: list[Doc]) -> list[Doc]:
-        if self._multi_label:
+        if self._mode == "multi":
             return super().integrate(results, docs)
 
         for doc, result in zip(docs, results):
@@ -572,7 +572,7 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
     def consolidate(
         self, results: Sequence[pydantic.BaseModel | str], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel | str]:
-        if self._multi_label:
+        if self._mode == "multi":
             return super().consolidate(results, docs_offsets)
 
         else:
@@ -592,5 +592,5 @@ class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outline
     @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return self._model_settings.inference_mode or (
-            outlines_.InferenceMode.json if self._multi_label else outlines_.InferenceMode.choice
+            outlines_.InferenceMode.json if self._mode == "multi" else outlines_.InferenceMode.choice
         )
