@@ -31,13 +31,17 @@ A `RelationEntity` includes the surface `text`, `entity_type`, and character `st
 
 Performance of the relation extraction task can be measured using the `.evaluate()` method.
 
-- **Metric**: Triplet-level F1-score. Triplets are matched based on the head entity text, the relation type, and the tail entity text.
+- **Metric**: Corpus-wide **Micro-F1 Score** (`F1`). Triplets are matched based on the head entity text, the relation type, and the tail entity text.
 - **Requirement**: Each document must have ground-truth triplets stored in `doc.gold[task_id]`.
 
 ```python
 report = task.evaluate(docs)
-print(f"Relation F1-Score: {report.metrics['score']}")
+print(f"Relation F1-Score: {report.metrics['F1']}")
 ```
+
+### Ground Truth Formats
+
+Ground truth has to be specified in `doc.meta` using `Result` instances.
 
 ---
 

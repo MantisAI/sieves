@@ -22,14 +22,18 @@ Confidence scores are self-reported by **LLMs** and may be `None` if the model f
 
 Performance of the Question Answering task is assessed using a "judge" model.
 
-- **Metric**: Model-based similarity score (0.0 to 1.0) provided by a DSPy judge, averaged across all question-answer pairs.
+- **Metric**: **LLM Score** (`LLM Score`). A model-based similarity score (0.0 to 1.0) provided by a DSPy judge, averaged across all question-answer pairs.
 - **Requirement**: Each document must have ground-truth answers stored in `doc.gold[task_id]`.
 - **Judge**: You must provide a `dspy.LM` instance to the `evaluate()` method.
 
 ```python
 report = task.evaluate(docs, judge=dspy_judge)
-print(f"QA Score: {report.metrics['score']}")
+print(f"QA Score: {report.metrics['LLM Score']}")
 ```
+
+### Ground Truth Formats
+
+Ground truth has to be specified in `doc.meta` using `Result` instances.
 
 ---
 
