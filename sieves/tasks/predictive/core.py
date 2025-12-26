@@ -141,6 +141,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         )
 
         # Compute batch-wise results.
+        docs = iter(docs)
         batch_size = self._batch_size if self._batch_size > 0 else sys.maxsize
         while docs_batch := [doc for doc in itertools.islice(docs, batch_size)]:
             if len(docs_batch) == 0:

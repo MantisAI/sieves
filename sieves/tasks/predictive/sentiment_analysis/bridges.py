@@ -1,9 +1,9 @@
 """Bridges for sentiment analysis task."""
 
 import abc
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import cached_property
-from typing import Literal, TypeVar, override
+from typing import Any, Literal, TypeVar, override
 
 import dspy
 import jinja2
@@ -13,6 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.consolidation import MapScoreConsolidation
 from sieves.tasks.predictive.schemas.sentiment_analysis import Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -43,6 +44,17 @@ class SentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrap
             model_settings=model_settings,
         )
         self._aspects = aspects
+        self._consolidation_strategy = MapScoreConsolidation(
+            keys=self._aspects,
+            extractor=self._get_extractor(),
+        )
+
+    @abc.abstractmethod
+    def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
+        """Return a callable that extracts (map_scores, overall_score) from a raw chunk result.
+
+        :return: Extractor callable.
+        """
 
 
 class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -96,6 +108,13 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
+    def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
+        def extractor(res: Any) -> tuple[dict[str, float], float | None]:
+            return res.sentiment_per_aspect, getattr(res, "score", None)
+
+        return extractor
+
+    @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.sentiment_per_aspect) == 1
@@ -109,40 +128,23 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
+        # Wrap back into dspy.Prediction.
         consolidated_results: list[dspy_.Result] = []
-        for doc_offset in docs_offsets:
-            aspect_scores: dict[str, float] = {label: 0.0 for label in self._aspects}
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            confidence_scores: list[float] = []
-
-            for res in doc_results:
-                if res is None:
-                    continue
-
-                assert len(res.completions.sentiment_per_aspect) == 1
-                for label, score in res.completions.sentiment_per_aspect[0].items():
-                    # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
-                    # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
-                    # useful?).
-                    aspect_scores[label] += max(0, min(score, 1))
-                if hasattr(res, "score") and res.score is not None:
-                    confidence_scores.append(res.score)
-
-            sorted_aspect_scores: list[dict[str, str | float]] = sorted(
-                (
-                    {"aspect": aspect, "score": score / (doc_offset[1] - doc_offset[0])}
-                    for aspect, score in aspect_scores.items()
-                ),
-                key=lambda x: x["score"],
+        for aspect_scores, overall_score in consolidated_results_clean:
+            # Sort by score descending as in original implementation.
+            sorted_aspect_scores = sorted(
+                aspect_scores.items(),
+                key=lambda x: x[1],
                 reverse=True,
             )
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
                     {
-                        "sentiment_per_aspect": [{sls["aspect"]: sls["score"] for sls in sorted_aspect_scores}],
-                        "score": [sum(confidence_scores) / len(confidence_scores) if confidence_scores else None],
+                        "sentiment_per_aspect": [{k: v for k, v in sorted_aspect_scores}],
+                        "score": [overall_score],
                     },
                     signature=self.prompt_signature,
                 )
@@ -239,6 +241,14 @@ class PydanticBasedSentAnalysis(
         return prompt_sig
 
     @override
+    def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
+        def extractor(res: Any) -> tuple[dict[str, float], float | None]:
+            m_scores = {aspect: float(getattr(res, aspect)) for aspect in self._aspects}
+            return m_scores, getattr(res, "score", None)
+
+        return extractor
+
+    @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             label_scores = {k: v for k, v in result.model_dump().items() if k not in ["score"]}
@@ -249,29 +259,14 @@ class PydanticBasedSentAnalysis(
     def consolidate(
         self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         consolidated_results: list[pydantic.BaseModel] = []
-        for doc_offset in docs_offsets:
-            aspect_scores: dict[str, float] = {label: 0.0 for label in self._aspects}
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            confidence_scores: list[float] = []
-
-            for rec in doc_results:
-                if rec is None:
-                    continue  # type: ignore[unreachable]
-
-                for aspect in self._aspects:
-                    # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
-                    # but this fails occasionally with some models and feels too strict (maybe a strict mode would be
-                    # useful?).
-                    aspect_scores[aspect] += max(0, min(getattr(rec, aspect), 1))
-                if hasattr(rec, "score") and rec.score is not None:
-                    confidence_scores.append(rec.score)
-
+        for aspect_scores, overall_score in consolidated_results_clean:
             consolidated_results.append(
                 self.prompt_signature(
-                    **{aspect: score / (doc_offset[1] - doc_offset[0]) for aspect, score in aspect_scores.items()},
-                    score=sum(confidence_scores) / len(confidence_scores) if confidence_scores else None,
+                    **aspect_scores,
+                    score=overall_score,
                 )
             )
         return consolidated_results

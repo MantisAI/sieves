@@ -1,7 +1,7 @@
 """Bridges for question answering task."""
 
 import abc
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Sequence
 from functools import cached_property
 from typing import Any, TypeVar, override
 
@@ -13,6 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.consolidation import QAConsolidation
 from sieves.tasks.predictive.schemas.question_answering import QuestionAnswer, Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -43,6 +44,17 @@ class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferen
             model_settings=model_settings,
         )
         self._questions = questions
+        self._consolidation_strategy = QAConsolidation(
+            questions=self._questions,
+            extractor=self._get_extractor(),
+        )
+
+    @abc.abstractmethod
+    def _get_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
+        """Return a callable that extracts (question, answer, score) tuples from a raw chunk result.
+
+        :return: Extractor callable.
+        """
 
     @override
     def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
@@ -87,6 +99,10 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
+    def _get_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
+        return lambda res: ((qa.question, qa.answer, qa.score) for qa in res.qa_pairs)
+
+    @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.qa_pairs) == 1
@@ -97,38 +113,16 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
+        # Wrap back into dspy.Prediction.
         consolidated_results: list[dspy_.Result] = []
-        for doc_offset in docs_offsets:
-            # Map question -> (list of answers, list of scores).
-            qa_map: dict[str, tuple[list[str], list[float]]] = {q: ([], []) for q in self._questions}
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-
-            for res in doc_results:
-                if res is None:
-                    continue
-
-                for qa in res.qa_pairs:
-                    if qa.question in qa_map:
-                        qa_map[qa.question][0].append(qa.answer)
-                        if qa.score is not None:
-                            qa_map[qa.question][1].append(qa.score)
-
-            # Reconstruct `QuestionAnswer` objects.
-            consolidated_qa_pairs: list[QuestionAnswer] = []
-            for question in self._questions:
-                answers, scores = qa_map[question]
-                consolidated_qa_pairs.append(
-                    QuestionAnswer(
-                        question=question,
-                        answer=" ".join(answers).strip(),
-                        score=sum(scores) / len(scores) if scores else None,
-                    )
-                )
-
+        for qa_list in consolidated_results_clean:
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {"qa_pairs": [consolidated_qa_pairs]},
+                    {
+                        "qa_pairs": [[QuestionAnswer(question=q, answer=a, score=s) for q, a, s in qa_list]],
+                    },
                     signature=self.prompt_signature,
                 )
             )
@@ -202,6 +196,10 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
         return QuestionAnswering
 
     @override
+    def _get_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
+        return lambda res: ((qa.question, qa.answer, qa.score) for qa in res.qa_pairs)
+
+    @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "qa_pairs")
@@ -212,37 +210,13 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
     def consolidate(
         self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         consolidated_results: list[pydantic.BaseModel] = []
-        for doc_offset in docs_offsets:
-            # Map question -> (list of answers, list of scores).
-            qa_map: dict[str, tuple[list[str], list[float]]] = {q: ([], []) for q in self._questions}
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-
-            for rec in doc_results:
-                if rec is None:
-                    continue  # type: ignore[unreachable]
-
-                assert hasattr(rec, "qa_pairs")
-                for qa in rec.qa_pairs:
-                    if qa.question in qa_map:
-                        qa_map[qa.question][0].append(qa.answer)
-                        if qa.score is not None:
-                            qa_map[qa.question][1].append(qa.score)
-
-            # Reconstruct `QuestionAnswer` objects.
-            consolidated_qa_pairs: list[QuestionAnswer] = []
-            for question in self._questions:
-                answers, scores = qa_map[question]
-                consolidated_qa_pairs.append(
-                    QuestionAnswer(
-                        question=question,
-                        answer=" ".join(answers).strip(),
-                        score=sum(scores) / len(scores) if scores else None,
-                    )
-                )
-
-            consolidated_results.append(self.prompt_signature(qa_pairs=consolidated_qa_pairs))
+        for qa_list in consolidated_results_clean:
+            consolidated_results.append(
+                self.prompt_signature(qa_pairs=[QuestionAnswer(question=q, answer=a, score=s) for q, a, s in qa_list])
+            )
         return consolidated_results
 
 

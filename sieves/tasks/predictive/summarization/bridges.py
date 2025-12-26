@@ -1,7 +1,7 @@
 """Bridges for summarization task."""
 
 import abc
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import cached_property
 from typing import Any, TypeVar, override
 
@@ -13,6 +13,7 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.consolidation import TextConsolidation
 from sieves.tasks.predictive.schemas.summarization import Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -48,6 +49,14 @@ class SummarizationBridge(
             model_settings=model_settings,
         )
         self._n_words = n_words
+        self._consolidation_strategy = TextConsolidation(extractor=self._get_extractor())
+
+    @abc.abstractmethod
+    def _get_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+        """Return a callable that extracts (text, score) from a raw chunk result.
+
+        :return: Extractor callable.
+        """
 
     @override
     def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
@@ -96,6 +105,10 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
+    def _get_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+        return lambda res: (res.summary, getattr(res, "score", None))
+
+    @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.summary) == 1
@@ -111,28 +124,21 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        # Merge all chunk translations.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
+        # Wrap back into dspy.Prediction.
         consolidated_results: list[dspy_.Result] = []
-        for doc_offset in docs_offsets:
-            summaries: list[str] = []
-            scores: list[float] = []
-
-            for res in results[doc_offset[0] : doc_offset[1]]:
-                if res is None:
-                    continue
-                summaries.append(res.summary)
-                if hasattr(res, "score") and res.score is not None:
-                    scores.append(res.score)
-
+        for summary, score in consolidated_results_clean:
             consolidated_results.append(
                 dspy.Prediction.from_completions(
                     {
-                        "summary": ["\n".join(summaries).strip()],
-                        "score": [sum(scores) / len(scores) if scores else None],
+                        "summary": [summary],
+                        "score": [score],
                     },
                     signature=self.prompt_signature,
                 )
             )
+
         return consolidated_results
 
 
@@ -190,6 +196,10 @@ class PydanticBasedSummarization(
         return Summary
 
     @override
+    def _get_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+        return lambda res: (res.summary, getattr(res, "score", None))
+
+    @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "summary")
@@ -204,25 +214,14 @@ class PydanticBasedSummarization(
     def consolidate(
         self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         consolidated_results: list[pydantic.BaseModel] = []
-        for doc_offset in docs_offsets:
-            summaries: list[str] = []
-            scores: list[float] = []
-
-            for res in results[doc_offset[0] : doc_offset[1]]:
-                if res is None:
-                    continue  # type: ignore[unreachable]
-
-                assert hasattr(res, "summary")
-                summaries.append(res.summary)
-                if hasattr(res, "score") and res.score is not None:
-                    scores.append(res.score)
-
+        for summary, score in consolidated_results_clean:
             consolidated_results.append(
                 self.prompt_signature(
-                    summary="\n".join(summaries).strip(),
-                    score=sum(scores) / len(scores) if scores else None,
+                    summary=summary,
+                    score=score,
                 )
             )
         return consolidated_results

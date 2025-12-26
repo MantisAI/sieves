@@ -1,10 +1,9 @@
 """Bridges for classification task."""
 
 import abc
-from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import cached_property
-from typing import Literal, TypeVar, override
+from typing import Any, Literal, TypeVar, override
 
 import dspy
 import jinja2
@@ -20,6 +19,7 @@ from sieves.model_wrappers import (
 )
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.consolidation import LabelScoreConsolidation
 from sieves.tasks.predictive.schemas.classification import ResultMultiLabel, ResultSingleLabel
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
@@ -60,6 +60,18 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
             self._labels = labels
             self._label_descriptions = {}
         self._mode = mode
+        self._consolidation_strategy = LabelScoreConsolidation(
+            labels=self._labels,
+            mode=self._mode,
+            extractor=self._get_extractor(),
+        )
+
+    @abc.abstractmethod
+    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+        """Return a callable that extracts label scores from a raw chunk result.
+
+        :return: Extractor callable.
+        """
 
     def _get_label_descriptions(self) -> str:
         """Return a string with the label descriptions.
@@ -155,6 +167,15 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
+    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+        def extractor(res: Any) -> dict[str, float]:
+            if self._mode == "multi":
+                return dict(res.score_per_label)
+            return {res.label: res.score}
+
+        return extractor
+
+    @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert len(result.completions.score_per_label) == 1
@@ -176,37 +197,15 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
+        # Wrap back into dspy.Prediction.
         consolidated_results: list[dspy_.Result] = []
-        for doc_offset in docs_offsets:
-            label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-
-            for res in doc_results:
-                if res is None:
-                    continue
-
-                # Clamp score to range between 0 and 1. Alternatively we could force this in the prompt signature,
-                # but this fails occasionally with some models and feels too strict.
-                if self._mode == "multi":
-                    for label, score in res.score_per_label.items():
-                        label_scores[label] += max(0, min(score, 1))
-                else:
-                    label_scores[res.label] += max(0, min(res.score, 1))
-
-            sorted_label_scores: list[dict[str, str | float]] = sorted(
-                (
-                    {"label": label, "score": score / (doc_offset[1] - doc_offset[0])}
-                    for label, score in label_scores.items()
-                ),
-                key=lambda x: x["score"],
-                reverse=True,
-            )
-
+        for scores_list in consolidated_results_clean:
             consolidated_results.append(
                 dspy.Prediction.from_completions(
                     {
-                        "score_per_label": [{sls["label"]: sls["score"] for sls in sorted_label_scores}],
+                        "score_per_label": [{label: score for label, score in scores_list}],
                     },
                     signature=self.prompt_signature,
                 )
@@ -281,6 +280,10 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
         return self._model_settings.inference_mode or huggingface_.InferenceMode.zeroshot_cls
 
     @override
+    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+        return lambda res: dict(zip(res["labels"], res["scores"]))
+
+    @override
     def integrate(self, results: Sequence[huggingface_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             label_scores = [(label, score) for label, score in zip(result["labels"], result["scores"])]
@@ -295,30 +298,14 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     def consolidate(
         self, results: Sequence[huggingface_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[huggingface_.Result]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         consolidated_results: list[huggingface_.Result] = []
-        for doc_offset in docs_offsets:
-            label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
-
-            for res in results[doc_offset[0] : doc_offset[1]]:
-                for label, score in zip(res["labels"], res["scores"]):
-                    assert isinstance(label, str)
-                    assert isinstance(score, float)
-                    label_scores[label] += score
-
-            # Average score, sort by it in descending order.
-            sorted_label_scores: list[dict[str, str | float]] = sorted(
-                (
-                    {"label": label, "score": score / (doc_offset[1] - doc_offset[0])}
-                    for label, score in label_scores.items()
-                ),
-                key=lambda x: x["score"],
-                reverse=True,
-            )
+        for scores_list in consolidated_results_clean:
             consolidated_results.append(
                 {
-                    "labels": [rec["label"] for rec in sorted_label_scores],  # type: ignore[dict-item]
-                    "scores": [rec["score"] for rec in sorted_label_scores],  # type: ignore[dict-item]
+                    "labels": [label for label, _ in scores_list],
+                    "scores": [score for _, score in scores_list],
                 }
             )
         return consolidated_results
@@ -439,6 +426,15 @@ class PydanticBasedClassification(
         return prompt_sig
 
     @override
+    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+        def extractor(res: Any) -> dict[str, float]:
+            if self._mode == "multi":
+                return {label: float(getattr(res, label)) for label in self._labels}
+            return {str(getattr(res, "label")): float(getattr(res, "score"))}
+
+        return extractor
+
+    @override
     def integrate(self, results: Sequence[pydantic.BaseModel | str], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             if self._mode == "multi":
@@ -458,37 +454,22 @@ class PydanticBasedClassification(
     def consolidate(
         self, results: Sequence[pydantic.BaseModel | str], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel | str]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         consolidated_results: list[pydantic.BaseModel | str] = []
-        for doc_offset in docs_offsets:
-            label_scores: dict[str, float] = {label: 0.0 for label in self._labels}
-            doc_results = results[doc_offset[0] : doc_offset[1]]
+        prompt_signature = self.prompt_signature
+        assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
 
-            for res in doc_results:
-                if res is None:
-                    continue  # type: ignore[unreachable]
-
-                # We clamp the score to 0 <= x <= 1. Alternatively we could force this in the prompt signature, but
-                # this fails occasionally with some models and feels too strict.
-                if self._mode == "multi":
-                    for label in self._labels:
-                        label_scores[label] += max(0, min(getattr(res, label), 1))
-                else:
-                    label_scores[getattr(res, "label")] += max(0, min(getattr(res, "score"), 1))
-
-            avg_label_scores = {label: score / (doc_offset[1] - doc_offset[0]) for label, score in label_scores.items()}
-            prompt_signature = self.prompt_signature
-            assert issubclass(prompt_signature, pydantic.BaseModel)  # type: ignore[arg-type]
-            assert callable(prompt_signature)
-
+        for scores_list in consolidated_results_clean:
             if self._mode == "multi":
-                consolidated_results.append(prompt_signature(**avg_label_scores))
+                consolidated_results.append(prompt_signature(**dict(scores_list)))
             else:
-                max_score_label = max(avg_label_scores, key=avg_label_scores.__getitem__)
+                # In single mode, we only take the top label.
+                top_label, top_score = scores_list[0]
                 consolidated_results.append(
                     prompt_signature(
-                        label=max_score_label,
-                        score=avg_label_scores[max_score_label],
+                        label=top_label,
+                        score=top_score,
                     )
                 )
         return consolidated_results
@@ -553,6 +534,18 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
         """
 
     @override
+    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+        if self._mode == "multi":
+            return super()._get_extractor()
+
+        def extractor(res: Any) -> dict[str, float]:
+            if isinstance(res, str):
+                return {res: 1.0}
+            return {str(getattr(res, "label")): float(getattr(res, "score", 1.0))}
+
+        return extractor
+
+    @override
     def integrate(self, results: Sequence[pydantic.BaseModel | str], docs: list[Doc]) -> list[Doc]:
         if self._mode == "multi":
             return super().integrate(results, docs)
@@ -574,14 +567,18 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
         if self._mode == "multi":
             return super().consolidate(results, docs_offsets)
 
-        else:
-            # Determine label scores for chunks per document.
-            consolidated_results: list[pydantic.BaseModel | str] = []
-            for doc_offset in docs_offsets:
-                doc_results = results[doc_offset[0] : doc_offset[1]]
-                label_counts = Counter(doc_results)
-                consolidated_results.append(label_counts.most_common()[0][0])
-            return consolidated_results
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
+        consolidated_results: list[pydantic.BaseModel | str] = []
+        for scores_list in consolidated_results_clean:
+            top_label, _ = scores_list[0]
+            # If we are in choice mode (Outlines), we just return the string.
+            # Otherwise we'd return a Pydantic model.
+            # PydanticBasedClassificationWithLabelForcing.prompt_signature returns self._labels (list[str]) if single.
+            # So the expected consolidated result type here is str.
+            consolidated_results.append(top_label)
+
+        return consolidated_results
 
 
 class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outlines_.InferenceMode]):

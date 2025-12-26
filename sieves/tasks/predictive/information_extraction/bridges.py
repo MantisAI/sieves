@@ -1,9 +1,9 @@
 """Bridges for information extraction task."""
 
 import abc
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Sequence
 from functools import cached_property
-from typing import Literal, TypeVar, override
+from typing import Any, Literal, TypeVar, override
 
 import dspy
 import jinja2
@@ -13,8 +13,11 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.consolidation import (
+    MultiEntityConsolidation,
+    SingleEntityConsolidation,
+)
 from sieves.tasks.predictive.schemas.information_extraction import ResultMulti, ResultSingle
-from sieves.tasks.predictive.utils import consolidate_entities_multi, consolidate_entities_single
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -50,6 +53,24 @@ class InformationExtractionBridge(
         )
         self._entity_type = entity_type
         self._mode = mode
+        if self._mode == "multi":
+            self._consolidation_strategy = MultiEntityConsolidation(extractor=self._get_multi_extractor())
+        else:
+            self._consolidation_strategy = SingleEntityConsolidation(extractor=self._get_single_extractor())
+
+    @abc.abstractmethod
+    def _get_multi_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        """Return a callable that extracts a list of entities from a raw chunk result.
+
+        :return: Multi-extractor callable.
+        """
+
+    @abc.abstractmethod
+    def _get_single_extractor(self) -> Callable[[Any], pydantic.BaseModel | None]:
+        """Return a callable that extracts a single entity from a raw chunk result.
+
+        :return: Single-extractor callable.
+        """
 
 
 class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -115,6 +136,14 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
     @override
+    def _get_multi_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.entities
+
+    @override
+    def _get_single_extractor(self) -> Callable[[Any], pydantic.BaseModel | None]:
+        return lambda res: res.entity
+
+    @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             if self._mode == "multi":
@@ -133,39 +162,22 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        # Merge all found entities.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
+        # Wrap back into dspy.Prediction.
         consolidated_results: list[dspy_.Result] = []
-        for doc_offset in docs_offsets:
+        for res_clean in consolidated_results_clean:
             if self._mode == "multi":
-                entities: list[pydantic.BaseModel] = []
-                for res in results[doc_offset[0] : doc_offset[1]]:
-                    if res is None:
-                        continue
-                    assert len(res.completions.entities) == 1
-                    entities.extend(res.completions.entities[0])
-
-                consolidated_entities = consolidate_entities_multi(entities)
-
                 consolidated_results.append(
                     dspy.Prediction.from_completions(
-                        {"entities": [consolidated_entities]},
+                        {"entities": [res_clean]},
                         signature=self.prompt_signature,
                     )
                 )
-
             else:
-                entities_with_indices: list[tuple[pydantic.BaseModel | None, int]] = []
-                for i, res in enumerate(results[doc_offset[0] : doc_offset[1]]):
-                    if res is None:
-                        continue
-                    assert len(res.completions.entity) == 1
-                    entities_with_indices.append((res.completions.entity[0], i))
-
-                winner_entity = consolidate_entities_single(entities_with_indices)
-
                 consolidated_results.append(
                     dspy.Prediction.from_completions(
-                        {"entity": [winner_entity]},
+                        {"entity": [res_clean]},
                         signature=self.prompt_signature,
                     )
                 )
@@ -260,6 +272,14 @@ class PydanticBasedInformationExtraction(
             return InformationExtractionSingle
 
     @override
+    def _get_multi_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.entities
+
+    @override
+    def _get_single_extractor(self) -> Callable[[Any], pydantic.BaseModel | None]:
+        return lambda res: res.entity
+
+    @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             if self._mode == "multi":
@@ -276,29 +296,14 @@ class PydanticBasedInformationExtraction(
         results: Sequence[pydantic.BaseModel],
         docs_offsets: list[tuple[int, int]],  # type: ignore[arg-type]
     ) -> Sequence[pydantic.BaseModel]:
-        # Determine label scores for chunks per document.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         consolidated_results: list[pydantic.BaseModel] = []
-        for doc_offset in docs_offsets:
+        for res_clean in consolidated_results_clean:
             if self._mode == "multi":
-                entities: list[pydantic.BaseModel] = []
-                for res in results[doc_offset[0] : doc_offset[1]]:
-                    if res is None:
-                        continue  # type: ignore[unreachable]
-                    assert hasattr(res, "entities")
-                    entities.extend(res.entities)
-
-                consolidated_entities = consolidate_entities_multi(entities)
-                consolidated_results.append(self.prompt_signature(entities=consolidated_entities))
+                consolidated_results.append(self.prompt_signature(entities=res_clean))
             else:
-                entities_with_indices: list[tuple[pydantic.BaseModel | None, int]] = []
-                for i, res in enumerate(results[doc_offset[0] : doc_offset[1]]):
-                    if res is None:
-                        continue  # type: ignore[unreachable]
-                    assert hasattr(res, "entity")
-                    entities_with_indices.append((res.entity, i))
-
-                winner_entity = consolidate_entities_single(entities_with_indices)
-                consolidated_results.append(self.prompt_signature(entity=winner_entity))
+                consolidated_results.append(self.prompt_signature(entity=res_clean))
         return consolidated_results
 
 

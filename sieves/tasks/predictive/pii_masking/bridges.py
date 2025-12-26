@@ -1,9 +1,9 @@
 """Bridges for PII masking task."""
 
 import abc
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Sequence
 from functools import cached_property
-from typing import Literal, TypeVar, override
+from typing import Any, Literal, TypeVar, override
 
 import dspy
 import jinja2
@@ -13,14 +13,17 @@ from sieves.data import Doc
 from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
-from sieves.tasks.predictive.schemas.pii_masking import PIIEntity, Result
-from sieves.tasks.predictive.utils import consolidate_entities_multi
+from sieves.tasks.predictive.consolidation import MultiEntityConsolidation
+from sieves.tasks.predictive.schemas.pii_masking import (
+    PIIEntity,
+    Result,
+)
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
-class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
+class PIIMaskingBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for PII masking bridges."""
 
     def __init__(
@@ -28,20 +31,18 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         task_id: str,
         prompt_instructions: str | None,
         overwrite: bool,
-        mask_placeholder: str,
-        pii_types: list[str] | dict[str, str] | None,
         model_settings: ModelSettings,
+        mask_placeholder: str,
+        pii_types: list[str] | dict[str, str] | None = None,
     ):
-        """
-        Initialize PIIBridge.
+        """Initialize PIIMaskingBridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param overwrite: Whether to overwrite text with masked text.
-        :param mask_placeholder: String to replace PII with.
-        :param pii_types: Types of PII to mask. Can be a list of PII type strings, a dict mapping PII types to
-            descriptions, or None for all common PII types.
+        :param overwrite: Whether to overwrite text with anonymized version.
         :param model_settings: Model settings including inference_mode.
+        :param mask_placeholder: Placeholder used for masking.
+        :param pii_types: PII types to mask.
         """
         super().__init__(
             task_id=task_id,
@@ -49,7 +50,6 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
             overwrite=overwrite,
             model_settings=model_settings,
         )
-
         self._mask_placeholder = mask_placeholder
         self._pii_types: list[str] | None = None
         self._pii_type_descriptions: dict[str, str] = {}
@@ -62,6 +62,14 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
             self._pii_type_descriptions = {}
 
         self._pii_entity_cls = self._create_pii_entity_cls()
+        self._consolidation_strategy = MultiEntityConsolidation(extractor=self._get_extractor())
+
+    @abc.abstractmethod
+    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        """Return a callable that extracts a list of entities from a raw chunk result.
+
+        :return: Extractor callable.
+        """
 
     def _get_pii_type_descriptions(self) -> str:
         """Return a string with the PII type descriptions.
@@ -109,8 +117,12 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         return PIIEntityRuntime
 
 
-class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
+class DSPyPIIMasking(PIIMaskingBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for PII masking."""
+
+    @override
+    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.pii_entities
 
     @override
     @property
@@ -138,12 +150,12 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
     @cached_property
     def prompt_signature(self) -> type[dspy_.PromptSignature]:
         """Define prompt signature for DSPy."""
-        PIIEntity = self._pii_entity_cls
+        PIIEntityCls = self._pii_entity_cls
 
         class PIIMasking(dspy.Signature):  # type: ignore[misc]
             text: str = dspy.InputField(description="Text to mask PII from.")
             masked_text: str = dspy.OutputField(description="Text with all PII masked.")
-            pii_entities: list[PIIEntity] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
+            pii_entities: list[PIIEntityCls] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
 
         PIIMasking.__doc__ = jinja2.Template(self._prompt_instructions).render()
 
@@ -173,27 +185,28 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
     @override
     def consolidate(
-        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[dspy_.Result],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[dspy_.Result]:
         """Consolidate results from multiple chunks."""
+        # Delegate consolidation of entities to strategy.
+        consolidated_entities_all = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         # Merge results for each document.
         consolidated_results: list[dspy_.Result] = []
-        for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            entities: list[pydantic.BaseModel] = []
+        for i, (start, end) in enumerate(docs_offsets):
+            doc_results = results[start:end]
             masked_texts: list[str] = []
 
             for res in doc_results:
                 masked_texts.append(res.masked_text)
-                entities.extend(res.pii_entities)
-
-            consolidated_entities = consolidate_entities_multi(entities)
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
                     {
                         "masked_text": [" ".join(masked_texts).strip()],
-                        "pii_entities": [consolidated_entities],
+                        "pii_entities": [consolidated_entities_all[i]],
                     },
                     signature=self.prompt_signature,
                 )
@@ -201,8 +214,14 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
         return consolidated_results
 
 
-class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
+class PydanticBasedPIIMasking(
+    PIIMaskingBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC
+):
     """Base class for Pydantic-based PII masking bridges."""
+
+    @override
+    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.pii_entities
 
     @property
     def _default_prompt_instructions(self) -> str:
@@ -253,13 +272,13 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
     @cached_property
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         """Define prompt signature for Pydantic-based model wrappers."""
-        PIIEntity = self._pii_entity_cls
+        PIIEntityCls = self._pii_entity_cls
 
         class PIIMasking(pydantic.BaseModel, frozen=True):
             """PII masking output."""
 
             masked_text: str
-            pii_entities: list[PIIEntity]  # type: ignore[valid-type]
+            pii_entities: list[PIIEntityCls]  # type: ignore[valid-type]
 
         return PIIMasking
 
@@ -281,13 +300,17 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
 
     @override
     def consolidate(
-        self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[pydantic.BaseModel],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[pydantic.BaseModel]:
+        # Delegate consolidation of entities to strategy.
+        consolidated_entities_all = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         # Merge results for each document.
         consolidated_results: list[pydantic.BaseModel] = []
-        for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            entities: list[pydantic.BaseModel] = []
+        for i, (start, end) in enumerate(docs_offsets):
+            doc_results = results[start:end]
             masked_texts: list[str] = []
 
             for res in doc_results:
@@ -295,17 +318,12 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                     continue  # type: ignore[unreachable]
 
                 assert hasattr(res, "masked_text")
-                assert hasattr(res, "pii_entities")
-
                 masked_texts.append(res.masked_text)
-                entities.extend(res.pii_entities)
-
-            consolidated_entities = consolidate_entities_multi(entities)
 
             consolidated_results.append(
                 self.prompt_signature(
                     masked_text=" ".join(masked_texts).strip(),
-                    pii_entities=consolidated_entities,
+                    pii_entities=consolidated_entities_all[i],
                 )
             )
         return consolidated_results

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import abc
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Sequence
 from functools import cached_property
 from typing import Any, Literal, TypeVar, override
 
@@ -20,6 +20,7 @@ from sieves.model_wrappers import (
 )
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.consolidation import MultiEntityConsolidation
 from sieves.tasks.predictive.schemas.relation_extraction import (
     RelationEntity,
     RelationEntityWithContext,
@@ -27,7 +28,6 @@ from sieves.tasks.predictive.schemas.relation_extraction import (
     RelationTripletWithContext,
     Result,
 )
-from sieves.tasks.predictive.utils import consolidate_entities_multi
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -75,6 +75,15 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         elif entity_types is not None:
             self._entity_types = entity_types
             self._entity_type_descriptions: dict[str, str] = {}
+
+        self._consolidation_strategy = MultiEntityConsolidation(extractor=self._get_extractor())
+
+    @abc.abstractmethod
+    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        """Return a callable that extracts a list of entities from a raw chunk result.
+
+        :return: Extractor callable.
+        """
 
     def _get_relation_descriptions(self) -> str:
         """Return relation descriptions as a string.
@@ -193,24 +202,15 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         results: Sequence[_BridgeResult],
         docs_offsets: list[tuple[int, int]],
     ) -> Sequence[list[pydantic.BaseModel]]:
-        consolidated: list[list[pydantic.BaseModel]] = []
-
-        for start, end in docs_offsets:
-            doc_results = results[start:end]
-            triplets: list[pydantic.BaseModel] = []
-
-            for res in doc_results:
-                if res and hasattr(res, "triplets"):
-                    triplets.extend(res.triplets)
-
-            consolidated_triplets = consolidate_entities_multi(triplets)
-            consolidated.append(consolidated_triplets)
-
-        return consolidated
+        return self._consolidation_strategy.consolidate(results, docs_offsets)
 
 
 class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for relation extraction."""
+
+    @override
+    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.triplets
 
     @override
     @property
@@ -263,6 +263,10 @@ class PydanticBasedRelationExtraction(
     RelationExtractionBridge[pydantic.BaseModel, pydantic.BaseModel | list[Any], ModelWrapperInferenceMode], abc.ABC
 ):
     """Base class for Pydantic-based relation extraction bridges."""
+
+    @override
+    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.triplets
 
     @override
     @property
