@@ -284,9 +284,6 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
 
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
-        if threshold is None:
-            threshold = self.THRESHOLD
-
         # Use the scored entity type for the dataset schema.
         entity_type = self._scored_entity_type
         if isinstance(self._bridge, GliNERBridge):
