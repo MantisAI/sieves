@@ -457,7 +457,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         if self._fewshot_examples:
             target_fields = list(self._fewshot_examples[0].target_fields)
         else:
-            # Fallback to all fields in truth that are not input fields
+            # Fallback to all fields in truth that are not input fields.
             target_fields = [k for k in truth.keys() if k not in ("text",)]
 
         # Filter truth and pred to only include target fields.
