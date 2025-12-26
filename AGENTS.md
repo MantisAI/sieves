@@ -150,14 +150,16 @@ uv run python -c "import sieves; print(sieves.__name__)"
 
 1. **Doc** (`sieves.data.Doc`)
    - Container for text, URI, chunks, images, and processing results
-   - Auto-chunks text on initialization using Chonkie
    - `results` dict stores task outputs keyed by task ID
+   - `gold` dict stores ground truth data for evaluation
+   - Auto-chunks text on initialization using Chonkie
    - Supports image inputs via PIL (stored in `images` field)
 
 2. **Pipeline** (`sieves.pipeline.Pipeline`)
    - Orchestrates sequential task execution
    - Caches by document hash (text or URI)
    - Supports composition via `+` operator
+   - Supports evaluation via `evaluate(docs)`
    - Serializable via `dump()`/`load()`
 
 3. **Task** (`sieves.tasks.core.Task`)
@@ -169,7 +171,7 @@ uv run python -c "import sieves; print(sieves.__name__)"
 
 4. **ModelWrapper** (`sieves.model_wrappers.core.ModelWrapper`)
    - Generic interface to structured generation frameworks
-   - Implementations: DSPy (v3), Outlines (default), LangChain, Transformers, GLiNER2
+   - Implementations: Outlines (default), DSPy (v3), LangChain, HuggingFace, GliNER
    - Each model wrapper implements `build_executable()` to compile prompts
    - All supported model libraries are now core dependencies (no longer optional)
 
@@ -209,8 +211,8 @@ Return docs with populated results
 | **Outlines** | Structured generation | text, choice, regex, json | Default; JSON schema constrained |
 | **DSPy** (v3) | Modular prompting | predict, chain_of_thought, react, module | Few-shot, optimizer support (MIPROv2) |
 | **LangChain** | LLM wrapper | structured | Chat models, tool calling |
-| **Transformers** | Direct inference | zero_shot_classification | HuggingFace zero-shot classification pipeline |
-| **GLiNER2** | Specialized NER | (specialized) | Domain-specific NER, zero-shot entity recognition |
+| **HuggingFace** | Direct inference | zeroshot_cls | Transformers zero-shot classification pipeline |
+| **GliNER** | Specialized extraction | classification, entities, structure, relations | GLiNER2-based zero-shot extraction |
 
 ---
 
@@ -370,7 +372,7 @@ Before proposing changes, ensure:
 
 - Some models do not support batching or few-shotting uniformly; bridge logic handles compatibility
 - Optional extras gate heavy dependencies (Docling, Marker for ingestion; SetFit, Model2Vec for distillation)
-- **All model libraries** (Outlines, DSPy, LangChain, Transformers, GLiNER2) are now **core dependencies**
+- **All model libraries** (Outlines, DSPy, LangChain, Transformers, GLiNER2) are **core dependencies**
 - Serialization excludes complex third-party objects (models, converters); must pass at load time
 - Ingestion tasks may require system packages (Tesseract for OCR, etc.)
 - Python 3.12 exact version required (not 3.12+)
@@ -432,7 +434,7 @@ Then run: `uv run pytest sieves/tests/test_my_feature.py -v`
 
 ## Recent Major Updates
 
-Key changes that affect development (last ~2-3 months):
+Key changes that affect development:
 
 1. **Token Counting and Raw Output Observability** - Implemented comprehensive token usage tracking (input/output) and raw model response capturing in `doc.meta`. Usage is aggregated per-task and per-document.
 2. **Information Extraction Single/Multi Mode** - Added `mode` parameter to `InformationExtraction` task for single vs multi entity extraction.
@@ -448,7 +450,11 @@ Key changes that affect development (last ~2-3 months):
 12. **Standardized Output Fields** (#206) - Normalized descriptive/ID attribute naming across tasks
 13. **Chonkie Integration** - Token-based chunking framework now primary chunking backend
 14. **Optional Progress Bars** (#197) - Progress display now configurable per task
+15. **Pipeline Evaluation** - Added `Pipeline.evaluate()` and `Task.evaluate()` for performance benchmarking against gold data.
 
 ---
 
 For questions or updates to these guidelines, refer to maintainers or GitHub issues.
+
+**Last Updated:** 2025-12-26 21:14:30 CET
+**Last Commit:** b17c50392fa376fbf53dfa0a1eece62f715e153d
