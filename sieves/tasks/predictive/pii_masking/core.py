@@ -121,6 +121,45 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         return "F1"
 
     @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        tp = 0
+        fp = 0
+        fn = 0
+
+        for gold, pred in zip(truths, preds):
+            # Extract entities.
+            true_entities = set()
+            if gold is not None:
+                if hasattr(gold, "pii_entities"):
+                    true_entities = {(e.entity_type, e.text) for e in gold.pii_entities}
+                elif isinstance(gold, dict) and "pii_entities" in gold:
+                    true_entities = {(e["entity_type"], e["text"]) for e in gold["pii_entities"]}
+
+            pred_entities = set()
+            if pred is not None:
+                if hasattr(pred, "pii_entities"):
+                    pred_entities = {(e.entity_type, e.text) for e in pred.pii_entities}
+                elif isinstance(pred, dict) and "pii_entities" in pred:
+                    pred_entities = {(e["entity_type"], e["text"]) for e in pred.get("pii_entities", [])}
+
+            tp += len(true_entities & pred_entities)
+            fp += len(pred_entities - true_entities)
+            fn += len(true_entities - pred_entities)
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+        return {self.metric: f1}
+
+    @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
             ModelType.dspy: DSPyPIIMasking,
@@ -161,7 +200,10 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         }
 
     @override
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
+        if threshold is None:
+            threshold = self.THRESHOLD
+
         # Define metadata.
         features = datasets.Features(
             {

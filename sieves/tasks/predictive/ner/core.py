@@ -113,6 +113,55 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         return "F1"
 
     @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        tp = 0
+        fp = 0
+        fn = 0
+
+        for gold, pred in zip(truths, preds):
+            if gold is None:
+                # If gold is None, everything predicted is a False Positive?
+                # Or do we assume no entities?
+                # Consistent with `_evaluate_dspy_example`, if no gold entities, score depends on pred.
+                true_entities = set()
+            else:
+                # Convert to DSPy format first to reuse logic or do it directly
+                # NER uses `entities` list of objects/dicts.
+                if hasattr(gold, "entities"):
+                    true_entities = {(e.text, e.entity_type) for e in gold.entities}
+                elif isinstance(gold, dict) and "entities" in gold:
+                    true_entities = {(e["text"], e["entity_type"]) for e in gold["entities"]}
+                else:
+                    true_entities = set()
+
+            if pred is None:
+                pred_entities = set()
+            else:
+                if hasattr(pred, "entities"):
+                    pred_entities = {(e.text, e.entity_type) for e in pred.entities}
+                elif isinstance(pred, dict) and "entities" in pred:
+                    pred_entities = {(e["text"], e["entity_type"]) for e in pred.get("entities", [])}
+                else:
+                    pred_entities = set()
+
+            tp += len(true_entities & pred_entities)
+            fp += len(pred_entities - true_entities)
+            fn += len(true_entities - pred_entities)
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+        return {self.metric: f1}
+
+    @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         if model_type == ModelType.gliner:
             from sieves.model_wrappers import gliner_
@@ -171,7 +220,10 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         }
 
     @override
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
+        if threshold is None:
+            threshold = self.THRESHOLD
+
         # Define metadata and features for the dataset
         features = datasets.Features(
             {

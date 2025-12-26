@@ -125,6 +125,76 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         return "F1" if self._mode == "multi" else "Accuracy"
 
     @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        if self._mode == "single":
+            correct = 0
+            total = 0
+            for gold, pred in zip(truths, preds):
+                # If gold is None, we assume it's a negative example (no entity).
+                # If pred is None, it predicted no entity.
+                # If both None -> Correct.
+                gold_entity = None
+                if gold is not None:
+                    gold_entity = gold.entity if hasattr(gold, "entity") else gold.get("entity")
+
+                pred_entity = None
+                if pred is not None:
+                    pred_entity = pred.entity if hasattr(pred, "entity") else pred.get("entity")
+
+                if gold_entity == pred_entity:
+                    correct += 1
+                total += 1
+
+            return {self.metric: correct / total if total > 0 else 0.0}
+
+        # Multi mode: F1
+        tp = 0
+        fp = 0
+        fn = 0
+
+        def entity_to_tuple(entity: Any) -> tuple:
+            # Handle Pydantic model or dict
+            if hasattr(entity, "model_dump"):
+                d = entity.model_dump()
+            else:
+                d = entity
+
+            # Remove score if present
+            if "score" in d:
+                del d["score"]
+
+            items = sorted(d.items())
+            return tuple((k, v if not (isinstance(v, list) or isinstance(v, dict)) else str(v)) for k, v in items)
+
+        for gold, pred in zip(truths, preds):
+            true_entities = set()
+            if gold is not None:
+                entities = gold.entities if hasattr(gold, "entities") else gold.get("entities", [])
+                true_entities = {entity_to_tuple(e) for e in entities}
+
+            pred_entities = set()
+            if pred is not None:
+                entities = pred.entities if hasattr(pred, "entities") else pred.get("entities", [])
+                pred_entities = {entity_to_tuple(e) for e in entities}
+
+            tp += len(true_entities & pred_entities)
+            fp += len(pred_entities - true_entities)
+            fn += len(true_entities - pred_entities)
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+        return {self.metric: f1}
+
+    @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.
 
@@ -209,7 +279,10 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 )
 
     @override
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
+        if threshold is None:
+            threshold = self.THRESHOLD
+
         # Use the scored entity type for the dataset schema.
         entity_type = self._scored_entity_type
         if isinstance(self._bridge, GliNERBridge):

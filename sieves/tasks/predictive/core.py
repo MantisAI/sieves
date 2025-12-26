@@ -37,6 +37,10 @@ from sieves.tasks.types import Model
 class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task, abc.ABC):
     """Base class for predictive tasks."""
 
+    # Threshold used for evaluation and any other situatoin in which we need to convert scores into a binary
+    # representation.
+    THRESHOLD = 0.5
+
     def __init__(
         self,
         model: Model,
@@ -272,9 +276,11 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         :param failure_threshold: Decision threshold for whether to mark predicitions as failures.
         :return: Evaluation report.
         """
-        scores: list[float] = []
+        truths: list[Any] = []
+        preds: list[Any] = []
         failures: list[Doc] = []
 
+        # Evaluate each doc individually to identify failed predictions.
         for doc in docs:
             if self.id not in doc.results:
                 continue
@@ -282,33 +288,56 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
             pred = doc.results[self.id]
             gold = doc.gold.get(self.id, None)
 
-            # If gold or prediction is None: we cannot do proper evalution, so we just check whether they're both None
-            # to compute score.
-            if gold is None or pred is None:
-                if gold is None and pred is None:
-                    scores.append(1.0)
-                else:
-                    scores.append(0.0)
-                    failures.append(doc)
+            # Accumulate for corpus-level metrics.
+            truths.append(gold)
+            preds.append(pred)
 
+            # If gold or prediction is None: we cannot do proper evalution, so we just check whether they're both None
+            # to compute score for failure analysis.
+            if gold is None or pred is None:
+                if gold is not None or pred is not None:
+                    failures.append(doc)
             else:
                 # Convert result and gold to DSPy representation.
                 truth = dspy.Example(**self._task_result_to_dspy_dict(gold))
-                pred = dspy.Prediction(**self._task_result_to_dspy_dict(pred))
+                pred_dspy = dspy.Prediction(**self._task_result_to_dspy_dict(pred))
 
-                # Call internal evaluation logic.
-                score = self._evaluate_dspy_example(truth, pred, trace=None, model=judge)
-                scores.append(score)
+                # Call internal evaluation logic for per-doc failure analysis.
+                score = self._evaluate_dspy_example(truth, pred_dspy, trace=None, model=judge)
 
                 if score < failure_threshold:
                     failures.append(doc)
 
-        avg_score = sum(scores) / len(scores) if scores else 0.0
+        # Evaluate on corpus level to obtain representative metrics.
+        metrics = self._compute_metrics(truths, preds, judge=judge)
+
         return TaskEvaluationReport(
-            metrics={self.metric: avg_score},
+            metrics=metrics,
             task_id=self.id,
             failures=failures,
         )
+
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        By default, this computes the average of `_evaluate_dspy_example` over all documents.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        scores: list[float] = []
+        for gold, pred in zip(truths, preds):
+            if gold is None or pred is None:
+                scores.append(1.0 if gold is None and pred is None else 0.0)
+            else:
+                truth = dspy.Example(**self._task_result_to_dspy_dict(gold))
+                pred_dspy = dspy.Prediction(**self._task_result_to_dspy_dict(pred))
+                scores.append(self._evaluate_dspy_example(truth, pred_dspy, trace=None, model=judge))
+
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        return {self.metric: avg_score}
 
     def _task_result_to_dspy_dict(self, result: Any) -> dict[str, Any]:
         """Convert a task result or gold data to a dictionary suitable for DSPy evaluation.
@@ -323,12 +352,12 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         return {"output": result}
 
     @abc.abstractmethod
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
         """Create Hugging Face datasets.Dataset from docs.
 
         :param docs: Docs to convert.
         :param threshold: Threshold to apply when converting logits/confidence scores into labels or other structured
-            predictions.
+            predictions. Defaults to `THRESHOLD`.
         :return datasets.Dataset: Hugging Face dataset.
         """
 

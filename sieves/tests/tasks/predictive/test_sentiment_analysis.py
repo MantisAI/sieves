@@ -76,15 +76,15 @@ def test_evaluation(batch_runtime) -> None:
     assert report_none.metrics[task.metric] == 0.0
 
     # 3. Partial overlap
-    doc_partial = Doc(text="Great food and service.")
-    # food is correct (1.0), service is slightly off (0.5 vs 1.0)
-    # _evaluate_dspy_example for Sentiment computes 1 - abs(gold - pred) averaged over aspects
-    # food: 1 - abs(1.0 - 1.0) = 1.0
-    # service: 1 - abs(1.0 - 0.5) = 0.5
-    # overall: 1 - abs(1.0 - 1.0) = 1.0
-    # Average: (1.0 + 0.5 + 1.0) / 3 = 0.833...
-    res_partial_pred = Result(sentiment_per_aspect={"food": 1.0, "service": 0.5, "overall": 1.0})
+    doc_partial = Doc(text="Great food. Bad service.")
+    # food is correct (1.0), service is wrong (0.0 vs 1.0)
+    # F1 (Macro):
+    # food: 1.0 (TP) -> F1 1.0
+    # service: 0.0 (FN) -> F1 0.0
+    # overall: 1.0 (TP) -> F1 1.0
+    # Average: (1.0 + 0.0 + 1.0) / 3 = 0.66...
+    res_partial_pred = Result(sentiment_per_aspect={"food": 1.0, "service": 0.0, "overall": 1.0})
     doc_partial.results["sent"] = res_partial_pred
     doc_partial.gold["sent"] = res_full
     report_partial = task.evaluate([doc_partial])
-    assert 0.8 < report_partial.metrics[task.metric] < 0.9
+    assert 0.6 < report_partial.metrics[task.metric] < 0.7

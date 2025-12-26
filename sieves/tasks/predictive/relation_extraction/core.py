@@ -83,6 +83,50 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
         return "F1"
 
     @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        tp = 0
+        fp = 0
+        fn = 0
+
+        for gold, pred in zip(truths, preds):
+            true_triplets = set()
+            if gold is not None:
+                triplets = gold.triplets if hasattr(gold, "triplets") else gold.get("triplets", [])
+                for t in triplets:
+                    if hasattr(t, "head"):
+                        # Pydantic model
+                        true_triplets.add((t.head.text.lower(), t.relation.lower(), t.tail.text.lower()))
+                    else:
+                        # Dict
+                        true_triplets.add((t["head"]["text"].lower(), t["relation"].lower(), t["tail"]["text"].lower()))
+
+            pred_triplets = set()
+            if pred is not None:
+                triplets = pred.triplets if hasattr(pred, "triplets") else pred.get("triplets", [])
+                for t in triplets:
+                    if hasattr(t, "head"):
+                        pred_triplets.add((t.head.text.lower(), t.relation.lower(), t.tail.text.lower()))
+                    else:
+                        pred_triplets.add((t["head"]["text"].lower(), t["relation"].lower(), t["tail"]["text"].lower()))
+
+            tp += len(true_triplets & pred_triplets)
+            fp += len(pred_triplets - true_triplets)
+            fn += len(true_triplets - pred_triplets)
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+        return {self.metric: f1}
+
+    @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         if model_type == ModelType.gliner:
             if self._entity_types is not None:
@@ -140,7 +184,10 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
         }
 
     @override
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
+        if threshold is None:
+            threshold = self.THRESHOLD
+
         # Define metadata and features.
         entity_feature = datasets.Features(
             {

@@ -8,6 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
+import sklearn
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -76,7 +77,76 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
     @property
     @override
     def metric(self) -> str:
-        return "Accuracy"
+        return "F1 (Macro)"
+
+    @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        aspects_list = list(self._aspects)
+        # We will compute F1 per aspect, then average.
+        # Sentiments are 0.0 to 1.0. We discretize them to 0 (Negative) or 1 (Positive) for F1.
+        # This is a simplification; a threshold of 0.5 is assumed.
+
+        scores: list[float] = []
+
+        for aspect in aspects_list:
+            y_true: list[int] = []
+            y_pred: list[int] = []
+
+            for gold, pred in zip(truths, preds):
+                if gold is None or pred is None:
+                    # Skip or treat as failure?
+                    # If we skip, we might ignore failures.
+                    # If we treat as failure, we need a "wrong" class.
+                    # Let's use 0 vs 1 for sentiment. If missing, we can use -1 if we want to penalize.
+                    # Or assume 0.5 (neutral) if available?
+                    # Let's stick to simple binary classification logic for now: 0 vs 1.
+                    # If None, we append -1 (which will mismatch 0 or 1).
+                    y_true.append(-1)
+                    y_pred.append(-1)
+                    continue
+
+                # Gold is expected to be a dict or pydantic model with `sentiment_per_aspect`
+                gold_val = self._get_aspect_sentiment(gold, aspect)
+                pred_val = self._get_aspect_sentiment(pred, aspect)
+
+                # Discretize
+                y_true.append(1 if gold_val >= self._EVAL_THRESHOLD else 0)
+                y_pred.append(1 if pred_val >= self._EVAL_THRESHOLD else 0)
+
+            # Compute Macro F1 for this aspect
+            # Note: binary F1 is usually focusing on the positive class. Macro averages F1 of pos and neg.
+            if y_true:
+                scores.append(sklearn.metrics.f1_score(y_true, y_pred, average="macro", zero_division=0))
+
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        return {self.metric: avg_score}
+
+    @staticmethod
+    def _get_aspect_sentiment(result: Any, aspect: str) -> float:
+        """Extract sentiment score for an aspect from various result formats.
+
+        :param result: Result to obtain sentiment score from.
+        :param aspect: Aspect to extract sentiment score for.
+        :return: Sentiment score for `aspect` in `result`.
+        """
+        if hasattr(result, "sentiment_per_aspect"):
+            return result.sentiment_per_aspect.get(aspect, 0.0)
+
+        if isinstance(result, dict):
+            # Check for DSPy dict format or raw dict.
+            if "sentiment_per_aspect" in result:
+                return result["sentiment_per_aspect"].get(aspect, 0.0)
+
+            return result.get(aspect, 0.0)
+
+        return 0.0
 
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
@@ -127,7 +197,10 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
         }
 
     @override
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
+        if threshold is None:
+            threshold = self._EVAL_THRESHOLD
+
         # Define metadata.
         features = datasets.Features(
             {

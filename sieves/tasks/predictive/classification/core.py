@@ -9,6 +9,7 @@ from typing import Any, Literal, override
 
 import datasets
 import dspy
+import sklearn
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -42,35 +43,7 @@ FewshotExample = FewshotExampleMultiLabel | FewshotExampleSingleLabel
 
 
 class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
-    """Predictive task for text classification.
-
-    Examples:
-        Basic usage with list of labels:
-
-        >>> classifier = Classification(
-        ...     labels=["science", "politics", "sports"],
-        ...     model=model,
-        ... )
-
-        Using dict format with descriptions for better accuracy:
-
-        >>> classifier = Classification(
-        ...     labels={
-        ...         "science": "Scientific topics including physics, biology, chemistry",
-        ...         "politics": "Political news, elections, and government affairs",
-        ...         "sports": "Sports events, teams, and athletes"
-        ...     },
-        ...     model=model,
-        ... )
-        The descriptions are especially useful with GliNER, which uses them to improve entity recognition accuracy.
-
-    Evaluation:
-        When using `evaluate()`, ground-truth labels can be provided in `doc.gold[task_id]` in several formats:
-        - `str`: Single label (e.g., `"science"`). Best for single-label mode.
-        - `list[str]`: List of active labels (e.g., `["science", "politics"]`). Best for multi-label mode.
-        - `ResultSingleLabel`: Single label with an explicit confidence score.
-        - `ResultMultiLabel`: Multiple labels with explicit confidence scores.
-    """
+    """Predictive task for text classification."""
 
     def __init__(
         self,
@@ -127,7 +100,85 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
     @property
     @override
     def metric(self) -> str:
-        return "Accuracy"
+        return "F1 (Macro)"
+
+    @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        # Prepare labels and mappings.
+        labels_list = list(self._labels)
+        label_to_idx = {label: i for i, label in enumerate(labels_list)}
+
+        y_true: list[float | list[float] | int] = []
+        y_pred: list[float | list[float] | int] = []
+
+        for gold, pred in zip(truths, preds):
+            if gold is None or pred is None:
+                # If either is None, we handle it as a failure for this example.
+                # In multi-label, this is an all-zero vector. In single-label, it's -1 (no class).
+                if self._mode == "multi":
+                    y_true.append([0.0] * len(labels_list))
+                    y_pred.append([0.0] * len(labels_list))
+                else:
+                    y_true.append(-1)
+                    y_pred.append(-1)
+                continue
+
+            # Convert to normalized representation using the existing logic.
+            # We reuse `_task_result_to_dspy_dict` indirectly or just use `_result_to_scores`.
+            gold_scores = self._result_to_scores(self._task_result_to_pydantic(gold))
+            pred_scores = self._result_to_scores(self._task_result_to_pydantic(pred))
+
+            if self._mode == "multi":
+                # Binary multi-hot vectors.
+                y_true.append([1.0 if gold_scores.get(label, 0.0) >= self.THRESHOLD else 0.0 for label in labels_list])
+                y_pred.append([1.0 if pred_scores.get(label, 0.0) >= self.THRESHOLD else 0.0 for label in labels_list])
+            else:
+                # Single label indices.
+                # Get the label with the highest score.
+                gold_label = max(gold_scores.items(), key=lambda x: x[1])[0]
+                pred_label = max(pred_scores.items(), key=lambda x: x[1])[0]
+                y_true.append(label_to_idx.get(gold_label, -1))
+                y_pred.append(label_to_idx.get(pred_label, -1))
+
+        # Filter out examples where gold or pred were None (represented by -1 or all-zero if that's what we chose).
+        score = sklearn.metrics.f1_score(y_true, y_pred, average="macro", zero_division=0)
+
+        return {self.metric: float(score)}
+
+    def _task_result_to_pydantic(self, result: Any) -> ResultSingleLabel | ResultMultiLabel:
+        """Convert a result to the appropriate Pydantic model for this task.
+
+        :param result: Input result.
+        :return: Normalized Pydantic result.
+        """
+        if isinstance(result, ResultSingleLabel | ResultMultiLabel):
+            return result
+
+        # Use the same logic as `_task_result_to_dspy_dict` but return the Pydantic model.
+        if isinstance(result, str):
+            return ResultSingleLabel(label=result, score=1.0)
+        elif isinstance(result, list) and all(isinstance(item, str) for item in result):
+            if self._mode == "single":
+                if len(result) == 1:
+                    return ResultSingleLabel(label=result[0], score=1.0)
+                else:
+                    raise ValueError(f"Got list of {len(result)} labels for single-label task.")
+            else:
+                label_scores: list[tuple[str, float]] = []
+                active_set = set(result)
+                for label in self._labels:
+                    s = 1.0 if label in active_set else 0.0
+                    label_scores.append((label, s))
+                return ResultMultiLabel(label_scores=label_scores)
+
+        raise TypeError(f"Unsupported result type in classification task: {type(result)}")
 
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.
@@ -337,7 +388,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                     f"Please choose one of {DistillationFramework.setfit, DistillationFramework.model2vec}"
                 )
 
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
         """Convert results to a Hugging Face dataset with multi-hot labels.
 
         The emitted dataset contains a ``text`` column and a ``labels`` column which is a multi-hot list aligned to
@@ -349,7 +400,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         - ``pydantic.BaseModel`` exposing ``label`` and optional ``score``
 
         :param docs: Documents whose ``results`` contain outputs for this task id.
-        :param threshold: Threshold to convert scores into multi-hot indicators.
+        :param threshold: Threshold to convert scores into multi-hot indicators. Defaults to `THRESHOLD`.
 
         :return: A ``datasets.Dataset`` with ``text`` and multi-hot ``labels``.
 
@@ -357,6 +408,9 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         :raises TypeError: If a result cannot be interpreted.
 
         """
+        if threshold is None:
+            threshold = self.THRESHOLD
+
         data: list[dict[str, str | list[bool]]] = []
 
         # Define metadata and features (multi-hot across declared labels for multi-label).
