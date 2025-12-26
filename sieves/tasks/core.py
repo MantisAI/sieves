@@ -63,6 +63,8 @@ class Task(abc.ABC):
         :param docs: Docs to process.
         :return: Processed docs (in original order).
         """
+        docs = iter(docs) if not isinstance(docs, Iterator) else docs
+
         # Materialize docs in batches. This doesn't incur additional memory overhead, as docs are materialized in
         # batches downstream anyway.
         batch_size = self._batch_size if self._batch_size > 0 else sys.maxsize
