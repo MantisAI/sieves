@@ -105,5 +105,5 @@ To evaluate a task, you must provide the expected results in the `.gold` field o
 ```
 
 Different tasks use different evaluation strategies:
-- **Deterministic Metrics**: Tasks like Classification and NER use standard metrics (e.g., Accuracy, F1-score) to provide precise measurements.
-- **Model-based Evaluation**: Generative tasks like Summarization and Translation require a "judge" model (a `dspy.LM` instance) to assess semantic quality.
+- **Deterministic Metrics**: Tasks like Classification and NER use standard metrics (e.g., accuracy, f1-score) to provide precise measurements.
+- **Model-based Evaluation**: Generative tasks like Summarization and Translation require a "judge" model (a `dspy.LM` instance) to assess semantic similarity.

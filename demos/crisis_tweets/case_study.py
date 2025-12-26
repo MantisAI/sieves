@@ -388,7 +388,7 @@ def _(pipeline, results):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    That's not too bad - the mediocre performance for labels is probably because there are quite a few of them (15) and the model has difficulties telling them apart.
+    That seems quite fine for `crisis_type`, and not so great for `crisis_label` - the mediocre performance for labels is probably because there are quite a few of them (15) and the model has difficulties telling them apart.
 
     Let's inspect the errors - hopefully we can learn from to improve our pipeline (or maybe even find mistakes in the gold data!):
     """)
