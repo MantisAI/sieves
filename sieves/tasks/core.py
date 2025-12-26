@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import abc
 import itertools
+import sys
 from collections.abc import Callable, Iterable, Iterator
 from typing import TYPE_CHECKING, Any
 
@@ -62,32 +63,28 @@ class Task(abc.ABC):
         :param docs: Docs to process.
         :return: Processed docs (in original order).
         """
-        # Create three independent iterators:
-        #   1. Check which docs pass condition.
-        #   2. Yield only passing docs to _call().
-        #   3. Iterate and yield results in order.
-        docs_iters = itertools.tee(docs, 3)
+        # Materialize docs in batches. This doesn't incur additional memory overhead, as docs are materialized in
+        # batches downstream anyway.
+        batch_size = self._batch_size if self._batch_size > 0 else sys.maxsize
+        while docs_batch := [doc for doc in itertools.islice(docs, batch_size)]:
+            # First pass: determine which docs pass the condition by index.
+            passing_indices: set[int] = {
+                idx for idx, doc in enumerate(docs_batch) if self._condition is None or self._condition(doc)
+            }
 
-        # First pass: determine which docs pass the condition by index
-        passing_indices: set[int] = set()
+            # Process all passing docs in one batch.
+            processed = self._call(d for i, d in enumerate(docs_batch) if i in passing_indices)
+            processed_iter = iter(processed) if not isinstance(processed, Iterator) else processed
 
-        for idx, doc in enumerate(docs_iters[0]):
-            if self._condition is None or self._condition(doc):
-                passing_indices.add(idx)
-
-        # Process all passing docs together.
-        processed = self._call(d for i, d in enumerate(docs_iters[1]) if i in passing_indices)
-        processed_iter = iter(processed) if not isinstance(processed, Iterator) else processed
-
-        # Iterate through original docs in order and yield results
-        for idx, doc in enumerate(docs_iters[2]):
-            if idx in passing_indices:
-                # Doc passed condition - use processed result.
-                yield next(processed_iter)
-            else:
-                # Doc failed condition - set None result and yield original.
-                doc.results[self.id] = None
-                yield doc
+            # Iterate through original docs in order and yield results.
+            for idx, doc in enumerate(docs_batch):
+                if idx in passing_indices:
+                    # Doc passed condition - use processed result.
+                    yield next(processed_iter)
+                else:
+                    # Doc failed condition - set `None` result and yield original.
+                    doc.results[self.id] = None
+                    yield doc
 
     @abc.abstractmethod
     def _call(self, docs: Iterable[Doc]) -> Iterable[Doc]:
