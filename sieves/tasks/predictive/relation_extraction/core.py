@@ -96,25 +96,17 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
         fn = 0
 
         for gold, pred in zip(truths, preds):
-            true_triplets = set()
             if gold is not None:
-                triplets = gold.triplets if hasattr(gold, "triplets") else gold.get("triplets", [])
-                for t in triplets:
-                    if hasattr(t, "head"):
-                        # Pydantic model
-                        true_triplets.add((t.head.text.lower(), t.relation.lower(), t.tail.text.lower()))
-                    else:
-                        # Dict
-                        true_triplets.add((t["head"]["text"].lower(), t["relation"].lower(), t["tail"]["text"].lower()))
+                assert isinstance(gold, TaskResult)
+                true_triplets = {(t.head.text.lower(), t.relation.lower(), t.tail.text.lower()) for t in gold.triplets}
+            else:
+                true_triplets = set()
 
-            pred_triplets = set()
             if pred is not None:
-                triplets = pred.triplets if hasattr(pred, "triplets") else pred.get("triplets", [])
-                for t in triplets:
-                    if hasattr(t, "head"):
-                        pred_triplets.add((t.head.text.lower(), t.relation.lower(), t.tail.text.lower()))
-                    else:
-                        pred_triplets.add((t["head"]["text"].lower(), t["relation"].lower(), t["tail"]["text"].lower()))
+                assert isinstance(pred, TaskResult)
+                pred_triplets = {(t.head.text.lower(), t.relation.lower(), t.tail.text.lower()) for t in pred.triplets}
+            else:
+                pred_triplets = set()
 
             tp += len(true_triplets & pred_triplets)
             fp += len(pred_triplets - true_triplets)

@@ -133,6 +133,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         :param judge: Optional DSPy LM instance to use as judge for generative tasks.
         :return: Dictionary of metrics.
         """
+        # Single mode.
         if self._mode == "single":
             correct = 0
             total = 0
@@ -140,13 +141,17 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 # If gold is None, we assume it's a negative example (no entity).
                 # If pred is None, it predicted no entity.
                 # If both None -> Correct.
-                gold_entity = None
                 if gold is not None:
-                    gold_entity = gold.entity if hasattr(gold, "entity") else gold.get("entity")
+                    assert isinstance(gold, TaskResult)
+                    gold_entity = gold.entity
+                else:
+                    gold_entity = None
 
-                pred_entity = None
                 if pred is not None:
-                    pred_entity = pred.entity if hasattr(pred, "entity") else pred.get("entity")
+                    assert isinstance(pred, TaskResult)
+                    pred_entity = pred.entity
+                else:
+                    pred_entity = None
 
                 if gold_entity == pred_entity:
                     correct += 1
@@ -154,17 +159,14 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
 
             return {self.metric: correct / total if total > 0 else 0.0}
 
-        # Multi mode: F1
+        # Multi mode.
         tp = 0
         fp = 0
         fn = 0
 
         def entity_to_tuple(entity: Any) -> tuple:
-            # Handle Pydantic model or dict
-            if hasattr(entity, "model_dump"):
-                d = entity.model_dump()
-            else:
-                d = entity
+            # Handle Pydantic model
+            d = entity.model_dump()
 
             # Remove score if present
             if "score" in d:
@@ -174,15 +176,17 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
             return tuple((k, v if not (isinstance(v, list) or isinstance(v, dict)) else str(v)) for k, v in items)
 
         for gold, pred in zip(truths, preds):
-            true_entities = set()
             if gold is not None:
-                entities = gold.entities if hasattr(gold, "entities") else gold.get("entities", [])
-                true_entities = {entity_to_tuple(e) for e in entities}
+                assert isinstance(gold, TaskResult)
+                true_entities = {entity_to_tuple(e) for e in gold.entities}
+            else:
+                true_entities = set()
 
-            pred_entities = set()
             if pred is not None:
-                entities = pred.entities if hasattr(pred, "entities") else pred.get("entities", [])
-                pred_entities = {entity_to_tuple(e) for e in entities}
+                assert isinstance(pred, TaskResult)
+                pred_entities = {entity_to_tuple(e) for e in pred.entities}
+            else:
+                pred_entities = set()
 
             tp += len(true_entities & pred_entities)
             fp += len(pred_entities - true_entities)

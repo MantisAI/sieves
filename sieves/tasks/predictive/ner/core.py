@@ -127,19 +127,11 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
         for gold, pred in zip(truths, preds):
             if gold is None:
-                # If gold is None, everything predicted is a False Positive?
-                # Or do we assume no entities?
-                # Consistent with `_evaluate_dspy_example`, if no gold entities, score depends on pred.
                 true_entities = set()
             else:
-                # Convert to DSPy format first to reuse logic or do it directly
-                # NER uses `entities` list of objects/dicts.
-                if hasattr(gold, "entities"):
-                    true_entities = {(e.text, e.entity_type) for e in gold.entities}
-                elif isinstance(gold, dict) and "entities" in gold:
-                    true_entities = {(e["text"], e["entity_type"]) for e in gold["entities"]}
-                else:
-                    true_entities = set()
+                # Convert to DSPy format first to reuse logic or do it directly.
+                assert isinstance(gold, TaskResult)
+                true_entities = {(e.text, e.entity_type) for e in gold.entities}
 
             if pred is None:
                 pred_entities = set()
@@ -221,9 +213,6 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
-        if threshold is None:
-            threshold = self.THRESHOLD
-
         # Define metadata and features for the dataset
         features = datasets.Features(
             {

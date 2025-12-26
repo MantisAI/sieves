@@ -408,8 +408,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         :raises TypeError: If a result cannot be interpreted.
 
         """
-        if threshold is None:
-            threshold = self.THRESHOLD
+        threshold = threshold or self.THRESHOLD
 
         data: list[dict[str, str | list[bool]]] = []
 

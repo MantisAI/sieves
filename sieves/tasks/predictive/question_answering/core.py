@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, override
 
 import datasets
+import dspy
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -70,6 +71,24 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
             condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
+
+    @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        for gold in truths:
+            if gold is not None:
+                assert isinstance(gold, TaskResult)
+        for pred in preds:
+            if pred is not None:
+                assert isinstance(pred, TaskResult)
+
+        return super()._compute_metrics(truths, preds, judge=judge)
 
     def _validate_fewshot_examples(self) -> None:
         """Validate that questions, answers and scores have the same length.

@@ -31,31 +31,7 @@ _TaskBridge = DSPyPIIMasking | LangChainPIIMasking | OutlinesPIIMasking
 
 
 class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
-    """Task for masking PII (Personally Identifiable Information) in text documents.
-
-    Examples:
-        Default behavior (masks all common PII types):
-
-        >>> masking = PIIMasking(model=model)
-
-        Specify PII types as a list:
-
-        >>> masking = PIIMasking(
-        ...     model=model,
-        ...     pii_types=["EMAIL", "PHONE", "SSN"],
-        ... )
-
-        Using dict format with descriptions for better PII detection:
-
-        >>> masking = PIIMasking(
-        ...     model=model,
-        ...     pii_types={
-        ...         "EMAIL": "Email addresses in any format",
-        ...         "PHONE": "Phone numbers including country codes",
-        ...         "SSN": "Social Security Numbers (XXX-XX-XXXX format)"
-        ...     },
-        ... )
-    """
+    """Task for masking PII (Personally Identifiable Information) in text documents."""
 
     def __init__(
         self,
@@ -135,19 +111,17 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
         for gold, pred in zip(truths, preds):
             # Extract entities.
-            true_entities = set()
             if gold is not None:
-                if hasattr(gold, "pii_entities"):
-                    true_entities = {(e.entity_type, e.text) for e in gold.pii_entities}
-                elif isinstance(gold, dict) and "pii_entities" in gold:
-                    true_entities = {(e["entity_type"], e["text"]) for e in gold["pii_entities"]}
+                assert isinstance(gold, TaskResult)
+                true_entities = {(e.entity_type, e.text) for e in gold.pii_entities}
+            else:
+                true_entities = set()
 
-            pred_entities = set()
             if pred is not None:
-                if hasattr(pred, "pii_entities"):
-                    pred_entities = {(e.entity_type, e.text) for e in pred.pii_entities}
-                elif isinstance(pred, dict) and "pii_entities" in pred:
-                    pred_entities = {(e["entity_type"], e["text"]) for e in pred.get("pii_entities", [])}
+                assert isinstance(pred, TaskResult)
+                pred_entities = {(e.entity_type, e.text) for e in pred.pii_entities}
+            else:
+                pred_entities = set()
 
             tp += len(true_entities & pred_entities)
             fp += len(pred_entities - true_entities)
