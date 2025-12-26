@@ -9,7 +9,7 @@ from typing import Any, Literal, override
 
 import datasets
 import dspy
-import pydantic
+import sklearn
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -43,27 +43,7 @@ FewshotExample = FewshotExampleMultiLabel | FewshotExampleSingleLabel
 
 
 class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
-    """Predictive task for text classification.
-
-    Examples:
-        Basic usage with list of labels:
-
-        >>> classifier = Classification(
-        ...     labels=["science", "politics", "sports"],
-        ...     model=model,
-        ... )
-
-        Using dict format with descriptions for better accuracy:
-
-        >>> classifier = Classification(
-        ...     labels={
-        ...         "science": "Scientific topics including physics, biology, chemistry",
-        ...         "politics": "Political news, elections, and government affairs",
-        ...         "sports": "Sports events, teams, and athletes"
-        ...     },
-        ...     model=model,
-        ... )
-    """
+    """Predictive task for text classification."""
 
     def __init__(
         self,
@@ -116,6 +96,89 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
             condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def metric(self) -> str:
+        return "F1 (Macro)"
+
+    @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        # Prepare labels and mappings.
+        labels_list = list(self._labels)
+        label_to_idx = {label: i for i, label in enumerate(labels_list)}
+
+        y_true: list[float | list[float] | int] = []
+        y_pred: list[float | list[float] | int] = []
+
+        for gold, pred in zip(truths, preds):
+            if gold is None or pred is None:
+                # If either is None, we handle it as a failure for this example.
+                # In multi-label, this is an all-zero vector. In single-label, it's -1 (no class).
+                if self._mode == "multi":
+                    y_true.append([0.0] * len(labels_list))
+                    y_pred.append([0.0] * len(labels_list))
+                else:
+                    y_true.append(-1)
+                    y_pred.append(-1)
+                continue
+
+            # Convert to normalized representation using the existing logic.
+            # We reuse `_task_result_to_dspy_dict` indirectly or just use `_result_to_scores`.
+            gold_scores = self._result_to_scores(self._task_result_to_pydantic(gold))
+            pred_scores = self._result_to_scores(self._task_result_to_pydantic(pred))
+
+            if self._mode == "multi":
+                # Binary multi-hot vectors.
+                y_true.append([1.0 if gold_scores.get(label, 0.0) >= self.THRESHOLD else 0.0 for label in labels_list])
+                y_pred.append([1.0 if pred_scores.get(label, 0.0) >= self.THRESHOLD else 0.0 for label in labels_list])
+            else:
+                # Single label indices.
+                # Get the label with the highest score.
+                gold_label = max(gold_scores.items(), key=lambda x: x[1])[0]
+                pred_label = max(pred_scores.items(), key=lambda x: x[1])[0]
+                y_true.append(label_to_idx.get(gold_label, -1))
+                y_pred.append(label_to_idx.get(pred_label, -1))
+
+        # Filter out examples where gold or pred were None (represented by -1 or all-zero if that's what we chose).
+        score = sklearn.metrics.f1_score(y_true, y_pred, average="macro", zero_division=0)
+
+        return {self.metric: float(score)}
+
+    def _task_result_to_pydantic(self, result: Any) -> ResultSingleLabel | ResultMultiLabel:
+        """Convert a result to the appropriate Pydantic model for this task.
+
+        :param result: Input result.
+        :return: Normalized Pydantic result.
+        """
+        if isinstance(result, ResultSingleLabel | ResultMultiLabel):
+            return result
+
+        # Use the same logic as `_task_result_to_dspy_dict` but return the Pydantic model.
+        if isinstance(result, str):
+            return ResultSingleLabel(label=result, score=1.0)
+        elif isinstance(result, list) and all(isinstance(item, str) for item in result):
+            if self._mode == "single":
+                if len(result) == 1:
+                    return ResultSingleLabel(label=result[0], score=1.0)
+                else:
+                    raise ValueError(f"Got list of {len(result)} labels for single-label task.")
+            else:
+                label_scores: list[tuple[str, float]] = []
+                active_set = set(result)
+                for label in self._labels:
+                    s = 1.0 if label in active_set else 0.0
+                    label_scores.append((label, s))
+                return ResultMultiLabel(label_scores=label_scores)
+
+        raise TypeError(f"Unsupported result type in classification task: {type(result)}")
 
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.
@@ -186,12 +249,12 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 assert isinstance(fs_example, FewshotExampleMultiLabel), TypeError(
                     example_type_error_text.format(example_type=FewshotExampleMultiLabel, mode=self._mode)
                 )
-                if any([label not in self._labels for label in fs_example.confidence_per_label]) or not all(
-                    [label in fs_example.confidence_per_label for label in self._labels]
+                if any([label not in self._labels for label in fs_example.score_per_label]) or not all(
+                    [label in fs_example.score_per_label for label in self._labels]
                 ):
                     raise ValueError(
                         label_error_text.format(
-                            task_id=self.id, labels=self._labels, example_labels=fs_example.confidence_per_label.keys()
+                            task_id=self.id, labels=self._labels, example_labels=fs_example.score_per_label.keys()
                         )
                     )
             else:
@@ -213,7 +276,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         }
 
     @staticmethod
-    def _result_to_scores(result: Any) -> dict[str, float]:
+    def _result_to_scores(result: ResultMultiLabel | ResultSingleLabel) -> dict[str, float]:
         """Normalize a single result to a mapping of label → score.
 
         :params result: One result value from ``doc.results``.
@@ -229,26 +292,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         if isinstance(result, ResultSingleLabel):
             return {result.label: result.score}
 
-        # Legacy handling if any.
-        if isinstance(result, list) and all(isinstance(item, list | tuple) and len(item) == 2 for item in result):
-            return {str(label): float(score) for label, score in result}
-
-        if isinstance(result, tuple) and len(result) == 2:
-            label, score = result
-            return {str(label): float(score)}
-
-        if isinstance(result, str):
-            return {result: 1.0}
-
-        if isinstance(result, pydantic.BaseModel) or hasattr(result, "model_dump"):
-            try:
-                label = getattr(result, "label")
-                score = getattr(result, "score", 1.0)
-                return {str(label): float(score)}
-            except Exception as exc:
-                raise TypeError(f"Unsupported pydantic result shape: {type(result)}") from exc
-
-        raise TypeError(f"Unsupported result type in to_hf_dataset: {type(result)}")
+        raise TypeError(f"Unsupported result type in _result_to_scores: {type(result)}")
 
     @override
     def distill(
@@ -344,7 +388,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                     f"Please choose one of {DistillationFramework.setfit, DistillationFramework.model2vec}"
                 )
 
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
         """Convert results to a Hugging Face dataset with multi-hot labels.
 
         The emitted dataset contains a ``text`` column and a ``labels`` column which is a multi-hot list aligned to
@@ -356,7 +400,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         - ``pydantic.BaseModel`` exposing ``label`` and optional ``score``
 
         :param docs: Documents whose ``results`` contain outputs for this task id.
-        :param threshold: Threshold to convert scores into multi-hot indicators.
+        :param threshold: Threshold to convert scores into multi-hot indicators. Defaults to `THRESHOLD`.
 
         :return: A ``datasets.Dataset`` with ``text`` and multi-hot ``labels``.
 
@@ -364,6 +408,8 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         :raises TypeError: If a result cannot be interpreted.
 
         """
+        threshold = threshold or self.THRESHOLD
+
         data: list[dict[str, str | list[bool]]] = []
 
         # Define metadata and features (multi-hot across declared labels for multi-label).
@@ -405,19 +451,47 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         return datasets.Dataset.from_list(data, features=features, info=info)
 
     @override
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
+    def _task_result_to_dspy_dict(self, result: Any) -> dict[str, Any]:
+        # We accept `str` and `list[str]` for better UX.
+        if isinstance(result, str):
+            result = ResultSingleLabel(label=result, score=1.0)
+        elif isinstance(result, list) and all(isinstance(item, str) for item in result):
+            if self._mode == "single":
+                if len(result) == 1:
+                    result = ResultSingleLabel(label=result[0], score=1.0)
+                else:
+                    raise ValueError(f"Got list of {len(result)} labels for single-label task.")
+            else:
+                label_scores: list[tuple[str, float]] = []
+                active_set = set(result)
+                for label in self._labels:
+                    s = 1.0 if label in active_set else 0.0
+                    label_scores.append((label, s))
+                result = ResultMultiLabel(label_scores=label_scores)
+
+        assert isinstance(result, ResultSingleLabel | ResultMultiLabel)
+
+        scores = self._result_to_scores(result)
+        if self._mode == "multi":
+            return {"score_per_label": scores}
+        else:
+            # For single label, it returns a dict with one key.
+            label = list(scores.keys())[0]
+            score = scores[label]
+            return {"label": label, "score": score}
+
+    @override
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
         if self._mode == "single":
-            return 1 - abs(truth["confidence"] - pred["confidence"]) if truth["label"] == pred["label"] else 0
+            return 1.0 if truth["label"] == pred["label"] else 0.0
 
         # For multi-label: compute label-wise accuracy as
-        # 1 - abs(true confidence for label - predicted confidence for label)
+        # 1 - abs(true score for label - predicted score for label)
         # and normalize the sum of label-wise accuracies over all labels.
         accuracy = 0
-        for label, confidence in truth["confidence_per_label"].items():
-            if label in pred["confidence_per_label"]:
-                pred_confidence = max(min(pred["confidence_per_label"][label], 1), 0)
-                accuracy += 1 - abs(confidence - pred_confidence)
+        for label, score in truth["score_per_label"].items():
+            if label in pred["score_per_label"]:
+                pred_score = max(min(pred["score_per_label"][label], 1), 0)
+                accuracy += 1 - abs(score - pred_score)
 
-        return accuracy / len(truth["confidence_per_label"])
+        return accuracy / len(truth["score_per_label"])

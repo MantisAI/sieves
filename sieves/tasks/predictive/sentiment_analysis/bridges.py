@@ -241,7 +241,7 @@ class PydanticBasedSentAnalysis(
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            label_scores = {k: v for k, v in result.model_dump().items() if k not in ["reasoning", "score"]}
+            label_scores = {k: v for k, v in result.model_dump().items() if k not in ["score"]}
             doc.results[self._task_id] = Result(sentiment_per_aspect=label_scores, score=getattr(result, "score", None))
         return docs
 

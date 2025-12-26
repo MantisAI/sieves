@@ -8,11 +8,13 @@ from collections.abc import Iterable, Iterator, Sized
 from pathlib import Path
 from typing import Any
 
+import dspy
 import tqdm
 
 from sieves.data import Doc
 from sieves.serialization import Attribute, Config, Serializable
 from sieves.tasks import Task
+from sieves.tasks.predictive.evaluation import PipelineEvaluationReport, TaskEvaluationReport
 
 
 class Pipeline:
@@ -278,3 +280,22 @@ class Pipeline:
         self._validate_tasks()
 
         return self
+
+    def evaluate(self, docs: Iterable[Doc], judge: dspy.LM | None = None) -> PipelineEvaluationReport:
+        """Evaluate pipeline performance across all tasks.
+
+        :param docs: Documents to evaluate. Must contain gold data for relevant tasks.
+        :param judge: Optional judge model for evaluation.
+        :return: Pipeline evaluation report.
+        """
+        reports: dict[str, TaskEvaluationReport[Any]] = {}
+        for task in self._tasks:
+            docs_iter = itertools.tee(docs, 2)
+            try:
+                report = task.evaluate(docs_iter[1], judge=judge)
+                reports[task.id] = report
+            except NotImplementedError:
+                # Skip tasks that don't support evaluation.
+                continue
+
+        return PipelineEvaluationReport(reports=reports)

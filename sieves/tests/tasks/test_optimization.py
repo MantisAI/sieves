@@ -44,49 +44,49 @@ def optimizer(request) -> Optimizer:
 def test_optimization_classification(optimizer) -> None:
     """Tests optimization for classification tasks."""
     examples_single_label = [
-        classification.FewshotExampleSingleLabel(text='Apple', label='fruit', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Broccoli', label='vegetable', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Melon', label='fruit', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Carrot', label='vegetable', confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Tomato', label='fruit', confidence=1.),
+        classification.FewshotExampleSingleLabel(text='Apple', label='fruit', score=1.),
+        classification.FewshotExampleSingleLabel(text='Broccoli', label='vegetable', score=1.),
+        classification.FewshotExampleSingleLabel(text='Melon', label='fruit', score=1.),
+        classification.FewshotExampleSingleLabel(text='Carrot', label='vegetable', score=1.),
+        classification.FewshotExampleSingleLabel(text='Tomato', label='fruit', score=1.),
         classification.FewshotExampleSingleLabel(text='Pepper', label='vegetable',
-                                                 confidence=1.),
-        classification.FewshotExampleSingleLabel(text='Kiwi', label='fruit', confidence=1.),
+                                                 score=1.),
+        classification.FewshotExampleSingleLabel(text='Kiwi', label='fruit', score=1.),
         classification.FewshotExampleSingleLabel(text='Onion', label='vegetable',
-                                                 confidence=1.),
+                                                 score=1.),
     ]
     examples_multi_label = [
         classification.FewshotExampleMultiLabel(
             text='Ghostbusters',
-            confidence_per_label={'comedy': 0.9, 'scifi': 0.8}
+            score_per_label={'comedy': 0.9, 'scifi': 0.8}
         ),
         classification.FewshotExampleMultiLabel(
             text='The Martian',
-            confidence_per_label={'comedy': 0.4, 'scifi': 1.0}
+            score_per_label={'comedy': 0.4, 'scifi': 1.0}
         ),
         classification.FewshotExampleMultiLabel(
             text='Galaxy Quest',
-            confidence_per_label={'comedy': 1.0, 'scifi': 0.9}
+            score_per_label={'comedy': 1.0, 'scifi': 0.9}
         ),
         classification.FewshotExampleMultiLabel(
             text='Back to the Future',
-            confidence_per_label={'comedy': 0.8, 'scifi': 0.9}
+            score_per_label={'comedy': 0.8, 'scifi': 0.9}
         ),
         classification.FewshotExampleMultiLabel(
             text='Superbad',
-            confidence_per_label={'comedy': 1.0, 'scifi': 0.0}
+            score_per_label={'comedy': 1.0, 'scifi': 0.0}
         ),
         classification.FewshotExampleMultiLabel(
             text='Blade Runner 2049',
-            confidence_per_label={'comedy': 0.05, 'scifi': 1.0}
+            score_per_label={'comedy': 0.05, 'scifi': 1.0}
         ),
         classification.FewshotExampleMultiLabel(
             text='Guardians of the Galaxy',
-            confidence_per_label={'comedy': 0.75, 'scifi': 0.9}
+            score_per_label={'comedy': 0.75, 'scifi': 0.9}
         ),
         classification.FewshotExampleMultiLabel(
             text='Interstellar',
-            confidence_per_label={'comedy': 0.05, 'scifi': 1.0}
+            score_per_label={'comedy': 0.05, 'scifi': 1.0}
         ),
     ]
 
@@ -106,27 +106,27 @@ def test_optimization_classification(optimizer) -> None:
     )
 
     # Test evaluation.
-    assert task_single_label._evaluate_optimization_example(
-        truth=dspy.Example(text="", reasoning="", label="fruit", confidence=.7),
-        pred=dspy.Prediction(text="", reasoning="", label="fruit", confidence=.1),
+    assert task_single_label._evaluate_dspy_example(
+        truth=dspy.Example(text="", label="fruit", score=.7),
+        pred=dspy.Prediction(text="", label="fruit", score=.1),
         trace=None,
         model=optimizer.model,
-    ) == .4
-    assert task_single_label._evaluate_optimization_example(
-        truth=dspy.Example(text="", reasoning="", label="fruit", confidence=.7),
-        pred=dspy.Prediction(text="", reasoning="", label="vegetable", confidence=.1),
+    ) == 1.
+    assert task_single_label._evaluate_dspy_example(
+        truth=dspy.Example(text="", label="fruit", score=.7),
+        pred=dspy.Prediction(text="", label="vegetable", score=.1),
         trace=None,
         model=optimizer.model,
-    ) == 0
-    assert task_multi_label._evaluate_optimization_example(
-        truth=dspy.Example(text="", reasoning="", confidence_per_label={"comedy": .4, "scifi": .2}),
-        pred=dspy.Prediction(text="", reasoning="", confidence_per_label={"comedy": .1, "scifi": .3}),
+    ) == 0.
+    assert task_multi_label._evaluate_dspy_example(
+        truth=dspy.Example(text="", score_per_label={"comedy": .4, "scifi": .2}),
+        pred=dspy.Prediction(text="", score_per_label={"comedy": .1, "scifi": .3}),
         trace=None,
         model=optimizer.model,
-    ) == .8
-    assert task_multi_label._evaluate_optimization_example(
-        truth=dspy.Example(text="", reasoning="", confidence_per_label={"comedy": .4, "scifi": .2}),
-        pred=dspy.Prediction(text="", reasoning="", confidence_per_label={"comedy": .4, "scifi": .2}),
+    ) == (0.7 + 0.9) / 2
+    assert task_multi_label._evaluate_dspy_example(
+        truth=dspy.Example(text="", score_per_label={"comedy": .4, "scifi": .2}),
+        pred=dspy.Prediction(text="", score_per_label={"comedy": .4, "scifi": .2}),
         trace=None,
         model=optimizer.model,
     ) == 1
@@ -180,7 +180,7 @@ def test_optimization_sentiment_analysis(optimizer) -> None:
     )
 
     # Test evaluation: perfect match
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
         pred=dspy.Prediction(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
         trace=None,
@@ -191,7 +191,7 @@ def test_optimization_sentiment_analysis(optimizer) -> None:
     # |0.8-0.6| = 0.2, |0.7-0.5| = 0.2, |0.9-0.8| = 0.1
     # Accuracy per aspect: (1-0.2) + (1-0.2) + (1-0.1) = 0.8 + 0.8 + 0.9 = 2.5
     # Average: 2.5 / 3 ≈ 0.833
-    score = task._evaluate_optimization_example(
+    score = task._evaluate_dspy_example(
         truth=dspy.Example(text='', reasoning='', sentiment_per_aspect={'overall': 0.8, 'quality': 0.7, 'delivery': 0.9}),
         pred=dspy.Prediction(text='', reasoning='', sentiment_per_aspect={'overall': 0.6, 'quality': 0.5, 'delivery': 0.8}),
         trace=None,
@@ -260,7 +260,7 @@ def test_optimization_ner(optimizer) -> None:
     )
 
     # Test evaluation: perfect match (F1 = 1.0)
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', entities=[
             {'text': 'Alice', 'entity_type': 'PERSON'},
             {'text': 'Boston', 'entity_type': 'LOCATION'},
@@ -278,7 +278,7 @@ def test_optimization_ner(optimizer) -> None:
     # Pred: {('Alice', 'PERSON'), ('Chicago', 'LOCATION')}
     # Intersection: {('Alice', 'PERSON')} = 1
     # Precision: 1/2 = 0.5, Recall: 1/2 = 0.5, F1: 0.5
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', entities=[
             {'text': 'Alice', 'entity_type': 'PERSON'},
             {'text': 'Boston', 'entity_type': 'LOCATION'},
@@ -292,7 +292,7 @@ def test_optimization_ner(optimizer) -> None:
     ) == 0.5
 
     # Test evaluation: no entities in truth (empty case)
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', entities=[]),
         pred=dspy.Prediction(text='', entities=[]),
         trace=None,
@@ -361,7 +361,7 @@ def test_optimization_pii_masking(optimizer) -> None:
     )
 
     # Test evaluation: perfect match (F1 = 1.0)
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', reasoning='', masked_text='', pii_entities=[
             {'entity_type': 'NAME', 'text': 'Alice'},
             {'entity_type': 'EMAIL', 'text': 'alice@test.com'},
@@ -379,7 +379,7 @@ model=optimizer.model
     # Pred: {('NAME', 'Alice'), ('EMAIL', 'bob@test.com')}
     # Intersection: {('NAME', 'Alice')} = 1
     # Precision: 1/2 = 0.5, Recall: 1/2 = 0.5, F1: 0.5
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', reasoning='', masked_text='', pii_entities=[
             {'entity_type': 'NAME', 'text': 'Alice'},
             {'entity_type': 'EMAIL', 'text': 'alice@test.com'},
@@ -393,7 +393,7 @@ model=optimizer.model
     ) == 0.5
 
     # Test evaluation: no PII (empty case)
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', reasoning='', masked_text='', pii_entities=[]),
         pred=dspy.Prediction(text='', reasoning='', masked_text='', pii_entities=[]),
         trace=None,
@@ -454,7 +454,7 @@ def test_optimization_information_extraction(optimizer) -> None:
     )
 
     # Test evaluation: perfect match (F1 = 1.0)
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', reasoning='', entities=[
             {'name': 'Alice', 'age': 30, 'occupation': 'engineer'},
             {'name': 'Bob', 'age': 25, 'occupation': 'designer'},
@@ -472,7 +472,7 @@ model=optimizer.model
     # ('name','Bob'),('occupation','designer')}
     # Pred entities: one correct, one different
     # This should give F1 of 0.5
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', reasoning='', entities=[
             {'name': 'Alice', 'age': 30, 'occupation': 'engineer'},
             {'name': 'Bob', 'age': 25, 'occupation': 'designer'},
@@ -486,7 +486,7 @@ model=optimizer.model
     ) == 0.5
 
     # Test evaluation: no entities (empty case)
-    assert task._evaluate_optimization_example(
+    assert task._evaluate_dspy_example(
         truth=dspy.Example(text='', reasoning='', entities=[]),
         pred=dspy.Prediction(text='', reasoning='', entities=[]),
         trace=None,
@@ -553,7 +553,7 @@ def test_optimization_summarization(optimizer) -> None:
 
     # Test LLM-based evaluation (no hardcoded scores since it uses LLM)
     # Just verify it runs and returns a score between 0 and 1
-    score = task._evaluate_optimization_example(
+    score = task._evaluate_dspy_example(
         truth=dspy.Example(text='', n_words=30, summary='Short summary about climate.'),
         pred=dspy.Prediction(text='', n_words=30, summary='Brief summary on climate change.'),
         trace=None,
@@ -611,7 +611,7 @@ def test_optimization_translation(optimizer) -> None:
     )
 
     # Test LLM-based evaluation
-    score = task._evaluate_optimization_example(
+    score = task._evaluate_dspy_example(
         truth=dspy.Example(text='Good morning.', to='Spanish', translation='Buenos días.'),
         pred=dspy.Prediction(text='Good morning.', to='Spanish', translation='Buen día.'),
         trace=None,
@@ -673,7 +673,7 @@ def test_optimization_question_answering(optimizer) -> None:
     )
 
     # Test LLM-based evaluation
-    score = task._evaluate_optimization_example(
+    score = task._evaluate_dspy_example(
         truth=dspy.Example(
             text='',
             reasoning='',

@@ -119,6 +119,85 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 f"be deduplicated and compared. Modify entity_type to be frozen=True."
             )
 
+    @property
+    @override
+    def metric(self) -> str:
+        return "F1" if self._mode == "multi" else "Accuracy"
+
+    @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        # Single mode.
+        if self._mode == "single":
+            correct = 0
+            total = 0
+            for gold, pred in zip(truths, preds):
+                # If gold is None, we assume it's a negative example (no entity).
+                # If pred is None, it predicted no entity.
+                # If both None -> Correct.
+                if gold is not None:
+                    assert isinstance(gold, TaskResult)
+                    gold_entity = gold.entity
+                else:
+                    gold_entity = None
+
+                if pred is not None:
+                    assert isinstance(pred, TaskResult)
+                    pred_entity = pred.entity
+                else:
+                    pred_entity = None
+
+                if gold_entity == pred_entity:
+                    correct += 1
+                total += 1
+
+            return {self.metric: correct / total if total > 0 else 0.0}
+
+        # Multi mode.
+        tp = 0
+        fp = 0
+        fn = 0
+
+        def entity_to_tuple(entity: Any) -> tuple:
+            # Handle Pydantic model
+            d = entity.model_dump()
+
+            # Remove score if present
+            if "score" in d:
+                del d["score"]
+
+            items = sorted(d.items())
+            return tuple((k, v if not (isinstance(v, list) or isinstance(v, dict)) else str(v)) for k, v in items)
+
+        for gold, pred in zip(truths, preds):
+            if gold is not None:
+                assert isinstance(gold, TaskResult)
+                true_entities = {entity_to_tuple(e) for e in gold.entities}
+            else:
+                true_entities = set()
+
+            if pred is not None:
+                assert isinstance(pred, TaskResult)
+                pred_entities = {entity_to_tuple(e) for e in pred.entities}
+            else:
+                pred_entities = set()
+
+            tp += len(true_entities & pred_entities)
+            fp += len(pred_entities - true_entities)
+            fn += len(true_entities - pred_entities)
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+        return {self.metric: f1}
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.
@@ -204,7 +283,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 )
 
     @override
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
         # Use the scored entity type for the dataset schema.
         entity_type = self._scored_entity_type
         if isinstance(self._bridge, GliNERBridge):
@@ -276,9 +355,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         raise NotImplementedError
 
     @override
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
         if self._mode == "single":
             true_entity = truth.get("entity")
             pred_entity = pred.get("entity")

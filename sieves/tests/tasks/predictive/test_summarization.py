@@ -6,6 +6,7 @@ from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, o
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, Summarization
 from sieves.tasks.predictive import summarization
+from sieves.tasks.predictive.schemas.summarization import Result
 
 
 @pytest.mark.parametrize(
@@ -147,3 +148,30 @@ def test_inference_mode_override(batch_runtime) -> None:
     )
 
     assert task._bridge.inference_mode == dummy
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.dspy], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for summarization using a real DSPy judge."""
+    task = summarization.Summarization(n_words=10, model=batch_runtime.model, task_id="sum")
+
+    # 1. Full overlap
+    doc_full = Doc(text="The quick brown fox jumps over the lazy dog.")
+    doc_full.results["sum"] = Result(summary="Fast fox jumps dog.", score=1.0)
+    doc_full.gold["sum"] = Result(summary="Fast fox jumps dog.", score=1.0)
+    report_full = task.evaluate([doc_full], judge=batch_runtime.model)
+    assert report_full.metrics[task.metric] > 0.8
+
+    # 2. No overlap
+    doc_none = Doc(text="The quick brown fox jumps over the lazy dog.")
+    doc_none.results["sum"] = Result(summary="The weather is nice today.", score=1.0)
+    doc_none.gold["sum"] = Result(summary="Fast fox jumps dog.", score=1.0)
+    report_none = task.evaluate([doc_none], judge=batch_runtime.model)
+    assert report_none.metrics[task.metric] < 0.6
+
+    # 3. Partial overlap
+    doc_partial = Doc(text="The quick brown fox jumps over the lazy dog.")
+    doc_partial.results["sum"] = Result(summary="A fox jumps.", score=1.0)
+    doc_partial.gold["sum"] = Result(summary="The quick brown fox jumps over the lazy dog.", score=1.0)
+    report_partial = task.evaluate([doc_partial], judge=batch_runtime.model)
+    assert 0.2 < report_partial.metrics[task.metric] < 0.8

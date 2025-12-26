@@ -1,15 +1,11 @@
 # mypy: ignore-errors
-import pydantic
 import pytest
 
 from sieves import Doc, Pipeline
 from sieves.model_wrappers import ModelType, ModelSettings
 from sieves.serialization import Config
-from sieves.tasks import PredictiveTask
 from sieves.tasks.predictive import ner
-from sieves.tasks.predictive.schemas.ner import EntityWithContext
-
-
+from sieves.tasks.predictive.schemas.ner import EntityWithContext, TaskResult, Entity
 
 
 @pytest.mark.parametrize(
@@ -185,3 +181,62 @@ def test_run_with_dict_entities(ner_docs, batch_runtime) -> None:
     assert len(docs) == 2
     for doc in docs:
         assert "NER" in doc.results
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.gliner], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for NER without running pipeline."""
+    task = ner.NER(entities=["PERSON", "LOCATION"], model=batch_runtime.model, task_id="ner")
+
+    # 1. Full overlap
+    doc_full = Doc(text="John lives in Berlin.")
+    res_full = TaskResult(
+        text=doc_full.text,
+        entities=[
+            Entity(text="John", start=0, end=4, entity_type="PERSON"),
+            Entity(text="Berlin", start=14, end=20, entity_type="LOCATION")
+        ]
+    )
+    doc_full.results["ner"] = res_full
+    doc_full.gold["ner"] = res_full
+    report_full = task.evaluate([doc_full])
+    assert report_full.metrics[task.metric] == 1.0
+
+    # 2. Partial overlap
+    doc_partial = Doc(text="John lives in Berlin.")
+    # Pred has John and Berlin
+    res_pred = TaskResult(
+        text=doc_partial.text,
+        entities=[
+            Entity(text="John", start=0, end=4, entity_type="PERSON"),
+            Entity(text="Berlin", start=14, end=20, entity_type="LOCATION")
+        ]
+    )
+    # Gold has John and Paris (Berlin is missing, Paris is extra in gold)
+    res_gold = TaskResult(
+        text=doc_partial.text,
+        entities=[
+            Entity(text="John", start=0, end=4, entity_type="PERSON"),
+            Entity(text="Paris", start=14, end=19, entity_type="LOCATION")
+        ]
+    )
+    doc_partial.results["ner"] = res_pred
+    doc_partial.gold["ner"] = res_gold
+    report_partial = task.evaluate([doc_partial])
+    # Precision: 1 TP (John) / 2 Pred = 0.5
+    # Recall: 1 TP (John) / 2 Gold = 0.5
+    # F1: 0.5. (Note: _evaluate_dspy_example uses the logic in NER subclass which computes F1)
+    assert report_partial.metrics[task.metric] == 0.5
+
+    # 3. No overlap
+    doc_none = Doc(text="John lives in Berlin.")
+    res_none_pred = TaskResult(
+        text=doc_none.text, entities=[Entity(text="John", start=0, end=4, entity_type="PERSON")]
+    )
+    res_none_gold = TaskResult(
+        text=doc_none.text, entities=[Entity(text="Berlin", start=14, end=20, entity_type="LOCATION")]
+    )
+    doc_none.results["ner"] = res_none_pred
+    doc_none.gold["ner"] = res_none_gold
+    report_none = task.evaluate([doc_none])
+    assert report_none.metrics[task.metric] == 0.0

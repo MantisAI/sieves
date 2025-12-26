@@ -23,6 +23,7 @@ from sieves.serialization import Config
 from sieves.tasks import optimization
 from sieves.tasks.core import Task
 from sieves.tasks.distillation.types import DistillationFramework
+from sieves.tasks.predictive.evaluation import TaskEvaluationReport
 from sieves.tasks.predictive.schemas.core import (
     EvaluationSignature,
     FewshotExample,
@@ -35,6 +36,10 @@ from sieves.tasks.types import Model
 
 class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task, abc.ABC):
     """Base class for predictive tasks."""
+
+    # Threshold used for evaluation and any other situatoin in which we need to convert scores into a binary
+    # representation.
+    THRESHOLD = 0.5
 
     def __init__(
         self,
@@ -253,13 +258,106 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
 
         return cls(**init_dict)
 
+    @property
+    def metric(self) -> str:
+        """Return metric name.
+
+        :return str: Metric name.
+        """
+        return "Similarity (LLM-judged)"
+
+    def evaluate(
+        self, docs: Iterable[Doc], judge: dspy.LM | None = None, failure_threshold: float = 0.5
+    ) -> TaskEvaluationReport:
+        """Evaluate task performance using DSPy-based evaluation.
+
+        :param docs: Documents to evaluate.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :param failure_threshold: Decision threshold for whether to mark predicitions as failures.
+        :return: Evaluation report.
+        """
+        truths: list[Any] = []
+        preds: list[Any] = []
+        failures: list[Doc] = []
+
+        # Evaluate each doc individually to identify failed predictions.
+        for doc in docs:
+            if self.id not in doc.results:
+                continue
+
+            pred = doc.results[self.id]
+            gold = doc.gold.get(self.id, None)
+
+            # Accumulate for corpus-level metrics.
+            truths.append(gold)
+            preds.append(pred)
+
+            # If gold or prediction is None: we cannot do proper evalution, so we just check whether they're both None
+            # to compute score for failure analysis.
+            if gold is None or pred is None:
+                if gold is not None or pred is not None:
+                    failures.append(doc)
+            else:
+                # Convert result and gold to DSPy representation.
+                truth = dspy.Example(**self._task_result_to_dspy_dict(gold))
+                pred_dspy = dspy.Prediction(**self._task_result_to_dspy_dict(pred))
+
+                # Call internal evaluation logic for per-doc failure analysis.
+                score = self._evaluate_dspy_example(truth, pred_dspy, trace=None, model=judge)
+
+                if score < failure_threshold:
+                    failures.append(doc)
+
+        # Evaluate on corpus level to obtain representative metrics.
+        metrics = self._compute_metrics(truths, preds, judge=judge)
+
+        return TaskEvaluationReport(
+            metrics=metrics,
+            task_id=self.id,
+            failures=failures,
+        )
+
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        By default, this computes the average of `_evaluate_dspy_example` over all documents.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        scores: list[float] = []
+        for gold, pred in zip(truths, preds):
+            if gold is None or pred is None:
+                scores.append(1.0 if gold is None and pred is None else 0.0)
+            else:
+                truth = dspy.Example(**self._task_result_to_dspy_dict(gold))
+                pred_dspy = dspy.Prediction(**self._task_result_to_dspy_dict(pred))
+                scores.append(self._evaluate_dspy_example(truth, pred_dspy, trace=None, model=judge))
+
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        return {self.metric: avg_score}
+
+    def _task_result_to_dspy_dict(self, result: Any) -> dict[str, Any]:
+        """Convert a task result or gold data to a dictionary suitable for DSPy evaluation.
+
+        :param result: Task result or gold data.
+        :return: Dictionary representation.
+        """
+        if hasattr(result, "model_dump"):
+            return result.model_dump(serialize_as_any=True)
+        if isinstance(result, dict):
+            return result
+        return {"output": result}
+
     @abc.abstractmethod
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
         """Create Hugging Face datasets.Dataset from docs.
 
         :param docs: Docs to convert.
         :param threshold: Threshold to apply when converting logits/confidence scores into labels or other structured
-            predictions.
+            predictions. Defaults to `THRESHOLD`.
         :return datasets.Dataset: Hugging Face dataset.
         """
 
@@ -336,10 +434,8 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         except KeyError as err:
             raise KeyError(f"DSPy bridge not available for task {self.__class__.__name__}.") from err
 
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
-        """Evaluate DSPy example for optimization.
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
+        """Evaluate DSPy example for optimization or evaluation.
 
         By default this implements an LLM-based evaluation that uses the model that drives optimization to compare
         results. Where possible this should be replaced by a targeted, deterministic evaluation.
@@ -350,9 +446,19 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         :param trace: Optional trace information.
         :return: Metric value between 0.0 and 1.0.
         :raises KeyError: If target fields are missing from truth or prediction.
-        :raises ValueError: If similarity score cannot be parsed from LLM response.
+        :raises ValueError: If similarity score cannot be parsed from LLM response or no judge model provided.
         """
-        target_fields = list(self._fewshot_examples[0].target_fields)
+        if model is None:
+            raise ValueError(
+                f"No judge model provided for task {self.__class__.__name__}. "
+                "Generative tasks require a DSPy LM judge for evaluation."
+            )
+
+        if self._fewshot_examples:
+            target_fields = list(self._fewshot_examples[0].target_fields)
+        else:
+            # Fallback to all fields in truth that are not input fields.
+            target_fields = [k for k in truth.keys() if k not in ("text",)]
 
         # Filter truth and pred to only include target fields.
         truth_filtered: dict[str, Any] = {}
@@ -421,7 +527,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
             :raises KeyError: If target fields are missing from truth or prediction.
             :raises ValueError: If similarity score cannot be parsed from LLM response.
             """
-            return self._evaluate_optimization_example(truth, pred, trace, model=optimizer.model)
+            return self._evaluate_dspy_example(truth, pred, trace, model=optimizer.model)
 
         if verbose:
             best_prompt, best_examples = optimizer(signature, dspy_examples, _pred_eval, verbose=verbose)

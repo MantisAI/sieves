@@ -9,6 +9,7 @@ from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, o
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, InformationExtraction
 from sieves.tasks.predictive import information_extraction
+from sieves.tasks.predictive.schemas.information_extraction import ResultSingle, ResultMulti
 
 
 class Person(pydantic.BaseModel, frozen=True):
@@ -239,3 +240,40 @@ def test_inference_mode_override(batch_runtime) -> None:
     )
 
     assert task._bridge.inference_mode == dummy
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.outlines], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for information extraction without running pipeline."""
+    task = tasks.predictive.InformationExtraction(entity_type=Person, model=batch_runtime.model, task_id="ie", mode="single")
+
+    # 1. Full overlap (Single)
+    doc_full = Doc(text="Ada is 47.")
+    res_full = ResultSingle(entity=Person(name="Ada", age=47))
+    doc_full.results["ie"] = res_full
+    doc_full.gold["ie"] = res_full
+    report_full = task.evaluate([doc_full])
+    assert report_full.metrics[task.metric] == 1.0
+
+    # 2. No overlap (Single)
+    doc_none = Doc(text="Ada is 47.")
+    res_none_pred = ResultSingle(entity=Person(name="Alan", age=58))
+    doc_none.results["ie"] = res_none_pred
+    doc_none.gold["ie"] = res_full
+    report_none = task.evaluate([doc_none])
+    assert report_none.metrics[task.metric] == 0.0
+
+    # 3. Multi-label partial overlap
+    task_multi = tasks.predictive.InformationExtraction(
+        entity_type=Person, model=batch_runtime.model, task_id="ie_multi", mode="multi"
+    )
+    doc_partial = Doc(text="Ada is 47 and Alan is 58.")
+    # Pred has both
+    res_multi_pred = ResultMulti(entities=[Person(name="Ada", age=47), Person(name="Alan", age=58)])
+    # Gold has only Ada
+    res_multi_gold = ResultMulti(entities=[Person(name="Ada", age=47)])
+    doc_partial.results["ie_multi"] = res_multi_pred
+    doc_partial.gold["ie_multi"] = res_multi_gold
+    report_partial = task_multi.evaluate([doc_partial])
+    # TP=1, FP=1, FN=0 -> Precision=0.5, Recall=1.0 -> F1=0.666...
+    assert 0.6 < report_partial.metrics[task_multi.metric] < 0.7

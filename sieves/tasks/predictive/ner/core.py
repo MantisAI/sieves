@@ -107,6 +107,52 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
+    @property
+    @override
+    def metric(self) -> str:
+        return "F1"
+
+    @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        tp = 0
+        fp = 0
+        fn = 0
+
+        for gold, pred in zip(truths, preds):
+            if gold is None:
+                true_entities = set()
+            else:
+                # Convert to DSPy format first to reuse logic or do it directly.
+                assert isinstance(gold, TaskResult)
+                true_entities = {(e.text, e.entity_type) for e in gold.entities}
+
+            if pred is None:
+                pred_entities = set()
+            else:
+                if hasattr(pred, "entities"):
+                    pred_entities = {(e.text, e.entity_type) for e in pred.entities}
+                elif isinstance(pred, dict) and "entities" in pred:
+                    pred_entities = {(e["text"], e["entity_type"]) for e in pred.get("entities", [])}
+                else:
+                    pred_entities = set()
+
+            tp += len(true_entities & pred_entities)
+            fp += len(pred_entities - true_entities)
+            fn += len(true_entities - pred_entities)
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+        return {self.metric: f1}
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         if model_type == ModelType.gliner:
@@ -166,7 +212,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         }
 
     @override
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
         # Define metadata and features for the dataset
         features = datasets.Features(
             {
@@ -250,9 +296,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         raise NotImplementedError
 
     @override
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
         # Compute entity-level F1 score based on (text, entity_type) pairs
         true_entities = {(e["text"], e["entity_type"]) for e in truth["entities"]}
         pred_entities = {(e["text"], e["entity_type"]) for e in pred.get("entities", [])}

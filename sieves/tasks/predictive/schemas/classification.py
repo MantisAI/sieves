@@ -11,23 +11,23 @@ from sieves.tasks.predictive.schemas.core import FewshotExample as BaseFewshotEx
 
 
 class FewshotExampleMultiLabel(BaseFewshotExample):
-    """Few‑shot example for multi‑label classification with per‑label confidences.
+    """Few‑shot example for multi‑label classification with per‑label scores.
 
     Attributes:
         text: Input text.
-        confidence_per_label: Mapping of labels to confidence scores.
+        score_per_label: Mapping of labels to confidence scores.
     """
 
-    confidence_per_label: dict[str, float]
+    score_per_label: dict[str, float]
 
     @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> FewshotExampleMultiLabel:
-        """Validate that confidences lie within [0, 1].
+    def check_score(self) -> FewshotExampleMultiLabel:
+        """Validate that scores lie within [0, 1].
 
         :return: Validated instance.
         """
-        if any([conf for conf in self.confidence_per_label.values() if not 0 <= conf <= 1]):
-            raise ValueError("Confidence has to be between 0 and 1.")
+        if any([conf for conf in self.score_per_label.values() if not 0 <= conf <= 1]):
+            raise ValueError("Score has to be between 0 and 1.")
         return self
 
     @property
@@ -36,29 +36,29 @@ class FewshotExampleMultiLabel(BaseFewshotExample):
 
         :return: Target fields.
         """
-        return ("confidence_per_label",)
+        return ("score_per_label",)
 
 
 class FewshotExampleSingleLabel(BaseFewshotExample):
-    """Few‑shot example for single‑label classification with a global confidence.
+    """Few‑shot example for single‑label classification with a global score.
 
     Attributes:
         text: Input text.
         label: Predicted label.
-        confidence: Confidence score.
+        score: Confidence score.
     """
 
     label: str
-    confidence: float
+    score: float
 
     @pydantic.model_validator(mode="after")
-    def check_confidence(self) -> FewshotExampleSingleLabel:
-        """Check confidence value.
+    def check_score(self) -> FewshotExampleSingleLabel:
+        """Check score value.
 
         :return: Validated instance.
         """
-        if not (0 <= self.confidence <= 1):
-            raise ValueError("Confidence has to be between 0 and 1.")
+        if not (0 <= self.score <= 1):
+            raise ValueError("Score has to be between 0 and 1.")
         return self
 
     @property
@@ -67,7 +67,7 @@ class FewshotExampleSingleLabel(BaseFewshotExample):
 
         :return: Target fields.
         """
-        return ("label", "confidence")
+        return ("label", "score")
 
 
 # --8<-- [start:Result]

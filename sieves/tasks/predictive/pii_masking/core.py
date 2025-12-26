@@ -31,31 +31,7 @@ _TaskBridge = DSPyPIIMasking | LangChainPIIMasking | OutlinesPIIMasking
 
 
 class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
-    """Task for masking PII (Personally Identifiable Information) in text documents.
-
-    Examples:
-        Default behavior (masks all common PII types):
-
-        >>> masking = PIIMasking(model=model)
-
-        Specify PII types as a list:
-
-        >>> masking = PIIMasking(
-        ...     model=model,
-        ...     pii_types=["EMAIL", "PHONE", "SSN"],
-        ... )
-
-        Using dict format with descriptions for better PII detection:
-
-        >>> masking = PIIMasking(
-        ...     model=model,
-        ...     pii_types={
-        ...         "EMAIL": "Email addresses in any format",
-        ...         "PHONE": "Phone numbers including country codes",
-        ...         "SSN": "Social Security Numbers (XXX-XX-XXXX format)"
-        ...     },
-        ... )
-    """
+    """Task for masking PII (Personally Identifiable Information) in text documents."""
 
     def __init__(
         self,
@@ -115,6 +91,48 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
             condition=condition,
         )
 
+    @property
+    @override
+    def metric(self) -> str:
+        return "F1"
+
+    @override
+    def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
+        """Compute corpus-level metrics.
+
+        :param truths: List of ground truths.
+        :param preds: List of predictions.
+        :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :return: Dictionary of metrics.
+        """
+        tp = 0
+        fp = 0
+        fn = 0
+
+        for gold, pred in zip(truths, preds):
+            # Extract entities.
+            if gold is not None:
+                assert isinstance(gold, TaskResult)
+                true_entities = {(e.entity_type, e.text) for e in gold.pii_entities}
+            else:
+                true_entities = set()
+
+            if pred is not None:
+                assert isinstance(pred, TaskResult)
+                pred_entities = {(e.entity_type, e.text) for e in pred.pii_entities}
+            else:
+                pred_entities = set()
+
+            tp += len(true_entities & pred_entities)
+            fp += len(pred_entities - true_entities)
+            fn += len(true_entities - pred_entities)
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+        return {self.metric: f1}
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
@@ -156,7 +174,7 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         }
 
     @override
-    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float = 0.5) -> datasets.Dataset:
+    def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
         # Define metadata.
         features = datasets.Features(
             {
@@ -201,9 +219,7 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         raise NotImplementedError
 
     @override
-    def _evaluate_optimization_example(
-        self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM
-    ) -> float:
+    def _evaluate_dspy_example(self, truth: dspy.Example, pred: dspy.Prediction, trace: Any, model: dspy.LM) -> float:
         # Compute entity detection F1 score based on (entity_type, text) pairs
         true_entities = {(e["entity_type"], e["text"]) for e in truth["pii_entities"]}
         pred_entities = {(e["entity_type"], e["text"]) for e in pred.get("pii_entities", [])}

@@ -7,6 +7,7 @@ from sieves.model_wrappers import ModelType, ModelSettings, dspy_, langchain_, o
 from sieves.serialization import Config
 from sieves.tasks import PredictiveTask, PIIMasking
 from sieves.tasks.predictive import pii_masking
+from sieves.tasks.predictive.schemas.pii_masking import Result, PIIEntity
 
 
 @pytest.mark.parametrize(
@@ -200,3 +201,56 @@ def test_run_with_list_pii_types(pii_masking_docs, batch_runtime) -> None:
     for doc in docs:
         assert doc.text
         assert "PIIMasking" in doc.results
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.outlines], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for PII masking without running pipeline."""
+    task = tasks.predictive.PIIMasking(model=batch_runtime.model, task_id="pii")
+
+    # 1. Full overlap
+    doc_full = Doc(text="My email is test@example.com")
+    res_full = Result(
+        masked_text="My email is [MASKED]",
+        pii_entities=[PIIEntity(entity_type="EMAIL", text="test@example.com", start=12, end=28)]
+    )
+    doc_full.results["pii"] = res_full
+    doc_full.gold["pii"] = res_full
+    report_full = task.evaluate([doc_full])
+    assert report_full.metrics[task.metric] == 1.0
+
+    # 2. Partial overlap
+    doc_partial = Doc(text="My email is test@example.com and phone is 123456")
+    # Pred has both
+    res_pred = Result(
+        masked_text="My email is [MASKED] and phone is [MASKED]",
+        pii_entities=[
+            PIIEntity(entity_type="EMAIL", text="test@example.com", start=12, end=28),
+            PIIEntity(entity_type="PHONE", text="123456", start=42, end=48)
+        ]
+    )
+    # Gold has only email
+    res_gold = Result(
+        masked_text="My email is [MASKED] and phone is 123456",
+        pii_entities=[PIIEntity(entity_type="EMAIL", text="test@example.com", start=12, end=28)]
+    )
+    doc_partial.results["pii"] = res_pred
+    doc_partial.gold["pii"] = res_gold
+    report_partial = task.evaluate([doc_partial])
+    # TP=1, FP=1, FN=0 -> Precision=0.5, Recall=1.0 -> F1=0.666...
+    assert 0.6 < report_partial.metrics[task.metric] < 0.7
+
+    # 3. No overlap
+    doc_none = Doc(text="My email is test@example.com")
+    res_none_pred = Result(
+        masked_text="My email is [MASKED]",
+        pii_entities=[PIIEntity(entity_type="EMAIL", text="test@example.com", start=12, end=28)]
+    )
+    res_none_gold = Result(
+        masked_text="My name is [MASKED]",
+        pii_entities=[PIIEntity(entity_type="PERSON", text="John", start=11, end=15)]
+    )
+    doc_none.results["pii"] = res_none_pred
+    doc_none.gold["pii"] = res_none_gold
+    report_none = task.evaluate([doc_none])
+    assert report_none.metrics[task.metric] == 0.0

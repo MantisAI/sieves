@@ -1,7 +1,10 @@
 # mypy: ignore-errors
 import pytest
 
+from sieves import Doc
+from sieves.model_wrappers import ModelType
 from sieves.tasks.predictive import SentimentAnalysis, sentiment_analysis
+from sieves.tasks.predictive.schemas.sentiment_analysis import Result
 
 
 @pytest.mark.parametrize(
@@ -49,3 +52,39 @@ def test_run(sentiment_analysis_docs, batch_runtime, fewshot):
         print(f"Raw output: {doc.meta['SentimentAnalysis']['raw']}")
         print(f"Usage: {doc.meta['SentimentAnalysis']['usage']}")
         print(f"Total Usage: {doc.meta['usage']}")
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.outlines], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for sentiment analysis without running pipeline."""
+    task = SentimentAnalysis(aspects=["food", "service"], model=batch_runtime.model, task_id="sent")
+
+    # 1. Full overlap
+    doc_full = Doc(text="Great food and service.")
+    res_full = Result(sentiment_per_aspect={"food": 1.0, "service": 1.0, "overall": 1.0})
+    doc_full.results["sent"] = res_full
+    doc_full.gold["sent"] = res_full
+    report_full = task.evaluate([doc_full])
+    assert report_full.metrics[task.metric] == 1.0
+
+    # 2. No overlap (opposite sentiments)
+    doc_none = Doc(text="Great food and service.")
+    res_none_pred = Result(sentiment_per_aspect={"food": 0.0, "service": 0.0, "overall": 0.0})
+    doc_none.results["sent"] = res_none_pred
+    doc_none.gold["sent"] = res_full
+    report_none = task.evaluate([doc_none])
+    assert report_none.metrics[task.metric] == 0.0
+
+    # 3. Partial overlap
+    doc_partial = Doc(text="Great food. Bad service.")
+    # food is correct (1.0), service is wrong (0.0 vs 1.0)
+    # F1 (Macro):
+    # food: 1.0 (TP) -> F1 1.0
+    # service: 0.0 (FN) -> F1 0.0
+    # overall: 1.0 (TP) -> F1 1.0
+    # Average: (1.0 + 0.0 + 1.0) / 3 = 0.66...
+    res_partial_pred = Result(sentiment_per_aspect={"food": 1.0, "service": 0.0, "overall": 1.0})
+    doc_partial.results["sent"] = res_partial_pred
+    doc_partial.gold["sent"] = res_full
+    report_partial = task.evaluate([doc_partial])
+    assert 0.6 < report_partial.metrics[task.metric] < 0.7

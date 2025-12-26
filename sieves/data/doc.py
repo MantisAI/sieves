@@ -18,6 +18,7 @@ class Doc:
 
     meta: dict[str, Any] = dataclasses.field(default_factory=dict)
     results: dict[str, Any] = dataclasses.field(default_factory=dict)
+    gold: dict[str, Any] = dataclasses.field(default_factory=dict)
     uri: Path | str | None = None
     text: str | None = None
     chunks: list[str] | None = None
@@ -73,6 +74,7 @@ class Doc:
             and self.text == other.text
             and self.chunks == other.chunks
             and self.results == other.results
+            and self.gold == other.gold
             and images_equal_check
         )
 

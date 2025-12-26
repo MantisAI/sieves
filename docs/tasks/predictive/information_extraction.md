@@ -56,6 +56,25 @@ While confidence scores are always present for **GLiNER2** models, they are self
 
 If your original model already contains a `score` field, `sieves` will use it as-is without further modification.
 
+## Evaluation
+
+The performance of information extraction can be measured using the `.evaluate()` method.
+
+- **Metric**:
+    - **Single Mode**: **Accuracy** (`Accuracy`). The fraction of documents where the extracted entity exactly matches the ground truth.
+    - **Multi Mode**: Corpus-wide **Micro-F1 Score** (`F1`). True Positives, False Positives, and False Negatives are accumulated across all documents based on exact entity matches.
+- **Requirement**: Each document must have ground-truth entities (matching your schema) stored in `doc.gold[task_id]`.
+
+```python
+report = task.evaluate(docs)
+# Use report.metrics['F1'] or report.metrics['Accuracy'] depending on mode
+print(f"IE Score: {report.metrics.get('F1') or report.metrics.get('Accuracy')}")
+```
+
+### Ground Truth Formats
+
+Ground truth has to be specified in `doc.meta` using `ResultMulti` or `ResultSingle` instances.
+
 ---
 
 ::: sieves.tasks.predictive.information_extraction.core

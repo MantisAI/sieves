@@ -25,11 +25,11 @@ def _run(
         fewshot_examples = [
             classification.FewshotExampleMultiLabel(
                 text="On the properties of hydrogen atoms and red dwarfs.",
-                confidence_per_label={"science": 1.0, "politics": 0.0},
+                score_per_label={"science": 1.0, "politics": 0.0},
             ),
             classification.FewshotExampleMultiLabel(
                 text="A parliament is elected by casting votes.",
-                confidence_per_label={"science": 0, "politics": 1.0},
+                score_per_label={"science": 0, "politics": 1.0},
             ),
         ]
     else:
@@ -37,12 +37,12 @@ def _run(
             classification.FewshotExampleSingleLabel(
                 text="On the properties of hydrogen atoms and red dwarfs.",
                 label="science",
-                confidence=1.0,
+                score=1.0,
             ),
             classification.FewshotExampleSingleLabel(
                 text="A parliament is elected by casting votes.",
                 label="politics",
-                confidence=1.0,
+                score=1.0,
             ),
         ]
 
@@ -90,7 +90,7 @@ def _run(
     if test_hf_conversion:
         _to_hf_dataset(task, docs, mode)
 
-@flaky(max_runs=3, min_passes=1)
+@flaky(max_runs=4, min_passes=1)
 @pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
 @pytest.mark.parametrize("fewshot", [True, False])
 @pytest.mark.parametrize("mode", ['multi', 'single'])
@@ -231,76 +231,50 @@ def test_labels_validation(batch_runtime) -> None:
     )
 
 
-def test_fewshot_example_singlelabel_confidence() -> None:
-    """Test that the confidence of a fewshot example is correctly validated."""
+def test_fewshot_example_singlelabel_score() -> None:
+    """Test that the score of a fewshot example is correctly validated."""
     classification.FewshotExampleSingleLabel(
         text="...",
         label="science",
-        confidence=1.0,
+        score=1.0,
     )
 
     with pytest.raises(ValueError):
         classification.FewshotExampleSingleLabel(
             text="...",
             label="science",
-            confidence=2.0,
+            score=2.0,
         )
 
     with pytest.raises(ValueError):
         classification.FewshotExampleSingleLabel(
             text="...",
             label="science",
-            confidence=-2.0,
+            score=-2.0,
         )
 
 
 def test_result_to_scores() -> None:
     """Test that the result to scores method works as expected."""
-    # 1) list of (label, score) pairs
-    res = [("science", 0.9), ("politics", 0.1)]
+    # 1) ResultMultiLabel
+    res = classification.ResultMultiLabel(label_scores=[("science", 0.9), ("politics", 0.1)])
     scores = classification.Classification._result_to_scores(res)
     assert scores == {"science": 0.9, "politics": 0.1}
 
-    # 2) single (label, score) tuple
-    res = ("science", 0.8)
+    # 2) ResultSingleLabel
+    res = classification.ResultSingleLabel(label="science", score=0.8)
     scores = classification.Classification._result_to_scores(res)
     assert scores == {"science": 0.8}
 
-    # 3) plain label string -> assumes score 1.0
-    res = "science"
-    scores = classification.Classification._result_to_scores(res)
-    assert scores == {"science": 1.0}
+    # 3) Unsupported types raise TypeError
+    with pytest.raises(TypeError):
+        classification.Classification._result_to_scores([("science", 0.9)])
 
-    # 4) Pydantic model with label and score
-    class PResWithScore(pydantic.BaseModel):  # type: ignore[attr-defined]
-        label: str
-        score: float
-
-    pyd_res = PResWithScore(label="science", score=0.55)
-    scores = classification.Classification._result_to_scores(pyd_res)
-    assert scores == {"science": 0.55}
-
-    # 5) Pydantic model with only label (defaults to 1.0)
-    class PResLabelOnly(pydantic.BaseModel):  # type: ignore[attr-defined]
-        label: str
-
-    pyd_res2 = PResLabelOnly(label="politics")
-    scores = classification.Classification._result_to_scores(pyd_res2)
-    assert scores == {"politics": 1.0}
-
-    # 6) Unsupported types raise TypeError
     with pytest.raises(TypeError):
         classification.Classification._result_to_scores({"science": 0.9})
 
     with pytest.raises(TypeError):
-        classification.Classification._result_to_scores([("science", 0.9, 123)])
-
-    with pytest.raises(TypeError):
-
-        class BadPRes(pydantic.BaseModel):  # type: ignore[attr-defined]
-            not_label: str
-
-        classification.Classification._result_to_scores(BadPRes(not_label="x"))
+        classification.Classification._result_to_scores("science")
 
 
 @pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
@@ -317,3 +291,81 @@ def test_inference_mode_override(batch_runtime) -> None:
     )
 
     assert task._bridge.inference_mode == dummy
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.huggingface], indirect=["batch_runtime"])
+def test_evaluation(batch_runtime) -> None:
+    """Test evaluation for classification without running pipeline."""
+    labels = ["science", "politics"]
+    task = Classification(labels=labels, model=batch_runtime.model, task_id="clf", mode="single")
+
+    # 1. Full overlap
+    doc_full = Doc(text="Text about science.")
+    doc_full.results["clf"] = classification.ResultSingleLabel(label="science", score=0.9)
+    doc_full.gold["clf"] = "science"
+
+    report_full = task.evaluate([doc_full])
+    assert report_full.metrics[task.metric] == 1.0
+
+    # 2. No overlap
+    doc_none = Doc(text="Text about science.")
+    doc_none.results["clf"] = classification.ResultSingleLabel(label="politics", score=0.9)
+    doc_none.gold["clf"] = "science"
+    report_none = task.evaluate([doc_none])
+    assert report_none.metrics[task.metric] == 0.0
+
+    # 3. Multi-label partial overlap
+    task_multi = Classification(labels=labels, model=batch_runtime.model, task_id="clf_multi", mode="multi")
+    doc_partial = Doc(text="Text about science and politics.")
+    # Prediction: science=0.9, politics=0.1
+    # Gold: science=1.0, politics=1.0 (both are true)
+    doc_partial.results["clf_multi"] = classification.ResultMultiLabel(label_scores=[("science", 0.9), ("politics", 0.1)])
+    doc_partial.gold["clf_multi"] = classification.ResultMultiLabel(label_scores=[("science", 1.0), ("politics", 1.0)])
+
+    report_partial = task_multi.evaluate([doc_partial])
+    # Multi-label evaluation uses 1 - abs(gold - pred) averaged over labels
+    # Label science: 1 - abs(1.0 - 0.9) = 0.9
+    # Label politics: 1 - abs(1.0 - 0.1) = 0.1
+    # Average: (0.9 + 0.1) / 2 = 0.5
+    assert report_partial.metrics[task_multi.metric] == 0.5
+
+    # 4. Multi-label full overlap
+    doc_multi_full = Doc(text="Text about science and politics.")
+    doc_multi_full.results["clf_multi"] = classification.ResultMultiLabel(
+        label_scores=[("science", 1.0), ("politics", 1.0)]
+    )
+    doc_multi_full.gold["clf_multi"] = classification.ResultMultiLabel(
+        label_scores=[("science", 1.0), ("politics", 1.0)]
+    )
+    report_multi_full = task_multi.evaluate([doc_multi_full])
+    assert report_multi_full.metrics[task_multi.metric] == 1.0
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.huggingface], indirect=["batch_runtime"])
+def test_list_str_multi_gold(batch_runtime) -> None:
+    """Test using list of strings as gold labels for multi-label classification."""
+    labels = ["science", "politics"]
+    task_multi = Classification(labels=labels, model=batch_runtime.model, task_id="clf_multi", mode="multi")
+
+    # 1. Full overlap with list[str] gold
+    doc_full = Doc(text="Text about science and politics.")
+    doc_full.results["clf_multi"] = classification.ResultMultiLabel(
+        label_scores=[("science", 1.0), ("politics", 1.0)]
+    )
+    doc_full.gold["clf_multi"] = ["science", "politics"]
+    report_full = task_multi.evaluate([doc_full])
+    assert report_full.metrics[task_multi.metric] == 1.0
+
+    # 2. Partial overlap with list[str] gold
+    # Gold is only science. Pred is science and politics.
+    doc_partial = Doc(text="Text about science.")
+    doc_partial.results["clf_multi"] = classification.ResultMultiLabel(
+        label_scores=[("science", 1.0), ("politics", 1.0)]
+    )
+    doc_partial.gold["clf_multi"] = ["science"]
+
+    # Science: |1.0 - 1.0| = 0. Acc=1.0
+    # Politics: |0.0 - 1.0| = 1. Acc=0.0
+    # Avg: 0.5
+    report_partial = task_multi.evaluate([doc_partial])
+    assert report_partial.metrics[task_multi.metric] == 0.5

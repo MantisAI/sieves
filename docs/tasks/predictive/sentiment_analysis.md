@@ -14,11 +14,24 @@ The `SentimentAnalysis` task returns a unified `Result` object containing a `sen
 
 Confidence scores are self-reported by **LLMs** and may be `None`.
 
+## Evaluation
+
+Performance of sentiment analysis can be measured using the `.evaluate()` method.
+
+- **Metric**: **Macro-averaged F1 Score** (`F1 (Macro)`). This is calculated per aspect across the corpus and then averaged. Continuous sentiment scores (0.0-1.0) are discretized (0 vs 1) for F1 calculation.
+- **Requirement**: Each document must have ground-truth sentiment scores stored in `doc.gold[task_id]`.
+
 ```python
---8<-- "sieves/tasks/predictive/schemas/sentiment_analysis.py:Result"
+report = task.evaluate(docs)
+print(f"Sentiment Score: {report.metrics['F1 (Macro)']}")
 ```
 
+### Ground Truth Formats
+
+Ground truth has to be specified in `doc.meta` using `Result` instances.
+
 ---
+
 
 ::: sieves.tasks.predictive.sentiment_analysis.core
 ::: sieves.tasks.predictive.sentiment_analysis.bridges

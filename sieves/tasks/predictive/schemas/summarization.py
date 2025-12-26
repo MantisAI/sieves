@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import dspy
 import pydantic
 
@@ -14,12 +16,22 @@ class FewshotExample(BaseFewshotExample):
 
     Attributes:
         text: Input text.
+        n_words: Guideline for summary length.
         summary: Summary of text.
         score: Confidence score.
     """
 
+    n_words: int
     summary: str
     score: float | None = None
+
+    @property
+    def input_fields(self) -> Sequence[str]:
+        """Return input fields.
+
+        :return: Input fields.
+        """
+        return "text", "n_words"
 
     @property
     def target_fields(self) -> tuple[str, ...]:
