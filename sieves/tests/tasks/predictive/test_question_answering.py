@@ -187,14 +187,14 @@ def test_evaluation(batch_runtime) -> None:
     doc_full.results["qa"] = res_full
     doc_full.gold["qa"] = res_full
     report_full = task.evaluate([doc_full], judge=batch_runtime.model)
-    assert report_full.metrics["score"] > 0.8
+    assert report_full.metrics[task.metric] > 0.8
 
     # 2. No overlap
     doc_none = Doc(text="1+1 equals 2")
     doc_none.results["qa"] = Result(qa_pairs=[QuestionAnswer(question="What is 1+1?", answer="It is a sunny day.")])
     doc_none.gold["qa"] = res_full
     report_none = task.evaluate([doc_none], judge=batch_runtime.model)
-    assert report_none.metrics["score"] < 0.6
+    assert report_none.metrics[task.metric] < 0.6
 
     # 3. Partial overlap (one correct, one incorrect)
     task_multi = question_answering.QuestionAnswering(
@@ -213,4 +213,4 @@ def test_evaluation(batch_runtime) -> None:
     ])
     report_partial = task_multi.evaluate([doc_partial], judge=batch_runtime.model)
     # Expected to be somewhere in the middle
-    assert 0.2 < report_partial.metrics["score"] < 0.8
+    assert 0.2 < report_partial.metrics[task_multi.metric] < 0.8

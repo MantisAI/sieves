@@ -119,6 +119,11 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 f"be deduplicated and compared. Modify entity_type to be frozen=True."
             )
 
+    @property
+    @override
+    def metric(self) -> str:
+        return "F1" if self._mode == "multi" else "Accuracy"
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.

@@ -28,10 +28,7 @@ dependencies = [
     "sentencepiece<1",
     "json-repair>=0.48.0",
     "openai>=1.109.1,<2",
-    "evaluate>=0.4.5",
-    "pytest>=7.4.4",
-    "langchain-openai>=1.1.6",
-    "flaky>=3.8.1",
+    "langchain-openai>=1.1.6,<2",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -56,6 +53,7 @@ test = [
     "anthropic>=0.45,<1",
     "langchain-community>=0.3.31,<0.4",
     "langchain-openai>=1,<2",
+    "marimo>=0.18.4,<0.19",
 #    "tesseract>=0.1,<1",
     # For generating documentation.
     "mkdocstrings[python]>=0.27,<1",

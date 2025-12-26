@@ -73,7 +73,7 @@ def _():
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    Next we'll load the data into memory.
+    Next we'll load the data into memory and preprocess it.
     """)
     return
 
@@ -106,7 +106,7 @@ def _():
                         crisis_type = 'Floods'
                     data_["crisis_type"] = crisis_type
                     data = pd.concat([data, data_])
-    return data, os, pd
+    return data, os
 
 
 @app.cell(hide_code=True)
@@ -148,6 +148,7 @@ def _(mo):
 @app.cell
 def _(data: pd.DataFrame):
     from sieves import Doc
+    from sieves.tasks.predictive.classification import ResultSingleLabel
     import random
 
     # We down-sample our dataset to avoid long processing times.
@@ -159,9 +160,12 @@ def _(data: pd.DataFrame):
             text=row['tweet_text'],
             meta={
                 'tweet_id': row['tweet_id'],
-                'gold_label': row['label'],
                 'dataset': row['dataset'],
-                'crisis_type': row['crisis_type']
+            },
+            # We store ground truth in .gold per task ID, so we can evaluate our pipeline performance later.
+            gold={
+                "crisis_label_classifier":  row['label'],
+                "crisis_type_classifier": row['crisis_type']
             }
         )
         for idx, row in data_sampled.iterrows()
@@ -171,6 +175,7 @@ def _(data: pd.DataFrame):
     print(f"\nSample doc:")
     print(f"Tweet: {docs[0].text[:100]}...")
     print(f"Metadata: {docs[0].meta}")
+    print(f"Ground truth: {docs[0].gold}")
     return Doc, data_sampled, docs
 
 
@@ -365,74 +370,19 @@ def _(mo):
 
     In a real-world scenario, we need to know if we can trust our automated extraction. By comparing our pipeline's "Predicted" results against the "Gold" human labels, we can calculate metrics like Accuracy and F1 Score.
 
-    This evaluation helps us tune our `condition` thresholds and improve our task prompts.
+    We do this by running the inbuilt evaluation functionality. Note that we don't have ground truth for the location extraction, so we'll ignore this task in our evaluation.
     """)
     return
 
 
 @app.cell
-def _(pd, results):
-    evaluation_data: list[dict] = []
-    for res_doc in results:
-        crisis_label_result = res_doc.results.get('crisis_label_classifier')
-        crisis_type_result = res_doc.results.get('crisis_type_classifier')
-        location_result = res_doc.results.get('location_extractor')
-
-        location = location_result.entity.name if location_result and location_result.entity else None
-
-        evaluation_data.append({
-            'tweet_id': res_doc.meta.get('tweet_id', ''),
-            'text': res_doc.text[:100],
-            'label_gold': res_doc.meta.get('gold_label', 'unknown'),
-            'label_predicted': crisis_label_result.label if crisis_label_result else None,
-            'crisis_type_gold': res_doc.meta.get('crisis_type', 'unknown'),
-            'crisis_type_predicted': crisis_type_result.label if crisis_type_result else None,
-            'location_predicted': location,
-        })
-
-    df_eval = pd.DataFrame(evaluation_data)
-    return (df_eval,)
-
-
-@app.cell
-def _(df_eval, mo):
-    from sklearn.metrics import f1_score, accuracy_score, recall_score
+def _(pipeline, results):
     from pprint import pprint
 
-    metrics_summary: list[dict[str, float]] = []
-    errors: list[dict[str, str | float]] = []
-
-    for category in ["label", "crisis_type"]:
-        y_true = df_eval[f"{category}_gold"].astype(str)
-        y_pred = df_eval[f"{category}_predicted"].fillna("skipped").astype(str)
-
-        metrics_summary.append({
-            "Task": category,
-            "Metric": 'Accuracy',
-            "Value": accuracy_score(y_true, y_pred),
-        })
-        metrics_summary.append({
-            "Task": category,
-            "Metric": 'F1 (Macro)',
-            "Value": f1_score(y_true, y_pred, average="macro"),
-        })
-        metrics_summary.append({
-            "Task": category,
-            "Metric": 'Recall (Macro)',
-            "Value": recall_score(y_true, y_pred, average="macro"),
-        })
-
-        wrong_mask = df_eval[f"{category}_gold"] != df_eval[f"{category}_predicted"].fillna("skipped")
-        for _, row in df_eval[wrong_mask].iterrows():
-            errors.append({
-                "Task": category,
-                "Text": row["text"],
-                "Gold": row[f"{category}_gold"],
-                "Predicted": row[f"{category}_predicted"],
-            })
-
-    mo.ui.table(metrics_summary)
-    return (errors,)
+    eval_report = pipeline.evaluate(results)
+    for task_id in eval_report.reports:
+        pprint(eval_report[task_id].summary())
+    return (eval_report,)
 
 
 @app.cell(hide_code=True)
@@ -444,12 +394,26 @@ def _(mo):
 
 
 @app.cell
-def _(errors: list[dict[str, str | float]], mo):
+def _(eval_report, mo):
+    from sklearn.metrics import f1_score, accuracy_score, recall_score
+
+    errors: list[dict[str, str | float]] = []
+
+    for tid in ("crisis_label_classifier", "crisis_type_classifier"):
+        for failed_pred in eval_report[tid].failures:
+            pred = failed_pred.results[tid]
+            errors.append({
+                "Task": tid,
+                "Text": failed_pred.text,
+                "Gold": failed_pred.gold[tid],
+                "Predicted": pred.label if pred else pred,
+            })
+
     mo.ui.table(errors)
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _():
     return
 

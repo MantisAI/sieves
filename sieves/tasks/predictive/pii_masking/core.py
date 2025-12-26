@@ -115,6 +115,11 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
             condition=condition,
         )
 
+    @property
+    @override
+    def metric(self) -> str:
+        return "F1"
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types: dict[ModelType, type[_TaskBridge]] = {

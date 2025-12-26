@@ -65,7 +65,7 @@ def test_evaluation(batch_runtime) -> None:
     doc_full.results["sent"] = res_full
     doc_full.gold["sent"] = res_full
     report_full = task.evaluate([doc_full])
-    assert report_full.metrics["score"] == 1.0
+    assert report_full.metrics[task.metric] == 1.0
 
     # 2. No overlap (opposite sentiments)
     doc_none = Doc(text="Great food and service.")
@@ -73,7 +73,7 @@ def test_evaluation(batch_runtime) -> None:
     doc_none.results["sent"] = res_none_pred
     doc_none.gold["sent"] = res_full
     report_none = task.evaluate([doc_none])
-    assert report_none.metrics["score"] == 0.0
+    assert report_none.metrics[task.metric] == 0.0
 
     # 3. Partial overlap
     doc_partial = Doc(text="Great food and service.")
@@ -87,4 +87,4 @@ def test_evaluation(batch_runtime) -> None:
     doc_partial.results["sent"] = res_partial_pred
     doc_partial.gold["sent"] = res_full
     report_partial = task.evaluate([doc_partial])
-    assert 0.8 < report_partial.metrics["score"] < 0.9
+    assert 0.8 < report_partial.metrics[task.metric] < 0.9

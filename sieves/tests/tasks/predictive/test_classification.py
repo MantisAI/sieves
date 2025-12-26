@@ -256,51 +256,25 @@ def test_fewshot_example_singlelabel_score() -> None:
 
 def test_result_to_scores() -> None:
     """Test that the result to scores method works as expected."""
-    # 1) list of (label, score) pairs
-    res = [("science", 0.9), ("politics", 0.1)]
+    # 1) ResultMultiLabel
+    res = classification.ResultMultiLabel(label_scores=[("science", 0.9), ("politics", 0.1)])
     scores = classification.Classification._result_to_scores(res)
     assert scores == {"science": 0.9, "politics": 0.1}
 
-    # 2) single (label, score) tuple
-    res = ("science", 0.8)
+    # 2) ResultSingleLabel
+    res = classification.ResultSingleLabel(label="science", score=0.8)
     scores = classification.Classification._result_to_scores(res)
     assert scores == {"science": 0.8}
 
-    # 3) plain label string -> assumes score 1.0
-    res = "science"
-    scores = classification.Classification._result_to_scores(res)
-    assert scores == {"science": 1.0}
+    # 3) Unsupported types raise TypeError
+    with pytest.raises(TypeError):
+        classification.Classification._result_to_scores([("science", 0.9)])
 
-    # 4) Pydantic model with label and score
-    class PResWithScore(pydantic.BaseModel):  # type: ignore[attr-defined]
-        label: str
-        score: float
-
-    pyd_res = PResWithScore(label="science", score=0.55)
-    scores = classification.Classification._result_to_scores(pyd_res)
-    assert scores == {"science": 0.55}
-
-    # 5) Pydantic model with only label (defaults to 1.0)
-    class PResLabelOnly(pydantic.BaseModel):  # type: ignore[attr-defined]
-        label: str
-
-    pyd_res2 = PResLabelOnly(label="politics")
-    scores = classification.Classification._result_to_scores(pyd_res2)
-    assert scores == {"politics": 1.0}
-
-    # 6) Unsupported types raise TypeError
     with pytest.raises(TypeError):
         classification.Classification._result_to_scores({"science": 0.9})
 
     with pytest.raises(TypeError):
-        classification.Classification._result_to_scores([("science", 0.9, 123)])
-
-    with pytest.raises(TypeError):
-
-        class BadPRes(pydantic.BaseModel):  # type: ignore[attr-defined]
-            not_label: str
-
-        classification.Classification._result_to_scores(BadPRes(not_label="x"))
+        classification.Classification._result_to_scores("science")
 
 
 @pytest.mark.parametrize("batch_runtime", Classification.supports(), indirect=["batch_runtime"])
@@ -331,14 +305,14 @@ def test_evaluation(batch_runtime) -> None:
     doc_full.gold["clf"] = "science"
 
     report_full = task.evaluate([doc_full])
-    assert report_full.metrics["score"] == 1.0
+    assert report_full.metrics[task.metric] == 1.0
 
     # 2. No overlap
     doc_none = Doc(text="Text about science.")
     doc_none.results["clf"] = classification.ResultSingleLabel(label="politics", score=0.9)
     doc_none.gold["clf"] = "science"
     report_none = task.evaluate([doc_none])
-    assert report_none.metrics["score"] == 0.0
+    assert report_none.metrics[task.metric] == 0.0
 
     # 3. Multi-label partial overlap
     task_multi = Classification(labels=labels, model=batch_runtime.model, task_id="clf_multi", mode="multi")
@@ -353,7 +327,7 @@ def test_evaluation(batch_runtime) -> None:
     # Label science: 1 - abs(1.0 - 0.9) = 0.9
     # Label politics: 1 - abs(1.0 - 0.1) = 0.1
     # Average: (0.9 + 0.1) / 2 = 0.5
-    assert report_partial.metrics["score"] == 0.5
+    assert report_partial.metrics[task_multi.metric] == 0.5
 
     # 4. Multi-label full overlap
     doc_multi_full = Doc(text="Text about science and politics.")
@@ -364,4 +338,34 @@ def test_evaluation(batch_runtime) -> None:
         label_scores=[("science", 1.0), ("politics", 1.0)]
     )
     report_multi_full = task_multi.evaluate([doc_multi_full])
-    assert report_multi_full.metrics["score"] == 1.0
+    assert report_multi_full.metrics[task_multi.metric] == 1.0
+
+
+@pytest.mark.parametrize("batch_runtime", [ModelType.huggingface], indirect=["batch_runtime"])
+def test_list_str_multi_gold(batch_runtime) -> None:
+    """Test using list of strings as gold labels for multi-label classification."""
+    labels = ["science", "politics"]
+    task_multi = Classification(labels=labels, model=batch_runtime.model, task_id="clf_multi", mode="multi")
+
+    # 1. Full overlap with list[str] gold
+    doc_full = Doc(text="Text about science and politics.")
+    doc_full.results["clf_multi"] = classification.ResultMultiLabel(
+        label_scores=[("science", 1.0), ("politics", 1.0)]
+    )
+    doc_full.gold["clf_multi"] = ["science", "politics"]
+    report_full = task_multi.evaluate([doc_full])
+    assert report_full.metrics[task_multi.metric] == 1.0
+
+    # 2. Partial overlap with list[str] gold
+    # Gold is only science. Pred is science and politics.
+    doc_partial = Doc(text="Text about science.")
+    doc_partial.results["clf_multi"] = classification.ResultMultiLabel(
+        label_scores=[("science", 1.0), ("politics", 1.0)]
+    )
+    doc_partial.gold["clf_multi"] = ["science"]
+
+    # Science: |1.0 - 1.0| = 0. Acc=1.0
+    # Politics: |0.0 - 1.0| = 1. Acc=0.0
+    # Avg: 0.5
+    report_partial = task_multi.evaluate([doc_partial])
+    assert report_partial.metrics[task_multi.metric] == 0.5

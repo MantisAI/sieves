@@ -281,7 +281,7 @@ def test_evaluation(batch_runtime) -> None:
     doc_full.results["re"] = res_full
     doc_full.gold["re"] = res_full
     report_full = task.evaluate([doc_full])
-    assert report_full.metrics["score"] == 1.0
+    assert report_full.metrics[task.metric] == 1.0
 
     # 2. Partial overlap
     doc_partial = Doc(text="Henri founded Red Cross in Geneva.")
@@ -299,7 +299,7 @@ def test_evaluation(batch_runtime) -> None:
     doc_partial.gold["re"] = res_gold
     report_partial = task.evaluate([doc_partial])
     # TP=1 (founded), FP=1 (located_in), FN=0 -> Precision=0.5, Recall=1.0 -> F1=0.666...
-    assert 0.6 < report_partial.metrics["score"] < 0.7
+    assert 0.6 < report_partial.metrics[task.metric] < 0.7
 
     # 3. No overlap
     doc_none = Doc(text="Henri founded Red Cross.")
@@ -320,4 +320,4 @@ def test_evaluation(batch_runtime) -> None:
     doc_none.results["re"] = res_none_pred
     doc_none.gold["re"] = res_none_gold
     report_none = task.evaluate([doc_none])
-    assert report_none.metrics["score"] == 0.0
+    assert report_none.metrics[task.metric] == 0.0

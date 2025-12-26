@@ -107,6 +107,11 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
+    @property
+    @override
+    def metric(self) -> str:
+        return "F1"
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         if model_type == ModelType.gliner:

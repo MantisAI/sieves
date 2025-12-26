@@ -160,18 +160,18 @@ def test_evaluation(batch_runtime) -> None:
     doc_full.results["sum"] = Result(summary="Fast fox jumps dog.", score=1.0)
     doc_full.gold["sum"] = Result(summary="Fast fox jumps dog.", score=1.0)
     report_full = task.evaluate([doc_full], judge=batch_runtime.model)
-    assert report_full.metrics["score"] > 0.8
+    assert report_full.metrics[task.metric] > 0.8
 
     # 2. No overlap
     doc_none = Doc(text="The quick brown fox jumps over the lazy dog.")
     doc_none.results["sum"] = Result(summary="The weather is nice today.", score=1.0)
     doc_none.gold["sum"] = Result(summary="Fast fox jumps dog.", score=1.0)
     report_none = task.evaluate([doc_none], judge=batch_runtime.model)
-    assert report_none.metrics["score"] < 0.6
+    assert report_none.metrics[task.metric] < 0.6
 
     # 3. Partial overlap
     doc_partial = Doc(text="The quick brown fox jumps over the lazy dog.")
     doc_partial.results["sum"] = Result(summary="A fox jumps.", score=1.0)
     doc_partial.gold["sum"] = Result(summary="The quick brown fox jumps over the lazy dog.", score=1.0)
     report_partial = task.evaluate([doc_partial], judge=batch_runtime.model)
-    assert 0.2 < report_partial.metrics["score"] < 0.8
+    assert 0.2 < report_partial.metrics[task.metric] < 0.8

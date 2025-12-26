@@ -200,7 +200,7 @@ def test_evaluation(batch_runtime) -> None:
     doc_full.results["ner"] = res_full
     doc_full.gold["ner"] = res_full
     report_full = task.evaluate([doc_full])
-    assert report_full.metrics["score"] == 1.0
+    assert report_full.metrics[task.metric] == 1.0
 
     # 2. Partial overlap
     doc_partial = Doc(text="John lives in Berlin.")
@@ -226,7 +226,7 @@ def test_evaluation(batch_runtime) -> None:
     # Precision: 1 TP (John) / 2 Pred = 0.5
     # Recall: 1 TP (John) / 2 Gold = 0.5
     # F1: 0.5. (Note: _evaluate_dspy_example uses the logic in NER subclass which computes F1)
-    assert report_partial.metrics["score"] == 0.5
+    assert report_partial.metrics[task.metric] == 0.5
 
     # 3. No overlap
     doc_none = Doc(text="John lives in Berlin.")
@@ -239,4 +239,4 @@ def test_evaluation(batch_runtime) -> None:
     doc_none.results["ner"] = res_none_pred
     doc_none.gold["ner"] = res_none_gold
     report_none = task.evaluate([doc_none])
-    assert report_none.metrics["score"] == 0.0
+    assert report_none.metrics[task.metric] == 0.0

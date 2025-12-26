@@ -218,10 +218,10 @@ def test_evaluation_example(small_transformer_model):
     report = pipeline.evaluate(docs)
 
     # Print results.
-    print(report["clf"].metrics)  # e.g., {'score': 0.94}
+    print(report["clf"].metrics)  # e.g., {'Accuracy': 0.94}
     # --8<-- [end:evaluation-basic]
 
-    assert 0.9 <= report["clf"].metrics["score"] <= 1.0
+    assert 0.9 <= report["clf"].metrics["Accuracy"] <= 1.0
 
 
 def test_readme_quick_start_basic(small_outlines_model):

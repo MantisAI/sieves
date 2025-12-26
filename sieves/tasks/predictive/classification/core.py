@@ -9,7 +9,6 @@ from typing import Any, Literal, override
 
 import datasets
 import dspy
-import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -63,6 +62,14 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         ...     },
         ...     model=model,
         ... )
+        The descriptions are especially useful with GliNER, which uses them to improve entity recognition accuracy.
+
+    Evaluation:
+        When using `evaluate()`, ground-truth labels can be provided in `doc.gold[task_id]` in several formats:
+        - `str`: Single label (e.g., `"science"`). Best for single-label mode.
+        - `list[str]`: List of active labels (e.g., `["science", "politics"]`). Best for multi-label mode.
+        - `ResultSingleLabel`: Single label with an explicit confidence score.
+        - `ResultMultiLabel`: Multiple labels with explicit confidence scores.
     """
 
     def __init__(
@@ -116,6 +123,11 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
             condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def metric(self) -> str:
+        return "Accuracy"
 
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.
@@ -213,7 +225,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         }
 
     @staticmethod
-    def _result_to_scores(result: Any) -> dict[str, float]:
+    def _result_to_scores(result: ResultMultiLabel | ResultSingleLabel) -> dict[str, float]:
         """Normalize a single result to a mapping of label → score.
 
         :params result: One result value from ``doc.results``.
@@ -229,26 +241,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         if isinstance(result, ResultSingleLabel):
             return {result.label: result.score}
 
-        # Legacy handling if any.
-        if isinstance(result, list) and all(isinstance(item, list | tuple) and len(item) == 2 for item in result):
-            return {str(label): float(score) for label, score in result}
-
-        if isinstance(result, tuple) and len(result) == 2:
-            label, score = result
-            return {str(label): float(score)}
-
-        if isinstance(result, str):
-            return {result: 1.0}
-
-        if isinstance(result, pydantic.BaseModel) or hasattr(result, "model_dump"):
-            try:
-                label = getattr(result, "label")
-                score = getattr(result, "score", 1.0)
-                return {str(label): float(score)}
-            except Exception as exc:
-                raise TypeError(f"Unsupported pydantic result shape: {type(result)}") from exc
-
-        raise TypeError(f"Unsupported result type in to_hf_dataset: {type(result)}")
+        raise TypeError(f"Unsupported result type in _result_to_scores: {type(result)}")
 
     @override
     def distill(
@@ -406,6 +399,25 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
 
     @override
     def _task_result_to_dspy_dict(self, result: Any) -> dict[str, Any]:
+        # We accept `str` and `list[str]` for better UX.
+        if isinstance(result, str):
+            result = ResultSingleLabel(label=result, score=1.0)
+        elif isinstance(result, list) and all(isinstance(item, str) for item in result):
+            if self._mode == "single":
+                if len(result) == 1:
+                    result = ResultSingleLabel(label=result[0], score=1.0)
+                else:
+                    raise ValueError(f"Got list of {len(result)} labels for single-label task.")
+            else:
+                label_scores: list[tuple[str, float]] = []
+                active_set = set(result)
+                for label in self._labels:
+                    s = 1.0 if label in active_set else 0.0
+                    label_scores.append((label, s))
+                result = ResultMultiLabel(label_scores=label_scores)
+
+        assert isinstance(result, ResultSingleLabel | ResultMultiLabel)
+
         scores = self._result_to_scores(result)
         if self._mode == "multi":
             return {"score_per_label": scores}

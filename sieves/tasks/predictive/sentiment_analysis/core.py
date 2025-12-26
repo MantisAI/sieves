@@ -73,6 +73,11 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
         )
         self._fewshot_examples: Sequence[FewshotExample]
 
+    @property
+    @override
+    def metric(self) -> str:
+        return "Accuracy"
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types: dict[ModelType, type[_TaskBridge]] = {

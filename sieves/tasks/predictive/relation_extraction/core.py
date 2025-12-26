@@ -77,6 +77,11 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
             condition=condition,
         )
 
+    @property
+    @override
+    def metric(self) -> str:
+        return "F1"
+
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         if model_type == ModelType.gliner:

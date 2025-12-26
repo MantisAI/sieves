@@ -253,7 +253,7 @@ def test_evaluation(batch_runtime) -> None:
     doc_full.results["ie"] = res_full
     doc_full.gold["ie"] = res_full
     report_full = task.evaluate([doc_full])
-    assert report_full.metrics["score"] == 1.0
+    assert report_full.metrics[task.metric] == 1.0
 
     # 2. No overlap (Single)
     doc_none = Doc(text="Ada is 47.")
@@ -261,7 +261,7 @@ def test_evaluation(batch_runtime) -> None:
     doc_none.results["ie"] = res_none_pred
     doc_none.gold["ie"] = res_full
     report_none = task.evaluate([doc_none])
-    assert report_none.metrics["score"] == 0.0
+    assert report_none.metrics[task.metric] == 0.0
 
     # 3. Multi-label partial overlap
     task_multi = tasks.predictive.InformationExtraction(
@@ -276,4 +276,4 @@ def test_evaluation(batch_runtime) -> None:
     doc_partial.gold["ie_multi"] = res_multi_gold
     report_partial = task_multi.evaluate([doc_partial])
     # TP=1, FP=1, FN=0 -> Precision=0.5, Recall=1.0 -> F1=0.666...
-    assert 0.6 < report_partial.metrics["score"] < 0.7
+    assert 0.6 < report_partial.metrics[task_multi.metric] < 0.7

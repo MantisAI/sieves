@@ -254,36 +254,58 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
 
         return cls(**init_dict)
 
-    def evaluate(self, docs: Iterable[Doc], judge: dspy.LM | None = None) -> TaskEvaluationReport:
+    @property
+    def metric(self) -> str:
+        """Return metric name.
+
+        :return str: Metric name.
+        """
+        return "Similarity (LLM-judged)"
+
+    def evaluate(
+        self, docs: Iterable[Doc], judge: dspy.LM | None = None, failure_threshold: float = 0.5
+    ) -> TaskEvaluationReport:
         """Evaluate task performance using DSPy-based evaluation.
 
         :param docs: Documents to evaluate.
         :param judge: Optional DSPy LM instance to use as judge for generative tasks.
+        :param failure_threshold: Decision threshold for whether to mark predicitions as failures.
         :return: Evaluation report.
         """
         scores: list[float] = []
         failures: list[Doc] = []
 
         for doc in docs:
-            if self.id not in doc.gold:
-                raise KeyError(f"Document missing gold data for task {self.id}")
             if self.id not in doc.results:
                 continue
 
-            # Convert result and gold to DSPy representation
-            truth = dspy.Example(**self._task_result_to_dspy_dict(doc.gold[self.id]))
-            pred = dspy.Prediction(**self._task_result_to_dspy_dict(doc.results[self.id]))
+            pred = doc.results[self.id]
+            gold = doc.gold.get(self.id, None)
 
-            # Call internal evaluation logic
-            score = self._evaluate_dspy_example(truth, pred, trace=None, model=judge)
-            scores.append(score)
+            # If gold or prediction is None: we cannot do proper evalution, so we just check whether they're both None
+            # to compute score.
+            if gold is None or pred is None:
+                if gold is None and pred is None:
+                    scores.append(1.0)
+                else:
+                    scores.append(0.0)
+                    failures.append(doc)
 
-            if score < 0.5:
-                failures.append(doc)
+            else:
+                # Convert result and gold to DSPy representation.
+                truth = dspy.Example(**self._task_result_to_dspy_dict(gold))
+                pred = dspy.Prediction(**self._task_result_to_dspy_dict(pred))
+
+                # Call internal evaluation logic.
+                score = self._evaluate_dspy_example(truth, pred, trace=None, model=judge)
+                scores.append(score)
+
+                if score < failure_threshold:
+                    failures.append(doc)
 
         avg_score = sum(scores) / len(scores) if scores else 0.0
         return TaskEvaluationReport(
-            metrics={"score": avg_score},
+            metrics={self.metric: avg_score},
             task_id=self.id,
             failures=failures,
         )
