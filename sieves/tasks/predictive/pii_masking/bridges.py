@@ -161,7 +161,10 @@ class DSPyPIIMasking(PIIMaskingBridge[dspy_.PromptSignature, dspy_.Result, dspy_
             # Store masked text and PII entities in results
             res = Result(
                 masked_text=result.masked_text,
-                pii_entities=[PIIEntity.model_validate(e) for e in result.pii_entities],
+                pii_entities=[
+                    PIIEntity.model_validate(e.model_dump() if hasattr(e, "model_dump") else e)
+                    for e in result.pii_entities
+                ],
             )
             doc.results[self._task_id] = res
 
@@ -225,7 +228,7 @@ class PydanticPIIMasking(PIIMaskingBridge[pydantic.BaseModel, pydantic.BaseModel
             "etc.\n"
             "{%- endif %}\n"
             f"{pii_type_info}\n"
-            'Replace each instance of PII with "{{ mask_placeholder }}".\n'
+            f'Replace each instance of PII with "{self._mask_placeholder}".\n'
             "Provide a confidence score between 0.0 and 1.0 for each entity found."
         )
 

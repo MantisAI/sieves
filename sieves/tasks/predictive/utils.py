@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import types
 import typing
+from collections.abc import Iterable, Sequence
 from typing import Any, Literal, TypeVar, Union
 
 import dspy
@@ -108,9 +109,65 @@ def _convert_to_dspy(model_cls: type[pydantic.BaseModel]) -> type[dspy.Signature
     :param model_cls: Pydantic model to convert.
     :return: DSPy Signature class.
     """
+    memo: dict[type[pydantic.BaseModel], type[pydantic.BaseModel]] = {}
+
+    def transform_type(ann: Any) -> Any:
+        """Recursively transform types to be DSPy-compatible.
+
+        This ensures that nested models and collections of models are converted to versions where
+        field metadata is preserved using Annotated.
+
+        :param ann: Type annotation to transform.
+        :return: Transformed type annotation.
+        """
+        if isinstance(ann, type) and issubclass(ann, pydantic.BaseModel):
+            return _model_to_dspy_compatible(ann)
+
+        origin = typing.get_origin(ann)
+        args = typing.get_args(ann)
+
+        if origin in (list, Sequence, Iterable, typing.MutableSequence) and args:
+            return list[transform_type(args[0])]  # type: ignore[invalid-type-form]
+        if origin in (Union, types.UnionType) and args:
+            return Union[tuple(transform_type(arg) for arg in args)]  # noqa: UP007
+
+        return ann
+
+    def _model_to_dspy_compatible(cls: type[pydantic.BaseModel]) -> type[pydantic.BaseModel]:
+        """Convert a Pydantic model to one where all fields are Annotated with dspy.OutputField.
+
+        This makes nested field descriptions visible to DSPy's prompt generation logic.
+
+        :param cls: Pydantic model class to convert.
+        :return: DSPy-compatible Pydantic model class.
+        """
+        if cls in memo:
+            return memo[cls]
+
+        fields_dict: dict[str, Any] = {}
+        for name, field_info in cls.model_fields.items():
+            new_ann = transform_type(field_info.annotation)
+            # Wrap every nested field in Annotated with dspy.OutputField to ensure its description
+            # is visible to DSPy's prompt generation logic.
+            fields_dict[name] = (
+                typing.Annotated[new_ann, dspy.OutputField(desc=field_info.description or "")],
+                ... if field_info.is_required() else field_info.default,
+            )
+
+        dspy_compatible_model = pydantic.create_model(
+            cls.__name__, **fields_dict, __base__=pydantic.BaseModel, __doc__=cls.__doc__
+        )
+        memo[cls] = dspy_compatible_model
+
+        return dspy_compatible_model
+
+    # Generate fields for the top-level DSPy Signature.
     fields = {"text": (str, dspy.InputField(desc="Input text to process."))}
     for name, field_info in model_cls.model_fields.items():
-        fields[name] = (field_info.annotation, dspy.OutputField(desc=field_info.description or ""))
+        # Transform the type recursively to include DSPy metadata at all levels.
+        new_ann = transform_type(field_info.annotation)
+        # Signature fields must be dspy.OutputField instances.
+        fields[name] = (new_ann, dspy.OutputField(desc=field_info.description or ""))
 
     signature = type(
         model_cls.__name__,

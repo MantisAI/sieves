@@ -220,6 +220,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     @override
     def _validate_fewshot_examples(self) -> None:
         for fs_example in self._fewshot_examples or []:
+            assert isinstance(fs_example, FewshotExample)
             for entity in fs_example.entities:
                 if entity.entity_type not in self._entities:
                     raise ValueError(f"Entity {entity.entity_type} not in {self._entities}.")

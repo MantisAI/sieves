@@ -203,7 +203,8 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
 
     @override
     def _validate_fewshot_examples(self) -> None:
-        for fs_example in self._fewshot_examples or []:
+        for fs_example in self._fewshot_examples:
+            assert isinstance(fs_example, FewshotExample)
             if any([aspect not in self._aspects for aspect in fs_example.sentiment_per_aspect]) or not all(
                 [label in fs_example.sentiment_per_aspect for label in self._aspects]
             ):

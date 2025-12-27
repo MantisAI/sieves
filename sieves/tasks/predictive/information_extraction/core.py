@@ -153,7 +153,17 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                         default=None, description="Provide a confidence score for the extraction, between 0 and 1."
                     ),
                 )
-                scored_type = pydantic.create_model("GliNEREntity", __doc__="Entity extracted by GliNER.", **fields)  # type: ignore[no-matching-overload]
+
+                # Extract structure name from gliner2 schema.
+                model_name = "GliNEREntity"
+                if hasattr(scored_type, "schema"):
+                    built = scored_type.schema.build()
+                    if "json_structures" in built and built["json_structures"]:
+                        model_name = list(built["json_structures"][0].keys())[0]
+
+                scored_type = pydantic.create_model(
+                    model_name, __doc__=f"Entity extracted by GliNER: {model_name}.", **fields
+                )  # type: ignore[no-matching-overload]
 
         if self._mode == "multi":
             return pydantic.create_model(

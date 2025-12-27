@@ -136,7 +136,10 @@ class PydanticSummarization(SummarizationBridge[pydantic.BaseModel, pydantic.Bas
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return "Your goal is to summarize a text. Provide a confidence score between 0.0 and 1.0 for the summary."
+        return (
+            "Your goal is to summarize a text. Provide a confidence score between 0.0 and 1.0 for the summary. "
+            f"The number of words should be around {self._n_words}."
+        )
 
     @override
     @property
