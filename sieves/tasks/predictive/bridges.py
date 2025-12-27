@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import abc
 import inspect
+import warnings
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import pydantic
-from pydantic_ai.format_as_xml import format_as_xml
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
+    from pydantic_ai.format_as_xml import format_as_xml
 
 from sieves.data import Doc
 from sieves.model_wrappers.types import ModelSettings
