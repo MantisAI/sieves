@@ -112,8 +112,6 @@ def test_serialization(pii_masking_docs, batch_runtime) -> None:
                                                         'init_kwargs': None,
                                                         'strict': True, 'inference_mode': None}},
                       'include_meta': {'is_placeholder': False, 'value': True},
-                      'mask_placeholder': {'is_placeholder': False,
-                                           'value': '[MASKED]'},
                       'model': {'is_placeholder': True,
                                 'value': 'dspy.clients.lm.LM'},
                       'pii_types': {'is_placeholder': False, 'value': None},

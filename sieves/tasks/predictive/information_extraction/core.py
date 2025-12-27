@@ -52,7 +52,7 @@ def _wrap_with_score(entity_type: type[pydantic.BaseModel]) -> type[pydantic.Bas
         """Extracted entity with an additional confidence score."""
 
         score: float | None = pydantic.Field(
-            default=None, description="Confidence score for the entity extraction, between 0 and 1."
+            default=None, description="Provide a confidence score for the entity extraction, between 0 and 1."
         )
 
     ScoredEntity.__name__ = entity_type.__name__
@@ -139,7 +139,9 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 }
                 fields["score"] = (
                     float | None,
-                    pydantic.Field(default=None, description="Confidence score for the extraction, between 0 and 1."),
+                    pydantic.Field(
+                        default=None, description="Provide a confidence score for the extraction, between 0 and 1."
+                    ),
                 )
                 scored_type = pydantic.create_model("GliNEREntity", __doc__="Entity extracted by GliNER.", **fields)  # type: ignore[no-matching-overload]
 

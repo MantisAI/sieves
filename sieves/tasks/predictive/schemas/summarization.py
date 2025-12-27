@@ -53,7 +53,7 @@ class Result(pydantic.BaseModel):
 
     summary: str = pydantic.Field(description="The generated summary of the input text.")
     score: float | None = pydantic.Field(
-        default=None, description="Confidence score for the generated summary, between 0 and 1."
+        default=None, description="Provide a confidence score for the generated summary, between 0 and 1."
     )
 
 

@@ -19,6 +19,7 @@ from sieves.model_wrappers import (
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.schemas.ner import Entity, Result
+from sieves.tasks.predictive.utils import convert_to_signature
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -56,6 +57,15 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         else:
             self._entities = list(entities)
             self._entity_descriptions = {}
+
+    @override
+    @property
+    def prompt_signature(self) -> _BridgePromptSignature:
+        return convert_to_signature(
+            model_cls=self._pydantic_signature,
+            model_type=self.model_type,
+            mode="entities",
+        )  # type: ignore[return-value]
 
     def _get_entity_descriptions(self) -> str:
         """Return a string with the entity descriptions.

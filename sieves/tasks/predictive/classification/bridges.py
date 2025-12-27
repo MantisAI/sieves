@@ -20,6 +20,7 @@ from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.consolidation import LabelScoreConsolidation
 from sieves.tasks.predictive.schemas.classification import ResultMultiLabel, ResultSingleLabel
+from sieves.tasks.predictive.utils import convert_to_signature
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -68,6 +69,15 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
             mode=self._mode,
             extractor=self._get_extractor(),
         )
+
+    @override
+    @property
+    def prompt_signature(self) -> _BridgePromptSignature:
+        return convert_to_signature(
+            model_cls=self._pydantic_signature,
+            model_type=self.model_type,
+            mode="classification",
+        )  # type: ignore[return-value]
 
     @abc.abstractmethod
     def _get_extractor(self) -> Callable[[Any], dict[str, float]]:

@@ -18,10 +18,12 @@ class QuestionAnswer(pydantic.BaseModel):
         score: Confidence score.
     """
 
-    question: str = pydantic.Field(description="The question being asked about the document.")
+    question: str = pydantic.Field(
+        description="The question being asked. This should exactly match one of the provided questions."
+    )
     answer: str = pydantic.Field(description="The generated answer to the question based on the document.")
     score: float | None = pydantic.Field(
-        default=None, description="Confidence score for the generated answer, between 0 and 1."
+        default=None, description="Provide a confidence score for the generated answer, between 0 and 1."
     )
 
 
@@ -83,7 +85,7 @@ class Result(pydantic.BaseModel):
     """
 
     qa_pairs: list[QuestionAnswer] = pydantic.Field(
-        description="A list of question-answer pairs, each containing a question, answer, and confidence score."
+        description="A list of question-answer pairs corresponding to the provided questions."
     )
 
 

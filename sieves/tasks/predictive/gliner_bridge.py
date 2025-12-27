@@ -88,8 +88,8 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         mode = mode_map[self.inference_mode]
 
         model_cls = self._pydantic_signature
-        # Unwrap unified signature container for structure mode if necessary.
-        if mode == "structure":
+        # Unwrap unified signature container if necessary.
+        if mode == "structure" or mode == "entities":
             if "entities" in model_cls.model_fields:
                 model_cls = model_cls.model_fields["entities"].annotation
                 if typing.get_origin(model_cls) is list:
@@ -101,10 +101,20 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     args = typing.get_args(model_cls)
                     model_cls = [t for t in args if t is not type(None)][0]
 
+        elif mode == "relations":
+            if "triplets" in model_cls.model_fields:
+                model_cls = model_cls.model_fields["triplets"].annotation
+                if typing.get_origin(model_cls) is list:
+                    model_cls = typing.get_args(model_cls)[0]
+
+        kwargs = {"mode": mode}
+        if mode == "classification":
+            kwargs["task"] = self._task_id
+
         prompt_signature = convert_to_signature(
             model_cls=model_cls,
             model_type=ModelType.gliner,
-            mode=mode,
+            **kwargs,
         )
         assert isinstance(prompt_signature, gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder)
 
@@ -223,11 +233,17 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     triplets: list[RERelationTriplet] = []
                     # GliNER2 relations output is a dict mapping task ids to relation types to lists of triplets:
                     # {'task_id': {'relation_type': [{'head': {...}, 'tail': {...}}, ...]}}  # noqa: ERA001
-                    relation_data = result.get(self._task_id, {})
+                    relation_data = result.get(self._task_id) or result.get("relation_extraction", {})
                     assert isinstance(relation_data, dict)
 
                     for rel_type, triplets_list in relation_data.items():
                         for triplet_data in triplets_list:
+                            # Calculate score as average of head and tail confidence if they exist.
+                            head_conf = triplet_data.get("head", {}).get("confidence")
+                            tail_conf = triplet_data.get("tail", {}).get("confidence")
+                            confidences = [c for c in (head_conf, tail_conf) if c is not None]
+                            score = sum(confidences) / len(confidences) if confidences else None
+
                             triplets.append(
                                 RERelationTriplet(
                                     head=RERelationEntity(
@@ -239,7 +255,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                                         text=triplet_data["tail"]["text"],
                                         entity_type="UNKNOWN",
                                     ),
-                                    score=triplet_data.get("confidence"),
+                                    score=score,
                                 )
                             )
 
@@ -395,6 +411,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                             for item in all_entities_list:
                                 rel_type = item.pop("relation")
                                 reconstructed[rel_type].append(item)
+                            # Ensure we use the current task_id as the key so that integrate() can find it.
                             consolidated_results.append({self._task_id: dict(reconstructed)})
                         else:
                             consolidated_results.append(all_entities_list)

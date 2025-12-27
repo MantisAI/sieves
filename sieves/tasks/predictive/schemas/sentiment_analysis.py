@@ -44,7 +44,7 @@ class Result(pydantic.BaseModel):
         "scores between 0 (Negative) and 1 (Positive)."
     )
     score: float | None = pydantic.Field(
-        default=None, description="Overall confidence score for the sentiment analysis, between 0 and 1."
+        default=None, description="Provide an overall confidence score for the sentiment analysis, between 0 and 1."
     )
 
 

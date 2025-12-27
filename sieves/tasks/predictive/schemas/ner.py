@@ -24,7 +24,7 @@ class EntityWithContext(pydantic.BaseModel):
     context: str = pydantic.Field(description="The surrounding text providing context for the entity.")
     entity_type: str = pydantic.Field(description="The category or type of the entity (e.g., PERSON, ORGANIZATION).")
     score: float | None = pydantic.Field(
-        default=None, description="Confidence score for the entity identification, between 0 and 1."
+        default=None, description="Provide a confidence score for the entity identification, between 0 and 1."
     )
 
 

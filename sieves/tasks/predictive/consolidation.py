@@ -278,7 +278,9 @@ class QAConsolidation(ConsolidationStrategy):
     def consolidate(
         self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[list[tuple[str, str, float | None]]]:
-        """Consolidate QA pairs.
+        """Consolidate QA pairs using sequential matching.
+
+        Assumes that the i-th QA pair returned by the model corresponds to the i-th question in self.questions.
 
         :param results: Raw chunk results.
         :param docs_offsets: Chunk offsets per document.
@@ -291,11 +293,14 @@ class QAConsolidation(ConsolidationStrategy):
             for res in results[start:end]:
                 if res is None:
                     continue
-                for q, a, s in self.extractor(res):
-                    if q in qa_map:
-                        qa_map[q][0].append(a)
+
+                # Match by index (sequentially) instead of by question text.
+                for i, (_, a, s) in enumerate(self.extractor(res)):
+                    if i < len(self.questions):
+                        target_q = self.questions[i]
+                        qa_map[target_q][0].append(a)
                         if s is not None:
-                            qa_map[q][1].append(s)
+                            qa_map[target_q][1].append(s)
 
             consolidated_qa: list[tuple[str, str, float | None]] = []
             for question in self.questions:

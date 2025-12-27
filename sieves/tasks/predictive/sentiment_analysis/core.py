@@ -101,7 +101,7 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
             float | None,
             pydantic.Field(
                 default=None,
-                description="Overall confidence score for the sentiment analysis, ranging from 0 to 1.",
+                description="Provide an overall confidence score for the sentiment analysis, ranging from 0 to 1.",
             ),
         )
 

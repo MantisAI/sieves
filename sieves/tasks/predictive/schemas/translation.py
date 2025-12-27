@@ -41,7 +41,7 @@ class Result(pydantic.BaseModel):
 
     translation: str = pydantic.Field(description="The input text translated into the target language.")
     score: float | None = pydantic.Field(
-        default=None, description="Confidence score for the translation, between 0 and 1."
+        default=None, description="Provide a confidence score for the translation, between 0 and 1."
     )
 
 

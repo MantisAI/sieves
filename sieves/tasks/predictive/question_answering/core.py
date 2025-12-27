@@ -141,11 +141,6 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         return TaskResult
 
-    @property
-    @override
-    def metric(self) -> str:
-        return "ROUGE-L"
-
     @override
     @property
     def _state(self) -> dict[str, Any]:

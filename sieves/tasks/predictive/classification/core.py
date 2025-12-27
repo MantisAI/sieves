@@ -109,7 +109,9 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 """Result of single-label classification. Contains the most likely label and its confidence score."""
 
                 label: LabelType = pydantic.Field(description="The predicted label from the specified set of labels.")
-                score: float = pydantic.Field(description="Confidence score for the predicted label, between 0 and 1.")
+                score: float = pydantic.Field(
+                    default=None, description="Provide a confidence score for the predicted label, between 0 and 1."
+                )
 
             return SingleLabelClassification
 

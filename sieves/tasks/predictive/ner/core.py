@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, override
+from typing import Any, Literal, override
 
 import datasets
 import dspy
@@ -29,29 +29,7 @@ _TaskBridge = DSPyNER | GliNERBridge | LangChainNER | OutlinesNER
 
 
 class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
-    """Extract named entities from text using various model wrappers.
-
-    Examples:
-        Basic usage with list of entity types:
-
-        >>> ner = NER(
-        ...     entities=["PERSON", "LOCATION", "ORGANIZATION"],
-        ...     model=model,
-        ... )
-
-        Using dict format with descriptions for better entity recognition:
-
-        >>> ner = NER(
-        ...     entities={
-        ...         "PERSON": "Names of people, including first and last names",
-        ...         "LOCATION": "Geographic locations like cities, countries, landmarks",
-        ...         "ORGANIZATION": "Companies, institutions, government agencies"
-        ...     },
-        ...     model=model,
-        ... )
-
-        The descriptions are especially useful with GliNER, which uses them to improve entity recognition accuracy.
-    """
+    """Extract named entities from text using various model wrappers."""
 
     def __init__(
         self,
@@ -114,13 +92,33 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
         :return: Unified Pydantic prompt signature.
         """
-        from sieves.tasks.predictive.schemas.ner import EntityWithContext
+        # Create a dynamic entity model with Literal for the entity types.
+        EntityTypes = Literal[*(tuple(self._entities))] if self._entities else str  # type: ignore[valid-type]
+
+        DynamicEntity = pydantic.create_model(
+            "NEREntity",
+            __doc__="Extracted named entity with its context and type.",
+            text=(str, pydantic.Field(description="The specific text segment identified as an entity.")),
+            context=(str, pydantic.Field(description="The surrounding text providing context for the entity.")),
+            entity_type=(
+                EntityTypes,
+                pydantic.Field(description="The category or type of the entity (e.g., PERSON, ORGANIZATION)."),
+            ),
+            score=(
+                float | None,
+                pydantic.Field(
+                    default=None,
+                    description="Provide a confidence score for the entity identification, between 0 and 1.",
+                ),
+            ),
+            __base__=pydantic.BaseModel,
+        )
 
         return pydantic.create_model(
             "NEROutput",
             __doc__="Result of named-entity recognition. Contains a list of extracted entities.",
             entities=(
-                list[EntityWithContext],
+                list[DynamicEntity],  # type: ignore[valid-type]
                 pydantic.Field(..., description="List of extracted named entities."),
             ),
         )

@@ -21,20 +21,21 @@ def _extract_labels_from_model(model_cls: type[pydantic.BaseModel]) -> list[str]
     :param model_cls: Pydantic model to extract labels from.
     :return: List of labels.
     """
-    # 1. Check for a 'label' field with Literal.
-    if "label" in model_cls.model_fields:
-        field = model_cls.model_fields["label"]
-        annotation = field.annotation
+    # 1. Check for a 'label', 'entity_type', or 'relation' field with Literal.
+    for field_name in ("label", "entity_type", "relation"):
+        if field_name in model_cls.model_fields:
+            field = model_cls.model_fields[field_name]
+            annotation = field.annotation
 
-        # Unpack Optional/Union
-        if typing.get_origin(annotation) in (Union, types.UnionType):
-            args = typing.get_args(annotation)
-            for arg in args:
-                if typing.get_origin(arg) is Literal:
-                    return list(typing.get_args(arg))
+            # Unpack Optional/Union
+            if typing.get_origin(annotation) in (Union, types.UnionType):
+                args = typing.get_args(annotation)
+                for arg in args:
+                    if typing.get_origin(arg) is Literal:
+                        return list(typing.get_args(arg))
 
-        if typing.get_origin(annotation) is Literal:
-            return list(typing.get_args(annotation))
+            if typing.get_origin(annotation) is Literal:
+                return list(typing.get_args(annotation))
 
     # 2. Fallback: all field names that aren't excluded.
     excluded = {"score", "reasoning"}
@@ -165,6 +166,14 @@ def convert_to_signature(
             return _pydantic_to_gliner(model_cls, mode, **{k: v for k, v in kwargs.items() if k != "mode"})
 
         case ModelType.huggingface:
+            # For classification, we want the actual labels, not the field names.
+            # We automatically detect classification mode if the model contains labels.
+            labels = _extract_labels_from_model(model_cls)
+            if kwargs.get("mode") == "classification" or (
+                labels and not all(label in model_cls.model_fields for label in labels)
+            ):
+                return labels
+
             # Per instructions: grab names of all fields that are not called 'score'.
             return [name for name in model_cls.model_fields if name != "score"]
 

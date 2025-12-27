@@ -17,7 +17,7 @@ from sieves.tasks.predictive.consolidation import (
 class DummyEntity(pydantic.BaseModel):
     """Dummy entity for testing."""
     name: str
-    score: float | None = None
+    score: float | None
 
 
 def test_multi_entity_consolidation():

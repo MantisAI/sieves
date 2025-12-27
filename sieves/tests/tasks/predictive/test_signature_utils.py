@@ -91,7 +91,7 @@ def test_convert_to_gliner_classification_full():
 
 def test_convert_to_huggingface_full():
     # Instruction: grab names of all fields that are not called 'score'.
-    expected = ["label"]
+    expected = ["A", "B", "C"]
     actual = convert_to_signature(ClassificationModel, ModelType.huggingface)
     assert actual == expected
 

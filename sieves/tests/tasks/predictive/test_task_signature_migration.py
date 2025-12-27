@@ -61,7 +61,7 @@ def test_classification_migration():
     )
 
     # HuggingFace (labels)
-    expected_hf = ["label"] # Per instruction: all but 'score'
+    expected_hf = ["science", "politics", "sports"]
 
     # Outlines (choice mode)
     expected_outlines_choice = ["science", "politics", "sports"]

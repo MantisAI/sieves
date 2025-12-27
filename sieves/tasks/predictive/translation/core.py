@@ -80,12 +80,11 @@ class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     @property
     @override
     def prompt_signature(self) -> type[pydantic.BaseModel]:
-        return TaskResult
+        """Return the unified Pydantic prompt signature for this task.
 
-    @property
-    @override
-    def metric(self) -> str:
-        return "BLEU"
+        :return: Unified Pydantic prompt signature.
+        """
+        return TaskResult
 
     @override
     def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:

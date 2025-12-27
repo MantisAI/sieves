@@ -21,7 +21,7 @@ class PIIEntity(pydantic.BaseModel, frozen=True):
     entity_type: str = pydantic.Field(description="The type of PII identified (e.g., EMAIL, PHONE, SSN).")
     text: str = pydantic.Field(description="The original text of the PII entity.")
     score: float | None = pydantic.Field(
-        default=None, description="Confidence score for the PII identification, between 0 and 1."
+        default=None, description="Provide a confidence score for the PII identification, between 0 and 1."
     )
 
 
@@ -49,6 +49,8 @@ class FewshotExample(BaseFewshotExample):
 # --8<-- [start:Result]
 class Result(pydantic.BaseModel):
     """Result of a PII masking task. Contains the masked text and the identified PII entities.
+
+    PII entities should be masked with [MASKED].
 
     Attributes:
         masked_text: Masked version of text.

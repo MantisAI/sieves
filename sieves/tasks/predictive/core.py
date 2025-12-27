@@ -269,7 +269,6 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         """
 
     @property
-    @abc.abstractmethod
     def metric(self) -> str:
         """Return metric name.
 

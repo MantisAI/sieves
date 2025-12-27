@@ -82,11 +82,6 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         return TaskResult
 
-    @property
-    @override
-    def metric(self) -> str:
-        return "ROUGE-L"
-
     @override
     def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
         """Compute corpus-level metrics.

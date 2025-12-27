@@ -24,6 +24,7 @@ from sieves.tasks.predictive.schemas.relation_extraction import (
     RelationTriplet,
     Result,
 )
+from sieves.tasks.predictive.utils import convert_to_signature
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -75,6 +76,15 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
             self._entity_type_descriptions = {}
 
         self._consolidation_strategy = MultiEntityConsolidation(extractor=self._get_extractor())
+
+    @override
+    @property
+    def prompt_signature(self) -> _BridgePromptSignature:
+        return convert_to_signature(
+            model_cls=self._pydantic_signature,
+            model_type=self.model_type,
+            mode="relations",
+        )  # type: ignore[return-value]
 
     @abc.abstractmethod
     def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:

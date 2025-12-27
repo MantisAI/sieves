@@ -122,7 +122,7 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
             score=(
                 float | None,
                 pydantic.Field(
-                    default=None, description="Confidence score for this relation triplet, between 0 and 1."
+                    default=None, description="Provide a confidence score for this relation triplet, between 0 and 1."
                 ),
             ),
             __doc__="A relation triplet consisting of a head entity, a relation type, and a tail entity.",
