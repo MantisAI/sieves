@@ -80,7 +80,15 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
     @property
     @override
     def prompt_signature(self) -> type[pydantic.BaseModel]:
-        return TaskResult
+        # Dynamically create type with length restriction in description.
+        class ResultWithLengthRestriction(TaskResult):
+            pass
+
+        ResultWithLengthRestriction.model_fields[
+            "summary"
+        ].description += f" This summary should be around {self._n_words} words."
+
+        return ResultWithLengthRestriction
 
     @override
     def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:

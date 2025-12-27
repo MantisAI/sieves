@@ -86,16 +86,6 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         entity_desc_string = crlf + "\t" + (crlf + "\t").join(entities_with_descriptions)
         return f"{crlf}<entity_descriptions>{entity_desc_string}{crlf}</entity_descriptions>\n\t\t"
 
-    @override
-    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
-        """Extract all values from doc instances that are to be injected into the prompts.
-
-        Overriding the default implementation to include the entity types in the extracted values.
-        :param docs: Docs to extract values from.
-        :return: All values from doc instances that are to be injected into the prompts as a sequence.
-        """
-        return [{"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs]
-
     @staticmethod
     def _find_entity_positions(
         doc_text: str,
@@ -220,11 +210,6 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
@@ -268,7 +253,7 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
         entity_info = self._get_entity_descriptions() if self._entity_descriptions else ""
         return f"""
         Your goal is to extract named entities from the text. Only extract entities of the specified types:
-        {{{{ entity_types }}}}.
+        {self._entities}.
         {entity_info}
 
         For each entity:
@@ -286,27 +271,27 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
     @override
     @property
     def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
+        return f"""
+        {{% if examples|length > 0 -%}}
             <examples>
-            {%- for example in examples %}
+            {{%- for example in examples %}}
                 <example>
-                    <text>{{ example.text }}</text>
-                    <entity_types>{{ entity_types }}</entity_types>
+                    <text>{{{{ example.text }}}}</text>
+                    <entity_types>{self._entities}</entity_types>
                     <entities>
-                        {%- for entity in example.entities %}
+                        {{%- for entity in example.entities %}}
                         <entity>
-                            <text>{{ entity.text }}</text>
-                            <context>{{ entity.context }}</context>
-                            <entity_type>{{ entity.entity_type }}</entity_type>
-                            <score>{{ entity.score }}</score>
+                            <text>{{{{ entity.text }}}}</text>
+                            <context>{{{{ entity.context }}}}</context>
+                            <entity_type>{{{{ entity.entity_type }}}}</entity_type>
+                            <score>{{{{ entity.score }}}}</score>
                         </entity>
-                        {%- endfor %}
+                        {{%- endfor %}}
                     </entities>
                 </example>
-            {% endfor -%}
+            {{% endfor -%}}
             </examples>
-        {% endif %}
+        {{% endif %}}
         """
 
     @override

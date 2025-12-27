@@ -106,10 +106,6 @@ def test_custom_bridge_example():
             return None
 
         @property
-        def _prompt_conclusion(self) -> str | None:
-            return None
-
-        @property
         def inference_mode(self) -> outlines_.InferenceMode:
             return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
@@ -239,10 +235,6 @@ def test_custom_predictive_task_example():
         # --8<-- [start:custom-task-predictive-bridge-properties]
         @property
         def _prompt_example_template(self) -> str | None:
-            return None
-
-        @property
-        def _prompt_conclusion(self) -> str | None:
             return None
 
         @property
@@ -414,10 +406,6 @@ def test_using_custom_task_example(small_outlines_model):
 
         @property
         def _prompt_example_template(self) -> str | None:
-            return None
-
-        @property
-        def _prompt_conclusion(self) -> str | None:
             return None
 
         @property

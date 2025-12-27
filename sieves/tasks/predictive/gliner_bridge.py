@@ -141,11 +141,6 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> gliner_.InferenceMode:
         return self._model_settings.inference_mode or self._inference_mode
 

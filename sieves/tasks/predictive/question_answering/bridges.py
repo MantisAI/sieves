@@ -51,18 +51,15 @@ class QuestionAnsweringBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
             prompt_signature=prompt_signature,
         )
         self._questions = questions
-        self._consolidation_strategy = QAConsolidation(questions=self._questions, extractor=self._get_extractor())
+        self._consolidation_strategy = QAConsolidation(questions=self._questions, extractor=self._chunk_extractor)
 
+    @property
     @abc.abstractmethod
-    def _get_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
         """Return a callable that extracts (question, answer, score) tuples from a raw chunk result.
 
         :return: Extractor callable.
         """
-
-    @override
-    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
-        return [{"text": doc.text if doc.text else None, "questions": self._questions} for doc in docs]
 
 
 class DSPyQuestionAnswering(QuestionAnsweringBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -85,16 +82,12 @@ class DSPyQuestionAnswering(QuestionAnsweringBridge[dspy_.PromptSignature, dspy_
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
         return lambda res: ((qa.question, qa.answer, qa.score) for qa in res.qa_pairs)
 
     @override
@@ -171,19 +164,15 @@ class PydanticBasedQA(
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        questions_block = "\n\t\t" + "\n\t\t".join(
-            [f"<question>{i + 1}. {question}</question>" for i, question in enumerate(self._questions)]
-        )
-
-        return f"""
+        return """
         ========
-        <text>{{{{ text }}}}</text>
-        <questions>{questions_block}</questions>
+        <text>{{ text }}</text>
         <output>
         """
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
         return lambda res: ((qa.question, qa.answer, qa.score) for qa in res.qa_pairs)
 
     @override

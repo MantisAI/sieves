@@ -80,7 +80,6 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         """
 
     @property
-    @abc.abstractmethod
     def _prompt_conclusion(self) -> str | None:
         """Return prompt conclusion.
 
@@ -88,6 +87,7 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
 
         :return: Default prompt conclusion.
         """
+        return None
 
     @property
     def model_settings(self) -> ModelSettings:

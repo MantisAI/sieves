@@ -69,10 +69,11 @@ class PIIMaskingBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrappe
             self._pii_type_descriptions = {}
 
         self._pii_entity_cls = self._create_pii_entity_cls()
-        self._consolidation_strategy = MultiEntityConsolidation(extractor=self._get_extractor())
+        self._consolidation_strategy = MultiEntityConsolidation(extractor=self._chunk_extractor)
 
+    @property
     @abc.abstractmethod
-    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         """Return a callable that extracts a list of entities from a raw chunk result.
 
         :return: Extractor callable.
@@ -144,17 +145,13 @@ class DSPyPIIMasking(PIIMaskingBridge[dspy_.PromptSignature, dspy_.Result, dspy_
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         """Return inference mode for DSPy model wrapper."""
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         return lambda res: res.pii_entities
 
     @override
@@ -209,8 +206,9 @@ class PydanticBasedPIIMasking(
 ):
     """Base class for Pydantic-based PII masking bridges."""
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         return lambda res: res.pii_entities
 
     @property

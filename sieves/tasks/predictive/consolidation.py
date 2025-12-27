@@ -3,13 +3,31 @@
 from __future__ import annotations
 
 import abc
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, Literal, TypeVar
 
 import pydantic
 
 _EntityType = TypeVar("_EntityType", bound=pydantic.BaseModel)
+
+
+def _average_scores(scores: list[float]) -> float | None:
+    """Calculate the average of a list of scores.
+
+    :param scores: List of float scores.
+    :return: Average score or None if list is empty.
+    """
+    return sum(scores) / len(scores) if scores else None
+
+
+def _get_entity_key(entity: pydantic.BaseModel) -> str:
+    """Generate a hashable key for a Pydantic model by excluding the 'score' field.
+
+    :param entity: The Pydantic model to key.
+    :return: JSON string representation of the model without its score.
+    """
+    return entity.model_copy(update={"score": None}).model_dump_json()
 
 
 class ConsolidationStrategy(abc.ABC):
@@ -36,7 +54,9 @@ class MultiEntityConsolidation(ConsolidationStrategy):
         self._extractor = extractor
 
     def consolidate(
-        self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[Any],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[list[pydantic.BaseModel]]:
         """Consolidate multiple entities from chunks.
 
@@ -46,48 +66,30 @@ class MultiEntityConsolidation(ConsolidationStrategy):
         """
         consolidated_results: list[list[pydantic.BaseModel]] = []
         for start, end in docs_offsets:
-            entities: list[pydantic.BaseModel] = []
-            for res in results[start:end]:
-                if res is None:
-                    continue
-                entities.extend(self._extractor(res))
-
+            entities = [e for res in results[start:end] if res is not None for e in self._extractor(res)]
             consolidated_results.append(self._consolidate_entities(entities))
         return consolidated_results
 
     @staticmethod
     def _consolidate_entities(entities: list[_EntityType]) -> list[_EntityType]:
-        """Deduplicate and average scores for entities.
-
-        Logic moved from sieves.tasks.predictive.utils.consolidate_entities_multi.
-        """
+        """Deduplicate entities and average their scores."""
         if not entities:
             return []
 
         entities_map: dict[str, tuple[_EntityType, list[float]]] = {}
-
         for entity in entities:
             if entity is None:
                 continue
 
-            assert isinstance(entity, pydantic.BaseModel)
-            key_entity = entity.model_copy(update={"score": None})
-            key = key_entity.model_dump_json() if hasattr(key_entity, "model_dump_json") else str(key_entity)
-
+            key = _get_entity_key(entity)
             if key not in entities_map:
-                entities_map[key] = (key_entity, [])
+                entities_map[key] = (entity, [])
             if getattr(entity, "score", None) is not None:
                 entities_map[key][1].append(entity.score)
 
-        consolidated_entities: list[_EntityType] = []
-        for key_entity, scores in entities_map.values():
-            avg_score = sum(scores) / len(scores) if scores else None
-            if hasattr(key_entity, "model_copy"):
-                consolidated_entities.append(key_entity.model_copy(update={"score": avg_score}))
-            else:
-                consolidated_entities.append(key_entity)
-
-        return consolidated_entities
+        return [
+            entity.model_copy(update={"score": _average_scores(scores)}) for entity, scores in entities_map.values()
+        ]
 
 
 class SingleEntityConsolidation(ConsolidationStrategy):
@@ -101,7 +103,9 @@ class SingleEntityConsolidation(ConsolidationStrategy):
         self._extractor = extractor
 
     def consolidate(
-        self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[Any],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[pydantic.BaseModel | None]:
         """Consolidate single entities from chunks via majority vote.
 
@@ -111,63 +115,42 @@ class SingleEntityConsolidation(ConsolidationStrategy):
         """
         consolidated_results: list[pydantic.BaseModel | None] = []
         for start, end in docs_offsets:
-            entities_with_indices: list[tuple[pydantic.BaseModel | None, int]] = []
-            for i, res in enumerate(results[start:end]):
-                if res is None:
-                    entities_with_indices.append((None, i))
-                    continue
-                entities_with_indices.append((self._extractor(res), i))
-
-            consolidated_results.append(self._consolidate_single(entities_with_indices))
+            chunk_results = [
+                (self._extractor(res) if res is not None else None, i) for i, res in enumerate(results[start:end])
+            ]
+            consolidated_results.append(self._consolidate_single(chunk_results))
         return consolidated_results
 
     @staticmethod
     def _consolidate_single(entities_with_indices: list[tuple[_EntityType | None, int]]) -> _EntityType | None:
-        """Majority vote for single entity.
-
-        Logic moved from sieves.tasks.predictive.utils.consolidate_entities_single.
-        """
+        """Majority vote for single entity with tie-breaking based on first occurrence."""
         if not entities_with_indices:
             return None
 
-        entity_counts: Counter[str] = Counter()
+        counts: Counter[str] = Counter()
         key_to_entity: dict[str, _EntityType | None] = {}
         first_seen: dict[str, int] = {}
-        scores_per_entity: dict[str, list[float]] = {}
+        scores_map: dict[str, list[float]] = defaultdict(list)
 
         for entity, i in entities_with_indices:
-            if entity is not None:
-                key_entity = entity.model_copy(update={"score": None})
-                key = key_entity.model_dump_json() if hasattr(key_entity, "model_dump_json") else str(key_entity)
-            else:
-                key_entity = None
-                key = "null"
-
-            entity_counts[key] += 1
+            key = _get_entity_key(entity) if entity is not None else "null"
+            counts[key] += 1
             if key not in key_to_entity:
-                key_to_entity[key] = key_entity
+                key_to_entity[key] = entity
             if key not in first_seen:
                 first_seen[key] = i
-            if key not in scores_per_entity:
-                scores_per_entity[key] = []
             if entity is not None and getattr(entity, "score", None) is not None:
-                scores_per_entity[key].append(entity.score)
+                scores_map[key].append(entity.score)
 
-        if not entity_counts:
-            return None
-
-        max_count = max(entity_counts.values())
-        candidates = [k for k, count in entity_counts.items() if count == max_count]
-        winner_key = min(candidates, key=lambda k: first_seen[k])
+        max_count = max(counts.values())
+        winners = [k for k, count in counts.items() if count == max_count]
+        winner_key = min(winners, key=lambda k: first_seen[k])
 
         winner_entity = key_to_entity[winner_key]
         if winner_entity is None:
             return None
 
-        scores = scores_per_entity[winner_key]
-        avg_score = sum(scores) / len(scores) if scores else None
-
-        return winner_entity.model_copy(update={"score": avg_score})
+        return winner_entity.model_copy(update={"score": _average_scores(scores_map[winner_key])})
 
 
 class LabelScoreConsolidation(ConsolidationStrategy):
@@ -190,9 +173,11 @@ class LabelScoreConsolidation(ConsolidationStrategy):
         self.extractor = extractor
 
     def consolidate(
-        self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[Any],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[list[tuple[str, float]]]:
-        """Consolidate label scores from chunks.
+        """Consolidate label scores from chunks by averaging them.
 
         :param results: Raw chunk results.
         :param docs_offsets: Chunk offsets per document.
@@ -200,25 +185,22 @@ class LabelScoreConsolidation(ConsolidationStrategy):
         """
         consolidated_results: list[list[tuple[str, float]]] = []
         for start, end in docs_offsets:
-            label_scores: dict[str, float] = {label: 0.0 for label in self.labels}
-            chunk_results = results[start:end]
+            chunk_results = [res for res in results[start:end] if res is not None]
             num_chunks = end - start
+            label_scores = {label: 0.0 for label in self.labels}
 
             for res in chunk_results:
-                if res is None:
-                    continue
-
                 scores = self.extractor(res)
                 for label, score in scores.items():
                     if label in label_scores:
-                        # Clamp score to [0, 1] as in existing bridges.
                         label_scores[label] += max(0.0, min(float(score), 1.0))
 
-            # Average score, sort by it in descending order.
-            avg_scores = [(label, score / num_chunks) for label, score in label_scores.items()]
-            # Sort by score descending.
-            sorted_scores = sorted(avg_scores, key=lambda x: x[1], reverse=True)
-            consolidated_results.append(sorted_scores)
+            avg_scores = sorted(
+                ((label, score / num_chunks) for label, score in label_scores.items()),
+                key=lambda x: x[1],
+                reverse=True,
+            )
+            consolidated_results.append(avg_scores)
 
         return consolidated_results
 
@@ -236,9 +218,11 @@ class TextConsolidation(ConsolidationStrategy):
         self.joiner = joiner
 
     def consolidate(
-        self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[Any],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[tuple[str, float | None]]:
-        """Consolidate text chunks.
+        """Consolidate text chunks by joining them and averaging scores.
 
         :param results: Raw chunk results.
         :param docs_offsets: Chunk offsets per document.
@@ -257,8 +241,7 @@ class TextConsolidation(ConsolidationStrategy):
                 if score is not None:
                     scores.append(score)
 
-            avg_score = sum(scores) / len(scores) if scores else None
-            consolidated_results.append((self.joiner.join(texts).strip(), avg_score))
+            consolidated_results.append((self.joiner.join(texts).strip(), _average_scores(scores)))
 
         return consolidated_results
 
@@ -276,7 +259,9 @@ class QAConsolidation(ConsolidationStrategy):
         self.extractor = extractor
 
     def consolidate(
-        self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[Any],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[list[tuple[str, str, float | None]]]:
         """Consolidate QA pairs using sequential matching.
 
@@ -294,20 +279,16 @@ class QAConsolidation(ConsolidationStrategy):
                 if res is None:
                     continue
 
-                # Match by index (sequentially) instead of by question text.
-                for i, (_, a, s) in enumerate(self.extractor(res)):
+                for i, (_, answer, score) in enumerate(self.extractor(res)):
                     if i < len(self.questions):
-                        target_q = self.questions[i]
-                        qa_map[target_q][0].append(a)
-                        if s is not None:
-                            qa_map[target_q][1].append(s)
+                        question = self.questions[i]
+                        qa_map[question][0].append(answer)
+                        if score is not None:
+                            qa_map[question][1].append(score)
 
-            consolidated_qa: list[tuple[str, str, float | None]] = []
-            for question in self.questions:
-                answers, scores = qa_map[question]
-                avg_score = sum(scores) / len(scores) if scores else None
-                consolidated_qa.append((question, " ".join(answers).strip(), avg_score))
-
+            consolidated_qa = [
+                (q, " ".join(qa_map[q][0]).strip(), _average_scores(qa_map[q][1])) for q in self.questions
+            ]
             consolidated_results.append(consolidated_qa)
 
         return consolidated_results
@@ -330,9 +311,11 @@ class MapScoreConsolidation(ConsolidationStrategy):
         self.extractor = extractor
 
     def consolidate(
-        self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[Any],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[tuple[dict[str, float], float | None]]:
-        """Consolidate map-based scores.
+        """Consolidate map-based scores by averaging them.
 
         :param results: Raw chunk results.
         :param docs_offsets: Chunk offsets per document.
@@ -340,9 +323,9 @@ class MapScoreConsolidation(ConsolidationStrategy):
         """
         consolidated_results: list[tuple[dict[str, float], float | None]] = []
         for start, end in docs_offsets:
-            key_scores: dict[str, float] = {k: 0.0 for k in self.keys}
-            overall_scores: list[float] = []
             num_chunks = end - start
+            key_scores = {k: 0.0 for k in self.keys}
+            overall_scores: list[float] = []
 
             for res in results[start:end]:
                 if res is None:
@@ -354,8 +337,7 @@ class MapScoreConsolidation(ConsolidationStrategy):
                 if o_score is not None:
                     overall_scores.append(o_score)
 
-            avg_key_scores = {k: s / num_chunks for k, s in key_scores.items()}
-            avg_overall_score = sum(overall_scores) / len(overall_scores) if overall_scores else None
-            consolidated_results.append((avg_key_scores, avg_overall_score))
+            avg_map = {k: s / num_chunks for k, s in key_scores.items()}
+            consolidated_results.append((avg_map, _average_scores(overall_scores)))
 
         return consolidated_results

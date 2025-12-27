@@ -75,7 +75,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
             self._entity_types = None
             self._entity_type_descriptions = {}
 
-        self._consolidation_strategy = MultiEntityConsolidation(extractor=self._get_extractor())
+        self._consolidation_strategy = MultiEntityConsolidation(extractor=self._chunk_extractor)
 
     @override
     @property
@@ -86,8 +86,9 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
             mode="relations",
         )  # type: ignore[return-value]
 
+    @property
     @abc.abstractmethod
-    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         """Return a callable that extracts a list of entities from a raw chunk result.
 
         :return: Extractor callable.
@@ -180,8 +181,9 @@ class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dsp
     def model_type(self) -> ModelType:
         return ModelType.dspy
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         return lambda res: res.triplets
 
     @override
@@ -196,11 +198,6 @@ class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dsp
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
@@ -210,8 +207,9 @@ class PydanticBasedRelationExtraction(
 ):
     """Base class for Pydantic-based relation extraction bridges."""
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         return lambda res: res.triplets
 
     @override

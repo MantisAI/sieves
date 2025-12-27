@@ -67,7 +67,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         self._consolidation_strategy = LabelScoreConsolidation(
             labels=self._labels,
             mode=self._mode,
-            extractor=self._get_extractor(),
+            extractor=self._chunk_extractor,
         )
 
     @override
@@ -79,8 +79,9 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
             mode="classification",
         )  # type: ignore[return-value]
 
+    @property
     @abc.abstractmethod
-    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+    def _chunk_extractor(self) -> Callable[[Any], dict[str, float]]:
         """Return a callable that extracts label scores from a raw chunk result.
 
         :return: Extractor callable.
@@ -127,16 +128,12 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+    def _chunk_extractor(self) -> Callable[[Any], dict[str, float]]:
         def extractor(res: Any) -> dict[str, float]:
             if self._mode == "multi":
                 return {label: getattr(res, label) for label in self._labels}
@@ -241,16 +238,12 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> huggingface_.InferenceMode:
         return self._model_settings.inference_mode or huggingface_.InferenceMode.zeroshot_cls
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+    def _chunk_extractor(self) -> Callable[[Any], dict[str, float]]:
         # For HuggingFace zero-shot, prompt_signature is a list of field names.
         # convert_to_signature for HF returns all fields but 'score'.
         # The raw result 'res' from HF has 'labels' and 'scores'.
@@ -356,8 +349,9 @@ class PydanticBasedClassification(
         <text>{{ text }}</text>
         """
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+    def _chunk_extractor(self) -> Callable[[Any], dict[str, float]]:
         def extractor(res: Any) -> dict[str, float]:
             if self._mode == "multi":
                 return {label: float(getattr(res, label)) for label in self._labels}
@@ -464,10 +458,11 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
         {% endif %}
         """
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], dict[str, float]]:
+    def _chunk_extractor(self) -> Callable[[Any], dict[str, float]]:
         if self._mode == "multi":
-            return super()._get_extractor()
+            return super()._chunk_extractor
 
         def extractor(res: Any) -> dict[str, float]:
             if isinstance(res, str):

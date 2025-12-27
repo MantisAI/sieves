@@ -53,23 +53,15 @@ class TranslationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapp
             prompt_signature=prompt_signature,
         )
         self._to = to
-        self._consolidation_strategy = TextConsolidation(extractor=self._get_extractor())
+        self._consolidation_strategy = TextConsolidation(extractor=self._chunk_extractor)
 
+    @property
     @abc.abstractmethod
-    def _get_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+    def _chunk_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
         """Return a callable that extracts (text, score) from a raw chunk result.
 
         :return: Extractor callable.
         """
-
-    @override
-    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
-        """Extract all values from doc instances that are to be injected into the prompts.
-
-        :param docs: Docs to extract values from.
-        :return: All values from doc instances that are to be injected into the prompts as a sequence.
-        """
-        return [{"text": doc.text if doc.text else None, "target_language": self._to} for doc in docs]
 
 
 class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -92,16 +84,12 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+    def _chunk_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
         return lambda res: (res.translation, getattr(res, "score", None))
 
     @override
@@ -146,8 +134,8 @@ class PydanticBasedTranslation(
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return """
-        Translate into {{ target_language }}. Also provide a confidence score between 0.0 and 1.0 for the translation.
+        return f"""
+        Translate into {self._to}. Also provide a confidence score between 0.0 and 1.0 for the translation.
         """
 
     @override
@@ -180,8 +168,9 @@ class PydanticBasedTranslation(
         <translation>
         """
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+    def _chunk_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
         return lambda res: (res.translation, getattr(res, "score", None))
 
     @override

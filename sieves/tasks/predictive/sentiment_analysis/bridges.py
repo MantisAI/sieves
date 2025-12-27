@@ -51,10 +51,11 @@ class SentimentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
             prompt_signature=prompt_signature,
         )
         self._aspects = aspects
-        self._consolidation_strategy = MapScoreConsolidation(extractor=self._get_extractor(), keys=list(self._aspects))
+        self._consolidation_strategy = MapScoreConsolidation(extractor=self._chunk_extractor, keys=list(self._aspects))
 
+    @property
     @abc.abstractmethod
-    def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
+    def _chunk_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
         """Return a callable that extracts (map_scores, overall_score) from a raw chunk result.
 
         :return: Extractor callable.
@@ -81,16 +82,12 @@ class DSPySentimentAnalysis(SentimentAnalysisBridge[dspy_.PromptSignature, dspy_
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
+    def _chunk_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
         def extractor(res: Any) -> tuple[dict[str, float], float | None]:
             m_scores = {aspect: float(getattr(res, aspect)) for aspect in self._aspects}
             return m_scores, getattr(res, "score", None)
@@ -201,8 +198,9 @@ class PydanticBasedSentAnalysis(
         <output>
         """
 
+    @property
     @override
-    def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
+    def _chunk_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
         def extractor(res: Any) -> tuple[dict[str, float], float | None]:
             m_scores = {aspect: float(getattr(res, aspect)) for aspect in self._aspects}
             return m_scores, getattr(res, "score", None)

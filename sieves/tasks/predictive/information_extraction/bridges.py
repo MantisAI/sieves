@@ -99,11 +99,6 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
     @override
     @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
