@@ -62,10 +62,17 @@ def test_custom_bridge_example():
     # --8<-- [end:custom-bridge-sentiment-schema]
 
 
-    # --8<-- [start:custom-bridge-sentiment-class-def]
     # This is the bridge class.
     class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, outlines_.InferenceMode]):
     # --8<-- [end:custom-bridge-sentiment-class-def]
+        @property
+        def model_type(self) -> ModelType:
+            from sieves.model_wrappers import ModelType
+            return ModelType.outlines
+        @property
+        def model_type(self) -> ModelType:
+            from sieves.model_wrappers import ModelType
+            return ModelType.outlines
         # --8<-- [start:custom-bridge-sentiment-prompt]
         # This defines the default prompt template as Jinja2 template string.
         # We include an example block allowing us to include fewshot examples.
@@ -198,6 +205,10 @@ def test_custom_predictive_task_example():
     # --8<-- [start:custom-task-predictive-bridge-class]
     class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, outlines_.InferenceMode]):
     # --8<-- [end:custom-task-predictive-bridge-class]
+        @property
+        def model_type(self) -> ModelType:
+            from sieves.model_wrappers import ModelType
+            return ModelType.outlines
         # --8<-- [start:custom-task-predictive-bridge-prompt]
         # This defines the default prompt template as Jinja2 template string.
         # We include an example block allowing us to include fewshot examples.
@@ -298,6 +309,13 @@ def test_custom_predictive_task_example():
     # --8<-- [start:custom-task-predictive-task-class]
     class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, OutlinesSentimentAnalysis]):
     # --8<-- [end:custom-task-predictive-task-class]
+        @property
+        def metric(self) -> str:
+            return "MSE"
+
+        @property
+        def prompt_signature(self) -> type[pydantic.BaseModel]:
+            return SentimentEstimate
         # --8<-- [start:custom-task-predictive-init-supports]
         # For the initialization of the bridge. We raise an error if an model wrapper has been specified that we don't
         # support (due to us not having a bridge implemented that would support this model type).
@@ -308,6 +326,7 @@ def test_custom_predictive_task_example():
                     prompt_instructions=self._custom_prompt_instructions,
                     overwrite=False,
                     model_settings=self._model_settings,
+                    prompt_signature=self.prompt_signature,
                 )
             else:
                 raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.")
@@ -366,6 +385,10 @@ def test_using_custom_task_example(small_outlines_model):
        score: pydantic.confloat(ge=0, le=1)
 
     class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, outlines_.InferenceMode]):
+        @property
+        def model_type(self) -> ModelType:
+            return ModelType.outlines
+
         @property
         def _default_prompt_instructions(self) -> str:
             return """
@@ -440,6 +463,14 @@ def test_using_custom_task_example(small_outlines_model):
 
     class SentimentAnalysis(PredictiveTask[SentimentEstimate, SentimentEstimate, OutlinesSentimentAnalysis]):
         """Custom sentiment analysis task."""
+        @property
+        def metric(self) -> str:
+            return "MSE"
+
+        @property
+        def prompt_signature(self) -> type[pydantic.BaseModel]:
+            return SentimentEstimate
+
         def __init__(self, model, task_id: str = "SentimentAnalysis", include_meta: bool = True, batch_size: int = -1,
                      prompt_instructions: str | None = None, fewshot_examples: Any = (),
                      model_settings=None):
@@ -459,6 +490,7 @@ def test_using_custom_task_example(small_outlines_model):
                     prompt_instructions=self._custom_prompt_instructions,
                     overwrite=False,
                     model_settings=self._model_settings,
+                    prompt_signature=self.prompt_signature,
                 )
             else:
                 raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.")

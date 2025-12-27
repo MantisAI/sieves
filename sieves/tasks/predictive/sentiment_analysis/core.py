@@ -8,6 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
+import pydantic
 import sklearn
 
 from sieves.data import Doc
@@ -33,6 +34,8 @@ _TaskBridge = DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSenti
 
 class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Estimate per‑aspect and overall sentiment for a document."""
+
+    THRESHOLD: float = 0.5
 
     def __init__(
         self,
@@ -73,6 +76,34 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
             condition=condition,
         )
         self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the unified Pydantic prompt signature for this task.
+
+        :return: Unified Pydantic prompt signature.
+        """
+        fields = {
+            aspect: (
+                float,
+                pydantic.Field(
+                    ...,
+                    description=f"Sentiment score for the '{aspect}' aspect, between 0 (Negative) and 1 (Positive).",
+                    ge=0,
+                    le=1,
+                ),
+            )
+            for aspect in self._aspects
+        }
+        fields["score"] = (
+            float | None,
+            pydantic.Field(
+                default=None, description="Overall confidence score for the sentiment analysis, between 0 and 1."
+            ),
+        )
+
+        return pydantic.create_model("SentimentAnalysisOutput", **fields)  # type: ignore[no-matching-overload]
 
     @property
     @override
@@ -140,6 +171,7 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
                 prompt_instructions=self._custom_prompt_instructions,
                 aspects=self._aspects,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

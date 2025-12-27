@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import types
+import typing
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import Any, Literal, override
@@ -121,6 +123,40 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
 
     @property
     @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the unified Pydantic prompt signature for this task.
+
+        :return: Unified Pydantic prompt signature.
+        """
+        scored_type = self._scored_entity_type
+
+        if not (isinstance(scored_type, type) and issubclass(scored_type, pydantic.BaseModel)):
+            # Handle gliner2.inference.engine.StructureBuilder
+            if hasattr(scored_type, "fields"):
+                fields = {name: (str, pydantic.Field(default=None)) for name in scored_type.fields}
+                fields["score"] = (float | None, pydantic.Field(default=None))
+                scored_type = pydantic.create_model("GliNEREntity", **fields)  # type: ignore[no-matching-overload]
+
+                return pydantic.BaseModel
+
+        if self._mode == "multi":
+            return pydantic.create_model(
+                f"{scored_type.__name__}Multi",
+                entities=(
+                    list[scored_type],  # type: ignore[valid-type]
+                    pydantic.Field(..., description=f"List of extracted {scored_type.__name__} entities."),
+                ),
+            )
+        return pydantic.create_model(
+            f"{scored_type.__name__}Single",
+            entity=(
+                scored_type | None,  # type: ignore[valid-type]
+                pydantic.Field(..., description=f"The extracted {scored_type.__name__} entity."),
+            ),
+        )
+
+    @property
+    @override
     def metric(self) -> str:
         return "F1" if self._mode == "multi" else "Accuracy"
 
@@ -219,7 +255,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=self._entity_type,
+                prompt_signature=self.prompt_signature,
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.structure,
                 mode=self._mode,
@@ -243,6 +279,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 entity_type=self._scored_entity_type,
                 model_settings=self._model_settings,
                 mode=self._mode,
+                prompt_signature=self.prompt_signature,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
@@ -285,12 +322,17 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
     @override
     def to_hf_dataset(self, docs: Iterable[Doc], threshold: float | None = None) -> datasets.Dataset:
         # Use the scored entity type for the dataset schema.
-        entity_type = self._scored_entity_type
-        if isinstance(self._bridge, GliNERBridge):
-            # GliNER already uses a generated scored model from GliNERBridge.schema_to_pydantic()
-            # which we will update in the next step.
-            entity_type = self._bridge.prompt_signature_pydantic
-            assert entity_type is not None
+        # We need to unwrap the unified signature container if it exists.
+        entity_type = self.prompt_signature
+        if "entities" in entity_type.model_fields:
+            entity_type = entity_type.model_fields["entities"].annotation
+            if typing.get_origin(entity_type) is list:
+                entity_type = typing.get_args(entity_type)[0]
+        elif "entity" in entity_type.model_fields:
+            entity_type = entity_type.model_fields["entity"].annotation
+            if typing.get_origin(entity_type) in (typing.Union, types.UnionType):
+                args = typing.get_args(entity_type)
+                entity_type = [t for t in args if t is not type(None)][0]
 
         # Define metadata.
         hf_entity_type = PydanticToHFDatasets.model_cls_to_features(entity_type)
@@ -301,8 +343,9 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         else:
             features = datasets.Features({"text": datasets.Value("string"), "entity": hf_entity_type})
 
+        entity_type_name = getattr(entity_type, "__name__", str(entity_type))
         info = datasets.DatasetInfo(
-            description=f"Information extraction dataset for entity type {entity_type.__name__}. "
+            description=f"Information extraction dataset for entity type {entity_type_name}. "
             f"Generated with sieves v{Config.get_version()}.",
             features=features,
         )

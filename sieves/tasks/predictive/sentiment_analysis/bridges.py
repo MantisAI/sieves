@@ -2,15 +2,19 @@
 
 import abc
 from collections.abc import Callable, Sequence
-from functools import cached_property
-from typing import Any, Literal, TypeVar, override
+from typing import Any, TypeVar, override
 
 import dspy
-import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers import (
+    ModelType,
+    ModelWrapperInferenceMode,
+    dspy_,
+    langchain_,
+    outlines_,
+)
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.consolidation import MapScoreConsolidation
@@ -20,7 +24,7 @@ _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
-class SentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
+class SentimentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for sentiment analysis bridges."""
 
     def __init__(
@@ -29,25 +33,25 @@ class SentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrap
         prompt_instructions: str | None,
         aspects: tuple[str, ...],
         model_settings: ModelSettings,
+        prompt_signature: type[pydantic.BaseModel],
     ):
-        """Initialize SentAnalysisBridge.
+        """Initialize sentiment analysis bridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param aspects: Aspects to consider.
-        :param model_settings: Model settings including inference_mode.
+        :param aspects: Aspects to analyze.
+        :param model_settings: Settings for structured generation.
+        :param prompt_signature: Unified Pydantic prompt signature.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
         )
         self._aspects = aspects
-        self._consolidation_strategy = MapScoreConsolidation(
-            keys=self._aspects,
-            extractor=self._get_extractor(),
-        )
+        self._consolidation_strategy = MapScoreConsolidation(extractor=self._get_extractor(), keys=list(self._aspects))
 
     @abc.abstractmethod
     def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
@@ -57,8 +61,13 @@ class SentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrap
         """
 
 
-class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
+class DSPySentimentAnalysis(SentimentAnalysisBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for sentiment analysis."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.dspy
 
     @override
     @property
@@ -85,24 +94,6 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
         return None
 
     @override
-    @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        aspects = self._aspects
-        # Dynamically create Literal as output type.
-        AspectType = Literal[*aspects]  # type: ignore[valid-type]
-
-        class SentimentAnalysis(dspy.Signature):  # type: ignore[misc]
-            text: str = dspy.InputField(description="Text to determine sentiments for.")
-            sentiment_per_aspect: dict[AspectType, float] = dspy.OutputField(
-                description="Sentiment in this text with respect to the corresponding aspect."
-            )
-            score: float = dspy.OutputField(description="Overall confidence score between 0.0 and 1.0.")
-
-        SentimentAnalysis.__doc__ = jinja2.Template(self._prompt_instructions).render()
-
-        return SentimentAnalysis
-
-    @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
@@ -110,17 +101,20 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
     @override
     def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
         def extractor(res: Any) -> tuple[dict[str, float], float | None]:
-            return res.sentiment_per_aspect, getattr(res, "score", None)
+            m_scores = {aspect: float(getattr(res, aspect)) for aspect in self._aspects}
+            return m_scores, getattr(res, "score", None)
 
         return extractor
 
     @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
-            assert len(result.completions.sentiment_per_aspect) == 1
+            # Take the first completion.
+            prediction = result.completions[0]
+            label_scores = {aspect: float(getattr(prediction, aspect)) for aspect in self._aspects}
             doc.results[self._task_id] = Result(
-                sentiment_per_aspect=result.completions.sentiment_per_aspect[0],
-                score=getattr(result, "score", None),
+                sentiment_per_aspect=label_scores,
+                score=getattr(prediction, "score", None),
             )
         return docs
 
@@ -133,19 +127,10 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
         # Wrap back into dspy.Prediction.
         consolidated_results: list[dspy_.Result] = []
         for aspect_scores, overall_score in consolidated_results_clean:
-            # Sort by score descending as in original implementation.
-            sorted_aspect_scores = sorted(
-                aspect_scores.items(),
-                key=lambda x: x[1],
-                reverse=True,
-            )
-
+            data = {**aspect_scores, "score": overall_score}
             consolidated_results.append(
                 dspy.Prediction.from_completions(
-                    {
-                        "sentiment_per_aspect": [{k: v for k, v in sorted_aspect_scores}],
-                        "score": [overall_score],
-                    },
+                    [data],
                     signature=self.prompt_signature,
                 )
             )
@@ -153,7 +138,7 @@ class DSPySentimentAnalysis(SentAnalysisBridge[dspy_.PromptSignature, dspy_.Resu
 
 
 class PydanticBasedSentAnalysis(
-    SentAnalysisBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC
+    SentimentAnalysisBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC
 ):
     """Base class for Pydantic-based sentiment analysis bridges."""
 
@@ -226,21 +211,6 @@ class PydanticBasedSentAnalysis(
         """
 
     @override
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        fields = {aspect: (float, ...) for aspect in self._aspects}
-        fields["score"] = (float | None, None)
-        prompt_sig = pydantic.create_model(  # type: ignore[no-matching-overload]
-            "SentimentAnalysis",
-            __base__=pydantic.BaseModel,
-            __doc__="Sentiment analysis of specified text.",
-            **fields,
-        )
-
-        assert isinstance(prompt_sig, type) and issubclass(prompt_sig, pydantic.BaseModel)
-        return prompt_sig
-
-    @override
     def _get_extractor(self) -> Callable[[Any], tuple[dict[str, float], float | None]]:
         def extractor(res: Any) -> tuple[dict[str, float], float | None]:
             m_scores = {aspect: float(getattr(res, aspect)) for aspect in self._aspects}
@@ -259,9 +229,11 @@ class PydanticBasedSentAnalysis(
     def consolidate(
         self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel]:
-        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+        assert issubclass(self.prompt_signature, pydantic.BaseModel)
 
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
         consolidated_results: list[pydantic.BaseModel] = []
+
         for aspect_scores, overall_score in consolidated_results_clean:
             consolidated_results.append(
                 self.prompt_signature(
@@ -269,11 +241,17 @@ class PydanticBasedSentAnalysis(
                     score=overall_score,
                 )
             )
+
         return consolidated_results
 
 
 class OutlinesSentimentAnalysis(PydanticBasedSentAnalysis[outlines_.InferenceMode]):
     """Outlines bridge for sentiment analysis."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.outlines
 
     @override
     @property
@@ -283,6 +261,16 @@ class OutlinesSentimentAnalysis(PydanticBasedSentAnalysis[outlines_.InferenceMod
 
 class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceMode]):
     """LangChain bridge for sentiment analysis."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.langchain
+
+    @override
+    @property
+    def _default_prompt_instructions(self) -> str:
+        return super()._default_prompt_instructions
 
     @override
     @property

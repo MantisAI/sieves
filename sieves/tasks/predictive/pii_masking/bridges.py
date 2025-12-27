@@ -2,15 +2,19 @@
 
 import abc
 from collections.abc import Callable, Iterable, Sequence
-from functools import cached_property
 from typing import Any, Literal, TypeVar, override
 
 import dspy
-import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers import (
+    ModelType,
+    ModelWrapperInferenceMode,
+    dspy_,
+    langchain_,
+    outlines_,
+)
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.consolidation import MultiEntityConsolidation
@@ -30,25 +34,28 @@ class PIIMaskingBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrappe
         self,
         task_id: str,
         prompt_instructions: str | None,
+        mask_placeholder: str,
+        pii_types: Sequence[str] | dict[str, str] | None,
         overwrite: bool,
         model_settings: ModelSettings,
-        mask_placeholder: str,
-        pii_types: list[str] | dict[str, str] | None = None,
+        prompt_signature: type[pydantic.BaseModel],
     ):
-        """Initialize PIIMaskingBridge.
+        """Initialize PII masking bridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param overwrite: Whether to overwrite text with anonymized version.
-        :param model_settings: Model settings including inference_mode.
-        :param mask_placeholder: Placeholder used for masking.
+        :param mask_placeholder: Placeholder for masked PII.
         :param pii_types: PII types to mask.
+        :param overwrite: Whether to overwrite original text.
+        :param model_settings: Settings for structured generation.
+        :param prompt_signature: Unified Pydantic prompt signature.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=overwrite,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
         )
         self._mask_placeholder = mask_placeholder
         self._pii_types: list[str] | None = None
@@ -121,8 +128,9 @@ class DSPyPIIMasking(PIIMaskingBridge[dspy_.PromptSignature, dspy_.Result, dspy_
     """DSPy bridge for PII masking."""
 
     @override
-    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
-        return lambda res: res.pii_entities
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.dspy
 
     @override
     @property
@@ -147,25 +155,14 @@ class DSPyPIIMasking(PIIMaskingBridge[dspy_.PromptSignature, dspy_.Result, dspy_
         return None
 
     @override
-    @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        """Define prompt signature for DSPy."""
-        PIIEntityCls = self._pii_entity_cls
-
-        class PIIMasking(dspy.Signature):  # type: ignore[misc]
-            text: str = dspy.InputField(description="Text to mask PII from.")
-            masked_text: str = dspy.OutputField(description="Text with all PII masked.")
-            pii_entities: list[PIIEntityCls] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
-
-        PIIMasking.__doc__ = jinja2.Template(self._prompt_instructions).render()
-
-        return PIIMasking
-
-    @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         """Return inference mode for DSPy model wrapper."""
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
+
+    @override
+    def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.pii_entities
 
     @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
@@ -269,20 +266,6 @@ class PydanticBasedPIIMasking(
         """
 
     @override
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        """Define prompt signature for Pydantic-based model wrappers."""
-        PIIEntityCls = self._pii_entity_cls
-
-        class PIIMasking(pydantic.BaseModel, frozen=True):
-            """PII masking output."""
-
-            masked_text: str
-            pii_entities: list[PIIEntityCls]  # type: ignore[valid-type]
-
-        return PIIMasking
-
-    @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
         for doc, result in zip(docs, results):
             assert hasattr(result, "masked_text")
@@ -304,11 +287,11 @@ class PydanticBasedPIIMasking(
         results: Sequence[pydantic.BaseModel],
         docs_offsets: list[tuple[int, int]],
     ) -> Sequence[pydantic.BaseModel]:
-        # Delegate consolidation of entities to strategy.
-        consolidated_entities_all = self._consolidation_strategy.consolidate(results, docs_offsets)
+        assert issubclass(self.prompt_signature, pydantic.BaseModel)
 
-        # Merge results for each document.
+        consolidated_entities_all = self._consolidation_strategy.consolidate(results, docs_offsets)
         consolidated_results: list[pydantic.BaseModel] = []
+
         for i, (start, end) in enumerate(docs_offsets):
             doc_results = results[start:end]
             masked_texts: list[str] = []
@@ -326,11 +309,17 @@ class PydanticBasedPIIMasking(
                     pii_entities=consolidated_entities_all[i],
                 )
             )
+
         return consolidated_results
 
 
 class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):
     """Outlines bridge for PII masking."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.outlines
 
     @override
     @property
@@ -340,6 +329,11 @@ class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):
 
 class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
     """LangChain bridge for PII masking."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.langchain
 
     @override
     @property

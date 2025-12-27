@@ -8,6 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -76,6 +77,16 @@ class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
             condition=condition,
         )
 
+    @property
+    @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        return TaskResult
+
+    @property
+    @override
+    def metric(self) -> str:
+        return "BLEU"
+
     @override
     def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
         """Compute corpus-level metrics.
@@ -103,17 +114,16 @@ class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
         }
 
         try:
-            bridge = bridge_types[model_type](
+            return bridge_types[model_type](
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
+                to=self._to,
                 overwrite=self._overwrite,
-                language=self._to,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
-
-        return bridge
 
     @staticmethod
     @override

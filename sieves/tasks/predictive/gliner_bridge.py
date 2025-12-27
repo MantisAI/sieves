@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import types
+import typing
 from collections import defaultdict
 from collections.abc import Sequence
 from typing import Any, Literal, override
@@ -10,20 +12,28 @@ import gliner2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import gliner_
+from sieves.model_wrappers import ModelType, gliner_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.schemas.classification import ResultMultiLabel, ResultSingleLabel
-from sieves.tasks.predictive.schemas.information_extraction import ResultMulti, ResultSingle
-from sieves.tasks.predictive.schemas.ner import Entity
+from sieves.tasks.predictive.schemas.information_extraction import (
+    ResultMulti as IEResultMulti,
+)
+from sieves.tasks.predictive.schemas.information_extraction import (
+    ResultSingle as IEResultSingle,
+)
+from sieves.tasks.predictive.schemas.ner import Entity as NEREntity
 from sieves.tasks.predictive.schemas.ner import Result as NERResult
 from sieves.tasks.predictive.schemas.relation_extraction import (
-    RelationEntity,
-    RelationTriplet,
+    RelationEntity as RERelationEntity,
 )
 from sieves.tasks.predictive.schemas.relation_extraction import (
-    Result as RelationResult,
+    RelationTriplet as RERelationTriplet,
 )
+from sieves.tasks.predictive.schemas.relation_extraction import (
+    Result as RERelationResult,
+)
+from sieves.tasks.predictive.utils import convert_to_signature
 
 
 class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
@@ -33,7 +43,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
         self,
         task_id: str,
         prompt_instructions: str | None,
-        prompt_signature: gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder,
+        prompt_signature: type[pydantic.BaseModel],
         model_settings: ModelSettings,
         inference_mode: gliner_.InferenceMode,
         mode: Literal["multi", "single"] = "multi",
@@ -45,7 +55,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param prompt_signature: GLiNER2 schema (list of field definitions).
+        :param prompt_signature: Unified Pydantic prompt signature.
         :param model_settings: Model settings including inference_mode.
         :param mode: Extraction mode. If "multi", all occurrences of the entity are extracted. If "single", exactly one
             (or no) entity is extracted. Only used if `inference_mode == InferenceMode.structure`, ignored otherwise.
@@ -55,18 +65,58 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
             prompt_instructions=prompt_instructions,
             overwrite=False,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
         )
-        self._prompt_signature = prompt_signature
-        # If prompt signature is a structure, we create a Pydantic representation of it for easier downstream result
-        # processing - e.g. when creating a HF dataset.
-        self._prompt_signature_pydantic = (
-            self.schema_to_pydantic()
-            if isinstance(prompt_signature, gliner2.inference.engine.StructureBuilder)
-            else None
-        )
-
         self._inference_mode = inference_mode
         self._mode = mode
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.gliner
+
+    @override
+    @property
+    def prompt_signature(self) -> gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder:
+        # Map internal inference mode to GliNER utility mode.
+        mode_map = {
+            gliner_.InferenceMode.classification: "classification",
+            gliner_.InferenceMode.entities: "entities",
+            gliner_.InferenceMode.structure: "structure",
+            gliner_.InferenceMode.relations: "relations",
+        }
+        mode = mode_map[self.inference_mode]
+
+        model_cls = self._pydantic_signature
+        # Unwrap unified signature container for structure mode if necessary.
+        if mode == "structure":
+            if "entities" in model_cls.model_fields:
+                model_cls = model_cls.model_fields["entities"].annotation
+                if typing.get_origin(model_cls) is list:
+                    model_cls = typing.get_args(model_cls)[0]
+            elif "entity" in model_cls.model_fields:
+                model_cls = model_cls.model_fields["entity"].annotation
+                # Handle Optional/Union.
+                if typing.get_origin(model_cls) in (typing.Union, types.UnionType):
+                    args = typing.get_args(model_cls)
+                    model_cls = [t for t in args if t is not type(None)][0]
+
+        prompt_signature = convert_to_signature(
+            model_cls=model_cls,
+            model_type=ModelType.gliner,
+            mode=mode,
+        )
+        assert isinstance(prompt_signature, gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder)
+
+        return prompt_signature
+
+    @property
+    def prompt_signature_pydantic(self) -> type[pydantic.BaseModel] | None:
+        """Return Pydantic model representation of GLiNER2 schema.
+
+        :return: Pydantic model representation of GLiNER2 schema.
+        """
+        return self._pydantic_signature
 
     @override
     @property
@@ -86,69 +136,8 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
     @override
     @property
-    def prompt_signature(self) -> gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder:
-        return self._prompt_signature
-
-    @property
-    def prompt_signature_pydantic(self) -> type[pydantic.BaseModel] | None:
-        """Return Pydantic model representation of GLiNER2 schema.
-
-        :return: Pydantic model representation of GLiNER2 schema.
-        """
-        return self._prompt_signature_pydantic
-
-    @override
-    @property
     def inference_mode(self) -> gliner_.InferenceMode:
         return self._model_settings.inference_mode or self._inference_mode
-
-    def schema_to_pydantic(self) -> type[pydantic.BaseModel]:
-        """Convert a Gliner2 Schema object to Pydantic models.
-
-        If the schema is a structure with more than one entry, a wrapper class `Schema` is created.
-
-        :return: Pydantic model representation of GLiNER2 schema.
-        """
-        if isinstance(self._prompt_signature, gliner2.inference.engine.StructureBuilder):
-            field_metadata = self._prompt_signature.schema._field_metadata
-        else:
-            assert isinstance(self._prompt_signature, gliner2.inference.engine.Schema)
-            field_metadata = self._prompt_signature._field_metadata
-
-        # Group fields by class name.
-        classes: dict[str, dict[str, Any]] = {}
-        for key, meta in field_metadata.items():
-            class_name, field_name = key.split(".")
-            if class_name not in classes:
-                classes[class_name] = {}
-            classes[class_name][field_name] = meta
-
-        # Create models for each class.
-        models: dict[str, type[pydantic.BaseModel]] = {}
-        for class_name, fields in classes.items():
-            field_definitions = {}
-            for field_name, meta in fields.items():
-                dtype = meta["dtype"]
-                choices = meta["choices"]
-
-                # Determine the field type.
-                inner_field_type = Literal[*choices] if choices else str  # type: ignore[invalid-type-form]
-                field_type = list[inner_field_type] if dtype == "list" else inner_field_type
-                field_definitions[field_name] = (field_type, ...)
-
-            # Add score field to the model.
-            field_definitions["score"] = (float | None, None)
-
-            model = pydantic.create_model(class_name, **field_definitions)
-            models[class_name] = model
-
-        # Create wrapper "Schema" model with lowercase attribute names if more than one structure is present.
-        if len(models) > 1:
-            raise TypeError(
-                "Composite GliNER2 schemas are not supported. Use a single structure/entitity/classification per task."
-            )
-
-        return models[list(models.keys())[0]]
 
     @override
     def integrate(self, results: Sequence[gliner_.Result], docs: list[Doc]) -> list[Doc]:
@@ -156,10 +145,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
             match self._inference_mode:
                 # Used by: Classification
                 case gliner_.InferenceMode.classification:
-                    assert hasattr(self._prompt_signature.schema, "__getitem__")
-                    mode = self._prompt_signature.schema["classifications"][0]["mode"]
-
-                    if mode == "multi":
+                    if self._mode == "multi":
                         label_scores: list[tuple[str, float]] = []
                         for res in sorted(result, key=lambda x: x["score"], reverse=True):
                             assert isinstance(res, dict)
@@ -177,7 +163,9 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                         # Result is a list of entity dictionaries.
                         doc.results[self._task_id] = NERResult(
                             entities=[
-                                Entity.model_validate({k if k != "confidence" else "score": v for k, v in res.items()})
+                                NEREntity.model_validate(
+                                    {k if k != "confidence" else "score": v for k, v in res.items()}
+                                )
                                 for res in result
                             ],
                             text=doc.text or "",
@@ -187,8 +175,30 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
                 # Used by: InformationExtraction
                 case gliner_.InferenceMode.structure:
+                    if not result:
+                        if self._mode == "multi":
+                            doc.results[self._task_id] = IEResultMulti(entities=[])
+                        else:
+                            doc.results[self._task_id] = IEResultSingle(entity=None)
+                        continue
+
                     entity_type_name = list(result.keys())[0]
-                    assert issubclass(self._prompt_signature_pydantic, pydantic.BaseModel)
+                    # Unified signature container unwrapping
+                    validation_model = self.prompt_signature_pydantic
+                    if validation_model and "entities" in validation_model.model_fields:
+                        # Multi-mode container
+                        validation_model = validation_model.model_fields["entities"].annotation
+                        if hasattr(validation_model, "__args__"):
+                            validation_model = validation_model.__args__[0]
+
+                    elif validation_model and "entity" in validation_model.model_fields:
+                        # Single-mode container
+                        validation_model = validation_model.model_fields["entity"].annotation
+                        if hasattr(validation_model, "__args__"):
+                            # Filter out None
+                            validation_model = [t for t in validation_model.__args__ if t is not type(None)][0]
+
+                    assert validation_model is not None and issubclass(validation_model, pydantic.BaseModel)
 
                     extracted_entities: list[pydantic.BaseModel] = []
                     for entity in result[entity_type_name]:
@@ -198,19 +208,19 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                         confidences = [v["confidence"] for v in entity.values() if "confidence" in v]
                         entity_data["score"] = sum(confidences) / len(confidences) if confidences else None
 
-                        extracted_entities.append(self._prompt_signature_pydantic.model_validate(entity_data))
+                        extracted_entities.append(validation_model.model_validate(entity_data))
 
                     # This covers single/multi mode for information extraction.
                     if self._mode == "multi":
-                        doc.results[self._task_id] = ResultMulti(entities=extracted_entities)
+                        doc.results[self._task_id] = IEResultMulti(entities=extracted_entities)
                     else:
-                        doc.results[self._task_id] = ResultSingle(
+                        doc.results[self._task_id] = IEResultSingle(
                             entity=extracted_entities[0] if extracted_entities else None
                         )
 
                 # Used by: RelationExtraction
                 case gliner_.InferenceMode.relations:
-                    triplets: list[RelationTriplet] = []
+                    triplets: list[RERelationTriplet] = []
                     # GliNER2 relations output is a dict mapping task ids to relation types to lists of triplets:
                     # {'task_id': {'relation_type': [{'head': {...}, 'tail': {...}}, ...]}}  # noqa: ERA001
                     relation_data = result.get(self._task_id, {})
@@ -219,13 +229,13 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                     for rel_type, triplets_list in relation_data.items():
                         for triplet_data in triplets_list:
                             triplets.append(
-                                RelationTriplet(
-                                    head=RelationEntity(
+                                RERelationTriplet(
+                                    head=RERelationEntity(
                                         text=triplet_data["head"]["text"],
                                         entity_type="UNKNOWN",
                                     ),
                                     relation=rel_type,
-                                    tail=RelationEntity(
+                                    tail=RERelationEntity(
                                         text=triplet_data["tail"]["text"],
                                         entity_type="UNKNOWN",
                                     ),
@@ -233,7 +243,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
                                 )
                             )
 
-                    doc.results[self._task_id] = RelationResult(triplets=triplets)
+                    doc.results[self._task_id] = RERelationResult(triplets=triplets)
 
         return docs
 
@@ -341,8 +351,9 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
             match self._inference_mode:
                 case gliner_.InferenceMode.classification:
                     # Ensure that all labels have been assigned - GLiNER2 is sometimes negligent about this.
-                    assert hasattr(self._prompt_signature.schema, "__getitem__")
-                    for label in self._prompt_signature.schema["classifications"][0]["labels"]:
+                    # We extract labels from our Pydantic signature fields (excluding 'score' if present).
+                    labels = [name for name in self._pydantic_signature.model_fields if name != "score"]
+                    for label in labels:
                         if label not in scores:
                             scores[label] = 0.0
 
@@ -360,7 +371,23 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
                 case gliner_.InferenceMode.entities | gliner_.InferenceMode.structure | gliner_.InferenceMode.relations:
                     if self._inference_mode == gliner_.InferenceMode.structure and self._mode == "single":
-                        consolidated_results.append(highest_confidence_entity or {list(res.keys())[0]: []})
+                        if highest_confidence_entity:
+                            consolidated_results.append(highest_confidence_entity)
+
+                        else:
+                            # Use the entity name from the pydantic signature (unwrapped).
+                            model_cls = self._pydantic_signature
+
+                            if "entity" in model_cls.model_fields:
+                                model_cls = model_cls.model_fields["entity"].annotation
+                                if typing.get_origin(model_cls) in (
+                                    typing.Union,
+                                    types.UnionType,
+                                ):
+                                    model_cls = [t for t in typing.get_args(model_cls) if t is not type(None)][0]
+
+                            consolidated_results.append({model_cls.__name__: []})
+
                     elif all_entities_list:
                         if self._inference_mode == gliner_.InferenceMode.relations:
                             # Reconstruct the dict structure for integrate.

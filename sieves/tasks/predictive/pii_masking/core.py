@@ -8,6 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
+import pydantic
 
 from sieves.data.doc import Doc
 from sieves.model_wrappers import ModelType
@@ -93,6 +94,11 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
     @property
     @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        return TaskResult
+
+    @property
+    @override
     def metric(self) -> str:
         return "F1"
 
@@ -149,6 +155,7 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                 pii_types=self._pii_types_param,
                 overwrite=self._overwrite,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

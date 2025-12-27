@@ -2,15 +2,19 @@
 
 import abc
 from collections.abc import Callable, Iterable, Sequence
-from functools import cached_property
 from typing import Any, TypeVar, override
 
 import dspy
-import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers import (
+    ModelType,
+    ModelWrapperInferenceMode,
+    dspy_,
+    langchain_,
+    outlines_,
+)
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.consolidation import QAConsolidation
@@ -20,7 +24,7 @@ _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
-class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
+class QuestionAnsweringBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for question answering bridges."""
 
     def __init__(
@@ -29,25 +33,25 @@ class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferen
         prompt_instructions: str | None,
         questions: list[str],
         model_settings: ModelSettings,
+        prompt_signature: type[pydantic.BaseModel],
     ):
-        """Initialize QuestionAnsweringBridge.
+        """Initialize question answering bridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param questions: Questions to answer.
-        :param model_settings: Model settings including inference_mode.
+        :param model_settings: Settings for structured generation.
+        :param prompt_signature: Unified Pydantic prompt signature.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
         )
         self._questions = questions
-        self._consolidation_strategy = QAConsolidation(
-            questions=self._questions,
-            extractor=self._get_extractor(),
-        )
+        self._consolidation_strategy = QAConsolidation(questions=self._questions, extractor=self._get_extractor())
 
     @abc.abstractmethod
     def _get_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
@@ -61,8 +65,13 @@ class QABridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferen
         return [{"text": doc.text if doc.text else None, "questions": self._questions} for doc in docs]
 
 
-class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
+class DSPyQuestionAnswering(QuestionAnsweringBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for question answering."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.dspy
 
     @override
     @property
@@ -78,20 +87,6 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
     @property
     def _prompt_conclusion(self) -> str | None:
         return None
-
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        class QuestionAnswering(dspy.Signature):  # type: ignore[misc]
-            text: str = dspy.InputField(description="Text to use for question answering.")
-            questions: list[str] = dspy.InputField(description="Questions to answer based on the text.")
-            qa_pairs: list[QuestionAnswer] = dspy.OutputField(
-                description="List of question-answer pairs, including confidence scores."
-            )
-
-        QuestionAnswering.__doc__ = jinja2.Template(self._prompt_instructions).render()
-
-        return QuestionAnswering
 
     @override
     @property
@@ -129,7 +124,9 @@ class DSPyQA(QABridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode])
         return consolidated_results
 
 
-class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
+class PydanticBasedQA(
+    QuestionAnsweringBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC
+):
     """Base class for Pydantic-based question answering bridges."""
 
     @override
@@ -186,16 +183,6 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
         """
 
     @override
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        class QuestionAnswering(pydantic.BaseModel, frozen=True):
-            """Question answering output."""
-
-            qa_pairs: list[QuestionAnswer]
-
-        return QuestionAnswering
-
-    @override
     def _get_extractor(self) -> Callable[[Any], Iterable[tuple[str, str, float | None]]]:
         return lambda res: ((qa.question, qa.answer, qa.score) for qa in res.qa_pairs)
 
@@ -210,18 +197,26 @@ class PydanticBasedQA(QABridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrap
     def consolidate(
         self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel]:
-        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+        assert issubclass(self.prompt_signature, pydantic.BaseModel)
 
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
         consolidated_results: list[pydantic.BaseModel] = []
+
         for qa_list in consolidated_results_clean:
             consolidated_results.append(
                 self.prompt_signature(qa_pairs=[QuestionAnswer(question=q, answer=a, score=s) for q, a, s in qa_list])
             )
+
         return consolidated_results
 
 
-class OutlinesQA(PydanticBasedQA[outlines_.InferenceMode]):
+class OutlinesQuestionAnswering(PydanticBasedQA[outlines_.InferenceMode]):
     """Outlines bridge for question answering."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.outlines
 
     @override
     @property
@@ -229,8 +224,13 @@ class OutlinesQA(PydanticBasedQA[outlines_.InferenceMode]):
         return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
 
-class LangChainQA(PydanticBasedQA[langchain_.InferenceMode]):
+class LangChainQuestionAnswering(PydanticBasedQA[langchain_.InferenceMode]):
     """LangChain bridge for question answering."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.langchain
 
     @override
     @property

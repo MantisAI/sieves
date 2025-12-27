@@ -14,6 +14,7 @@ from typing import Any, Generic
 
 import datasets
 import dspy
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, ModelWrapperInferenceMode  # noqa: F401
@@ -260,6 +261,15 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         return cls(**init_dict)
 
     @property
+    @abc.abstractmethod
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the Pydantic prompt signature for this task.
+
+        :return: Pydantic model class.
+        """
+
+    @property
+    @abc.abstractmethod
     def metric(self) -> str:
         """Return metric name.
 

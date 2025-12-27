@@ -8,7 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
-import gliner2
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -109,6 +109,23 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
     @property
     @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the unified Pydantic prompt signature for this task.
+
+        :return: Unified Pydantic prompt signature.
+        """
+        from sieves.tasks.predictive.schemas.ner import EntityWithContext
+
+        return pydantic.create_model(
+            "NEROutput",
+            entities=(
+                list[EntityWithContext],
+                pydantic.Field(..., description="List of extracted named entities."),
+            ),
+        )
+
+    @property
+    @override
     def metric(self) -> str:
         return "F1"
 
@@ -161,7 +178,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=gliner2.inference.engine.Schema().entities(entity_types=self._entities, dtype="list"),
+                prompt_signature=self.prompt_signature,
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.entities,
             )
@@ -179,6 +196,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                 prompt_instructions=self._custom_prompt_instructions,
                 entities=self._entities_param,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
             )
             return result  # type: ignore[return-value]
         except KeyError as err:

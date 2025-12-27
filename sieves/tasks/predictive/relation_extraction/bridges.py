@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Callable, Iterable, Sequence
-from functools import cached_property
-from typing import Any, Literal, TypeVar, override
+from typing import Any, TypeVar, override
 
-import dspy
-import jinja2
 import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import (
+    ModelType,
     ModelWrapperInferenceMode,
     dspy_,
     langchain_,
@@ -23,9 +21,7 @@ from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.consolidation import MultiEntityConsolidation
 from sieves.tasks.predictive.schemas.relation_extraction import (
     RelationEntity,
-    RelationEntityWithContext,
     RelationTriplet,
-    RelationTripletWithContext,
     Result,
 )
 
@@ -39,42 +35,44 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
     def __init__(
         self,
         task_id: str,
-        relations: list[str] | dict[str, str],
-        entity_types: list[str] | dict[str, str] | None,
+        relations: Sequence[str] | dict[str, str],
+        entity_types: Sequence[str] | dict[str, str] | None,
         prompt_instructions: str | None,
         model_settings: ModelSettings,
+        prompt_signature: type[pydantic.BaseModel],
     ):
-        """Initialize RelationExtractionBridge.
+        """Initialize relation extraction bridge.
 
         :param task_id: Task ID.
-        :param relations: Relation types to extract.
-        :param entity_types: Entity types to consider.
+        :param relations: Relations to extract.
+        :param entity_types: Entity types constraints.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param model_settings: Model settings.
+        :param model_settings: Settings for structured generation.
+        :param prompt_signature: Unified Pydantic prompt signature.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
         )
-
         if isinstance(relations, dict):
-            self._relations: list[str] = list(relations.keys())
-            self._relation_descriptions: dict[str, str] = relations
+            self._relations = list(relations.keys())
+            self._relation_descriptions = relations
         else:
-            self._relations: list[str] = relations
-            self._relation_descriptions: dict[str, str] = {}
-
-        self._entity_types: list[str] | None = None
-        self._entity_type_descriptions: dict[str, str] = {}
+            self._relations = list(relations)
+            self._relation_descriptions = {}
 
         if isinstance(entity_types, dict):
             self._entity_types = list(entity_types.keys())
             self._entity_type_descriptions = entity_types
         elif entity_types is not None:
-            self._entity_types = entity_types
-            self._entity_type_descriptions: dict[str, str] = {}
+            self._entity_types = list(entity_types)
+            self._entity_type_descriptions = {}
+        else:
+            self._entity_types = None
+            self._entity_type_descriptions = {}
 
         self._consolidation_strategy = MultiEntityConsolidation(extractor=self._get_extractor())
 
@@ -121,49 +119,6 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
 
         return "\n\t\t\t".join(descs)
 
-    def _get_dynamic_relation_triple_model(self) -> type[pydantic.BaseModel]:
-        """Create dynamic model for triplets with strict type constraints.
-
-        :return: Triplet model.
-        """
-        # Create a list of allowed types including lowercase variations to be more robust.
-        entity_types_list: list[str] = []
-        if self._entity_types:
-            for et in self._entity_types:
-                entity_types_list.append(et)
-                if et.lower() not in entity_types_list:
-                    entity_types_list.append(et.lower())
-                if et.upper() not in entity_types_list:
-                    entity_types_list.append(et.upper())
-
-        relations_list: list[str] = []
-        if self._relations:
-            for rel in self._relations:
-                relations_list.append(rel)
-                if rel.lower() not in relations_list:
-                    relations_list.append(rel.lower())
-                if rel.upper() not in relations_list:
-                    relations_list.append(rel.upper())
-
-        AllowedEntityType = Literal[*entity_types_list] if entity_types_list else str  # type: ignore[valid-type]
-        AllowedRelationType = Literal[*relations_list] if relations_list else str  # type: ignore[valid-type]
-
-        class _RelationEntityWithContext(pydantic.BaseModel):
-            text: str
-            context: str | None = None
-            entity_type: AllowedEntityType
-
-        class _RelationTripletWithContext(pydantic.BaseModel):
-            head: _RelationEntityWithContext
-            relation: AllowedRelationType
-            tail: _RelationEntityWithContext
-            score: float | None = None
-
-        _RelationEntityWithContext.__doc__ = RelationEntityWithContext.__doc__
-        _RelationTripletWithContext.__doc__ = RelationTripletWithContext.__doc__
-
-        return _RelationTripletWithContext
-
     def _process_triplets(self, raw_triplets: list[Any]) -> list[RelationTriplet]:
         """Convert raw triplets from model to RelationTriplet objects.
 
@@ -209,25 +164,18 @@ class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dsp
     """DSPy bridge for relation extraction."""
 
     @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.dspy
+
+    @override
     def _get_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         return lambda res: res.triplets
 
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return f"""
-        Extract relations between entities in the text.
-        Relations to look for: {self._relations}
-        {self._get_relation_descriptions()}
-        Entity types to consider: {self._entity_types or "Unbounded"}
-        {self._get_entity_type_descriptions()}
-
-        For each triplet:
-        - head: the subject entity (text, type)
-        - relation: the type of relation
-        - tail: the object entity (text, type)
-        - score: a confidence score between 0.0 and 1.0
-        """
+        return ""
 
     @override
     @property
@@ -238,20 +186,6 @@ class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dsp
     @property
     def _prompt_conclusion(self) -> str | None:
         return None
-
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        _RelationTripletWithContext = self._get_dynamic_relation_triple_model()
-
-        class RelationExtraction(dspy.Signature):
-            text: str = dspy.InputField()
-            triplets: list[_RelationTripletWithContext] = dspy.OutputField()  # type: ignore[valid-type]
-
-        RelationExtraction.__doc__ = jinja2.Template(self._prompt_instructions).render()
-        RelationExtraction.model_rebuild()
-
-        return RelationExtraction
 
     @override
     @property
@@ -303,19 +237,14 @@ class PydanticBasedRelationExtraction(
         <output>
         """
 
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        _RelationTripletWithContext = self._get_dynamic_relation_triple_model()
-
-        class RelationExtraction(pydantic.BaseModel):
-            triplets: list[_RelationTripletWithContext]  # type: ignore[valid-type]
-
-        return RelationExtraction
-
 
 class OutlinesRelationExtraction(PydanticBasedRelationExtraction[outlines_.InferenceMode]):
     """Outlines bridge for relation extraction."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.outlines
 
     @override
     @property
@@ -325,6 +254,11 @@ class OutlinesRelationExtraction(PydanticBasedRelationExtraction[outlines_.Infer
 
 class LangChainRelationExtraction(PydanticBasedRelationExtraction[langchain_.InferenceMode]):
     """LangChain bridge for relation extraction."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.langchain
 
     @override
     @property

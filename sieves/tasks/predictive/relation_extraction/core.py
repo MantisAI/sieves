@@ -5,11 +5,11 @@ from __future__ import annotations
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, override
+from typing import Any, Literal, override
 
 import datasets
 import dspy
-import gliner2
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, gliner_
@@ -79,6 +79,63 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
 
     @property
     @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the unified Pydantic prompt signature for this task.
+
+        :return: Unified Pydantic prompt signature.
+        """
+        # Define relation type literal if relations are provided.
+        if isinstance(self._relations, dict):
+            relation_names = list(self._relations.keys())
+        else:
+            relation_names = list(self._relations)
+
+        RelationType = Literal[*(tuple(relation_names))] if relation_names else str  # type: ignore[invalid-type-form]
+
+        # Define entity type literal if entity types are provided.
+        entity_type_names: list[str] = []
+        if self._entity_types:
+            if isinstance(self._entity_types, dict):
+                entity_type_names = list(self._entity_types.keys())
+            else:
+                entity_type_names = list(self._entity_types)
+
+        EntityType = Literal[*(tuple(entity_type_names))] if entity_type_names else str  # type: ignore[invalid-type-form]
+
+        # Create dynamic models.
+        DynamicEntity = pydantic.create_model(
+            "RelationEntity",
+            text=(str, pydantic.Field(..., description="Surface text of the entity.")),
+            entity_type=(
+                EntityType,
+                pydantic.Field(..., description="Type of the entity."),
+            ),
+            __base__=pydantic.BaseModel,
+        )
+
+        DynamicTriplet = pydantic.create_model(
+            "RelationTriplet",
+            head=(DynamicEntity, pydantic.Field(..., description="The subject entity.")),
+            relation=(RelationType, pydantic.Field(..., description="The type of relation.")),
+            tail=(DynamicEntity, pydantic.Field(..., description="The object entity.")),
+            score=(
+                float | None,
+                pydantic.Field(default=None, description="Confidence score."),
+            ),
+            __doc__="A relation triplet consisting of a subject entity, a relation type, and an object entity.",
+            __base__=pydantic.BaseModel,
+        )
+
+        return pydantic.create_model(
+            "RelationExtractionOutput",
+            triplets=(
+                list[DynamicTriplet],  # type: ignore[invalid-type-form]
+                pydantic.Field(..., description="List of extracted relation triplets."),
+            ),
+        )
+
+    @property
+    @override
     def metric(self) -> str:
         return "F1"
 
@@ -130,9 +187,7 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=gliner2.inference.engine.Schema().relations(
-                    relation_types=self._relations,
-                ),
+                prompt_signature=self.prompt_signature,
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.relations,
             )
@@ -152,6 +207,7 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
                 entity_types=self._entity_types,
                 prompt_instructions=self._custom_prompt_instructions,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

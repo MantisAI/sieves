@@ -4,16 +4,29 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers.types import ModelSettings
+from sieves.tasks.predictive.utils import convert_to_signature
+
+if TYPE_CHECKING:
+    from sieves.model_wrappers import ModelType
 
 
 class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC):
     """Bridge base class."""
 
-    def __init__(self, task_id: str, prompt_instructions: str | None, overwrite: bool, model_settings: ModelSettings):
+    def __init__(
+        self,
+        task_id: str,
+        prompt_instructions: str | None,
+        overwrite: bool,
+        model_settings: ModelSettings,
+        prompt_signature: type[pydantic.BaseModel],
+    ):
         """Initialize new bridge.
 
         :param task_id: Task ID.
@@ -21,11 +34,21 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         :param overwrite: Whether to overwrite text with produced text. Considered only by bridges for tasks producing
             fluent text - like translation, summarization, PII masking, etc.
         :param model_settings: Model settings including inference_mode.
+        :param prompt_signature: Pydantic model class representing the task's output schema.
         """
         self._task_id = task_id
         self._custom_prompt_instructions = prompt_instructions
         self._overwrite = overwrite
         self._model_settings = model_settings
+        self._pydantic_signature = prompt_signature
+
+    @property
+    @abc.abstractmethod
+    def model_type(self) -> ModelType:
+        """Return the model type supported by this bridge.
+
+        :return: Model type.
+        """
 
     @property
     @abc.abstractmethod
@@ -67,6 +90,14 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         """
 
     @property
+    def model_settings(self) -> ModelSettings:
+        """Return model settings.
+
+        :return: Model settings.
+        """
+        return self._model_settings
+
+    @property
     def prompt_template(self) -> str:
         """Return prompt template.
 
@@ -85,7 +116,6 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         """
 
     @property
-    @abc.abstractmethod
     def prompt_signature(self) -> type[TaskPromptSignature] | TaskPromptSignature:
         """Create output signature.
 
@@ -95,6 +125,16 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         :return type[_TaskPromptSignature] | _TaskPromptSignature: Output signature object. This can be an instance
             (e.g. a regex string) or a class (e.g. a Pydantic class).
         """
+        # Extract framework-specific kwargs if needed.
+        kwargs: dict[str, Any] = {}
+        if self.model_settings.inference_mode:
+            kwargs["inference_mode"] = self.model_settings.inference_mode
+
+        return convert_to_signature(  # type: ignore[invalid-return-type]
+            model_cls=self._pydantic_signature,
+            model_type=self.model_type,
+            **kwargs,
+        )
 
     @property
     @abc.abstractmethod

@@ -2,15 +2,19 @@
 
 import abc
 from collections.abc import Callable, Iterable, Sequence
-from functools import cached_property
 from typing import Any, Literal, TypeVar, override
 
 import dspy
-import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers import (
+    ModelType,
+    ModelWrapperInferenceMode,
+    dspy_,
+    langchain_,
+    outlines_,
+)
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.consolidation import (
@@ -23,10 +27,7 @@ _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
-class InformationExtractionBridge(
-    Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode],
-    abc.ABC,
-):
+class InformationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for information extraction bridges."""
 
     def __init__(
@@ -35,24 +36,29 @@ class InformationExtractionBridge(
         prompt_instructions: str | None,
         entity_type: type[pydantic.BaseModel],
         model_settings: ModelSettings,
-        mode: Literal["multi", "single"] = "multi",
+        mode: Literal["multi", "single"],
+        prompt_signature: type[pydantic.BaseModel],
     ):
-        """Initialize InformationExtractionBridge.
+        """Initialize information extraction bridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param entity_type: Type to extract.
-        :param model_settings: Model settings including inference_mode.
-        :param mode: Extraction mode.
+        :param entity_type: Object type to extract.
+        :param model_settings: Settings for structured generation.
+        :param mode: Extraction mode. If "multi", all occurrences of the entity are extracted. If "single", exactly one
+            (or no) entity is extracted.
+        :param prompt_signature: Unified Pydantic prompt signature.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
         )
         self._entity_type = entity_type
         self._mode = mode
+
         if self._mode == "multi":
             self._consolidation_strategy = MultiEntityConsolidation(extractor=self._get_multi_extractor())
         else:
@@ -75,6 +81,11 @@ class InformationExtractionBridge(
 
 class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for information extraction."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.dspy
 
     @override
     @property
@@ -103,32 +114,6 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     @property
     def _prompt_conclusion(self) -> str | None:
         return None
-
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        extraction_type = self._entity_type
-
-        if self._mode == "multi":
-
-            class InformationExtractionMulti(dspy.Signature):  # type: ignore[misc]
-                text: str = dspy.InputField(description="Text to extract entities from.")
-                entities: list[extraction_type] = dspy.OutputField(description="Entities to extract from text.")  # type: ignore[valid-type]
-
-            cls = InformationExtractionMulti
-        else:
-
-            class InformationExtractionSingle(dspy.Signature):  # type: ignore[misc]
-                text: str = dspy.InputField(description="Text to extract entity from.")
-                entity: extraction_type | None = dspy.OutputField(  # type: ignore[valid-type]
-                    description="The single entity to extract from text. Should NOT be a list."
-                )
-
-            cls = InformationExtractionSingle
-
-        cls.__doc__ = jinja2.Template(self._prompt_instructions).render()
-
-        return cls
 
     @override
     @property
@@ -248,30 +233,6 @@ class PydanticBasedInformationExtraction(
         """
 
     @override
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        entity_type = self._entity_type
-
-        if self._mode == "multi":
-
-            class InformationExtractionMulti(pydantic.BaseModel, frozen=True):
-                """Entities to extract from text."""
-
-                entities: list[entity_type]  # type: ignore[valid-type]
-
-            return InformationExtractionMulti
-        else:
-
-            class InformationExtractionSingle(pydantic.BaseModel, frozen=True):
-                """Entity to extract from text."""
-
-                entity: entity_type | None = pydantic.Field(  # type: ignore[valid-type]
-                    description="The single entity to extract from text. Should NOT be a list."
-                )
-
-            return InformationExtractionSingle
-
-    @override
     def _get_multi_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         return lambda res: res.entities
 
@@ -294,11 +255,13 @@ class PydanticBasedInformationExtraction(
     def consolidate(
         self,
         results: Sequence[pydantic.BaseModel],
-        docs_offsets: list[tuple[int, int]],  # type: ignore[arg-type]
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[pydantic.BaseModel]:
-        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+        assert issubclass(self.prompt_signature, pydantic.BaseModel)
 
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
         consolidated_results: list[pydantic.BaseModel] = []
+
         for res_clean in consolidated_results_clean:
             if self._mode == "multi":
                 consolidated_results.append(self.prompt_signature(entities=res_clean))
@@ -312,12 +275,27 @@ class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_
 
     @override
     @property
+    def model_type(self) -> ModelType:
+        return ModelType.outlines
+
+    @override
+    @property
     def inference_mode(self) -> outlines_.InferenceMode:
         return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
 
 class LangChainInformationExtraction(PydanticBasedInformationExtraction[langchain_.InferenceMode]):
     """LangChain bridge for information extraction."""
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.langchain
+
+    @override
+    @property
+    def _default_prompt_instructions(self) -> str:
+        return super()._default_prompt_instructions
 
     @override
     @property

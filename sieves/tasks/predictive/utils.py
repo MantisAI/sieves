@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import types
 import typing
-import warnings
 from typing import Any, Literal, TypeVar, Union
 
 import dspy
@@ -11,10 +11,6 @@ import gliner2.inference.engine
 import pydantic
 
 from sieves.model_wrappers import ModelType, dspy_, gliner_, huggingface_, outlines_
-from sieves.tasks.predictive.consolidation import (
-    MultiEntityConsolidation,
-    SingleEntityConsolidation,
-)
 
 _EntityType = TypeVar("_EntityType", bound=pydantic.BaseModel)
 
@@ -31,7 +27,7 @@ def _extract_labels_from_model(model_cls: type[pydantic.BaseModel]) -> list[str]
         annotation = field.annotation
 
         # Unpack Optional/Union
-        if typing.get_origin(annotation) in (Union, getattr(typing, "UnionType", None)):
+        if typing.get_origin(annotation) in (Union, types.UnionType):
             args = typing.get_args(annotation)
             for arg in args:
                 if typing.get_origin(arg) is Literal:
@@ -181,39 +177,3 @@ def convert_to_signature(
 
         case _:
             raise ValueError(f"Unsupported model type for signature conversion: {model_type}")
-
-
-def consolidate_entities_multi(entities: list[_EntityType]) -> list[_EntityType]:
-    """Consolidate entities found in multiple chunks by deduplicating and averaging scores.
-
-    .. deprecated:: 1.0.0
-        Use :class:`sieves.tasks.predictive.consolidation.MultiEntityConsolidation` instead.
-
-    :param entities: List of entities found across all chunks of a document.
-    :return: List of deduplicated entities with averaged scores.
-    """
-    warnings.warn(
-        "consolidate_entities_multi is deprecated and will be removed in a future version. "
-        "Use MultiEntityConsolidation strategy instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return MultiEntityConsolidation._consolidate_entities(entities)
-
-
-def consolidate_entities_single(entities_with_indices: list[tuple[_EntityType | None, int]]) -> _EntityType | None:
-    """Consolidate single entity results from multiple chunks by majority vote and averaging scores.
-
-    .. deprecated:: 1.0.0
-        Use :class:`sieves.tasks.predictive.consolidation.SingleEntityConsolidation` instead.
-
-    :param entities_with_indices: List of (entity, index) pairs found across all chunks of a document.
-    :return: Winner entity with averaged scores, or None.
-    """
-    warnings.warn(
-        "consolidate_entities_single is deprecated and will be removed in a future version. "
-        "Use SingleEntityConsolidation strategy instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return SingleEntityConsolidation._consolidate_single(entities_with_indices)

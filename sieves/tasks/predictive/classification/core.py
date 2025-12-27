@@ -9,7 +9,7 @@ from typing import Any, Literal, override
 
 import datasets
 import dspy
-import gliner2
+import pydantic
 import sklearn
 
 from sieves.data import Doc
@@ -100,6 +100,35 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
 
     @property
     @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        if self._mode == "single":
+            labels = self._labels
+            LabelType = Literal[*labels]  # type: ignore[valid-type]
+
+            class SingleLabelClassification(pydantic.BaseModel):
+                """Result of single-label classification."""
+
+                label: LabelType = pydantic.Field(description="The predicted label")
+                score: float = pydantic.Field(description="Confidence score between 0 and 1")
+
+            return SingleLabelClassification
+
+        # For multi-label, create a model with fields for each label.
+        fields: dict[str, tuple[type, Any]] = {}
+        for label in self._labels:
+            assert isinstance(self._label_descriptions, dict)
+            description = self._label_descriptions.get(label, f"Score for {label} category")  # type: ignore[no-matching-overload]
+            fields[label] = (float, pydantic.Field(description=description))
+
+        return pydantic.create_model(  # type: ignore[no-matching-overload]
+            "MultiLabelClassification",
+            __base__=pydantic.BaseModel,
+            __doc__="Result of multi-label classification.",
+            **fields,
+        )
+
+    @property
+    @override
     def metric(self) -> str:
         return "F1 (Macro)"
 
@@ -166,13 +195,10 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=gliner2.inference.engine.Schema().classification(
-                    task="classification",
-                    labels=labels,
-                    mode=self._mode,
-                ),
+                prompt_signature=self.prompt_signature,
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.classification,
+                mode=self._mode,
             )
 
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
@@ -192,6 +218,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 labels=labels,
                 mode=self._mode,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
