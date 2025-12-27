@@ -83,7 +83,11 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
             model_settings=model_settings,
             condition=condition,
         )
-        self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        return FewshotExample
 
     @property
     @override
@@ -197,6 +201,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
                 model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
             return result  # type: ignore[return-value]
         except KeyError as err:

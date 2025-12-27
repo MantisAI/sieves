@@ -78,6 +78,15 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
 
     @property
     @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
+        return FewshotExample
+
+    @property
+    @override
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         # Dynamically create type with length restriction in description.
         class ResultWithLengthRestriction(TaskResult):
@@ -124,6 +133,7 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
                 model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

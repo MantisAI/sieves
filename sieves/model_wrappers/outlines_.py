@@ -132,12 +132,7 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
 
                         yield result, result, usage
 
-            return self._infer(
-                generate,
-                template,
-                values,
-                fewshot_examples,
-            )
+            return self._infer(generate, template, values)
 
         return execute
 

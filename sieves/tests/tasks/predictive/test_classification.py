@@ -72,7 +72,6 @@ def _run(
 
         # Verify unified result types.
         if mode == 'multi':
-            print(doc.results["classifier"])
             assert isinstance(doc.results["classifier"], classification.ResultMultiLabel)
         else:
             assert isinstance(doc.results["classifier"], classification.ResultSingleLabel)

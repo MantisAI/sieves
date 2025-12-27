@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import abc
+import inspect
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import pydantic
+from pydantic_ai.format_as_xml import format_as_xml
 
 from sieves.data import Doc
 from sieves.model_wrappers.types import ModelSettings
@@ -27,6 +29,7 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize new bridge.
 
@@ -37,6 +40,7 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         :param model_settings: Model settings including inference_mode.
         :param prompt_signature: Pydantic model class representing the task's output schema.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         self._task_id = task_id
         self._custom_prompt_instructions = prompt_instructions
@@ -44,6 +48,7 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         self._model_settings = model_settings
         self._pydantic_signature = prompt_signature
         self._model_type = model_type
+        self._fewshot_examples = fewshot_examples
 
         self._validate()
 
@@ -73,14 +78,19 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         return self._custom_prompt_instructions or self._default_prompt_instructions
 
     @property
-    @abc.abstractmethod
-    def _prompt_example_template(self) -> str | None:
-        """Return default prompt template for example injection.
+    def _prompt_example_xml(self) -> str | None:
+        """Return prompt template for example injection.
 
         Examples are injected between instructions and conclusions.
 
         :return: Default prompt example template.
         """
+        if not self._fewshot_examples:
+            return None
+
+        # format_as_xml handles escaping and structured formatting.
+        # Passing a list of models usually results in an <examples> root tag.
+        return format_as_xml(self._fewshot_examples).strip()
 
     @property
     def _prompt_conclusion(self) -> str | None:
@@ -112,7 +122,7 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
     def prompt_template(self) -> str:
         """Return prompt template.
 
-        Chains `_prompt_instructions`, `_prompt_example_template` and `_prompt_conclusion`.
+        Chains `_prompt_instructions`, `_prompt_example_xml` and `_prompt_conclusion`.
 
         Note: different model have different expectations as to how a prompt should look like. E.g. outlines supports
         the Jinja 2 templating format for insertion of values and few-shot examples, whereas DSPy integrates these
@@ -120,11 +130,17 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         model-specific expectations when creating a prompt template.
         :return str | None: Prompt template as string. None if not used by model wrapper.
         """
-        return f"""
-        {self._custom_prompt_instructions or self._prompt_instructions}
-        {self._prompt_example_template or ""}
-        {self._prompt_conclusion or ""}
-        """
+        instructions = inspect.cleandoc(self._custom_prompt_instructions or self._prompt_instructions)
+        examples = (self._prompt_example_xml or "").strip()
+        conclusion = inspect.cleandoc(self._prompt_conclusion or "")
+
+        prompt_parts = [instructions]
+        if examples:
+            prompt_parts.append(examples)
+        if conclusion:
+            prompt_parts.append(conclusion)
+
+        return "\n\n".join(prompt_parts).strip()
 
     @property
     def prompt_signature(self) -> type[TaskPromptSignature] | TaskPromptSignature:

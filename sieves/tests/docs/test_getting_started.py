@@ -232,7 +232,7 @@ def test_readme_quick_start_basic(small_outlines_model):
     # --8<-- [start:basic-classification]
     import outlines
     import transformers
-    from sieves import Pipeline, tasks, Doc
+    from sieves import Pipeline, tasks, Doc, ModelSettings
 
     # Set up model.
     model_name = "HuggingFaceTB/SmolLM2-135M-Instruct"
@@ -242,7 +242,12 @@ def test_readme_quick_start_basic(small_outlines_model):
     )
 
     # Define task.
-    task = tasks.Classification(labels=["science", "politics"], model=model)
+    task = tasks.Classification(
+        labels=["science", "politics"],
+        model=model,
+        # If you want to change inference-time parameters, pass them like this:
+        model_settings=ModelSettings(inference_kwargs={"max_new_tokens": 512})
+    )
     # Define pipeline with at least one task.
     pipeline = Pipeline(task)
 

@@ -38,6 +38,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize ClassificationBridge.
 
@@ -49,6 +50,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         :param model_settings: Model settings.
         :param prompt_signature: Unified Pydantic prompt signature.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
@@ -57,6 +59,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         if isinstance(labels, dict):
             self._labels = list(labels.keys())
@@ -98,16 +101,15 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         for label in self._labels:
             if label in self._label_descriptions:
                 labels_with_descriptions.append(
-                    f"<label_description><label>{label}</label><description>"
-                    f"{self._label_descriptions[label]}</description></label_description>"
+                    f"  <label_description>\n    <label>{label}</label>\n    <description>"
+                    f"{self._label_descriptions[label]}</description>\n  </label_description>"
                 )
             else:
-                labels_with_descriptions.append(label)
+                labels_with_descriptions.append(f"  <label>{label}</label>")
 
-        crlf = "\n\t\t\t"
-        label_desc_string = crlf + "\t" + (crlf + "\t").join(labels_with_descriptions)
+        label_desc_string = "\n".join(labels_with_descriptions)
 
-        return f"{crlf}<label_descriptions>{label_desc_string}{crlf}</label_descriptions>\n\t\t"
+        return f"<label_descriptions>\n{label_desc_string}\n</label_descriptions>"
 
 
 class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -121,11 +123,6 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     @property
     def _default_prompt_instructions(self) -> str:
         return ""
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
 
     @override
     @property
@@ -191,50 +188,7 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return f"""
-        This text is about {{}}.
-        {self._get_label_descriptions()}
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        if self._mode == "multi":
-            return """
-            {% if examples|length > 0 -%}
-
-                Examples:
-                <examples>
-                {%- for example in examples %}
-                    <example>
-                        <text>{{ example.text }}</text>
-                        <output>
-                            {%- for l, s in example.score_per_label.items() %}
-                            <label_score>
-                                <label>{{ l }}</label><
-                                score>{{ s }}</score>
-                            </label_score>{% endfor %}
-                        </output>
-                    </example>
-                {% endfor %}</examples>
-            {% endif %}
-            """
-
-        return """
-            {% if examples|length > 0 -%}
-
-                Examples:
-                <examples>
-                {%- for example in examples %}
-                    <example>
-                        <text>{{ example.text }}</text>
-                        <output>
-                            <label>{{ example.label }}</label><score>{{ example.score }}</score>
-                        </output>
-                    </example>
-                {% endfor %}</examples>
-            {% endif %}
-            """
+        return f"This text is about {{}}.\n{self._get_label_descriptions()}"
 
     @override
     @property
@@ -306,40 +260,6 @@ class LangChainClassification(
         Classify the provided text.
         Provide a score reflecting how likely it is that your chosen label is the correct
         fit for the text.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        if self._mode == "multi":
-            return """
-            {% if examples|length > 0 -%}
-                Examples:
-                <examples>
-                {%- for example in examples %}
-                    <example>
-                        <text>{{ example.text }}</text>
-                        <output>
-                            {{ example.score_per_label }}
-                        </output>
-                    </example>
-                {% endfor %}</examples>
-            {% endif %}
-            """
-
-        return """
-        {% if examples|length > 0 -%}
-            Examples:
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>{{ example.text }}</text>
-                    <output>
-                        {"label": "{{ example.label }}", "score": {{ example.score }}}
-                    </output>
-                </example>
-            {% endfor %}</examples>
-        {% endif %}
         """
 
     @override
@@ -427,27 +347,6 @@ class OutlinesClassification(LangChainClassification[ModelWrapperInferenceMode],
         {self._get_label_descriptions()}
 
         Provide the best-fitting label for given text.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        if self._mode == "multi":
-            return super()._prompt_example_template
-
-        return """
-        {% if examples|length > 0 -%}
-            Examples:
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>{{ example.text }}</text>
-                    <output>
-                        <label>{{ example.label }}</label>
-                    </output>
-                </example>
-            {% endfor %}</examples>
-        {% endif %}
         """
 
     @property

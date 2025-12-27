@@ -40,6 +40,7 @@ class PIIMaskingBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrappe
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize PII masking bridge.
 
@@ -51,6 +52,7 @@ class PIIMaskingBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrappe
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
@@ -59,6 +61,7 @@ class PIIMaskingBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrappe
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
 
         self._mask_placeholder = mask_placeholder
@@ -95,15 +98,14 @@ class PIIMaskingBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrappe
         for pii_type in self._pii_types:
             if pii_type in self._pii_type_descriptions:
                 pii_types_with_descriptions.append(
-                    f"<pii_type_description><pii_type>{pii_type}</pii_type><description>"
-                    f"{self._pii_type_descriptions[pii_type]}</description></pii_type_description>"
+                    f"  <pii_type_description>\n    <pii_type>{pii_type}</pii_type>\n    <description>"
+                    f"{self._pii_type_descriptions[pii_type]}</description>\n  </pii_type_description>"
                 )
             else:
-                pii_types_with_descriptions.append(pii_type)
+                pii_types_with_descriptions.append(f"  <pii_type>{pii_type}</pii_type>")
 
-        crlf = "\n\t\t\t"
-        pii_type_desc_string = crlf + "\t" + (crlf + "\t").join(pii_types_with_descriptions)
-        return f"{crlf}<pii_type_descriptions>{pii_type_desc_string}{crlf}</pii_type_descriptions>\n\t\t"
+        pii_type_desc_string = "\n".join(pii_types_with_descriptions)
+        return f"<pii_type_descriptions>\n{pii_type_desc_string}\n</pii_type_descriptions>"
 
     def _create_pii_entity_cls(self) -> type[pydantic.BaseModel]:
         """Create PII entity class.
@@ -140,11 +142,6 @@ class DSPyPIIMasking(PIIMaskingBridge[dspy_.PromptSignature, dspy_.Result, dspy_
     @property
     def _default_prompt_instructions(self) -> str:
         return ""
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
 
     @override
     @property
@@ -219,47 +216,23 @@ class PydanticPIIMasking(PIIMaskingBridge[pydantic.BaseModel, pydantic.BaseModel
     @property
     def _default_prompt_instructions(self) -> str:
         pii_type_info = self._get_pii_type_descriptions() if self._pii_type_descriptions else ""
-        return f"""
-        Identify and mask Personally Identifiable Information (PII) in the given text.
-        {{%- if pii_types|length > 0 %}}
-            Focus on these specific PII types: {{{{ pii_types|join(', ') }}}}.
-        {{%- else %}}
-            Mask all common types of PII such as names, addresses, phone numbers, emails, SSNs, credit
-            card numbers, etc.
-        {{%- endif %}}
-        {pii_type_info}
-        Replace each instance of PII with "{{{{ mask_placeholder }}}}".
-        Provide a confidence score between 0.0 and 1.0 for each entity found.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>"{{ example.text }}"</text>
-                    <output>
-                        <masked_test>{{ example.masked_text }}</masked_test>
-                        <pii_entities_found>{{ example.pii_entities }}</pii_entities_found>
-                    </output>
-                </example>
-            {% endfor -%}
-            </examples>
-        {% endif -%}
-        """
+        return (
+            "Identify and mask Personally Identifiable Information (PII) in the given text.\n"
+            "{%- if pii_types|length > 0 %}\n"
+            "Focus on these specific PII types: {{ pii_types|join(', ') }}.\n"
+            "{%- else %}\n"
+            "Mask all common types of PII such as names, addresses, phone numbers, emails, SSNs, credit card numbers, "
+            "etc.\n"
+            "{%- endif %}\n"
+            f"{pii_type_info}\n"
+            'Replace each instance of PII with "{{ mask_placeholder }}".\n'
+            "Provide a confidence score between 0.0 and 1.0 for each entity found."
+        )
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ========
-
-        <text>{{ text }}</text>
-        <output>
-        """
+        return "========\n\n<text>{{ text }}</text>"
 
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:

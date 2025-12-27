@@ -35,6 +35,7 @@ class SentimentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize sentiment analysis bridge.
 
@@ -44,6 +45,7 @@ class SentimentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
@@ -52,6 +54,7 @@ class SentimentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         self._aspects = aspects
         self._consolidation_strategy = MapScoreConsolidation(extractor=self._chunk_extractor, keys=list(self._aspects))
@@ -76,11 +79,6 @@ class DSPySentimentAnalysis(SentimentAnalysisBridge[dspy_.PromptSignature, dspy_
     @property
     def _default_prompt_instructions(self) -> str:
         return ""
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
 
     @override
     @property
@@ -139,70 +137,21 @@ class PydanticSentimentAnalysis(
     @override
     @property
     def _default_prompt_instructions(self) -> str:
+        aspects_str = ",".join(self._aspects)
         return (
-            f"""
-        Perform aspect-based sentiment analysis of the provided text given the provided aspects:
-        {",".join(self._aspects)}."""
-            + """
-        For each aspect, provide the sentiment in the provided text with respect to this aspect.
-        The "overall" aspect should reflect the sentiment in the text overall.
-        A score of 1.0 means that the sentiment in the text with respect to this aspect is extremely positive.
-        0 means the opposite, 0.5 means neutral.
-        The sentiment score per aspect should ALWAYS be between 0 and 1.
-        Also provide an overall confidence score between 0.0 and 1.0 for the sentiment analysis.
-
-        The output for two aspects ASPECT_1 and ASPECT_2 should look like this:
-        <output>
-            <aspect_sentiments>
-                <aspect_sentiment>
-                    <aspect>ASPECT_1</aspect>
-                    <sentiment>SENTIMENT_SCORE_1</sentiment>
-                <aspect_sentiment>
-                <aspect_sentiment>
-                    <aspect>ASPECT_2</aspect>
-                    <sentiment>SENTIMENT_SCORE_2</sentiment>
-                <aspect_sentiment>
-            </aspect_sentiments>
-            <score>CONFIDENCE_SCORE</score>
-        </output>
-        """
+            f"Perform aspect-based sentiment analysis of the provided text given the provided aspects: {aspects_str}.\n"
+            "For each aspect, provide the sentiment in the provided text with respect to this aspect.\n"
+            "The 'overall' aspect should reflect the sentiment in the text overall.\n"
+            "A score of 1.0 means that the sentiment in the text with respect to this aspect is extremely positive.\n"
+            "0 means the opposite, 0.5 means neutral.\n"
+            "The sentiment score per aspect should ALWAYS be between 0 and 1.\n"
+            "Also provide an overall confidence score between 0.0 and 1.0 for the sentiment analysis."
         )
 
     @override
     @property
-    def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>{{ example.text }}</text>
-                    <output>
-                        <aspect_sentiments>
-                        {%- for a, s in example.sentiment_per_aspect.items() %}
-                            <aspect_sentiment>
-                                <aspect>{{ a }}</aspect>
-                                <sentiment>{{ s }}</sentiment>
-                            </aspect_sentiment>
-                        {% endfor -%}
-                        </aspect_sentiments>
-                        <score>{{ example.score }}</score>
-                    </output>
-                </example>
-            {% endfor %}
-            </examples>
-        {% endif -%}
-        """
-
-    @override
-    @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ========
-
-        <text>{{ text }}</text>
-        <output>
-        """
+        return "========\n\n<text>{{ text }}</text>"
 
     @property
     @override

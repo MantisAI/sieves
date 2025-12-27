@@ -122,6 +122,17 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
 
     @property
     @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
+        if self._mode == "multi":
+            return FewshotExampleMulti
+        return FewshotExampleSingle
+
+    @property
+    @override
     def prompt_signature(self) -> type[pydantic.BaseModel]:
         """Return the unified Pydantic prompt signature for this task.
 
@@ -286,6 +297,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 mode=self._mode,
                 prompt_signature=self.prompt_signature,
                 model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
 
         except KeyError as err:

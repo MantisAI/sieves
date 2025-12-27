@@ -74,7 +74,15 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
             fewshot_examples=fewshot_examples,
             condition=condition,
         )
-        self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
+        return FewshotExample
 
     @property
     @override
@@ -179,6 +187,7 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
                 model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

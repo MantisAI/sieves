@@ -36,6 +36,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize NER bridge.
 
@@ -44,6 +45,8 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         :param entities: List of entities to extract or dict mapping labels to descriptions.
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         assert model_type in {ModelType.dspy, ModelType.outlines, ModelType.langchain, ModelType.gliner}
 
@@ -54,6 +57,7 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         if isinstance(entities, dict):
             self._entities = list(entities.keys())
@@ -80,15 +84,14 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         for entity in self._entities:
             if entity in self._entity_descriptions:
                 entities_with_descriptions.append(
-                    f"<entity_description><entity>{entity}</entity><description>"
-                    f"{self._entity_descriptions[entity]}</description></entity_description>"
+                    f"  <entity_description>\n    <entity>{entity}</entity>\n    <description>"
+                    f"{self._entity_descriptions[entity]}</description>\n  </entity_description>"
                 )
             else:
-                entities_with_descriptions.append(entity)
+                entities_with_descriptions.append(f"  <entity>{entity}</entity>")
 
-        crlf = "\n\t\t\t"
-        entity_desc_string = crlf + "\t" + (crlf + "\t").join(entities_with_descriptions)
-        return f"{crlf}<entity_descriptions>{entity_desc_string}{crlf}</entity_descriptions>\n\t\t"
+        entity_desc_string = "\n".join(entities_with_descriptions)
+        return f"<entity_descriptions>\n{entity_desc_string}\n</entity_descriptions>"
 
     @staticmethod
     def _find_entity_positions(
@@ -213,11 +216,6 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
 
     @override
     @property
-    def _prompt_example_template(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
@@ -263,59 +261,28 @@ class PydanticNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapper
     @property
     def _default_prompt_instructions(self) -> str:
         entity_info = self._get_entity_descriptions() if self._entity_descriptions else ""
-        return f"""
-        Your goal is to extract named entities from the text. Only extract entities of the specified types:
-        {self._entities}.
-        {entity_info}
-
-        For each entity:
-        - Extract the exact text of the entity
-        - Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words after it.
-          DO NOT include the entire text as context. DO NOT include words that are not present in the original text
-          as introductory words (Eg. 'Text:' before context string).
-        - Specify which type of entity it is (must be one of the provided entity types)
-        - Provide a confidence score between 0.0 and 1.0 for the extraction.
-
-        IMPORTANT:
-        - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return f"""
-        {{% if examples|length > 0 -%}}
-            <examples>
-            {{%- for example in examples %}}
-                <example>
-                    <text>{{{{ example.text }}}}</text>
-                    <entity_types>{self._entities}</entity_types>
-                    <entities>
-                        {{%- for entity in example.entities %}}
-                        <entity>
-                            <text>{{{{ entity.text }}}}</text>
-                            <context>{{{{ entity.context }}}}</context>
-                            <entity_type>{{{{ entity.entity_type }}}}</entity_type>
-                            <score>{{{{ entity.score }}}}</score>
-                        </entity>
-                        {{%- endfor %}}
-                    </entities>
-                </example>
-            {{% endfor -%}}
-            </examples>
-        {{% endif %}}
-        """
+        return (
+            "Your goal is to extract named entities from the text. Only extract entities of the specified types:\n"
+            f"{self._entities}.\n"
+            f"{entity_info}\n\n"
+            "For each entity:\n"
+            "- Extract the exact text of the entity\n"
+            "- Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words "
+            "after it.\n"
+            "  DO NOT include the entire text as context. DO NOT include words that are not present in the original "
+            "text\n"
+            "  as introductory words (Eg. 'Text:' before context string).\n"
+            "- Specify which type of entity it is (must be one of the provided entity types)\n"
+            "- Provide a confidence score between 0.0 and 1.0 for the extraction.\n\n"
+            "IMPORTANT:\n"
+            "- If the same entity appears multiple times in the text, extract each occurrence separately with its own "
+            "context"
+        )
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ===========
-
-        <text>{{ text }}</text>
-        <entity_types>{{ entity_types }}</entity_types>
-        <entities>
-        """
+        return "===========\n\n<text>{{ text }}</text>\n<entity_types>{{ entity_types }}</entity_types>\n<entities>"
 
     @override
     def consolidate(

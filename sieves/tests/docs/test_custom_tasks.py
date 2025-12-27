@@ -102,10 +102,6 @@ def test_custom_bridge_example():
 
         # --8<-- [start:custom-bridge-sentiment-properties]
         @property
-        def _prompt_example_template(self) -> str | None:
-            return None
-
-        @property
         def inference_mode(self) -> outlines_.InferenceMode:
             return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
@@ -456,6 +452,10 @@ def test_using_custom_task_example(small_outlines_model):
             return "MSE"
 
         @property
+        def fewshot_example_type(self) -> type[FewshotExample]:
+            return FewshotExample
+
+        @property
         def prompt_signature(self) -> type[pydantic.BaseModel]:
             return SentimentEstimate
 
@@ -479,6 +479,7 @@ def test_using_custom_task_example(small_outlines_model):
                     overwrite=False,
                     model_settings=self._model_settings,
                     prompt_signature=self.prompt_signature,
+                    model_type=model_type
                 )
             else:
                 raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.")

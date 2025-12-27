@@ -42,16 +42,18 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize relation extraction bridge.
 
         :param task_id: Task ID.
-        :param relations: Relations to extract.
+        :param relations: Relations to extract. Can be a list of relation types or a dict mapping types to descriptions.
         :param entity_types: Entity types constraints.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
@@ -60,6 +62,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         if isinstance(relations, dict):
             self._relations = list(relations.keys())
@@ -106,12 +109,12 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         for rel in self._relations:
             if rel in self._relation_descriptions:
                 descs.append(
-                    f"<relation_description><relation>{rel}</relation><description>"
-                    f"{self._relation_descriptions[rel]}</description></relation_description>"
+                    f"  <relation_description>\n    <relation>{rel}</relation>\n    <description>"
+                    f"{self._relation_descriptions[rel]}</description>\n  </relation_description>"
                 )
             else:
-                descs.append(rel)
-        return "\n\t\t\t".join(descs)
+                descs.append(f"  <relation>{rel}</relation>")
+        return "\n".join(descs)
 
     def _get_entity_type_descriptions(self) -> str:
         """Return entity type descriptions as a string.
@@ -125,13 +128,13 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         for et in self._entity_types:
             if et in self._entity_type_descriptions:
                 descs.append(
-                    f"<entity_type_description><type>{et}</type><description>"
-                    f"{self._entity_type_descriptions[et]}</description></entity_type_description>"
+                    f"  <entity_type_description>\n    <type>{et}</type>\n    <description>"
+                    f"{self._entity_type_descriptions[et]}</description>\n  </entity_type_description>"
                 )
             else:
-                descs.append(et)
+                descs.append(f"  <type>{et}</type>")
 
-        return "\n\t\t\t".join(descs)
+        return "\n".join(descs)
 
     def _process_triplets(self, raw_triplets: list[Any]) -> list[RelationTriplet]:
         """Convert raw triplets from model to RelationTriplet objects.
@@ -195,11 +198,6 @@ class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dsp
 
     @override
     @property
-    def _prompt_example_template(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
@@ -221,37 +219,17 @@ class PydanticRelationExtraction(
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return f"""
-        Extract relations between entities in the text.
-        Relations: {self._relations}
-        Entity Types: {self._entity_types or "Any"}
-        Return a list of triplets with head, relation, tail, and a confidence score between 0.0 and 1.0.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
-        <examples>
-        {%- for example in examples %}
-            <example>
-                <text>{{ example.text }}</text>
-                <output>{{ example.triplets }}</output>
-            </example>
-        {% endfor -%}
-        </examples>
-        {% endif %}
-        """
+        return (
+            "Extract relations between entities in the text.\n"
+            f"Relations: {self._relations}\n"
+            f"Entity Types: {self._entity_types or 'Any'}\n"
+            "Return a list of triplets with head, relation, tail, and a confidence score between 0.0 and 1.0."
+        )
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ========
-        <text>{{ text }}</text>
-        <output>
-        """
+        return "========\n<text>{{ text }}</text>"
 
     @override
     @property

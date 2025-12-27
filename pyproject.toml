@@ -29,6 +29,7 @@ dependencies = [
     "json-repair>=0.48.0",
     "openai>=1.109.1,<2",
     "langchain-openai>=1.1.6,<2",
+    "pydantic-ai>=0.0.31,<0.0.32",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

@@ -75,8 +75,8 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         self._model_settings = model_settings
         self._overwrite = overwrite
         self._custom_prompt_instructions = prompt_instructions
-        self._bridge = self._init_bridge(ModelType.get_model_type(self._model_wrapper))
         self._fewshot_examples = fewshot_examples
+        self._bridge = self._init_bridge(ModelType.get_model_type(self._model_wrapper))
 
         self._validate_fewshot_examples()
 
@@ -86,6 +86,14 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         :raises ValueError: if fewshot examples don't pass validation.
         """
         pass
+
+    @property
+    @abc.abstractmethod
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
 
     @abc.abstractmethod
     def _init_bridge(self, model_type: ModelType) -> TaskBridge:

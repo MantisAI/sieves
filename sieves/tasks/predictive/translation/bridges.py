@@ -36,6 +36,7 @@ class TranslationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapp
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize translation bridge.
 
@@ -46,6 +47,7 @@ class TranslationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapp
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
@@ -54,6 +56,7 @@ class TranslationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapp
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         self._to = to
         self._consolidation_strategy = TextConsolidation(extractor=self._chunk_extractor)
@@ -78,11 +81,6 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     @property
     def _default_prompt_instructions(self) -> str:
         return ""
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
 
     @override
     @property
@@ -137,39 +135,14 @@ class PydanticTranslation(TranslationBridge[pydantic.BaseModel, pydantic.BaseMod
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return f"""
-        Translate into {self._to}. Also provide a confidence score between 0.0 and 1.0 for the translation.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>{{ example.text }}</text>
-                    <target_language>{{ example.to }}</target_language>
-                    <translation>
-                    {{ example.translation }}
-                    </translation>
-                    <score>{{ example.score }}</score>
-                </example>
-            {% endfor -%}
-            </examples>
-        {% endif -%}
-        """
+        return f"Translate into {self._to}. Also provide a confidence score between 0.0 and 1.0 for the translation."
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ========
-        <text>{{ text }}</text>
-        <target_language>{{ target_language }}</target_language>
-        <translation>
-        """
+        return (
+            "========\n<text>{{ text }}</text>\n<target_language>{{ target_language }}</target_language>\n<translation>"
+        )
 
     @property
     @override

@@ -35,6 +35,7 @@ class QuestionAnsweringBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize question answering bridge.
 
@@ -44,6 +45,7 @@ class QuestionAnsweringBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
@@ -52,6 +54,7 @@ class QuestionAnsweringBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         self._questions = questions
         self._consolidation_strategy = QAConsolidation(questions=self._questions, extractor=self._chunk_extractor)
@@ -76,11 +79,6 @@ class DSPyQuestionAnswering(QuestionAnsweringBridge[dspy_.PromptSignature, dspy_
     @property
     def _default_prompt_instructions(self) -> str:
         return ""
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
 
     @override
     @property
@@ -129,50 +127,16 @@ class PydanticQA(QuestionAnsweringBridge[pydantic.BaseModel, pydantic.BaseModel,
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return """
-        Use the given text to answer the following questions. Ensure you answer each question exactly once. Prefix each
-        question with the number of the corresponding question. Also provide a confidence score between 0.0 and 1.0
-        for each answer.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>"{{ example.text }}"</text>
-                    <questions>
-                    {% for q in example.questions %}    <question>{{ loop.index }}. {{ q }}</question>
-                    {% endfor -%}
-                    </questions>
-                    <output>
-                        <qa_pairs>
-                        {% for i in range(example.questions|length) %}
-                            <qa_pair>
-                                <question>{{ example.questions[i] }}</question>
-                                <answer>{{ example.answers[i] }}</answer>
-                                <score>{{ example.scores[i] if example.scores else "" }}</score>
-                            </qa_pair>
-                        {% endfor -%}
-                        </qa_pairs>
-                    </output>
-                </example>
-            {% endfor %}
-            </examples>
-        {% endif -%}
-        """
+        return (
+            "Use the given text to answer the following questions. Ensure you answer each question exactly once. "
+            "Prefix each question with the number of the corresponding question. Also provide a confidence score "
+            "between 0.0 and 1.0 for each answer."
+        )
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ========
-        <text>{{ text }}</text>
-        <output>
-        """
+        return "========\n<text>{{ text }}</text>"
 
     @property
     @override

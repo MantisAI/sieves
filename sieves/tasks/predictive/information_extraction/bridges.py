@@ -39,6 +39,7 @@ class InformationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, 
         mode: Literal["multi", "single"],
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize information extraction bridge.
 
@@ -50,6 +51,7 @@ class InformationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, 
             (or no) entity is extracted.
         :param prompt_signature: Unified Pydantic prompt signature.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         assert model_type in {ModelType.dspy, ModelType.gliner, ModelType.langchain, ModelType.outlines}
 
@@ -60,6 +62,7 @@ class InformationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, 
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         self._entity_type = entity_type
         self._mode = mode
@@ -69,19 +72,21 @@ class InformationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, 
         else:
             self._consolidation_strategy = SingleEntityConsolidation(extractor=self._get_single_extractor())
 
-    @abc.abstractmethod
-    def _get_multi_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+    @staticmethod
+    def _get_multi_extractor() -> Callable[[Any], Iterable[pydantic.BaseModel]]:
         """Return a callable that extracts a list of entities from a raw chunk result.
 
         :return: Multi-extractor callable.
         """
+        return lambda res: res.entities
 
-    @abc.abstractmethod
-    def _get_single_extractor(self) -> Callable[[Any], pydantic.BaseModel | None]:
+    @staticmethod
+    def _get_single_extractor() -> Callable[[Any], pydantic.BaseModel | None]:
         """Return a callable that extracts a single entity from a raw chunk result.
 
         :return: Single-extractor callable.
         """
+        return lambda res: res.entity
 
 
 class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
@@ -98,21 +103,8 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
 
     @override
     @property
-    def _prompt_example_template(self) -> str | None:
-        return None
-
-    @override
-    @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
-
-    @override
-    def _get_multi_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
-        return lambda res: res.entities
-
-    @override
-    def _get_single_extractor(self) -> Callable[[Any], pydantic.BaseModel | None]:
-        return lambda res: res.entity
 
     @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
@@ -169,67 +161,21 @@ class PydanticInformationExtraction(
     @property
     def _default_prompt_instructions(self) -> str:
         if self._mode == "multi":
-            return """
-            Find all occurences of this kind of entitity within the text. For each entity found, also provide
-            a confidence score between 0.0 and 1.0 in the 'score' field.
-            """
+            return (
+                "Find all occurences of this kind of entitity within the text. For each entity found, also provide "
+                "a confidence score between 0.0 and 1.0 in the 'score' field."
+            )
 
-        return """
-        Find the single most relevant entitity within the text. If no such entitity exists, return null. Return exactly
-        one entity with all its fields, NOT just a string. Also provide a confidence score between 0.0 and 1.0 in the
-        'score' field.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        if self._mode == "multi":
-            return """
-            {% if examples|length > 0 -%}
-                <examples>
-                {%- for example in examples %}
-                    <example>
-                        <text>{{ example.text }}</text>
-                        <output>
-                            <entities>{{ example.entities }}</entities>
-                        </output>
-                    </example>
-                {% endfor -%}
-                </examples>
-            {% endif -%}
-            """
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>{{ example.text }}</text>
-                    <output>
-                        <entity>{{ example.entity }}</entity>
-                    </output>
-                </example>
-            {% endfor -%}
-            </examples>
-        {% endif -%}
-        """
+        return (
+            "Find the single most relevant entitity within the text. If no such entitity exists, return null. "
+            "Return exactly one entity with all its fields, NOT just a string. Also provide a confidence score "
+            "between 0.0 and 1.0 in the 'score' field."
+        )
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ========
-
-        <text>{{ text }}</text>
-        <output>
-        """
-
-    @override
-    def _get_multi_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
-        return lambda res: res.entities
-
-    @override
-    def _get_single_extractor(self) -> Callable[[Any], pydantic.BaseModel | None]:
-        return lambda res: res.entity
+        return "========\n\n<text>{{ text }}</text>"
 
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:

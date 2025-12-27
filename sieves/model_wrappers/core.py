@@ -183,21 +183,17 @@ class PydanticModelWrapper(
         generator: Callable[[list[str]], Iterable[tuple[ModelWrapperResult, Any, TokenUsage]]],
         template: jinja2.Template,
         values: Sequence[dict[str, Any]],
-        fewshot_examples: Sequence[pydantic.BaseModel],
     ) -> Sequence[tuple[ModelWrapperResult | None, Any, TokenUsage]]:
         """Run inference in batches with exception handling.
 
         :param generator: Callable generating responses.
         :param template: Prompt template.
         :param values: Doc values to inject.
-        :param fewshot_examples: Fewshot examples.
         :return: Sequence of tuples containing results parsed from responses, raw outputs, and token usage.
         """
-        fewshot_examples_dict = ModelWrapper.convert_fewshot_examples(fewshot_examples)
-        examples = {"examples": fewshot_examples_dict} if len(fewshot_examples_dict) else {}
-
         try:
-            return list(generator([template.render(**doc_values, **examples) for doc_values in values]))
+            prompts = [template.render(**doc_values) for doc_values in values]
+            return list(generator(prompts))
 
         except Exception as err:
             if self._strict:

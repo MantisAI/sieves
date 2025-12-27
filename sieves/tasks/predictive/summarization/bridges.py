@@ -36,6 +36,7 @@ class SummarizationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWra
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
         model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
         """Initialize summarization bridge.
 
@@ -46,6 +47,7 @@ class SummarizationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWra
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
         :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
@@ -54,6 +56,7 @@ class SummarizationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWra
             model_settings=model_settings,
             prompt_signature=prompt_signature,
             model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         self._n_words = n_words
         self._consolidation_strategy = TextConsolidation(extractor=self._chunk_extractor)
@@ -78,11 +81,6 @@ class DSPySummarization(SummarizationBridge[dspy_.PromptSignature, dspy_.Result,
     @property
     def _default_prompt_instructions(self) -> str:
         return ""
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
 
     @override
     @property
@@ -142,30 +140,8 @@ class PydanticSummarization(SummarizationBridge[pydantic.BaseModel, pydantic.Bas
 
     @override
     @property
-    def _prompt_example_template(self) -> str:
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <text>{{ example.text }}</text>
-                <approximate_number_of_words_in_summary>{{ example.n_words }}</approximate_number_of_words_in_summary>
-                <summary>
-                {{ example.summary }}
-                </summary>
-                <score>{{ example.score }}</score>
-            {% endfor -%}
-            </examples>
-        {% endif -%}
-        """
-
-    @override
-    @property
     def _prompt_conclusion(self) -> str:
-        return """
-        ========
-        <text>{{ text }}</text>
-        <summary>
-        """
+        return "========\n<text>{{ text }}</text>\n<summary>"
 
     @property
     @override
