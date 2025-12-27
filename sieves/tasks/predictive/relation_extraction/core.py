@@ -105,29 +105,33 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
         # Create dynamic models.
         DynamicEntity = pydantic.create_model(
             "RelationEntity",
-            text=(str, pydantic.Field(..., description="Surface text of the entity.")),
+            text=(str, pydantic.Field(..., description="Surface text of the entity as it appears in the document.")),
             entity_type=(
                 EntityType,
-                pydantic.Field(..., description="Type of the entity."),
+                pydantic.Field(..., description="The category or type of the entity."),
             ),
+            __doc__="An entity involved in a relation.",
             __base__=pydantic.BaseModel,
         )
 
         DynamicTriplet = pydantic.create_model(
             "RelationTriplet",
-            head=(DynamicEntity, pydantic.Field(..., description="The subject entity.")),
-            relation=(RelationType, pydantic.Field(..., description="The type of relation.")),
-            tail=(DynamicEntity, pydantic.Field(..., description="The object entity.")),
+            head=(DynamicEntity, pydantic.Field(..., description="The subject entity (head) of the relation.")),
+            relation=(RelationType, pydantic.Field(..., description="The type of relation between the head and tail.")),
+            tail=(DynamicEntity, pydantic.Field(..., description="The object entity (tail) of the relation.")),
             score=(
                 float | None,
-                pydantic.Field(default=None, description="Confidence score."),
+                pydantic.Field(
+                    default=None, description="Confidence score for this relation triplet, between 0 and 1."
+                ),
             ),
-            __doc__="A relation triplet consisting of a subject entity, a relation type, and an object entity.",
+            __doc__="A relation triplet consisting of a head entity, a relation type, and a tail entity.",
             __base__=pydantic.BaseModel,
         )
 
         return pydantic.create_model(
             "RelationExtractionOutput",
+            __doc__="Result of relation extraction. Contains a list of extracted relation triplets.",
             triplets=(
                 list[DynamicTriplet],  # type: ignore[invalid-type-form]
                 pydantic.Field(..., description="List of extracted relation triplets."),

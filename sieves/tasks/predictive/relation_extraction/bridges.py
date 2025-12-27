@@ -141,6 +141,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
                     score=getattr(raw, "score", None),
                 )
             )
+
         return processed
 
     @override
@@ -149,6 +150,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
             # Handle both model result objects and raw lists from consolidation.
             raw_triplets = result if isinstance(result, list) else getattr(result, "triplets", [])
             doc.results[self._task_id] = Result(triplets=self._process_triplets(raw_triplets))
+
         return docs
 
     @override

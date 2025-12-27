@@ -10,7 +10,7 @@ from sieves.tasks.predictive.schemas.core import FewshotExample as BaseFewshotEx
 
 
 class QuestionAnswer(pydantic.BaseModel):
-    """Question, answer, and confidence score.
+    """A pair consisting of a question, its generated answer, and a confidence score.
 
     Attributes:
         question: Question asked.
@@ -18,9 +18,11 @@ class QuestionAnswer(pydantic.BaseModel):
         score: Confidence score.
     """
 
-    question: str
-    answer: str
-    score: float | None = None
+    question: str = pydantic.Field(description="The question being asked about the document.")
+    answer: str = pydantic.Field(description="The generated answer to the question based on the document.")
+    score: float | None = pydantic.Field(
+        default=None, description="Confidence score for the generated answer, between 0 and 1."
+    )
 
 
 class FewshotExample(BaseFewshotExample):
@@ -74,13 +76,15 @@ class FewshotExample(BaseFewshotExample):
 
 # --8<-- [start:Result]
 class Result(pydantic.BaseModel):
-    """Result of a question-answering task.
+    """Result of a question-answering task. Contains a list of question-answer pairs.
 
     Attributes:
         qa_pairs: List of question-answer pairs.
     """
 
-    qa_pairs: list[QuestionAnswer]
+    qa_pairs: list[QuestionAnswer] = pydantic.Field(
+        description="A list of question-answer pairs, each containing a question, answer, and confidence score."
+    )
 
 
 # --8<-- [end:Result]

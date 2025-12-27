@@ -11,19 +11,21 @@ from sieves.tasks.predictive.schemas.core import FewshotExample as BaseFewshotEx
 
 
 class EntityWithContext(pydantic.BaseModel):
-    """Entity mention with text span and type.
+    """Entity mention with its text span, context, and type.
 
     Attributes:
-        text: Entity text.
-        context: Context around entity.
-        entity_type: Type of entity.
-        score: Confidence score.
+        text: The specific text segment identified as an entity.
+        context: The surrounding text providing context for the entity.
+        entity_type: The category or type of the entity.
+        score: Confidence score for the entity identification.
     """
 
-    text: str
-    context: str
-    entity_type: str
-    score: float | None = None
+    text: str = pydantic.Field(description="The specific text segment identified as an entity.")
+    context: str = pydantic.Field(description="The surrounding text providing context for the entity.")
+    entity_type: str = pydantic.Field(description="The category or type of the entity (e.g., PERSON, ORGANIZATION).")
+    score: float | None = pydantic.Field(
+        default=None, description="Confidence score for the entity identification, between 0 and 1."
+    )
 
 
 class Entity(pydantic.BaseModel):
@@ -80,7 +82,7 @@ class Entities(pydantic.BaseModel):
 
 # --8<-- [start:Result]
 class Result(Entities):
-    """Result of an NER task."""
+    """Result of a named-entity recognition (NER) task. Contains the extracted entities and the source text."""
 
     pass
 

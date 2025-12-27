@@ -118,6 +118,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
         return pydantic.create_model(
             "NEROutput",
+            __doc__="Result of named-entity recognition. Contains a list of extracted entities.",
             entities=(
                 list[EntityWithContext],
                 pydantic.Field(..., description="List of extracted named entities."),

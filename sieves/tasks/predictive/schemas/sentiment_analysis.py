@@ -32,15 +32,20 @@ class FewshotExample(BaseFewshotExample):
 
 # --8<-- [start:Result]
 class Result(pydantic.BaseModel):
-    """Result of a sentiment analysis task.
+    """Result of an aspect-based sentiment analysis task.
 
     Attributes:
-        sentiment_per_aspect: Mapping of aspects to sentiments.
-        score: Overall confidence score for the sentiment assessment.
+        sentiment_per_aspect: Mapping of aspects to sentiment scores.
+        score: Overall confidence score for the sentiment analysis.
     """
 
-    sentiment_per_aspect: dict[str, float]
-    score: float | None = None
+    sentiment_per_aspect: dict[str, float] = pydantic.Field(
+        description="A mapping where keys are aspect names (e.g., 'overall', 'quality') and values are sentiment "
+        "scores between 0 (Negative) and 1 (Positive)."
+    )
+    score: float | None = pydantic.Field(
+        default=None, description="Overall confidence score for the sentiment analysis, between 0 and 1."
+    )
 
 
 # --8<-- [end:Result]

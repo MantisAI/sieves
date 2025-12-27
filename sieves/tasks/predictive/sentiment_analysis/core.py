@@ -89,7 +89,8 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
                 float,
                 pydantic.Field(
                     ...,
-                    description=f"Sentiment score for the '{aspect}' aspect, between 0 (Negative) and 1 (Positive).",
+                    description=f"Sentiment score for the '{aspect}' aspect, ranging from 0 (Negative) to 1 "
+                    f"(Positive).",
                     ge=0,
                     le=1,
                 ),
@@ -99,11 +100,17 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
         fields["score"] = (
             float | None,
             pydantic.Field(
-                default=None, description="Overall confidence score for the sentiment analysis, between 0 and 1."
+                default=None,
+                description="Overall confidence score for the sentiment analysis, ranging from 0 to 1.",
             ),
         )
 
-        return pydantic.create_model("SentimentAnalysisOutput", **fields)  # type: ignore[no-matching-overload]
+        return pydantic.create_model(
+            "SentimentAnalysisOutput",
+            __base__=pydantic.BaseModel,
+            __doc__="Result of aspect-based sentiment analysis.",
+            **fields,
+        )  # type: ignore[no-matching-overload]
 
     @property
     @override

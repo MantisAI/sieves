@@ -106,10 +106,10 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
             LabelType = Literal[*labels]  # type: ignore[valid-type]
 
             class SingleLabelClassification(pydantic.BaseModel):
-                """Result of single-label classification."""
+                """Result of single-label classification. Contains the most likely label and its confidence score."""
 
-                label: LabelType = pydantic.Field(description="The predicted label")
-                score: float = pydantic.Field(description="Confidence score between 0 and 1")
+                label: LabelType = pydantic.Field(description="The predicted label from the specified set of labels.")
+                score: float = pydantic.Field(description="Confidence score for the predicted label, between 0 and 1.")
 
             return SingleLabelClassification
 
@@ -117,13 +117,15 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         fields: dict[str, tuple[type, Any]] = {}
         for label in self._labels:
             assert isinstance(self._label_descriptions, dict)
-            description = self._label_descriptions.get(label, f"Score for {label} category")  # type: ignore[no-matching-overload]
+            description = self._label_descriptions.get(
+                label, f"Confidence score for the '{label}' category, between 0 and 1."
+            )  # type: ignore[no-matching-overload]
             fields[label] = (float, pydantic.Field(description=description))
 
         return pydantic.create_model(  # type: ignore[no-matching-overload]
             "MultiLabelClassification",
             __base__=pydantic.BaseModel,
-            __doc__="Result of multi-label classification.",
+            __doc__="Result of multi-label classification. Contains confidence scores for each potential label.",
             **fields,
         )
 

@@ -49,10 +49,10 @@ def _wrap_with_score(entity_type: type[pydantic.BaseModel]) -> type[pydantic.Bas
         return entity_type
 
     class ScoredEntity(entity_type):  # type: ignore[valid-type, misc]
-        """Entity with an additional confidence score."""
+        """Extracted entity with an additional confidence score."""
 
         score: float | None = pydantic.Field(
-            default=None, description="Confidence score for the extraction, between 0 and 1."
+            default=None, description="Confidence score for the entity extraction, between 0 and 1."
         )
 
     ScoredEntity.__name__ = entity_type.__name__
@@ -133,15 +133,20 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         if not (isinstance(scored_type, type) and issubclass(scored_type, pydantic.BaseModel)):
             # Handle gliner2.inference.engine.StructureBuilder
             if hasattr(scored_type, "fields"):
-                fields = {name: (str, pydantic.Field(default=None)) for name in scored_type.fields}
-                fields["score"] = (float | None, pydantic.Field(default=None))
-                scored_type = pydantic.create_model("GliNEREntity", **fields)  # type: ignore[no-matching-overload]
-
-                return pydantic.BaseModel
+                fields = {
+                    name: (str, pydantic.Field(default=None, description=f"Extracted value for the '{name}' field."))
+                    for name in scored_type.fields
+                }
+                fields["score"] = (
+                    float | None,
+                    pydantic.Field(default=None, description="Confidence score for the extraction, between 0 and 1."),
+                )
+                scored_type = pydantic.create_model("GliNEREntity", __doc__="Entity extracted by GliNER.", **fields)  # type: ignore[no-matching-overload]
 
         if self._mode == "multi":
             return pydantic.create_model(
                 f"{scored_type.__name__}Multi",
+                __doc__=f"Result of multi-entity extraction for {scored_type.__name__}.",
                 entities=(
                     list[scored_type],  # type: ignore[valid-type]
                     pydantic.Field(..., description=f"List of extracted {scored_type.__name__} entities."),
@@ -149,6 +154,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
             )
         return pydantic.create_model(
             f"{scored_type.__name__}Single",
+            __doc__=f"Result of single-entity extraction for {scored_type.__name__}.",
             entity=(
                 scored_type | None,  # type: ignore[valid-type]
                 pydantic.Field(..., description=f"The extracted {scored_type.__name__} entity."),
