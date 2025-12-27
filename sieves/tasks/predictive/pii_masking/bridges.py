@@ -135,14 +135,7 @@ class DSPyPIIMasking(PIIMaskingBridge[dspy_.PromptSignature, dspy_.Result, dspy_
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        default_pii_types_desc = "all types of personally identifiable information"
-        pii_types_desc = ", ".join(self._pii_types) if self._pii_types else default_pii_types_desc
-        pii_type_info = self._get_pii_type_descriptions() if self._pii_type_descriptions else ""
-        return (
-            f"Identify and mask {pii_types_desc} in the given text. Replace each PII instance with "
-            f"'{self._mask_placeholder}'. Provide a confidence score between 0.0 and 1.0 for each entity "
-            f"found.\n{pii_type_info}"
-        )
+        return ""
 
     @override
     @property

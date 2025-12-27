@@ -108,23 +108,7 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        if self._mode == "multi":
-            return f"""
-            Multi-label classification of the provided text given the labels {self._labels}.
-            For each label, provide the score with which you believe that the provided text should be assigned
-            this label. A score of 1.0 means that this text should absolutely be assigned this label. 0 means the
-            opposite. Score per label should always be between 0 and 1. Score across lables does not have to
-            add up to 1.
-
-            {self._get_label_descriptions()}
-            """
-
-        return f"""
-        Single-label classification of the provided text given the labels {self._labels}.
-        Return the label that is the best fit for the provided text with the corresponding score.
-        Exactly one label must be returned. Provide label as simple string, not as list.
-        {self._get_label_descriptions()}
-        """
+        return ""
 
     @override
     @property

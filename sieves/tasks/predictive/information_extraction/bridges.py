@@ -90,20 +90,7 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        if self._mode == "multi":
-            return (
-                "Find all occurences of this kind of entitity within the text. For each entity found, also provide "
-                "a confidence score between 0.0 and 1.0 in the 'score' field. "
-                "The `score` field must be provided regardless of whether or not potentially given fewshot examples "
-                "have it."
-            )
-        return (
-            "Find the single most relevant entitity within the text. If no such entitity exists, return null. Return "
-            "exactly one entity with all its fields, NOT just a string. Also provide a confidence score between 0.0 "
-            "and 1.0 in the 'score' field."
-            "The `score` field must be provided regardless of whether or not potentially given fewshot examples "
-            "have it."
-        )
+        return ""
 
     @override
     @property

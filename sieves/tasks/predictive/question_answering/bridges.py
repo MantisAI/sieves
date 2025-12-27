@@ -76,7 +76,7 @@ class DSPyQuestionAnswering(QuestionAnsweringBridge[dspy_.PromptSignature, dspy_
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return """Multi-question answering. Also provide a confidence score between 0.0 and 1.0 for each answer."""
+        return ""
 
     @override
     @property

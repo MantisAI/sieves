@@ -201,19 +201,7 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        entity_info = self._get_entity_descriptions() if self._entity_descriptions else ""
-        return f"""
-        A named entity recognition result that represents named entities from the provided text.
-        For each entity found it includes:
-        - exact text of the entity
-        - a context string that contains the exact entity text along with a few surrounding words
-          (two or three surronding words). The context includes the entity text itself.
-        - if the same entity appears multiple times in the text, each occurrence is listed separately with its
-        own context
-        - the entity type from the provided list of entity types. Only entities of the specified types are included.
-        - a confidence score between 0.0 and 1.0 for each entity found.
-        {entity_info}
-        """
+        return ""
 
     @override
     @property

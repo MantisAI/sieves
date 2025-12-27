@@ -72,16 +72,7 @@ class DSPySentimentAnalysis(SentimentAnalysisBridge[dspy_.PromptSignature, dspy_
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return """
-        Aspect-based sentiment analysis of the provided text given the provided aspects.
-        For each aspect, provide the sentiment score with which you reflects the sentiment in the provided text with
-        respect to this aspect.
-        The "overall" aspect should reflect the sentiment in the text overall.
-        A score of 1.0 means that the sentiment in the text with respect to this aspect is extremely positive.
-        0 means the opposite, 0.5 means neutral.
-        Sentiment per aspect should always be between 0 and 1.
-        Also provide an overall confidence score between 0.0 and 1.0 for the sentiment analysis.
-        """
+        return ""
 
     @override
     @property

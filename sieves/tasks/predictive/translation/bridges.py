@@ -83,7 +83,7 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return "Translate this text into the target language. Also provide a confidence score between 0.0 and 1.0."
+        return ""
 
     @override
     @property
