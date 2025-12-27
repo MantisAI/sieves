@@ -22,6 +22,8 @@ Key packages and concepts: `sieves.data.Doc`, `sieves.pipeline.Pipeline`, `sieve
 - Make pipelines easy to compose, observe, cache, and serialize
 - Support multiple structured-generation model libraries behind one interface
 - Enable distillation to smaller, local models for cost/performance optimization
+- **Automated Prompt Construction**: Built-in XML generation for few-shot examples and standardized prompt formatting across all tasks.
+- **Deep Model Inspection**: Recursive mapping of nested Pydantic models to DSPy signatures, ensuring full visibility of nested metadata like confidence scores.
 
 ---
 
@@ -209,7 +211,7 @@ Return docs with populated results
 | ModelWrapper | Type | Inference Modes | Notes |
 |---|---|---|---|
 | **Outlines** | Structured generation | text, choice, regex, json | Default; JSON schema constrained |
-| **DSPy** (v3) | Modular prompting | predict, chain_of_thought, react, module | Few-shot, optimizer support (MIPROv2) |
+| **DSPy** (v3) | Modular prompting | predict, chain_of_thought, react, module | Few-shot, optimizer support (MIPROv2), recursive schema mapping |
 | **LangChain** | LLM wrapper | structured | Chat models, tool calling |
 | **HuggingFace** | Direct inference | zeroshot_cls | Transformers zero-shot classification pipeline |
 | **GliNER** | Specialized extraction | classification, entities, structure, relations | GLiNER2-based zero-shot extraction |
@@ -436,7 +438,10 @@ Then run: `uv run pytest sieves/tests/test_my_feature.py -v`
 
 Key changes that affect development:
 
-1. **Token Counting and Raw Output Observability** - Implemented comprehensive token usage tracking (input/output) and raw model response capturing in `doc.meta`. Usage is aggregated per-task and per-document.
+1. **Automated Few-shot XML Generation** - The `Bridge` base class now automatically handles few-shot example formatting using XML, simplifying prompt templates.
+2. **Recursive DSPy Signature Mapping** - `_convert_to_dspy` now recursively maps all Pydantic fields using `Annotated` with `dspy.OutputField`, ensuring nested metadata (like scores and descriptions) is visible to DSPy.
+3. **Standardized Prompt Formatting** - All task prompts have been standardized using `inspect.cleandoc` and string flattening to eliminate excessive whitespace and improve prompt quality.
+4. **Token Counting and Raw Output Observability** - Implemented comprehensive token usage tracking (input/output) and raw model response capturing in `doc.meta`. Usage is aggregated per-task and per-document.
 2. **Information Extraction Single/Multi Mode** - Added `mode` parameter to `InformationExtraction` task for single vs multi entity extraction.
 3. **GliNERBridge Refactoring** - Consolidated NER logic into `GliNERBridge`, removing dedicated `GlinerNER` class.
 4. **Documentation Enhancements** - Standardized documentation with usage snippets (tested) and library links across all tasks and model wrappers.
@@ -456,5 +461,5 @@ Key changes that affect development:
 
 For questions or updates to these guidelines, refer to maintainers or GitHub issues.
 
-**Last Updated:** 2025-12-26 21:14:30 CET
-**Last Commit:** b17c50392fa376fbf53dfa0a1eece62f715e153d
+**Last Updated:** 2025-12-27 23:51:30 CET
+**Last Commit:** 058b88bb0845750178baae60608a8dc8ef7f9b9e

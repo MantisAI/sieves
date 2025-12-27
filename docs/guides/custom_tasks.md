@@ -93,7 +93,7 @@ The Bridge pattern decouples task logic (what to compute) from model-specific im
 
 ### Responsibilities
 
-Each layer has clear, focused responsibilities:
+Each layer has distinct responsibilities:
 
 **Task** (User creates this for custom functionality):
 
@@ -106,7 +106,8 @@ Each layer has clear, focused responsibilities:
 **Bridge** (User implements this for custom tasks):
 
 - Defines **how** to solve the problem for a specific model type
-- Creates prompts (Jinja2 templates for Outlines, signatures for DSPy)
+- Creates prompts by implementing `_default_prompt_instructions` and optionally `_prompt_conclusion`.
+- **Automated few-shotting**: Inheriting from `Bridge` automatically handles formatting few-shot examples as XML between instructions and conclusions.
 - Parses model outputs into structured results (Pydantic models)
 - Integrates results into documents (`integrate()` method)
 - Consolidates multi-chunk results into document-level results (`consolidate()` method)
@@ -241,13 +242,13 @@ employ Outlines for our sentiment analysis task.
 
 #### Define the Prompt Template
 
-The prompt template uses Jinja2 syntax to support few-shot examples:
+The prompt is constructed by joining `_default_prompt_instructions`, automatically generated XML few-shot examples (if any), and `_prompt_conclusion`. Excessive whitespace is automatically cleaned up:
 
 ```python
 --8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-prompt"
 ```
 
-This template instructs the model on how to estimate sentiment and allows for optional few-shot examples.
+This template instructs the model on how to estimate sentiment. Few-shot examples are automatically injected by the base `Bridge` class.
 
 #### Configure Bridge Properties
 
@@ -398,17 +399,13 @@ print(f"Supported models: {task.supports}")  # e.g., {ModelType.outlines}
 **Symptom**: Model outputs are unexpected or malformed.
 
 **Debug steps**:
-1. **Check Jinja2 syntax**: Ensure your template variables are correct
-2. **Validate few-shot examples**: Ensure examples match your template's expected structure
-3. **Print the rendered prompt**: Add debug logging to see what's actually sent to the model
+1. **Check Bridge properties**: Ensure `_default_prompt_instructions` and `_prompt_conclusion` are correctly implemented.
+2. **Validate few-shot examples**: Ensure examples match the expected schema for automatic XML generation.
+3. **Print the rendered prompt**: Access `task.prompt_template` to see what's actually sent to the model.
 
 ```python
-# In your bridge, add this to see the rendered prompt:
-@cached_property
-def _prompt_template(self) -> str:
-    template = """..."""
-    print(f"Template: {template}")
-    return template
+# In your code, check the full template:
+print(task.prompt_template)
 ```
 
 ### Best Practices

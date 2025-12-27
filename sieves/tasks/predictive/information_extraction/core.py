@@ -141,7 +141,7 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
         scored_type = self._scored_entity_type
 
         if not (isinstance(scored_type, type) and issubclass(scored_type, pydantic.BaseModel)):
-            # Handle gliner2.inference.engine.StructureBuilder
+            # Handle gliner2.inference.engine.StructureBuilder.
             if hasattr(scored_type, "fields"):
                 fields = {
                     name: (str, pydantic.Field(default=None, description=f"Extracted value for the '{name}' field."))

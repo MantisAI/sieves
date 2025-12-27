@@ -74,30 +74,16 @@ def test_custom_bridge_example():
             from sieves.model_wrappers import ModelType
             return ModelType.outlines
         # --8<-- [start:custom-bridge-sentiment-prompt]
-        # This defines the default prompt template as Jinja2 template string.
-        # We include an example block allowing us to include fewshot examples.
         @property
         def _default_prompt_instructions(self) -> str:
-            return """
-            Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. Provide your
-            reasoning for why you estimate this score before you output the score.
+            return (
+                "Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. "
+                "Provide your reasoning for why you estimate this score before you output the score."
+            )
 
-            {% if examples|length > 0 -%}
-                Examples:
-                ----------
-                {%- for example in examples %}
-                    Text: "{{ example.text }}":
-                    Output:
-                        Reasoning: "{{ example.reasoning }}":
-                        Sentiment: "{{ example.sentiment }}"
-                {% endfor -%}
-                ----------
-            {% endif -%}
-
-            ========
-            Text: {{ text }}
-            Output:
-            """
+        @property
+        def _prompt_conclusion(self) -> str | None:
+            return "========\nText: {{ text }}\nOutput:"
         # --8<-- [end:custom-bridge-sentiment-prompt]
 
         # --8<-- [start:custom-bridge-sentiment-properties]
@@ -202,30 +188,16 @@ def test_custom_predictive_task_example():
             from sieves.model_wrappers import ModelType
             return ModelType.outlines
         # --8<-- [start:custom-task-predictive-bridge-prompt]
-        # This defines the default prompt template as Jinja2 template string.
-        # We include an example block allowing us to include fewshot examples.
         @property
         def _default_prompt_instructions(self) -> str:
-            return """
-            Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. Provide your
-            reasoning for why you estimate this score before you output the score.
+            return (
+                "Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. "
+                "Provide your reasoning for why you estimate this score before you output the score."
+            )
 
-            {% if examples|length > 0 -%}
-                Examples:
-                ----------
-                {%- for example in examples %}
-                    Text: "{{ example.text }}":
-                    Output:
-                        Reasoning: "{{ example.reasoning }}":
-                        Sentiment: "{{ example.sentiment }}"
-                {% endfor -%}
-                ----------
-            {% endif -%}
-
-            ========
-            Text: {{ text }}
-            Output:
-            """
+        @property
+        def _prompt_conclusion(self) -> str | None:
+            return "========\nText: {{ text }}\nOutput:"
         # --8<-- [end:custom-task-predictive-bridge-prompt]
 
         # --8<-- [start:custom-task-predictive-bridge-properties]
@@ -379,26 +351,14 @@ def test_using_custom_task_example(small_outlines_model):
 
         @property
         def _default_prompt_instructions(self) -> str:
-            return """
-            Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. Provide your
-            reasoning for why you estimate this score before you output the score.
+            return (
+                "Estimate the sentiment in this text as a float between 0 and 1. 0 is negative, 1 is positive. "
+                "Provide your reasoning for why you estimate this score before you output the score."
+            )
 
-            {% if examples|length > 0 -%}
-                Examples:
-                ----------
-                {%- for example in examples %}
-                    Text: "{{ example.text }}":
-                    Output:
-                        Reasoning: "{{ example.reasoning }}":
-                        Sentiment: "{{ example.sentiment }}"
-                {% endfor -%}
-                ----------
-            {% endif -%}
-
-            ========
-            Text: {{ text }}
-            Output:
-            """
+        @property
+        def _prompt_conclusion(self) -> str | None:
+            return "========\nText: {{ text }}\nOutput:"
 
         @property
         def _prompt_example_template(self) -> str | None:
