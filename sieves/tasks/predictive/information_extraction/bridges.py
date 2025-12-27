@@ -38,6 +38,7 @@ class InformationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, 
         model_settings: ModelSettings,
         mode: Literal["multi", "single"],
         prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
     ):
         """Initialize information extraction bridge.
 
@@ -48,13 +49,17 @@ class InformationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, 
         :param mode: Extraction mode. If "multi", all occurrences of the entity are extracted. If "single", exactly one
             (or no) entity is extracted.
         :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
         """
+        assert model_type in {ModelType.dspy, ModelType.gliner, ModelType.langchain, ModelType.outlines}
+
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
             model_settings=model_settings,
             prompt_signature=prompt_signature,
+            model_type=model_type,
         )
         self._entity_type = entity_type
         self._mode = mode
@@ -83,9 +88,8 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
     """DSPy bridge for information extraction."""
 
     @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.dspy
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
 
     @override
     @property
@@ -148,14 +152,18 @@ class DSPyInformationExtraction(InformationExtractionBridge[dspy_.PromptSignatur
                         signature=self.prompt_signature,
                     )
                 )
+
         return consolidated_results
 
 
-class PydanticBasedInformationExtraction(
+class PydanticInformationExtraction(
     InformationExtractionBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode],
-    abc.ABC,
 ):
     """Base class for Pydantic-based information extraction bridges."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type in {ModelType.langchain, ModelType.outlines}
 
     @override
     @property
@@ -165,6 +173,7 @@ class PydanticBasedInformationExtraction(
             Find all occurences of this kind of entitity within the text. For each entity found, also provide
             a confidence score between 0.0 and 1.0 in the 'score' field.
             """
+
         return """
         Find the single most relevant entitity within the text. If no such entitity exists, return null. Return exactly
         one entity with all its fields, NOT just a string. Also provide a confidence score between 0.0 and 1.0 in the
@@ -249,37 +258,16 @@ class PydanticBasedInformationExtraction(
                 consolidated_results.append(self.prompt_signature(entities=res_clean))
             else:
                 consolidated_results.append(self.prompt_signature(entity=res_clean))
+
         return consolidated_results
 
-
-class OutlinesInformationExtraction(PydanticBasedInformationExtraction[outlines_.InferenceMode]):
-    """Outlines bridge for information extraction."""
-
     @override
     @property
-    def model_type(self) -> ModelType:
-        return ModelType.outlines
+    def inference_mode(self) -> outlines_.InferenceMode | langchain_.InferenceMode:
+        if self._model_type == ModelType.outlines:
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
 
-    @override
-    @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return self._model_settings.inference_mode or outlines_.InferenceMode.json
+        elif self._model_type == ModelType.langchain:
+            return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
-
-class LangChainInformationExtraction(PydanticBasedInformationExtraction[langchain_.InferenceMode]):
-    """LangChain bridge for information extraction."""
-
-    @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.langchain
-
-    @override
-    @property
-    def _default_prompt_instructions(self) -> str:
-        return super()._default_prompt_instructions
-
-    @override
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
+        raise ValueError(f"Unsupported model type: {self._model_type}")

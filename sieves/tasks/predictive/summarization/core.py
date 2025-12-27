@@ -24,11 +24,10 @@ from sieves.tasks.predictive.schemas.summarization import (
 )
 from sieves.tasks.predictive.summarization.bridges import (
     DSPySummarization,
-    LangChainSummarization,
-    OutlinesSummarization,
+    PydanticSummarization,
 )
 
-_TaskBridge = DSPySummarization | LangChainSummarization | OutlinesSummarization
+_TaskBridge = DSPySummarization | PydanticSummarization
 
 
 class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -110,10 +109,10 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
 
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
-        bridge_types: dict[ModelType, type[_TaskBridge]] = {
+        bridge_types: dict[ModelType, type[DSPySummarization | PydanticSummarization]] = {
             ModelType.dspy: DSPySummarization,
-            ModelType.langchain: LangChainSummarization,
-            ModelType.outlines: OutlinesSummarization,
+            ModelType.langchain: PydanticSummarization,
+            ModelType.outlines: PydanticSummarization,
         }
 
         try:
@@ -124,6 +123,7 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
                 overwrite=self._overwrite,
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

@@ -72,8 +72,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param mode: If 'multi', task returns confidence scores for all specified labels. If 'single', task returns
-            most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
-            accuracy.
+            most likely class label.
         :param model_settings: Model settings.
         :param condition: Optional callable that determines whether to process each document.
         """
@@ -223,6 +222,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 mode=self._mode,
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

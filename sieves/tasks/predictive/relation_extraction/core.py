@@ -18,11 +18,7 @@ from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.gliner_bridge import GliNERBridge
-from sieves.tasks.predictive.relation_extraction.bridges import (
-    DSPyRelationExtraction,
-    LangChainRelationExtraction,
-    OutlinesRelationExtraction,
-)
+from sieves.tasks.predictive.relation_extraction.bridges import DSPyRelationExtraction, PydanticRelationExtraction
 from sieves.tasks.predictive.schemas.relation_extraction import (
     FewshotExample,
     TaskModel,
@@ -30,7 +26,7 @@ from sieves.tasks.predictive.schemas.relation_extraction import (
     TaskResult,
 )
 
-_TaskBridge = GliNERBridge | DSPyRelationExtraction | LangChainRelationExtraction | OutlinesRelationExtraction
+_TaskBridge = GliNERBridge | DSPyRelationExtraction | PydanticRelationExtraction
 
 
 class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -196,12 +192,10 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
                 inference_mode=gliner_.InferenceMode.relations,
             )
 
-        bridge_types: dict[
-            ModelType, type[DSPyRelationExtraction | LangChainRelationExtraction | OutlinesRelationExtraction]
-        ] = {
+        bridge_types: dict[ModelType, type[DSPyRelationExtraction | PydanticRelationExtraction]] = {
             ModelType.dspy: DSPyRelationExtraction,
-            ModelType.langchain: LangChainRelationExtraction,
-            ModelType.outlines: OutlinesRelationExtraction,
+            ModelType.langchain: PydanticRelationExtraction,
+            ModelType.outlines: PydanticRelationExtraction,
         }
 
         try:
@@ -212,6 +206,7 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
                 prompt_instructions=self._custom_prompt_instructions,
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

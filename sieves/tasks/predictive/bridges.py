@@ -26,6 +26,7 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         overwrite: bool,
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
     ):
         """Initialize new bridge.
 
@@ -35,19 +36,21 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
             fluent text - like translation, summarization, PII masking, etc.
         :param model_settings: Model settings including inference_mode.
         :param prompt_signature: Pydantic model class representing the task's output schema.
+        :param model_type: Model type.
         """
         self._task_id = task_id
         self._custom_prompt_instructions = prompt_instructions
         self._overwrite = overwrite
         self._model_settings = model_settings
         self._pydantic_signature = prompt_signature
+        self._model_type = model_type
 
-    @property
-    @abc.abstractmethod
-    def model_type(self) -> ModelType:
-        """Return the model type supported by this bridge.
+        self._validate()
 
-        :return: Model type.
+    def _validate(self) -> None:
+        """Validate configuration.
+
+        No-op by default. Executed at the end of __init__().
         """
 
     @property
@@ -96,6 +99,14 @@ class Bridge[TaskPromptSignature, TaskResult, ModelWrapperInferenceMode](abc.ABC
         :return: Model settings.
         """
         return self._model_settings
+
+    @property
+    def model_type(self) -> ModelType:
+        """Return model type.
+
+        :return: Model type.
+        """
+        return self._model_type
 
     @property
     def prompt_template(self) -> str:

@@ -14,7 +14,7 @@ import gliner2.inference.engine
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelType
+from sieves.model_wrappers import ModelType, gliner_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
@@ -22,8 +22,7 @@ from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.gliner_bridge import GliNERBridge
 from sieves.tasks.predictive.information_extraction.bridges import (
     DSPyInformationExtraction,
-    LangChainInformationExtraction,
-    OutlinesInformationExtraction,
+    PydanticInformationExtraction,
 )
 from sieves.tasks.predictive.schemas.information_extraction import (
     FewshotExampleMulti,
@@ -34,7 +33,7 @@ from sieves.tasks.predictive.schemas.information_extraction import (
 )
 from sieves.tasks.utils import PydanticToHFDatasets
 
-_TaskBridge = GliNERBridge | DSPyInformationExtraction | LangChainInformationExtraction | OutlinesInformationExtraction
+_TaskBridge = GliNERBridge | DSPyInformationExtraction | PydanticInformationExtraction
 
 FewshotExample = FewshotExampleMulti | FewshotExampleSingle
 
@@ -258,8 +257,6 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                     "this task with a GLiNER2 model."
                 )
 
-            from sieves.model_wrappers import gliner_
-
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
@@ -276,8 +273,8 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
 
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
             ModelType.dspy: DSPyInformationExtraction,
-            ModelType.langchain: LangChainInformationExtraction,
-            ModelType.outlines: OutlinesInformationExtraction,
+            ModelType.langchain: PydanticInformationExtraction,
+            ModelType.outlines: PydanticInformationExtraction,
         }
 
         try:
@@ -288,7 +285,9 @@ class InformationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _Tas
                 model_settings=self._model_settings,
                 mode=self._mode,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
+
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
 

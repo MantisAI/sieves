@@ -41,6 +41,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         prompt_instructions: str | None,
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
     ):
         """Initialize relation extraction bridge.
 
@@ -50,6 +51,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
         """
         super().__init__(
             task_id=task_id,
@@ -57,6 +59,7 @@ class RelationExtractionBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mod
             overwrite=False,
             model_settings=model_settings,
             prompt_signature=prompt_signature,
+            model_type=model_type,
         )
         if isinstance(relations, dict):
             self._relations = list(relations.keys())
@@ -177,9 +180,8 @@ class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dsp
     """DSPy bridge for relation extraction."""
 
     @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.dspy
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
 
     @property
     @override
@@ -202,10 +204,14 @@ class DSPyRelationExtraction(RelationExtractionBridge[dspy_.PromptSignature, dsp
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
 
 
-class PydanticBasedRelationExtraction(
+class PydanticRelationExtraction(
     RelationExtractionBridge[pydantic.BaseModel, pydantic.BaseModel | list[Any], ModelWrapperInferenceMode], abc.ABC
 ):
     """Base class for Pydantic-based relation extraction bridges."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type in {ModelType.langchain, ModelType.outlines}
 
     @property
     @override
@@ -247,30 +253,17 @@ class PydanticBasedRelationExtraction(
         <output>
         """
 
-
-class OutlinesRelationExtraction(PydanticBasedRelationExtraction[outlines_.InferenceMode]):
-    """Outlines bridge for relation extraction."""
-
     @override
     @property
     def model_type(self) -> ModelType:
-        return ModelType.outlines
+        return self._model_type
 
     @override
     @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return self._model_settings.inference_mode or outlines_.InferenceMode.json
+    def inference_mode(self) -> outlines_.InferenceMode | langchain_.InferenceMode:
+        if self._model_type == ModelType.outlines:
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
+        elif self._model_type == ModelType.langchain:
+            return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
-
-class LangChainRelationExtraction(PydanticBasedRelationExtraction[langchain_.InferenceMode]):
-    """LangChain bridge for relation extraction."""
-
-    @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.langchain
-
-    @override
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
+        raise ValueError(f"Unsupported model type: {self._model_type}")

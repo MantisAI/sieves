@@ -37,6 +37,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         mode: Literal["single", "multi"],
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
     ):
         """Initialize ClassificationBridge.
 
@@ -44,10 +45,10 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param labels: Labels to classify. Can be a list of label strings, or a dict mapping labels to descriptions.
         :param mode: If 'multi'', task returns scores for all specified labels. If 'single', task returns
-        most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
-            accuracy.
+        most likely class label.
         :param model_settings: Model settings.
         :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
         """
         super().__init__(
             task_id=task_id,
@@ -55,6 +56,7 @@ class ClassificationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWr
             overwrite=False,
             model_settings=model_settings,
             prompt_signature=prompt_signature,
+            model_type=model_type,
         )
         if isinstance(labels, dict):
             self._labels = list(labels.keys())
@@ -112,9 +114,8 @@ class DSPyClassification(ClassificationBridge[dspy_.PromptSignature, dspy_.Resul
     """DSPy bridge for classification."""
 
     @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.dspy
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
 
     @override
     @property
@@ -184,9 +185,8 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
     """HuggingFace bridge for classification."""
 
     @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.huggingface
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.huggingface
 
     @override
     @property
@@ -284,25 +284,27 @@ class HuggingFaceClassification(ClassificationBridge[list[str], huggingface_.Res
         return consolidated_results
 
 
-class PydanticBasedClassification(
+class LangChainClassification(
     ClassificationBridge[pydantic.BaseModel | list[str], pydantic.BaseModel | str, ModelWrapperInferenceMode], abc.ABC
 ):
     """Base class for Pydantic-based classification bridges."""
 
     @override
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.langchain
+
+    @override
     @property
     def _default_prompt_instructions(self) -> str:
         if self._mode == "multi":
-            return f"""
-            Perform multi-label classification of the provided text given the provided labels: {",".join(self._labels)}.
-            {self._get_label_descriptions()}
+            return """
+            Perform multi-label classification of the provided text.
             For each label, provide a score between 0.0 (not applicable) and 1.0 (highly applicable).
             """
 
-        return f"""
-        Classify the provided text. Your classification must match one of these labels: {",".join(self._labels)}.
-        {self._get_label_descriptions()}
-        Also provide a score reflecting how likely it is that your chosen label is the correct
+        return """
+        Classify the provided text.
+        Provide a score reflecting how likely it is that your chosen label is the correct
         fit for the text.
         """
 
@@ -369,6 +371,7 @@ class PydanticBasedClassification(
                     ((label, score) for label, score in label_scores.items()), key=lambda x: x[1], reverse=True
                 )
                 doc.results[self._task_id] = ResultMultiLabel(label_scores=sorted_label_scores)
+
             else:
                 assert hasattr(result, "label") and hasattr(result, "score")
                 doc.results[self._task_id] = ResultSingleLabel(label=result.label, score=result.score)
@@ -397,16 +400,8 @@ class PydanticBasedClassification(
                         score=top_score,
                     )
                 )
+
         return consolidated_results
-
-
-class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMode]):
-    """LangChain bridge for classification."""
-
-    @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.langchain
 
     @override
     @property
@@ -414,8 +409,12 @@ class LangChainClassification(PydanticBasedClassification[langchain_.InferenceMo
         return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
 
-class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[ModelWrapperInferenceMode], abc.ABC):
-    """Base class for Pydantic-based classification bridges with label forcing."""
+class OutlinesClassification(LangChainClassification[ModelWrapperInferenceMode], abc.ABC):
+    """Base class for Outlines-based classification bridges with label forcing."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.outlines
 
     @override
     @property
@@ -428,12 +427,6 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
         {self._get_label_descriptions()}
 
         Provide the best-fitting label for given text.
-
-        The output for two labels LABEL_1 and LABEL_2 should look like this:
-        <output>
-            <reasoning>REASONING</reasoning>
-            <label>LABEL_1</label>
-        </output>
         """
 
     @override
@@ -450,7 +443,6 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
                 <example>
                     <text>{{ example.text }}</text>
                     <output>
-                        <reasoning>{{ example.reasoning }}</reasoning>
                         <label>{{ example.label }}</label>
                     </output>
                 </example>
@@ -498,22 +490,9 @@ class PydanticBasedClassificationWithLabelForcing(PydanticBasedClassification[Mo
         consolidated_results: list[pydantic.BaseModel | str] = []
         for scores_list in consolidated_results_clean:
             top_label, _ = scores_list[0]
-            # If we are in choice mode (Outlines), we just return the string.
-            # Otherwise we'd return a Pydantic model.
-            # PydanticBasedClassificationWithLabelForcing.prompt_signature returns self._labels (list[str]) if single.
-            # So the expected consolidated result type here is str.
             consolidated_results.append(top_label)
 
         return consolidated_results
-
-
-class OutlinesClassification(PydanticBasedClassificationWithLabelForcing[outlines_.InferenceMode]):
-    """Outlines bridge for classification."""
-
-    @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.outlines
 
     @override
     @property

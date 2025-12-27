@@ -34,6 +34,7 @@ class QuestionAnsweringBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
         questions: list[str],
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
     ):
         """Initialize question answering bridge.
 
@@ -42,6 +43,7 @@ class QuestionAnsweringBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
         :param questions: Questions to answer.
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
         """
         super().__init__(
             task_id=task_id,
@@ -49,6 +51,7 @@ class QuestionAnsweringBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
             overwrite=False,
             model_settings=model_settings,
             prompt_signature=prompt_signature,
+            model_type=model_type,
         )
         self._questions = questions
         self._consolidation_strategy = QAConsolidation(questions=self._questions, extractor=self._chunk_extractor)
@@ -66,9 +69,8 @@ class DSPyQuestionAnswering(QuestionAnsweringBridge[dspy_.PromptSignature, dspy_
     """DSPy bridge for question answering."""
 
     @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.dspy
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
 
     @override
     @property
@@ -117,10 +119,12 @@ class DSPyQuestionAnswering(QuestionAnsweringBridge[dspy_.PromptSignature, dspy_
         return consolidated_results
 
 
-class PydanticBasedQA(
-    QuestionAnsweringBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC
-):
+class PydanticQA(QuestionAnsweringBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
     """Base class for Pydantic-based question answering bridges."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type in {ModelType.langchain, ModelType.outlines}
 
     @override
     @property
@@ -198,30 +202,17 @@ class PydanticBasedQA(
 
         return consolidated_results
 
-
-class OutlinesQuestionAnswering(PydanticBasedQA[outlines_.InferenceMode]):
-    """Outlines bridge for question answering."""
-
     @override
     @property
     def model_type(self) -> ModelType:
-        return ModelType.outlines
+        return self._model_type
 
     @override
     @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return self._model_settings.inference_mode or outlines_.InferenceMode.json
+    def inference_mode(self) -> outlines_.InferenceMode | langchain_.InferenceMode:
+        if self._model_type == ModelType.outlines:
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
+        elif self._model_type == ModelType.langchain:
+            return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
-
-class LangChainQuestionAnswering(PydanticBasedQA[langchain_.InferenceMode]):
-    """LangChain bridge for question answering."""
-
-    @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.langchain
-
-    @override
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
+        raise ValueError(f"Unsupported model type: {self._model_type}")

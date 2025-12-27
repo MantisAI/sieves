@@ -17,7 +17,7 @@ from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.gliner_bridge import GliNERBridge
-from sieves.tasks.predictive.ner.bridges import DSPyNER, LangChainNER, OutlinesNER
+from sieves.tasks.predictive.ner.bridges import DSPyNER, PydanticNER
 from sieves.tasks.predictive.schemas.ner import (
     FewshotExample,
     TaskModel,
@@ -25,7 +25,7 @@ from sieves.tasks.predictive.schemas.ner import (
     TaskResult,
 )
 
-_TaskBridge = DSPyNER | GliNERBridge | LangChainNER | OutlinesNER
+_TaskBridge = DSPyNER | GliNERBridge | PydanticNER
 
 
 class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -183,8 +183,8 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
             )
 
         bridge_types = {
-            ModelType.langchain: LangChainNER,
-            ModelType.outlines: OutlinesNER,
+            ModelType.langchain: PydanticNER,
+            ModelType.outlines: PydanticNER,
             ModelType.dspy: DSPyNER,
         }
 
@@ -196,6 +196,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                 entities=self._entities_param,
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
             return result  # type: ignore[return-value]
         except KeyError as err:

@@ -34,6 +34,7 @@ class SentimentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
         aspects: tuple[str, ...],
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
     ):
         """Initialize sentiment analysis bridge.
 
@@ -42,6 +43,7 @@ class SentimentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
         :param aspects: Aspects to analyze.
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
         """
         super().__init__(
             task_id=task_id,
@@ -49,6 +51,7 @@ class SentimentAnalysisBridge(Bridge[_BridgePromptSignature, _BridgeResult, Mode
             overwrite=False,
             model_settings=model_settings,
             prompt_signature=prompt_signature,
+            model_type=model_type,
         )
         self._aspects = aspects
         self._consolidation_strategy = MapScoreConsolidation(extractor=self._chunk_extractor, keys=list(self._aspects))
@@ -66,9 +69,8 @@ class DSPySentimentAnalysis(SentimentAnalysisBridge[dspy_.PromptSignature, dspy_
     """DSPy bridge for sentiment analysis."""
 
     @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.dspy
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
 
     @override
     @property
@@ -125,10 +127,14 @@ class DSPySentimentAnalysis(SentimentAnalysisBridge[dspy_.PromptSignature, dspy_
         return consolidated_results
 
 
-class PydanticBasedSentAnalysis(
-    SentimentAnalysisBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC
+class PydanticSentimentAnalysis(
+    SentimentAnalysisBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode]
 ):
-    """Base class for Pydantic-based sentiment analysis bridges."""
+    """Pydantic-based sentiment analysis bridge."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type in {ModelType.langchain, ModelType.outlines}
 
     @override
     @property
@@ -233,35 +239,12 @@ class PydanticBasedSentAnalysis(
 
         return consolidated_results
 
-
-class OutlinesSentimentAnalysis(PydanticBasedSentAnalysis[outlines_.InferenceMode]):
-    """Outlines bridge for sentiment analysis."""
-
     @override
     @property
-    def model_type(self) -> ModelType:
-        return ModelType.outlines
+    def inference_mode(self) -> outlines_.InferenceMode | langchain_.InferenceMode:
+        if self._model_type == ModelType.outlines:
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
+        elif self._model_type == ModelType.langchain:
+            return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
-    @override
-    @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return self._model_settings.inference_mode or outlines_.InferenceMode.json
-
-
-class LangChainSentimentAnalysis(PydanticBasedSentAnalysis[langchain_.InferenceMode]):
-    """LangChain bridge for sentiment analysis."""
-
-    @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.langchain
-
-    @override
-    @property
-    def _default_prompt_instructions(self) -> str:
-        return super()._default_prompt_instructions
-
-    @override
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
+        raise ValueError(f"Unsupported model type: {self._model_type}")

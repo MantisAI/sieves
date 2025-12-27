@@ -25,11 +25,10 @@ from sieves.tasks.predictive.schemas.sentiment_analysis import (
 )
 from sieves.tasks.predictive.sentiment_analysis.bridges import (
     DSPySentimentAnalysis,
-    LangChainSentimentAnalysis,
-    OutlinesSentimentAnalysis,
+    PydanticSentimentAnalysis,
 )
 
-_TaskBridge = DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSentimentAnalysis
+_TaskBridge = DSPySentimentAnalysis | PydanticSentimentAnalysis
 
 
 class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -164,10 +163,10 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
 
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
-        bridge_types: dict[ModelType, type[_TaskBridge]] = {
+        bridge_types: dict[ModelType, type[DSPySentimentAnalysis | PydanticSentimentAnalysis]] = {
             ModelType.dspy: DSPySentimentAnalysis,
-            ModelType.outlines: OutlinesSentimentAnalysis,
-            ModelType.langchain: LangChainSentimentAnalysis,
+            ModelType.outlines: PydanticSentimentAnalysis,
+            ModelType.langchain: PydanticSentimentAnalysis,
         }
 
         try:
@@ -179,6 +178,7 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
                 aspects=self._aspects,
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

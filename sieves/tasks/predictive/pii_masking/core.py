@@ -16,11 +16,7 @@ from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.pii_masking.bridges import (
-    DSPyPIIMasking,
-    LangChainPIIMasking,
-    OutlinesPIIMasking,
-)
+from sieves.tasks.predictive.pii_masking.bridges import DSPyPIIMasking, PydanticPIIMasking
 from sieves.tasks.predictive.schemas.pii_masking import (
     FewshotExample,
     TaskModel,
@@ -28,7 +24,7 @@ from sieves.tasks.predictive.schemas.pii_masking import (
     TaskResult,
 )
 
-_TaskBridge = DSPyPIIMasking | LangChainPIIMasking | OutlinesPIIMasking
+_TaskBridge = DSPyPIIMasking | PydanticPIIMasking
 
 
 class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -141,8 +137,8 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
             ModelType.dspy: DSPyPIIMasking,
-            ModelType.langchain: LangChainPIIMasking,
-            ModelType.outlines: OutlinesPIIMasking,
+            ModelType.langchain: PydanticPIIMasking,
+            ModelType.outlines: PydanticPIIMasking,
         }
 
         try:
@@ -154,6 +150,7 @@ class PIIMasking(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                 overwrite=self._overwrite,
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

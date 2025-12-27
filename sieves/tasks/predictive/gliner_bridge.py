@@ -66,6 +66,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
             overwrite=False,
             model_settings=model_settings,
             prompt_signature=prompt_signature,
+            model_type=ModelType.gliner,
         )
         self._inference_mode = inference_mode
         self._mode = mode

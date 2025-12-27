@@ -35,6 +35,7 @@ class TranslationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapp
         overwrite: bool,
         model_settings: ModelSettings,
         prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
     ):
         """Initialize translation bridge.
 
@@ -44,6 +45,7 @@ class TranslationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapp
         :param overwrite: Whether to overwrite original text with translation.
         :param model_settings: Settings for structured generation.
         :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
         """
         super().__init__(
             task_id=task_id,
@@ -51,6 +53,7 @@ class TranslationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapp
             overwrite=overwrite,
             model_settings=model_settings,
             prompt_signature=prompt_signature,
+            model_type=model_type,
         )
         self._to = to
         self._consolidation_strategy = TextConsolidation(extractor=self._chunk_extractor)
@@ -68,9 +71,8 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     """DSPy bridge for translation."""
 
     @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.dspy
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
 
     @override
     @property
@@ -125,11 +127,12 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
         return consolidated_results
 
 
-class PydanticBasedTranslation(
-    TranslationBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode],
-    abc.ABC,
-):
-    """Base class for Pydantic-based translation bridges."""
+class PydanticTranslation(TranslationBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode]):
+    """Pydantic-based translation bridge."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type in {ModelType.langchain, ModelType.outlines}
 
     @override
     @property
@@ -203,30 +206,12 @@ class PydanticBasedTranslation(
 
         return consolidated_results
 
-
-class OutlinesTranslation(PydanticBasedTranslation[outlines_.InferenceMode]):
-    """Outlines bridge for translation."""
-
     @override
     @property
-    def model_type(self) -> ModelType:
-        return ModelType.outlines
+    def inference_mode(self) -> outlines_.InferenceMode | langchain_.InferenceMode:
+        if self._model_type == ModelType.outlines:
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
+        elif self._model_type == ModelType.langchain:
+            return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
-    @override
-    @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return self._model_settings.inference_mode or outlines_.InferenceMode.json
-
-
-class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
-    """LangChain bridge for translation."""
-
-    @override
-    @property
-    def model_type(self) -> ModelType:
-        return ModelType.langchain
-
-    @override
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
+        raise ValueError(f"Unsupported model type: {self._model_type}")

@@ -16,11 +16,7 @@ from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.question_answering.bridges import (
-    DSPyQuestionAnswering,
-    LangChainQuestionAnswering,
-    OutlinesQuestionAnswering,
-)
+from sieves.tasks.predictive.question_answering.bridges import DSPyQuestionAnswering, PydanticQA
 from sieves.tasks.predictive.schemas.question_answering import (
     FewshotExample,
     TaskModel,
@@ -28,7 +24,7 @@ from sieves.tasks.predictive.schemas.question_answering import (
     TaskResult,
 )
 
-_TaskBridge = DSPyQuestionAnswering | LangChainQuestionAnswering | OutlinesQuestionAnswering
+_TaskBridge = DSPyQuestionAnswering | PydanticQA
 
 
 class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -112,8 +108,8 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
             ModelType.dspy: DSPyQuestionAnswering,
-            ModelType.outlines: OutlinesQuestionAnswering,
-            ModelType.langchain: LangChainQuestionAnswering,
+            ModelType.outlines: PydanticQA,
+            ModelType.langchain: PydanticQA,
         }
 
         try:
@@ -123,6 +119,7 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
                 questions=self._questions,
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

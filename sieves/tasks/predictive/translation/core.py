@@ -24,11 +24,10 @@ from sieves.tasks.predictive.schemas.translation import (
 )
 from sieves.tasks.predictive.translation.bridges import (
     DSPyTranslation,
-    LangChainTranslation,
-    OutlinesTranslation,
+    PydanticTranslation,
 )
 
-_TaskBridge = DSPyTranslation | LangChainTranslation | OutlinesTranslation
+_TaskBridge = DSPyTranslation | PydanticTranslation
 
 
 class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -106,10 +105,10 @@ class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
 
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
-        bridge_types: dict[ModelType, type[_TaskBridge]] = {
+        bridge_types: dict[ModelType, type[DSPyTranslation | PydanticTranslation]] = {
             ModelType.dspy: DSPyTranslation,
-            ModelType.langchain: LangChainTranslation,
-            ModelType.outlines: OutlinesTranslation,
+            ModelType.langchain: PydanticTranslation,
+            ModelType.outlines: PydanticTranslation,
         }
 
         try:
@@ -120,6 +119,7 @@ class Translation(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                 overwrite=self._overwrite,
                 model_settings=self._model_settings,
                 prompt_signature=self.prompt_signature,
+                model_type=model_type,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
