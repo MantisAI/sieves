@@ -80,6 +80,7 @@ def test_run(relation_extraction_docs, batch_runtime, fewshot) -> None:
         assert "RelationExtraction" in doc.results
         res = doc.results["RelationExtraction"]
         assert isinstance(res, relation_extraction.Result)
+        assert len(res.triplets)
 
         assert "RelationExtraction" in doc.meta
         assert "raw" in doc.meta["RelationExtraction"]

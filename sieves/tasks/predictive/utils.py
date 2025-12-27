@@ -27,7 +27,7 @@ def _extract_labels_from_model(model_cls: type[pydantic.BaseModel]) -> list[str]
             field = model_cls.model_fields[field_name]
             annotation = field.annotation
 
-            # Unpack Optional/Union
+            # Unpack Optional/Union.
             if typing.get_origin(annotation) in (Union, types.UnionType):
                 args = typing.get_args(annotation)
                 for arg in args:

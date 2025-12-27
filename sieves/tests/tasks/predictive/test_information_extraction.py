@@ -99,10 +99,13 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
         assert "InformationExtraction" in doc.results
 
         # Verify unified result types.
+        res = doc.results["InformationExtraction"]
         if mode == "multi":
-            assert isinstance(doc.results["InformationExtraction"], information_extraction.ResultMulti)
+            assert isinstance(res, information_extraction.ResultMulti)
+            assert len(res.entities)
         else:
-            assert isinstance(doc.results["InformationExtraction"], information_extraction.ResultSingle)
+            assert isinstance(res, information_extraction.ResultSingle)
+            assert res.entity is not None
 
         assert "InformationExtraction" in doc.meta
         assert "raw" in doc.meta["InformationExtraction"]

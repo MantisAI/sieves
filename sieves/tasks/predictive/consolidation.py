@@ -33,7 +33,7 @@ class MultiEntityConsolidation(ConsolidationStrategy):
 
         :param extractor: Callable to extract a list of entities from a raw chunk result.
         """
-        self.extractor = extractor
+        self._extractor = extractor
 
     def consolidate(
         self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
@@ -50,7 +50,7 @@ class MultiEntityConsolidation(ConsolidationStrategy):
             for res in results[start:end]:
                 if res is None:
                     continue
-                entities.extend(self.extractor(res))
+                entities.extend(self._extractor(res))
 
             consolidated_results.append(self._consolidate_entities(entities))
         return consolidated_results
@@ -98,7 +98,7 @@ class SingleEntityConsolidation(ConsolidationStrategy):
 
         :param extractor: Callable to extract a single entity from a raw chunk result.
         """
-        self.extractor = extractor
+        self._extractor = extractor
 
     def consolidate(
         self, results: Sequence[Any], docs_offsets: list[tuple[int, int]]
@@ -116,7 +116,7 @@ class SingleEntityConsolidation(ConsolidationStrategy):
                 if res is None:
                     entities_with_indices.append((None, i))
                     continue
-                entities_with_indices.append((self.extractor(res), i))
+                entities_with_indices.append((self._extractor(res), i))
 
             consolidated_results.append(self._consolidate_single(entities_with_indices))
         return consolidated_results

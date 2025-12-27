@@ -52,7 +52,9 @@ def test_run(pii_masking_docs, batch_runtime, fewshot) -> None:
         assert "PIIMasking" in doc.results
 
         # Verify unified result types.
-        assert isinstance(doc.results["PIIMasking"], pii_masking.Result)
+        res = doc.results["PIIMasking"]
+        assert isinstance(res, pii_masking.Result)
+        assert len(res.pii_entities)
 
         assert "PIIMasking" in doc.meta
         assert "raw" in doc.meta["PIIMasking"]
