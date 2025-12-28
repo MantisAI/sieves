@@ -63,6 +63,7 @@ def test_custom_bridge_example():
 
 
     # This is the bridge class.
+    # --8<-- [start:custom-bridge-sentiment-class-def]
     class OutlinesSentimentAnalysis(Bridge[SentimentEstimate, SentimentEstimate, outlines_.InferenceMode]):
     # --8<-- [end:custom-bridge-sentiment-class-def]
         @property

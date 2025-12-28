@@ -242,7 +242,7 @@ employ Outlines for our sentiment analysis task.
 
 #### Define the Prompt Template
 
-The prompt is constructed by joining `_default_prompt_instructions`, automatically generated XML few-shot examples (if any), and `_prompt_conclusion`. Excessive whitespace is automatically cleaned up:
+The prompt is constructed by joining `_default_prompt_instructions`, automatically generated XML few-shot examples (if any), and `_prompt_conclusion`. Excessive whitespace is automatically cleaned up.
 
 ```python
 --8<-- "sieves/tests/docs/test_custom_tasks.py:custom-bridge-sentiment-prompt"
