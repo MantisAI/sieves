@@ -6,11 +6,15 @@
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test.yml)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/mantisai/sieves)
-[![PyPI - Version](https://img.shields.io/pypi/v/sieves)]((https://pypi.org/project/sieves/))
-![PyPI - Status](https://img.shields.io/pypi/status/sieves)
+[![Version](https://img.shields.io/github/v/release/mantisai/sieves?include_prereleases&label=version)](https://github.com/mantisai/sieves/releases)
+![Status](https://img.shields.io/badge/status-beta-blue)
+<!--
+[![Version](https://img.shields.io/pypi/v/sieves)]((https://pypi.org/project/sieves/))
+![Status](https://img.shields.io/pypi/status/sieves)
+-->
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17633730.svg)](https://doi.org/10.5281/zenodo.17633730)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18075798.svg)](https://doi.org/10.5281/zenodo.18075798)
 
 ## A Unified Interface for Document AI.
 
