@@ -9,10 +9,11 @@ from typing import Any, Literal, override
 
 import datasets
 import dspy
+import pydantic
 import sklearn
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelType
+from sieves.model_wrappers import ModelType, gliner_
 from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.distillation_import import model2vec, setfit
@@ -71,8 +72,7 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
         :param fewshot_examples: Few-shot examples.
         :param mode: If 'multi', task returns confidence scores for all specified labels. If 'single', task returns
-            most likely class label. In the latter case label forcing mechanisms are utilized, which can lead to higher
-            accuracy.
+            most likely class label.
         :param model_settings: Model settings.
         :param condition: Optional callable that determines whether to process each document.
         """
@@ -95,7 +95,51 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
             model_settings=model_settings,
             condition=condition,
         )
-        self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
+        if self._mode == "multi":
+            return FewshotExampleMultiLabel
+
+        return FewshotExampleSingleLabel
+
+    @property
+    @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        if self._mode == "single":
+            labels = self._labels
+            LabelType = Literal[*labels]  # type: ignore[valid-type]
+
+            class SingleLabelClassification(pydantic.BaseModel):
+                """Result of single-label classification. Contains the most likely label and its confidence score."""
+
+                label: LabelType = pydantic.Field(description="The predicted label from the specified set of labels.")
+                score: float = pydantic.Field(
+                    default=None, description="Provide a confidence score for the predicted label, between 0 and 1."
+                )
+
+            return SingleLabelClassification
+
+        # For multi-label, create a model with fields for each label.
+        fields: dict[str, tuple[type, Any]] = {}
+        for label in self._labels:
+            assert isinstance(self._label_descriptions, dict)
+            description = self._label_descriptions.get(
+                label, f"Confidence score for the '{label}' category, between 0 and 1."
+            )  # type: ignore[no-matching-overload]
+            fields[label] = (float, pydantic.Field(description=description))
+
+        return pydantic.create_model(  # type: ignore[no-matching-overload]
+            "MultiLabelClassification",
+            __base__=pydantic.BaseModel,
+            __doc__="Result of multi-label classification. Contains confidence scores for each potential label.",
+            **fields,
+        )
 
     @property
     @override
@@ -152,34 +196,6 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
 
         return {self.metric: float(score)}
 
-    def _task_result_to_pydantic(self, result: Any) -> ResultSingleLabel | ResultMultiLabel:
-        """Convert a result to the appropriate Pydantic model for this task.
-
-        :param result: Input result.
-        :return: Normalized Pydantic result.
-        """
-        if isinstance(result, ResultSingleLabel | ResultMultiLabel):
-            return result
-
-        # Use the same logic as `_task_result_to_dspy_dict` but return the Pydantic model.
-        if isinstance(result, str):
-            return ResultSingleLabel(label=result, score=1.0)
-        elif isinstance(result, list) and all(isinstance(item, str) for item in result):
-            if self._mode == "single":
-                if len(result) == 1:
-                    return ResultSingleLabel(label=result[0], score=1.0)
-                else:
-                    raise ValueError(f"Got list of {len(result)} labels for single-label task.")
-            else:
-                label_scores: list[tuple[str, float]] = []
-                active_set = set(result)
-                for label in self._labels:
-                    s = 1.0 if label in active_set else 0.0
-                    label_scores.append((label, s))
-                return ResultMultiLabel(label_scores=label_scores)
-
-        raise TypeError(f"Unsupported result type in classification task: {type(result)}")
-
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         """Initialize bridge.
 
@@ -190,20 +206,13 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
         labels = self._label_descriptions if self._label_descriptions else self._labels
 
         if model_type == ModelType.gliner:
-            import gliner2.inference.engine
-
-            from sieves.model_wrappers import gliner_
-
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=gliner2.inference.engine.Schema().classification(
-                    task="classification",
-                    labels=labels,
-                    mode=self._mode,
-                ),
+                prompt_signature=self.prompt_signature,
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.classification,
+                mode=self._mode,
             )
 
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
@@ -223,6 +232,9 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
                 labels=labels,
                 mode=self._mode,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
+                model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
@@ -449,6 +461,34 @@ class Classification(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge
             raise KeyError(f"Not all documents have results for this task with ID {self._task_id}") from err
 
         return datasets.Dataset.from_list(data, features=features, info=info)
+
+    def _task_result_to_pydantic(self, result: Any) -> ResultSingleLabel | ResultMultiLabel:
+        """Convert a result to the appropriate Pydantic model for this task.
+
+        :param result: Input result.
+        :return: Normalized Pydantic result.
+        """
+        if isinstance(result, ResultSingleLabel | ResultMultiLabel):
+            return result
+
+        # Use the same logic as `_task_result_to_dspy_dict` but return the Pydantic model.
+        if isinstance(result, str):
+            return ResultSingleLabel(label=result, score=1.0)
+        elif isinstance(result, list) and all(isinstance(item, str) for item in result):
+            if self._mode == "single":
+                if len(result) == 1:
+                    return ResultSingleLabel(label=result[0], score=1.0)
+                else:
+                    raise ValueError(f"Got list of {len(result)} labels for single-label task.")
+            else:
+                label_scores: list[tuple[str, float]] = []
+                active_set = set(result)
+                for label in self._labels:
+                    s = 1.0 if label in active_set else 0.0
+                    label_scores.append((label, s))
+                return ResultMultiLabel(label_scores=label_scores)
+
+        raise TypeError(f"Unsupported result type in classification task: {type(result)}")
 
     @override
     def _task_result_to_dspy_dict(self, result: Any) -> dict[str, Any]:

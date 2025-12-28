@@ -1,99 +1,96 @@
 """Bridges for translation task."""
 
 import abc
-from collections.abc import Sequence
-from functools import cached_property
+from collections.abc import Callable, Sequence
 from typing import Any, TypeVar, override
 
 import dspy
-import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers import (
+    ModelType,
+    ModelWrapperInferenceMode,
+    dspy_,
+    langchain_,
+    outlines_,
+)
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
+from sieves.tasks.predictive.consolidation import TextConsolidation
 from sieves.tasks.predictive.schemas.translation import Result
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
-class TranslationBridge(
-    Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode],
-    abc.ABC,
-):
+class TranslationBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for translation bridges."""
 
     def __init__(
         self,
         task_id: str,
         prompt_instructions: str | None,
+        to: str,
         overwrite: bool,
-        language: str,
         model_settings: ModelSettings,
+        prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
-        """Initialize TranslationBridge.
+        """Initialize translation bridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param overwrite: Whether to overwrite text with translation.
-        :param language: Language to translate to.
-        :param model_settings: Model settings including inference_mode.
+        :param to: Target language.
+        :param overwrite: Whether to overwrite original text with translation.
+        :param model_settings: Settings for structured generation.
+        :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=overwrite,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
+            model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
-        self._to = language
+        self._to = to
+        self._consolidation_strategy = TextConsolidation(extractor=self._chunk_extractor)
 
-    @override
-    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
-        """Extract all values from doc instances that are to be injected into the prompts.
+    @property
+    @abc.abstractmethod
+    def _chunk_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+        """Return a callable that extracts (text, score) from a raw chunk result.
 
-        :param docs: Docs to extract values from.
-        :return: All values from doc instances that are to be injected into the prompts as a sequence.
+        :return: Extractor callable.
         """
-        return [{"text": doc.text if doc.text else None, "target_language": self._to} for doc in docs]
 
 
 class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for translation."""
 
     @override
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
+
+    @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return "Translate this text into the target language. Also provide a confidence score between 0.0 and 1.0."
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
-
-    @override
-    @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        class Translation(dspy.Signature):  # type: ignore[misc]
-            text: str = dspy.InputField()
-            target_language: str = dspy.InputField()
-            translation: str = dspy.OutputField()
-            score: float = dspy.OutputField(description="Confidence score between 0.0 and 1.0.")
-
-        Translation.__doc__ = jinja2.Template(self._prompt_instructions).render()
-
-        return Translation
+        return ""
 
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
+
+    @property
+    @override
+    def _chunk_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+        return lambda res: (res.translation, getattr(res, "score", None))
 
     @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
@@ -111,24 +108,16 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
     def consolidate(
         self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[dspy_.Result]:
-        # Merge all chunk translations.
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
+
+        # Wrap back into dspy.Prediction.
         consolidated_results: list[dspy_.Result] = []
-        for doc_offset in docs_offsets:
-            translations: list[str] = []
-            scores: list[float] = []
-
-            for res in results[doc_offset[0] : doc_offset[1]]:
-                if res is None:
-                    continue
-                translations.append(res.translation)
-                if hasattr(res, "score") and res.score is not None:
-                    scores.append(res.score)
-
+        for translation, score in consolidated_results_clean:
             consolidated_results.append(
                 dspy.Prediction.from_completions(
                     {
-                        "translation": [" ".join(translations).strip()],
-                        "score": [sum(scores) / len(scores) if scores else None],
+                        "translation": [translation],
+                        "score": [score],
                     },
                     signature=self.prompt_signature,
                 )
@@ -136,59 +125,29 @@ class DSPyTranslation(TranslationBridge[dspy_.PromptSignature, dspy_.Result, dsp
         return consolidated_results
 
 
-class PydanticBasedTranslation(
-    TranslationBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode],
-    abc.ABC,
-):
-    """Base class for Pydantic-based translation bridges."""
+class PydanticTranslation(TranslationBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode]):
+    """Pydantic-based translation bridge."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type in {ModelType.langchain, ModelType.outlines}
 
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        return """
-        Translate into {{ target_language }}. Also provide a confidence score between 0.0 and 1.0 for the translation.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>{{ example.text }}</text>
-                    <target_language>{{ example.to }}</target_language>
-                    <translation>
-                    {{ example.translation }}
-                    </translation>
-                    <score>{{ example.score }}</score>
-                </example>
-            {% endfor -%}
-            </examples>
-        {% endif -%}
-        """
+        return f"Translate into {self._to}. Also provide a confidence score between 0.0 and 1.0 for the translation."
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ========
-        <text>{{ text }}</text>
-        <target_language>{{ target_language }}</target_language>
-        <translation>
-        """
+        return (
+            "========\n<text>{{ text }}</text>\n<target_language>{{ target_language }}</target_language>\n<translation>"
+        )
 
+    @property
     @override
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        class Translation(pydantic.BaseModel, frozen=True):
-            """Translation."""
-
-            translation: str
-            score: float | None = None
-
-        return Translation
+    def _chunk_extractor(self) -> Callable[[Any], tuple[str, float | None]]:
+        return lambda res: (res.translation, getattr(res, "score", None))
 
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
@@ -205,43 +164,27 @@ class PydanticBasedTranslation(
     def consolidate(
         self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel]:
-        # Determine label scores for chunks per document.
+        assert issubclass(self.prompt_signature, pydantic.BaseModel)
+
+        consolidated_results_clean = self._consolidation_strategy.consolidate(results, docs_offsets)
         consolidated_results: list[pydantic.BaseModel] = []
-        for doc_offset in docs_offsets:
-            translations: list[str] = []
-            scores: list[float] = []
 
-            for res in results[doc_offset[0] : doc_offset[1]]:
-                if res is None:
-                    continue  # type: ignore[unreachable]
-
-                assert hasattr(res, "translation")
-                translations.append(res.translation)
-                if hasattr(res, "score") and res.score is not None:
-                    scores.append(res.score)
-
+        for translation, score in consolidated_results_clean:
             consolidated_results.append(
                 self.prompt_signature(
-                    translation="\n".join(translations),
-                    score=sum(scores) / len(scores) if scores else None,
+                    translation=translation,
+                    score=score,
                 )
             )
+
         return consolidated_results
 
-
-class OutlinesTranslation(PydanticBasedTranslation[outlines_.InferenceMode]):
-    """Outlines bridge for translation."""
-
     @override
     @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return self._model_settings.inference_mode or outlines_.InferenceMode.json
+    def inference_mode(self) -> outlines_.InferenceMode | langchain_.InferenceMode:
+        if self._model_type == ModelType.outlines:
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
+        elif self._model_type == ModelType.langchain:
+            return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
-
-class LangChainTranslation(PydanticBasedTranslation[langchain_.InferenceMode]):
-    """LangChain bridge for translation."""
-
-    @override
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
+        raise ValueError(f"Unsupported model type: {self._model_type}")

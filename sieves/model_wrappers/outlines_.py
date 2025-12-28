@@ -73,6 +73,12 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
         prompt_signature: type[PromptSignature] | PromptSignature,
         fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ) -> Executable[Result | None]:
+        # Set a moderate default for max_new_tokens for `transformers` models, as they otherwise run into truncation
+        # issues.
+        inference_kwargs = self._inference_kwargs.copy()
+        if isinstance(self._model, outlines.models.transformers.Transformers):
+            inference_kwargs = {"max_new_tokens": 1024} | inference_kwargs
+
         template = self._create_template(prompt_template)
 
         # Create Generator instance responsible for generating non-parsed text.
@@ -94,7 +100,7 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
 
             def generate(prompts: list[str]) -> Iterable[tuple[Result, Any, TokenUsage]]:
                 try:
-                    results = generator.batch(prompts, **self._inference_kwargs)
+                    results = generator.batch(prompts, **inference_kwargs)
                 # Batch mode is not implemented for all Outlines wrappers. Fall back to single-prompt mode in
                 # that case.
                 except NotImplementedError:
@@ -132,12 +138,7 @@ class Outlines(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMod
 
                         yield result, result, usage
 
-            return self._infer(
-                generate,
-                template,
-                values,
-                fewshot_examples,
-            )
+            return self._infer(generate, template, values)
 
         return execute
 

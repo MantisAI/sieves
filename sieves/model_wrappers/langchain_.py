@@ -78,6 +78,6 @@ class LangChain(PydanticModelWrapper[PromptSignature, Result, Model, InferenceMo
                 case _:
                     raise ValueError(f"Inference mode {inference_mode} not supported by {cls_name} model wrapper.")
 
-            return self._infer(generator, template, values, fewshot_examples)
+            return self._infer(generator, template, values)
 
         return execute

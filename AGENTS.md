@@ -22,6 +22,8 @@ Key packages and concepts: `sieves.data.Doc`, `sieves.pipeline.Pipeline`, `sieve
 - Make pipelines easy to compose, observe, cache, and serialize
 - Support multiple structured-generation model libraries behind one interface
 - Enable distillation to smaller, local models for cost/performance optimization
+- **Automated Prompt Construction**: Built-in XML generation for few-shot examples and standardized prompt formatting across all tasks.
+- **Deep Model Inspection**: Recursive mapping of nested Pydantic models to DSPy signatures, ensuring full visibility of nested metadata like confidence scores.
 
 ---
 
@@ -150,14 +152,16 @@ uv run python -c "import sieves; print(sieves.__name__)"
 
 1. **Doc** (`sieves.data.Doc`)
    - Container for text, URI, chunks, images, and processing results
-   - Auto-chunks text on initialization using Chonkie
    - `results` dict stores task outputs keyed by task ID
+   - `gold` dict stores ground truth data for evaluation
+   - Auto-chunks text on initialization using Chonkie
    - Supports image inputs via PIL (stored in `images` field)
 
 2. **Pipeline** (`sieves.pipeline.Pipeline`)
    - Orchestrates sequential task execution
    - Caches by document hash (text or URI)
    - Supports composition via `+` operator
+   - Supports evaluation via `evaluate(docs)`
    - Serializable via `dump()`/`load()`
 
 3. **Task** (`sieves.tasks.core.Task`)
@@ -169,7 +173,7 @@ uv run python -c "import sieves; print(sieves.__name__)"
 
 4. **ModelWrapper** (`sieves.model_wrappers.core.ModelWrapper`)
    - Generic interface to structured generation frameworks
-   - Implementations: DSPy (v3), Outlines (default), LangChain, Transformers, GLiNER2
+   - Implementations: Outlines (default), DSPy (v3), LangChain, HuggingFace, GliNER
    - Each model wrapper implements `build_executable()` to compile prompts
    - All supported model libraries are now core dependencies (no longer optional)
 
@@ -207,10 +211,10 @@ Return docs with populated results
 | ModelWrapper | Type | Inference Modes | Notes |
 |---|---|---|---|
 | **Outlines** | Structured generation | text, choice, regex, json | Default; JSON schema constrained |
-| **DSPy** (v3) | Modular prompting | predict, chain_of_thought, react, module | Few-shot, optimizer support (MIPROv2) |
+| **DSPy** (v3) | Modular prompting | predict, chain_of_thought, react, module | Few-shot, optimizer support (MIPROv2), recursive schema mapping |
 | **LangChain** | LLM wrapper | structured | Chat models, tool calling |
-| **Transformers** | Direct inference | zero_shot_classification | HuggingFace zero-shot classification pipeline |
-| **GLiNER2** | Specialized NER | (specialized) | Domain-specific NER, zero-shot entity recognition |
+| **HuggingFace** | Direct inference | zeroshot_cls | Transformers zero-shot classification pipeline |
+| **GliNER** | Specialized extraction | classification, entities, structure, relations | GLiNER2-based zero-shot extraction |
 
 ---
 
@@ -370,7 +374,7 @@ Before proposing changes, ensure:
 
 - Some models do not support batching or few-shotting uniformly; bridge logic handles compatibility
 - Optional extras gate heavy dependencies (Docling, Marker for ingestion; SetFit, Model2Vec for distillation)
-- **All model libraries** (Outlines, DSPy, LangChain, Transformers, GLiNER2) are now **core dependencies**
+- **All model libraries** (Outlines, DSPy, LangChain, Transformers, GLiNER2) are **core dependencies**
 - Serialization excludes complex third-party objects (models, converters); must pass at load time
 - Ingestion tasks may require system packages (Tesseract for OCR, etc.)
 - Python 3.12 exact version required (not 3.12+)
@@ -432,9 +436,12 @@ Then run: `uv run pytest sieves/tests/test_my_feature.py -v`
 
 ## Recent Major Updates
 
-Key changes that affect development (last ~2-3 months):
+Key changes that affect development:
 
-1. **Token Counting and Raw Output Observability** - Implemented comprehensive token usage tracking (input/output) and raw model response capturing in `doc.meta`. Usage is aggregated per-task and per-document.
+1. **Automated Few-shot XML Generation** - The `Bridge` base class now automatically handles few-shot example formatting using XML, simplifying prompt templates.
+2. **Recursive DSPy Signature Mapping** - `_convert_to_dspy` now recursively maps all Pydantic fields using `Annotated` with `dspy.OutputField`, ensuring nested metadata (like scores and descriptions) is visible to DSPy.
+3. **Standardized Prompt Formatting** - All task prompts have been standardized using `inspect.cleandoc` and string flattening to eliminate excessive whitespace and improve prompt quality.
+4. **Token Counting and Raw Output Observability** - Implemented comprehensive token usage tracking (input/output) and raw model response capturing in `doc.meta`. Usage is aggregated per-task and per-document.
 2. **Information Extraction Single/Multi Mode** - Added `mode` parameter to `InformationExtraction` task for single vs multi entity extraction.
 3. **GliNERBridge Refactoring** - Consolidated NER logic into `GliNERBridge`, removing dedicated `GlinerNER` class.
 4. **Documentation Enhancements** - Standardized documentation with usage snippets (tested) and library links across all tasks and model wrappers.
@@ -448,7 +455,11 @@ Key changes that affect development (last ~2-3 months):
 12. **Standardized Output Fields** (#206) - Normalized descriptive/ID attribute naming across tasks
 13. **Chonkie Integration** - Token-based chunking framework now primary chunking backend
 14. **Optional Progress Bars** (#197) - Progress display now configurable per task
+15. **Pipeline Evaluation** - Added `Pipeline.evaluate()` and `Task.evaluate()` for performance benchmarking against gold data.
 
 ---
 
 For questions or updates to these guidelines, refer to maintainers or GitHub issues.
+
+**Last Updated:** 2025-12-27 23:51:30 CET
+**Last Commit:** 058b88bb0845750178baae60608a8dc8ef7f9b9e

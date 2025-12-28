@@ -8,6 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
+import pydantic
 import sklearn
 
 from sieves.data import Doc
@@ -24,15 +25,16 @@ from sieves.tasks.predictive.schemas.sentiment_analysis import (
 )
 from sieves.tasks.predictive.sentiment_analysis.bridges import (
     DSPySentimentAnalysis,
-    LangChainSentimentAnalysis,
-    OutlinesSentimentAnalysis,
+    PydanticSentimentAnalysis,
 )
 
-_TaskBridge = DSPySentimentAnalysis | LangChainSentimentAnalysis | OutlinesSentimentAnalysis
+_TaskBridge = DSPySentimentAnalysis | PydanticSentimentAnalysis
 
 
 class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     """Estimate per‑aspect and overall sentiment for a document."""
+
+    THRESHOLD: float = 0.5
 
     def __init__(
         self,
@@ -72,7 +74,50 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
             fewshot_examples=fewshot_examples,
             condition=condition,
         )
-        self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
+        return FewshotExample
+
+    @property
+    @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the unified Pydantic prompt signature for this task.
+
+        :return: Unified Pydantic prompt signature.
+        """
+        fields = {
+            aspect: (
+                float,
+                pydantic.Field(
+                    ...,
+                    description=f"Sentiment score for the '{aspect}' aspect, ranging from 0 (Negative) to 1 "
+                    f"(Positive).",
+                    ge=0,
+                    le=1,
+                ),
+            )
+            for aspect in self._aspects
+        }
+        fields["score"] = (
+            float | None,
+            pydantic.Field(
+                default=None,
+                description="Provide an overall confidence score for the sentiment analysis, ranging from 0 to 1.",
+            ),
+        )
+
+        return pydantic.create_model(
+            "SentimentAnalysisOutput",
+            __base__=pydantic.BaseModel,
+            __doc__="Result of aspect-based sentiment analysis.",
+            **fields,
+        )  # type: ignore[no-matching-overload]
 
     @property
     @override
@@ -126,10 +171,10 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
 
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
-        bridge_types: dict[ModelType, type[_TaskBridge]] = {
+        bridge_types: dict[ModelType, type[DSPySentimentAnalysis | PydanticSentimentAnalysis]] = {
             ModelType.dspy: DSPySentimentAnalysis,
-            ModelType.outlines: OutlinesSentimentAnalysis,
-            ModelType.langchain: LangChainSentimentAnalysis,
+            ModelType.outlines: PydanticSentimentAnalysis,
+            ModelType.langchain: PydanticSentimentAnalysis,
         }
 
         try:
@@ -140,6 +185,9 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
                 prompt_instructions=self._custom_prompt_instructions,
                 aspects=self._aspects,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
+                model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
@@ -155,7 +203,8 @@ class SentimentAnalysis(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
 
     @override
     def _validate_fewshot_examples(self) -> None:
-        for fs_example in self._fewshot_examples or []:
+        for fs_example in self._fewshot_examples:
+            assert isinstance(fs_example, FewshotExample)
             if any([aspect not in self._aspects for aspect in fs_example.sentiment_per_aspect]) or not all(
                 [label in fs_example.sentiment_per_aspect for label in self._aspects]
             ):

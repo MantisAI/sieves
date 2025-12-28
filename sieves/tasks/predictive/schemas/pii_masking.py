@@ -10,7 +10,7 @@ from sieves.tasks.predictive.schemas.core import FewshotExample as BaseFewshotEx
 
 
 class PIIEntity(pydantic.BaseModel, frozen=True):
-    """PII entity.
+    """Personally Identifiable Information (PII) entity.
 
     Attributes:
         entity_type: Type of PII.
@@ -18,9 +18,11 @@ class PIIEntity(pydantic.BaseModel, frozen=True):
         score: Confidence score.
     """
 
-    entity_type: str
-    text: str
-    score: float | None = None
+    entity_type: str = pydantic.Field(description="The type of PII identified (e.g., EMAIL, PHONE, SSN).")
+    text: str = pydantic.Field(description="The original text of the PII entity.")
+    score: float | None = pydantic.Field(
+        default=None, description="Provide a confidence score for the PII identification, between 0 and 1."
+    )
 
 
 class FewshotExample(BaseFewshotExample):
@@ -46,15 +48,17 @@ class FewshotExample(BaseFewshotExample):
 
 # --8<-- [start:Result]
 class Result(pydantic.BaseModel):
-    """Result of a PII masking task.
+    """Result of a PII masking task. Contains the masked text and the identified PII entities.
+
+    PII entities should be masked with [MASKED].
 
     Attributes:
         masked_text: Masked version of text.
         pii_entities: List of PII entities.
     """
 
-    masked_text: str
-    pii_entities: list[PIIEntity]
+    masked_text: str = pydantic.Field(description="The original text with PII entities replaced by placeholders.")
+    pii_entities: list[PIIEntity] = pydantic.Field(description="List of all PII entities identified in the text.")
 
 
 # --8<-- [end:Result]

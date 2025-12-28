@@ -28,6 +28,13 @@ class PydanticToHFDatasets(abc.ABC):
         :param entity_type: The Pydantic model class to convert.
         :return: A `datasets.Features` instance for use in a Hugging Face `datasets.Dataset`.
         """
+        origin = typing.get_origin(entity_type)
+        if origin in (typing.Union, types.UnionType):
+            args = typing.get_args(entity_type)
+            underlying = cls._get_underlying_optional_type(args)
+            if underlying:
+                return cls.model_cls_to_features(underlying)
+
         field_features: dict[str, datasets.Value | datasets.Sequence | datasets.Features] = {}
 
         for field_name, field_info in entity_type.model_fields.items():
@@ -58,7 +65,7 @@ class PydanticToHFDatasets(abc.ABC):
             return cls._handle_dict_annotation(args)
 
         # 4) Union / Optional.
-        if origin in (typing.Union, getattr(types, "UnionType", None)):
+        if origin in (typing.Union, types.UnionType):
             return cls._handle_union_annotation(args)
 
         # 5) Primitives & Fallback.
@@ -151,7 +158,7 @@ class PydanticToHFDatasets(abc.ABC):
             return cls._handle_dict_value(value, args)
 
         # 4) Union / Optional.
-        if origin in (typing.Union, getattr(types, "UnionType", None)):
+        if origin in (typing.Union, types.UnionType):
             return cls._handle_union_value(value, args)
 
         # 5) Primitives & fallback.

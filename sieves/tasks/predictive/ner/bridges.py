@@ -3,18 +3,23 @@
 import abc
 import re
 from collections.abc import Sequence
-from functools import cached_property
-from typing import Any, Literal, TypeVar, override
+from typing import Any, TypeVar, override
 
 import dspy
-import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers import (
+    ModelType,
+    ModelWrapperInferenceMode,
+    dspy_,
+    langchain_,
+    outlines_,
+)
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
 from sieves.tasks.predictive.schemas.ner import Entity, Result
+from sieves.tasks.predictive.utils import convert_to_signature
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
@@ -25,31 +30,50 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
 
     def __init__(
         self,
-        entities: list[str] | dict[str, str],
         task_id: str,
         prompt_instructions: str | None,
+        entities: list[str] | dict[str, str],
         model_settings: ModelSettings,
+        prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
-        """Initialize NERBridge.
+        """Initialize NER bridge.
 
-        :param entities: Entity types to extract. Can be a list of entity type strings, or a dict mapping entity types
-            to descriptions.
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param model_settings: Model settings including inference_mode.
+        :param entities: List of entities to extract or dict mapping labels to descriptions.
+        :param model_settings: Settings for structured generation.
+        :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
+        assert model_type in {ModelType.dspy, ModelType.outlines, ModelType.langchain, ModelType.gliner}
+
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=False,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
+            model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
         if isinstance(entities, dict):
             self._entities = list(entities.keys())
             self._entity_descriptions = entities
         else:
-            self._entities = entities
+            self._entities = list(entities)
             self._entity_descriptions = {}
+
+    @override
+    @property
+    def prompt_signature(self) -> _BridgePromptSignature:
+        return convert_to_signature(
+            model_cls=self._pydantic_signature,
+            model_type=self.model_type,
+            mode="entities",
+        )  # type: ignore[return-value]
 
     def _get_entity_descriptions(self) -> str:
         """Return a string with the entity descriptions.
@@ -60,25 +84,14 @@ class NERBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         for entity in self._entities:
             if entity in self._entity_descriptions:
                 entities_with_descriptions.append(
-                    f"<entity_description><entity>{entity}</entity><description>"
-                    f"{self._entity_descriptions[entity]}</description></entity_description>"
+                    f"  <entity_description>\n    <entity>{entity}</entity>\n    <description>"
+                    f"{self._entity_descriptions[entity]}</description>\n  </entity_description>"
                 )
             else:
-                entities_with_descriptions.append(entity)
+                entities_with_descriptions.append(f"  <entity>{entity}</entity>")
 
-        crlf = "\n\t\t\t"
-        entity_desc_string = crlf + "\t" + (crlf + "\t").join(entities_with_descriptions)
-        return f"{crlf}<entity_descriptions>{entity_desc_string}{crlf}</entity_descriptions>\n\t\t"
-
-    @override
-    def extract(self, docs: Sequence[Doc]) -> Sequence[dict[str, Any]]:
-        """Extract all values from doc instances that are to be injected into the prompts.
-
-        Overriding the default implementation to include the entity types in the extracted values.
-        :param docs: Docs to extract values from.
-        :return: All values from doc instances that are to be injected into the prompts as a sequence.
-        """
-        return [{"text": doc.text if doc.text else None, "entity_types": self._entities} for doc in docs]
+        entity_desc_string = "\n".join(entities_with_descriptions)
+        return f"<entity_descriptions>\n{entity_desc_string}\n</entity_descriptions>"
 
     @staticmethod
     def _find_entity_positions(
@@ -188,63 +201,18 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
     """DSPy bridge for NER."""
 
     @override
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
+
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return ModelType.dspy
+
+    @override
     @property
     def _default_prompt_instructions(self) -> str:
-        entity_info = self._get_entity_descriptions() if self._entity_descriptions else ""
-        return f"""
-        A named entity recognition result that represents named entities from the provided text.
-        For each entity found it includes:
-        - exact text of the entity
-        - a context string that contains the exact entity text along with a few surrounding words
-          (two or three surronding words). The context includes the entity text itself.
-        - if the same entity appears multiple times in the text, each occurrence is listed separately with its
-        own context
-        - the entity type from the provided list of entity types. Only entities of the specified types are included.
-        - a confidence score between 0.0 and 1.0 for each entity found.
-        {entity_info}
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
-
-    @override
-    @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        entity_types = self._entities
-        LiteralType = Literal[*entity_types]  # type: ignore[valid-type]
-
-        class Entity(dspy.Signature):  # type: ignore[misc]
-            text: str = dspy.OutputField(
-                description="The extracted entity text, if the same entity appears multiple times in the text, "
-                "includes each occurrence separately."
-            )
-            context: str = dspy.OutputField(
-                description="A context string that MUST include the exact entity text. The context should include "
-                "the entity and a few surrounding words (two or three surrounding words). IMPORTANT: The entity text "
-                "MUST be present in the context string exactly as it appears in the text."
-            )
-            entity_type: LiteralType = dspy.OutputField(description="The type of entity")
-            score: float = dspy.OutputField(description="Confidence score between 0.0 and 1.0")
-
-        class Prediction(dspy.Signature):  # type: ignore[misc]
-            text: str = dspy.InputField(description="Text to extract entities from")
-            entity_types: list[str] = dspy.InputField(description="List of entity types to extract")
-
-            entities: list[Entity] = dspy.OutputField(
-                description="List of entities found in the text. If the same entity appears multiple times "
-                "in different contexts, include each occurrence separately."
-            )
-
-        Prediction.__doc__ = jinja2.Template(self._prompt_instructions).render()
-
-        return Prediction
+        return ""
 
     @override
     @property
@@ -282,91 +250,47 @@ class DSPyNER(NERBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode
         return consolidated_results
 
 
-class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
+class PydanticNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
     """Base class for Pydantic-based NER bridges."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type in {ModelType.langchain, ModelType.outlines}
 
     @override
     @property
     def _default_prompt_instructions(self) -> str:
         entity_info = self._get_entity_descriptions() if self._entity_descriptions else ""
-        return f"""
-        Your goal is to extract named entities from the text. Only extract entities of the specified types:
-        {{{{ entity_types }}}}.
-        {entity_info}
-
-        For each entity:
-        - Extract the exact text of the entity
-        - Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words after it.
-          DO NOT include the entire text as context. DO NOT include words that are not present in the original text
-          as introductory words (Eg. 'Text:' before context string).
-        - Specify which type of entity it is (must be one of the provided entity types)
-        - Provide a confidence score between 0.0 and 1.0 for the extraction.
-
-        IMPORTANT:
-        - If the same entity appears multiple times in the text, extract each occurrence separately with its own context
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>{{ example.text }}</text>
-                    <entity_types>{{ entity_types }}</entity_types>
-                    <entities>
-                        {%- for entity in example.entities %}
-                        <entity>
-                            <text>{{ entity.text }}</text>
-                            <context>{{ entity.context }}</context>
-                            <entity_type>{{ entity.entity_type }}</entity_type>
-                            <score>{{ entity.score }}</score>
-                        </entity>
-                        {%- endfor %}
-                    </entities>
-                </example>
-            {% endfor -%}
-            </examples>
-        {% endif %}
-        """
+        return (
+            "Your goal is to extract named entities from the text. Only extract entities of the specified types:\n"
+            f"{self._entities}.\n"
+            f"{entity_info}\n\n"
+            "For each entity:\n"
+            "- Extract the exact text of the entity\n"
+            "- Include a SHORT context string that contains ONLY the entity and AT MOST 3 words before and 3 words "
+            "after it.\n"
+            "  DO NOT include the entire text as context. DO NOT include words that are not present in the original "
+            "text\n"
+            "  as introductory words (Eg. 'Text:' before context string).\n"
+            "- Specify which type of entity it is (must be one of the provided entity types)\n"
+            "- Provide a confidence score between 0.0 and 1.0 for the extraction.\n\n"
+            "IMPORTANT:\n"
+            "- If the same entity appears multiple times in the text, extract each occurrence separately with its own "
+            "context"
+        )
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ===========
-
-        <text>{{ text }}</text>
-        <entity_types>{{ entity_types }}</entity_types>
-        <entities>
-        """
-
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        entity_types = self._entities
-        LiteralType = Literal[*entity_types]  # type: ignore[valid-type]
-
-        class _EntityWithContext(pydantic.BaseModel):
-            text: str
-            context: str
-            entity_type: LiteralType
-            score: float | None = None
-
-        class Prediction(pydantic.BaseModel):
-            """NER prediction."""
-
-            entities: list[_EntityWithContext] = []
-
-        return Prediction
+        return "===========\n\n<text>{{ text }}</text>\n<entity_types>{{ entity_types }}</entity_types>\n<entities>"
 
     @override
     def consolidate(
         self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
     ) -> Sequence[pydantic.BaseModel]:
-        # Process each document (which may consist of multiple chunks)
+        assert issubclass(self.prompt_signature, pydantic.BaseModel)
+
+        # Process each document (which may consist of multiple chunks).
         consolidated_results: list[pydantic.BaseModel] = []
         for doc_offset in docs_offsets:
             doc_results = results[doc_offset[0] : doc_offset[1]]
@@ -389,22 +313,20 @@ class PydanticBasedNER(NERBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWr
 
             # Create a consolidated result for this document - instantiate the class with entities
             consolidated_results.append(self.prompt_signature(entities=all_entities))
+
         return consolidated_results
 
-
-class OutlinesNER(PydanticBasedNER[outlines_.InferenceMode]):
-    """Outlines bridge for NER."""
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return self._model_type
 
     @override
     @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return self._model_settings.inference_mode or outlines_.InferenceMode.json
+    def inference_mode(self) -> outlines_.InferenceMode | langchain_.InferenceMode:
+        if self._model_type == ModelType.outlines:
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
+        elif self._model_type == ModelType.langchain:
+            return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
-
-class LangChainNER(PydanticBasedNER[langchain_.InferenceMode]):
-    """LangChain bridge for NER."""
-
-    @override
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
+        raise ValueError(f"Unsupported model type: {self._model_type}")

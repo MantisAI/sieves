@@ -8,6 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -23,11 +24,10 @@ from sieves.tasks.predictive.schemas.summarization import (
 )
 from sieves.tasks.predictive.summarization.bridges import (
     DSPySummarization,
-    LangChainSummarization,
-    OutlinesSummarization,
+    PydanticSummarization,
 )
 
-_TaskBridge = DSPySummarization | LangChainSummarization | OutlinesSummarization
+_TaskBridge = DSPySummarization | PydanticSummarization
 
 
 class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -76,6 +76,28 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
             condition=condition,
         )
 
+    @property
+    @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
+        return FewshotExample
+
+    @property
+    @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        # Dynamically create type with length restriction in description.
+        class ResultWithLengthRestriction(TaskResult):
+            pass
+
+        ResultWithLengthRestriction.model_fields[
+            "summary"
+        ].description += f" This summary should be around {self._n_words} words."
+
+        return ResultWithLengthRestriction
+
     @override
     def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
         """Compute corpus-level metrics.
@@ -96,21 +118,22 @@ class Summarization(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]
 
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
-        bridge_types: dict[ModelType, type[_TaskBridge]] = {
+        bridge_types: dict[ModelType, type[DSPySummarization | PydanticSummarization]] = {
             ModelType.dspy: DSPySummarization,
-            ModelType.langchain: LangChainSummarization,
-            ModelType.outlines: OutlinesSummarization,
+            ModelType.langchain: PydanticSummarization,
+            ModelType.outlines: PydanticSummarization,
         }
 
         try:
-            bridge_type = bridge_types[model_type]
-
-            return bridge_type(
+            return bridge_types[model_type](
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                overwrite=self._overwrite,
                 n_words=self._n_words,
+                overwrite=self._overwrite,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
+                model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

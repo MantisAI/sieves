@@ -1,53 +1,67 @@
 """Bridges for PII masking task."""
 
 import abc
-from collections.abc import Sequence
-from functools import cached_property
-from typing import Literal, TypeVar, override
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any, Literal, TypeVar, override
 
 import dspy
-import jinja2
 import pydantic
 
 from sieves.data import Doc
-from sieves.model_wrappers import ModelWrapperInferenceMode, dspy_, langchain_, outlines_
+from sieves.model_wrappers import (
+    ModelType,
+    ModelWrapperInferenceMode,
+    dspy_,
+    langchain_,
+    outlines_,
+)
 from sieves.model_wrappers.types import ModelSettings
 from sieves.tasks.predictive.bridges import Bridge
-from sieves.tasks.predictive.schemas.pii_masking import PIIEntity, Result
-from sieves.tasks.predictive.utils import consolidate_entities_multi
+from sieves.tasks.predictive.consolidation import MultiEntityConsolidation
+from sieves.tasks.predictive.schemas.pii_masking import (
+    PIIEntity,
+    Result,
+)
 
 _BridgePromptSignature = TypeVar("_BridgePromptSignature")
 _BridgeResult = TypeVar("_BridgeResult")
 
 
-class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
+class PIIMaskingBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInferenceMode], abc.ABC):
     """Abstract base class for PII masking bridges."""
 
     def __init__(
         self,
         task_id: str,
         prompt_instructions: str | None,
-        overwrite: bool,
         mask_placeholder: str,
-        pii_types: list[str] | dict[str, str] | None,
+        pii_types: Sequence[str] | dict[str, str] | None,
+        overwrite: bool,
         model_settings: ModelSettings,
+        prompt_signature: type[pydantic.BaseModel],
+        model_type: ModelType,
+        fewshot_examples: Sequence[pydantic.BaseModel] = (),
     ):
-        """
-        Initialize PIIBridge.
+        """Initialize PII masking bridge.
 
         :param task_id: Task ID.
         :param prompt_instructions: Custom prompt instructions. If None, default instructions are used.
-        :param overwrite: Whether to overwrite text with masked text.
-        :param mask_placeholder: String to replace PII with.
-        :param pii_types: Types of PII to mask. Can be a list of PII type strings, a dict mapping PII types to
-            descriptions, or None for all common PII types.
-        :param model_settings: Model settings including inference_mode.
+        :param mask_placeholder: Placeholder for masked PII.
+        :param pii_types: PII types to mask.
+        :param overwrite: Whether to overwrite original text.
+        :param model_settings: Settings for structured generation.
+        :param prompt_signature: Unified Pydantic prompt signature.
+        :param model_type: Model type.
+        :param fewshot_examples: Few-shot examples.
         """
         super().__init__(
             task_id=task_id,
             prompt_instructions=prompt_instructions,
             overwrite=overwrite,
             model_settings=model_settings,
+            prompt_signature=prompt_signature,
+            model_type=model_type,
+            fewshot_examples=fewshot_examples,
         )
 
         self._mask_placeholder = mask_placeholder
@@ -62,6 +76,15 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
             self._pii_type_descriptions = {}
 
         self._pii_entity_cls = self._create_pii_entity_cls()
+        self._consolidation_strategy = MultiEntityConsolidation(extractor=self._chunk_extractor)
+
+    @property
+    @abc.abstractmethod
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        """Return a callable that extracts a list of entities from a raw chunk result.
+
+        :return: Extractor callable.
+        """
 
     def _get_pii_type_descriptions(self) -> str:
         """Return a string with the PII type descriptions.
@@ -75,15 +98,14 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         for pii_type in self._pii_types:
             if pii_type in self._pii_type_descriptions:
                 pii_types_with_descriptions.append(
-                    f"<pii_type_description><pii_type>{pii_type}</pii_type><description>"
-                    f"{self._pii_type_descriptions[pii_type]}</description></pii_type_description>"
+                    f"  <pii_type_description>\n    <pii_type>{pii_type}</pii_type>\n    <description>"
+                    f"{self._pii_type_descriptions[pii_type]}</description>\n  </pii_type_description>"
                 )
             else:
-                pii_types_with_descriptions.append(pii_type)
+                pii_types_with_descriptions.append(f"  <pii_type>{pii_type}</pii_type>")
 
-        crlf = "\n\t\t\t"
-        pii_type_desc_string = crlf + "\t" + (crlf + "\t").join(pii_types_with_descriptions)
-        return f"{crlf}<pii_type_descriptions>{pii_type_desc_string}{crlf}</pii_type_descriptions>\n\t\t"
+        pii_type_desc_string = "\n".join(pii_types_with_descriptions)
+        return f"<pii_type_descriptions>\n{pii_type_desc_string}\n</pii_type_descriptions>"
 
     def _create_pii_entity_cls(self) -> type[pydantic.BaseModel]:
         """Create PII entity class.
@@ -101,7 +123,7 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
 
         PIIType = Literal[*pii_types_list] if pii_types_list else str  # type: ignore[invalid-type-form]
 
-        class PIIEntityRuntime(PIIEntity):
+        class PIIEntityRuntime(PIIEntity, frozen=True):
             """PII entity."""
 
             entity_type: PIIType  # type: ignore[valid-type]
@@ -109,51 +131,28 @@ class PIIBridge(Bridge[_BridgePromptSignature, _BridgeResult, ModelWrapperInfere
         return PIIEntityRuntime
 
 
-class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
+class DSPyPIIMasking(PIIMaskingBridge[dspy_.PromptSignature, dspy_.Result, dspy_.InferenceMode]):
     """DSPy bridge for PII masking."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type == ModelType.dspy
 
     @override
     @property
     def _default_prompt_instructions(self) -> str:
-        default_pii_types_desc = "all types of personally identifiable information"
-        pii_types_desc = ", ".join(self._pii_types) if self._pii_types else default_pii_types_desc
-        pii_type_info = self._get_pii_type_descriptions() if self._pii_type_descriptions else ""
-        return (
-            f"Identify and mask {pii_types_desc} in the given text. Replace each PII instance with "
-            f"'{self._mask_placeholder}'. Provide a confidence score between 0.0 and 1.0 for each entity "
-            f"found.\n{pii_type_info}"
-        )
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return None
-
-    @override
-    @property
-    def _prompt_conclusion(self) -> str | None:
-        return None
-
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[dspy_.PromptSignature]:
-        """Define prompt signature for DSPy."""
-        PIIEntity = self._pii_entity_cls
-
-        class PIIMasking(dspy.Signature):  # type: ignore[misc]
-            text: str = dspy.InputField(description="Text to mask PII from.")
-            masked_text: str = dspy.OutputField(description="Text with all PII masked.")
-            pii_entities: list[PIIEntity] = dspy.OutputField(description="List of PII entities that were masked.")  # type: ignore[valid-type]
-
-        PIIMasking.__doc__ = jinja2.Template(self._prompt_instructions).render()
-
-        return PIIMasking
+        return ""
 
     @override
     @property
     def inference_mode(self) -> dspy_.InferenceMode:
         """Return inference mode for DSPy model wrapper."""
         return self._model_settings.inference_mode or dspy_.InferenceMode.predict
+
+    @property
+    @override
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.pii_entities
 
     @override
     def integrate(self, results: Sequence[dspy_.Result], docs: list[Doc]) -> list[Doc]:
@@ -162,7 +161,10 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
             # Store masked text and PII entities in results
             res = Result(
                 masked_text=result.masked_text,
-                pii_entities=[PIIEntity.model_validate(e) for e in result.pii_entities],
+                pii_entities=[
+                    PIIEntity.model_validate(e.model_dump() if hasattr(e, "model_dump") else e)
+                    for e in result.pii_entities
+                ],
             )
             doc.results[self._task_id] = res
 
@@ -173,27 +175,28 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
 
     @override
     def consolidate(
-        self, results: Sequence[dspy_.Result], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[dspy_.Result],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[dspy_.Result]:
         """Consolidate results from multiple chunks."""
+        # Delegate consolidation of entities to strategy.
+        consolidated_entities_all = self._consolidation_strategy.consolidate(results, docs_offsets)
+
         # Merge results for each document.
         consolidated_results: list[dspy_.Result] = []
-        for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            entities: list[pydantic.BaseModel] = []
+        for i, (start, end) in enumerate(docs_offsets):
+            doc_results = results[start:end]
             masked_texts: list[str] = []
 
             for res in doc_results:
                 masked_texts.append(res.masked_text)
-                entities.extend(res.pii_entities)
-
-            consolidated_entities = consolidate_entities_multi(entities)
 
             consolidated_results.append(
                 dspy.Prediction.from_completions(
                     {
                         "masked_text": [" ".join(masked_texts).strip()],
-                        "pii_entities": [consolidated_entities],
+                        "pii_entities": [consolidated_entities_all[i]],
                     },
                     signature=self.prompt_signature,
                 )
@@ -201,67 +204,38 @@ class DSPyPIIMasking(PIIBridge[dspy_.PromptSignature, dspy_.Result, dspy_.Infere
         return consolidated_results
 
 
-class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
+class PydanticPIIMasking(PIIMaskingBridge[pydantic.BaseModel, pydantic.BaseModel, ModelWrapperInferenceMode], abc.ABC):
     """Base class for Pydantic-based PII masking bridges."""
+
+    @override
+    def _validate(self) -> None:
+        assert self._model_type in {ModelType.langchain, ModelType.outlines}
+
+    @property
+    @override
+    def _chunk_extractor(self) -> Callable[[Any], Iterable[pydantic.BaseModel]]:
+        return lambda res: res.pii_entities
 
     @property
     def _default_prompt_instructions(self) -> str:
         pii_type_info = self._get_pii_type_descriptions() if self._pii_type_descriptions else ""
-        return f"""
-        Identify and mask Personally Identifiable Information (PII) in the given text.
-        {{%- if pii_types|length > 0 %}}
-            Focus on these specific PII types: {{{{ pii_types|join(', ') }}}}.
-        {{%- else %}}
-            Mask all common types of PII such as names, addresses, phone numbers, emails, SSNs, credit
-            card numbers, etc.
-        {{%- endif %}}
-        {pii_type_info}
-        Replace each instance of PII with "{{{{ mask_placeholder }}}}".
-        Provide a confidence score between 0.0 and 1.0 for each entity found.
-        """
-
-    @override
-    @property
-    def _prompt_example_template(self) -> str | None:
-        return """
-        {% if examples|length > 0 -%}
-            <examples>
-            {%- for example in examples %}
-                <example>
-                    <text>"{{ example.text }}"</text>
-                    <output>
-                        <masked_test>{{ example.masked_text }}</masked_test>
-                        <pii_entities_found>{{ example.pii_entities }}</pii_entities_found>
-                    </output>
-                </example>
-            {% endfor -%}
-            </examples>
-        {% endif -%}
-        """
+        return (
+            "Identify and mask Personally Identifiable Information (PII) in the given text.\n"
+            "{%- if pii_types|length > 0 %}\n"
+            "Focus on these specific PII types: {{ pii_types|join(', ') }}.\n"
+            "{%- else %}\n"
+            "Mask all common types of PII such as names, addresses, phone numbers, emails, SSNs, credit card numbers, "
+            "etc.\n"
+            "{%- endif %}\n"
+            f"{pii_type_info}\n"
+            f'Replace each instance of PII with "{self._mask_placeholder}".\n'
+            "Provide a confidence score between 0.0 and 1.0 for each entity found."
+        )
 
     @override
     @property
     def _prompt_conclusion(self) -> str | None:
-        return """
-        ========
-
-        <text>{{ text }}</text>
-        <output>
-        """
-
-    @override
-    @cached_property
-    def prompt_signature(self) -> type[pydantic.BaseModel]:
-        """Define prompt signature for Pydantic-based model wrappers."""
-        PIIEntity = self._pii_entity_cls
-
-        class PIIMasking(pydantic.BaseModel, frozen=True):
-            """PII masking output."""
-
-            masked_text: str
-            pii_entities: list[PIIEntity]  # type: ignore[valid-type]
-
-        return PIIMasking
+        return "========\n\n<text>{{ text }}</text>"
 
     @override
     def integrate(self, results: Sequence[pydantic.BaseModel], docs: list[Doc]) -> list[Doc]:
@@ -281,13 +255,17 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
 
     @override
     def consolidate(
-        self, results: Sequence[pydantic.BaseModel], docs_offsets: list[tuple[int, int]]
+        self,
+        results: Sequence[pydantic.BaseModel],
+        docs_offsets: list[tuple[int, int]],
     ) -> Sequence[pydantic.BaseModel]:
-        # Merge results for each document.
+        assert issubclass(self.prompt_signature, pydantic.BaseModel)
+
+        consolidated_entities_all = self._consolidation_strategy.consolidate(results, docs_offsets)
         consolidated_results: list[pydantic.BaseModel] = []
-        for doc_offset in docs_offsets:
-            doc_results = results[doc_offset[0] : doc_offset[1]]
-            entities: list[pydantic.BaseModel] = []
+
+        for i, (start, end) in enumerate(docs_offsets):
+            doc_results = results[start:end]
             masked_texts: list[str] = []
 
             for res in doc_results:
@@ -295,35 +273,28 @@ class PydanticBasedPIIMasking(PIIBridge[pydantic.BaseModel, pydantic.BaseModel, 
                     continue  # type: ignore[unreachable]
 
                 assert hasattr(res, "masked_text")
-                assert hasattr(res, "pii_entities")
-
                 masked_texts.append(res.masked_text)
-                entities.extend(res.pii_entities)
-
-            consolidated_entities = consolidate_entities_multi(entities)
 
             consolidated_results.append(
                 self.prompt_signature(
                     masked_text=" ".join(masked_texts).strip(),
-                    pii_entities=consolidated_entities,
+                    pii_entities=consolidated_entities_all[i],
                 )
             )
+
         return consolidated_results
 
-
-class OutlinesPIIMasking(PydanticBasedPIIMasking[outlines_.InferenceMode]):
-    """Outlines bridge for PII masking."""
+    @override
+    @property
+    def model_type(self) -> ModelType:
+        return self._model_type
 
     @override
     @property
-    def inference_mode(self) -> outlines_.InferenceMode:
-        return self._model_settings.inference_mode or outlines_.InferenceMode.json
+    def inference_mode(self) -> outlines_.InferenceMode | langchain_.InferenceMode:
+        if self._model_type == ModelType.outlines:
+            return self._model_settings.inference_mode or outlines_.InferenceMode.json
+        elif self._model_type == ModelType.langchain:
+            return self._model_settings.inference_mode or langchain_.InferenceMode.structured
 
-
-class LangChainPIIMasking(PydanticBasedPIIMasking[langchain_.InferenceMode]):
-    """LangChain bridge for PII masking."""
-
-    @override
-    @property
-    def inference_mode(self) -> langchain_.InferenceMode:
-        return self._model_settings.inference_mode or langchain_.InferenceMode.structured
+        raise ValueError(f"Unsupported model type: {self._model_type}")

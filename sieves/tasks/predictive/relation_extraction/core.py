@@ -5,11 +5,11 @@ from __future__ import annotations
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, override
+from typing import Any, Literal, override
 
 import datasets
 import dspy
-import gliner2
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, gliner_
@@ -18,11 +18,7 @@ from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.gliner_bridge import GliNERBridge
-from sieves.tasks.predictive.relation_extraction.bridges import (
-    DSPyRelationExtraction,
-    LangChainRelationExtraction,
-    OutlinesRelationExtraction,
-)
+from sieves.tasks.predictive.relation_extraction.bridges import DSPyRelationExtraction, PydanticRelationExtraction
 from sieves.tasks.predictive.schemas.relation_extraction import (
     FewshotExample,
     TaskModel,
@@ -30,7 +26,7 @@ from sieves.tasks.predictive.schemas.relation_extraction import (
     TaskResult,
 )
 
-_TaskBridge = GliNERBridge | DSPyRelationExtraction | LangChainRelationExtraction | OutlinesRelationExtraction
+_TaskBridge = GliNERBridge | DSPyRelationExtraction | PydanticRelationExtraction
 
 
 class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -75,6 +71,76 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
             fewshot_examples=fewshot_examples,
             model_settings=model_settings,
             condition=condition,
+        )
+
+    @property
+    @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
+        return FewshotExample
+
+    @property
+    @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the unified Pydantic prompt signature for this task.
+
+        :return: Unified Pydantic prompt signature.
+        """
+        # Define relation type literal if relations are provided.
+        if isinstance(self._relations, dict):
+            relation_names = list(self._relations.keys())
+        else:
+            relation_names = list(self._relations)
+
+        RelationType = Literal[*(tuple(relation_names))] if relation_names else str  # type: ignore[invalid-type-form]
+
+        # Define entity type literal if entity types are provided.
+        entity_type_names: list[str] = []
+        if self._entity_types:
+            if isinstance(self._entity_types, dict):
+                entity_type_names = list(self._entity_types.keys())
+            else:
+                entity_type_names = list(self._entity_types)
+
+        EntityType = Literal[*(tuple(entity_type_names))] if entity_type_names else str  # type: ignore[invalid-type-form]
+
+        # Create dynamic models.
+        DynamicEntity = pydantic.create_model(
+            "RelationEntity",
+            text=(str, pydantic.Field(..., description="Surface text of the entity as it appears in the document.")),
+            entity_type=(
+                EntityType,
+                pydantic.Field(..., description="The category or type of the entity."),
+            ),
+            __doc__="An entity involved in a relation.",
+            __base__=pydantic.BaseModel,
+        )
+
+        DynamicTriplet = pydantic.create_model(
+            "RelationTriplet",
+            head=(DynamicEntity, pydantic.Field(..., description="The subject entity (head) of the relation.")),
+            relation=(RelationType, pydantic.Field(..., description="The type of relation between the head and tail.")),
+            tail=(DynamicEntity, pydantic.Field(..., description="The object entity (tail) of the relation.")),
+            score=(
+                float | None,
+                pydantic.Field(
+                    default=None, description="Provide a confidence score for this relation triplet, between 0 and 1."
+                ),
+            ),
+            __doc__="A relation triplet consisting of a head entity, a relation type, and a tail entity.",
+            __base__=pydantic.BaseModel,
+        )
+
+        return pydantic.create_model(
+            "RelationExtractionOutput",
+            __doc__="Result of relation extraction. Contains a list of extracted relation triplets.",
+            triplets=(
+                list[DynamicTriplet],  # type: ignore[invalid-type-form]
+                pydantic.Field(..., description="List of extracted relation triplets."),
+            ),
         )
 
     @property
@@ -130,19 +196,15 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=gliner2.inference.engine.Schema().relations(
-                    relation_types=self._relations,
-                ),
+                prompt_signature=self.prompt_signature,
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.relations,
             )
 
-        bridge_types: dict[
-            ModelType, type[DSPyRelationExtraction | LangChainRelationExtraction | OutlinesRelationExtraction]
-        ] = {
+        bridge_types: dict[ModelType, type[DSPyRelationExtraction | PydanticRelationExtraction]] = {
             ModelType.dspy: DSPyRelationExtraction,
-            ModelType.langchain: LangChainRelationExtraction,
-            ModelType.outlines: OutlinesRelationExtraction,
+            ModelType.langchain: PydanticRelationExtraction,
+            ModelType.outlines: PydanticRelationExtraction,
         }
 
         try:
@@ -152,6 +214,9 @@ class RelationExtraction(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBr
                 entity_types=self._entity_types,
                 prompt_instructions=self._custom_prompt_instructions,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
+                model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err

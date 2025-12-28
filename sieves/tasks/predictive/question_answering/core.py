@@ -8,6 +8,7 @@ from typing import Any, override
 
 import datasets
 import dspy
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -15,11 +16,7 @@ from sieves.model_wrappers.types import ModelSettings
 from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
-from sieves.tasks.predictive.question_answering.bridges import (
-    DSPyQA,
-    LangChainQA,
-    OutlinesQA,
-)
+from sieves.tasks.predictive.question_answering.bridges import DSPyQuestionAnswering, PydanticQA
 from sieves.tasks.predictive.schemas.question_answering import (
     FewshotExample,
     TaskModel,
@@ -27,7 +24,7 @@ from sieves.tasks.predictive.schemas.question_answering import (
     TaskResult,
 )
 
-_TaskBridge = DSPyQA | LangChainQA | OutlinesQA
+_TaskBridge = DSPyQuestionAnswering | PydanticQA
 
 
 class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
@@ -70,7 +67,15 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
             model_settings=model_settings,
             condition=condition,
         )
-        self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
+        return FewshotExample
 
     @override
     def _compute_metrics(self, truths: list[Any], preds: list[Any], judge: dspy.LM | None = None) -> dict[str, float]:
@@ -110,19 +115,20 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
     @override
     def _init_bridge(self, model_type: ModelType) -> _TaskBridge:
         bridge_types: dict[ModelType, type[_TaskBridge]] = {
-            ModelType.dspy: DSPyQA,
-            ModelType.outlines: OutlinesQA,
-            ModelType.langchain: LangChainQA,
+            ModelType.dspy: DSPyQuestionAnswering,
+            ModelType.outlines: PydanticQA,
+            ModelType.langchain: PydanticQA,
         }
 
         try:
-            bridge_type = bridge_types[model_type]
-
-            return bridge_type(
+            return bridge_types[model_type](
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
                 questions=self._questions,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
+                model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
         except KeyError as err:
             raise KeyError(f"Model type {model_type} is not supported by {self.__class__.__name__}.") from err
@@ -135,6 +141,11 @@ class QuestionAnswering(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBri
             ModelType.langchain,
             ModelType.outlines,
         }
+
+    @property
+    @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        return TaskResult
 
     @override
     @property

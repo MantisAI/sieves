@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, override
+from typing import Any, Literal, override
 
 import datasets
 import dspy
-import gliner2
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType
@@ -17,7 +17,7 @@ from sieves.serialization import Config
 from sieves.tasks.distillation.types import DistillationFramework
 from sieves.tasks.predictive.core import PredictiveTask
 from sieves.tasks.predictive.gliner_bridge import GliNERBridge
-from sieves.tasks.predictive.ner.bridges import DSPyNER, LangChainNER, OutlinesNER
+from sieves.tasks.predictive.ner.bridges import DSPyNER, PydanticNER
 from sieves.tasks.predictive.schemas.ner import (
     FewshotExample,
     TaskModel,
@@ -25,33 +25,11 @@ from sieves.tasks.predictive.schemas.ner import (
     TaskResult,
 )
 
-_TaskBridge = DSPyNER | GliNERBridge | LangChainNER | OutlinesNER
+_TaskBridge = DSPyNER | GliNERBridge | PydanticNER
 
 
 class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
-    """Extract named entities from text using various model wrappers.
-
-    Examples:
-        Basic usage with list of entity types:
-
-        >>> ner = NER(
-        ...     entities=["PERSON", "LOCATION", "ORGANIZATION"],
-        ...     model=model,
-        ... )
-
-        Using dict format with descriptions for better entity recognition:
-
-        >>> ner = NER(
-        ...     entities={
-        ...         "PERSON": "Names of people, including first and last names",
-        ...         "LOCATION": "Geographic locations like cities, countries, landmarks",
-        ...         "ORGANIZATION": "Companies, institutions, government agencies"
-        ...     },
-        ...     model=model,
-        ... )
-
-        The descriptions are especially useful with GliNER, which uses them to improve entity recognition accuracy.
-    """
+    """Extract named entities from text using various model wrappers."""
 
     def __init__(
         self,
@@ -105,7 +83,49 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
             model_settings=model_settings,
             condition=condition,
         )
-        self._fewshot_examples: Sequence[FewshotExample]
+
+    @property
+    @override
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        return FewshotExample
+
+    @property
+    @override
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the unified Pydantic prompt signature for this task.
+
+        :return: Unified Pydantic prompt signature.
+        """
+        # Create a dynamic entity model with Literal for the entity types.
+        EntityTypes = Literal[*(tuple(self._entities))] if self._entities else str  # type: ignore[valid-type]
+
+        DynamicEntity = pydantic.create_model(
+            "NEREntity",
+            __doc__="Extracted named entity with its context and type.",
+            text=(str, pydantic.Field(description="The specific text segment identified as an entity.")),
+            context=(str, pydantic.Field(description="The surrounding text providing context for the entity.")),
+            entity_type=(
+                EntityTypes,
+                pydantic.Field(description="The category or type of the entity (e.g., PERSON, ORGANIZATION)."),
+            ),
+            score=(
+                float | None,
+                pydantic.Field(
+                    default=None,
+                    description="Provide a confidence score for the entity identification, between 0 and 1.",
+                ),
+            ),
+            __base__=pydantic.BaseModel,
+        )
+
+        return pydantic.create_model(
+            "NEROutput",
+            __doc__="Result of named-entity recognition. Contains a list of extracted entities.",
+            entities=(
+                list[DynamicEntity],  # type: ignore[valid-type]
+                pydantic.Field(..., description="List of extracted named entities."),
+            ),
+        )
 
     @property
     @override
@@ -161,14 +181,14 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
             return GliNERBridge(
                 task_id=self._task_id,
                 prompt_instructions=self._custom_prompt_instructions,
-                prompt_signature=gliner2.inference.engine.Schema().entities(entity_types=self._entities, dtype="list"),
+                prompt_signature=self.prompt_signature,
                 model_settings=self._model_settings,
                 inference_mode=gliner_.InferenceMode.entities,
             )
 
         bridge_types = {
-            ModelType.langchain: LangChainNER,
-            ModelType.outlines: OutlinesNER,
+            ModelType.langchain: PydanticNER,
+            ModelType.outlines: PydanticNER,
             ModelType.dspy: DSPyNER,
         }
 
@@ -179,6 +199,9 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
                 prompt_instructions=self._custom_prompt_instructions,
                 entities=self._entities_param,
                 model_settings=self._model_settings,
+                prompt_signature=self.prompt_signature,
+                model_type=model_type,
+                fewshot_examples=self._fewshot_examples,
             )
             return result  # type: ignore[return-value]
         except KeyError as err:
@@ -197,6 +220,7 @@ class NER(PredictiveTask[TaskPromptSignature, TaskResult, _TaskBridge]):
     @override
     def _validate_fewshot_examples(self) -> None:
         for fs_example in self._fewshot_examples or []:
+            assert isinstance(fs_example, FewshotExample)
             for entity in fs_example.entities:
                 if entity.entity_type not in self._entities:
                     raise ValueError(f"Entity {entity.entity_type} not in {self._entities}.")

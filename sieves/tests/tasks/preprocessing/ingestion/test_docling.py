@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, smolvlm_picture_description
-from docling.document_converter import DocumentConverter, ImageFormatOption
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc.document import DescriptionAnnotation
 
 from sieves import Doc, Pipeline
@@ -61,7 +61,7 @@ def test_image_description_with_local_vlm() -> None:
     """Test image description with local VLM model."""
     converter = DocumentConverter(
         format_options={
-            InputFormat.PDF: ImageFormatOption(
+            InputFormat.PDF: PdfFormatOption(
                 pipeline_options=PdfPipelineOptions(
                     do_picture_description=True,
                     picture_description_options=smolvlm_picture_description,

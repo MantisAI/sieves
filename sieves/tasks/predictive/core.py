@@ -14,6 +14,7 @@ from typing import Any, Generic
 
 import datasets
 import dspy
+import pydantic
 
 from sieves.data import Doc
 from sieves.model_wrappers import ModelType, ModelWrapperInferenceMode  # noqa: F401
@@ -74,8 +75,8 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         self._model_settings = model_settings
         self._overwrite = overwrite
         self._custom_prompt_instructions = prompt_instructions
-        self._bridge = self._init_bridge(ModelType.get_model_type(self._model_wrapper))
         self._fewshot_examples = fewshot_examples
+        self._bridge = self._init_bridge(ModelType.get_model_type(self._model_wrapper))
 
         self._validate_fewshot_examples()
 
@@ -85,6 +86,14 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         :raises ValueError: if fewshot examples don't pass validation.
         """
         pass
+
+    @property
+    @abc.abstractmethod
+    def fewshot_example_type(self) -> type[FewshotExample]:
+        """Return few-shot example type.
+
+        :return: Few-shot example type.
+        """
 
     @abc.abstractmethod
     def _init_bridge(self, model_type: ModelType) -> TaskBridge:
@@ -141,6 +150,7 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         )
 
         # Compute batch-wise results.
+        docs = iter(docs)
         batch_size = self._batch_size if self._batch_size > 0 else sys.maxsize
         while docs_batch := [doc for doc in itertools.islice(docs, batch_size)]:
             if len(docs_batch) == 0:
@@ -257,6 +267,14 @@ class PredictiveTask(Generic[TaskPromptSignature, TaskResult, TaskBridge], Task,
         init_dict["model_settings"] = ModelSettings.model_validate(init_dict["model_settings"])
 
         return cls(**init_dict)
+
+    @property
+    @abc.abstractmethod
+    def prompt_signature(self) -> type[pydantic.BaseModel]:
+        """Return the Pydantic prompt signature for this task.
+
+        :return: Pydantic model class.
+        """
 
     @property
     def metric(self) -> str:

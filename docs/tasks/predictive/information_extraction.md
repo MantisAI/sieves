@@ -4,9 +4,10 @@ The `InformationExtraction` task allows for structured data extraction from docu
 
 ## Usage
 
-!!! note "Fewshot examples and confidence scores"
-    If you use few-shot examples and want your model to provided scores, you should include them in your examples. This
-    makes it easier for the model to understand what's expected.
+!!! note "Confidence scores"
+    Confidence scores are automatically captured and visible to the model (including nested fields in DSPy signatures).
+    While few-shot examples are helpful for performance tuning, they are not required for the model to understand
+    it should provide scores.
 
 ### Multi-Entity Extraction (Default)
 
@@ -73,7 +74,7 @@ print(f"IE Score: {report.metrics.get('F1') or report.metrics.get('Accuracy')}")
 
 ### Ground Truth Formats
 
-Ground truth has to be specified in `doc.meta` using `ResultMulti` or `ResultSingle` instances.
+Ground truth has to be specified in `doc.gold` using `ResultMulti` or `ResultSingle` instances.
 
 ---
 

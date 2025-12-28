@@ -32,15 +32,17 @@ class FewshotExample(BaseFewshotExample):
 
 # --8<-- [start:Result]
 class Result(pydantic.BaseModel):
-    """Result of a translation task.
+    """Result of a translation task. Contains the translated text and a confidence score.
 
     Attributes:
         translation: Translated text.
         score: Confidence score.
     """
 
-    translation: str
-    score: float | None = None
+    translation: str = pydantic.Field(description="The input text translated into the target language.")
+    score: float | None = pydantic.Field(
+        default=None, description="Provide a confidence score for the translation, between 0 and 1."
+    )
 
 
 # --8<-- [end:Result]

@@ -44,15 +44,17 @@ class FewshotExample(BaseFewshotExample):
 
 # --8<-- [start:Result]
 class Result(pydantic.BaseModel):
-    """Result of a summarization task.
+    """Result of a summarization task. Contains the generated summary and a confidence score.
 
     Attributes:
         summary: Summary of text.
         score: Confidence score.
     """
 
-    summary: str
-    score: float | None = None
+    summary: str = pydantic.Field(description="The generated summary of the input text.")
+    score: float | None = pydantic.Field(
+        default=None, description="Provide a confidence score for the generated summary, between 0 and 1."
+    )
 
 
 # --8<-- [end:Result]
