@@ -8,10 +8,10 @@ readme = "README.md"
 description = "Plug-and-play, zero-shot document processing pipelines."
 license = { text = "MIT" }
 authors = [
-    { name = "Matthew Upson" },
-    { name = "Nick Sorros" },
-    { name = "Raphael Mitsch" },
-    { name = "Matthew Maufe" },
+    { name = "Matthew Upson", email = "hi@mantisnlp.com" },
+    { name = "Nick Sorros", email = "hi@mantisnlp.com" },
+    { name = "Raphael Mitsch", email = "hi@mantisnlp.com" },
+    { name = "Matthew Maufe", email = "hi@mantisnlp.com" },
     { name = "Angelo Di Gianvito", email = "hi@mantisnlp.com" },
 ]
 dynamic = ["version"]
