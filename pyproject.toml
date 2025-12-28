@@ -7,7 +7,14 @@ name = "sieves"
 readme = "README.md"
 description = "Plug-and-play, zero-shot document processing pipelines."
 license = { text = "MIT" }
-dynamic = ["version", "authors"]
+authors = [
+    { name = "Matthew Upson", email = "hi@mantisnlp.com" },
+    { name = "Nick Sorros", email = "hi@mantisnlp.com" },
+    { name = "Raphael Mitsch", email = "hi@mantisnlp.com" },
+    { name = "Matthew Maufe", email = "hi@mantisnlp.com" },
+    { name = "Angelo Di Gianvito", email = "hi@mantisnlp.com" },
+]
+dynamic = ["version"]
 requires-python = "==3.12.*"
 dependencies = [
     "chonkie>=1,<2",
@@ -30,6 +37,7 @@ dependencies = [
     "openai>=1.109.1,<2",
     "langchain-openai>=1.1.6,<2",
     "pydantic-ai>=0.0.31,<0.0.32",
+    "scikit-learn>=1.6,<2",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -39,6 +47,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12"
 ]
+
+[project.urls]
+Homepage = "https://github.com/MantisAI/sieves"
+Repository = "https://github.com/MantisAI/sieves"
 
 [project.optional-dependencies]
 ingestion = [
@@ -69,6 +81,11 @@ test = [
     "mypy-extensions>=1",
     "pre-commit>=4,<5",
 ]
+
+[tool.setuptools.packages.find]
+include = ["sieves*"]
+
+[tool.setuptools_scm]
 
 [tool.ruff]
 line-length = 120
@@ -148,7 +165,20 @@ module = ["outlines.*", "docling.*", "chonkie.*", "tqdm.*", "dspy.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
 
+[[tool.mypy.overrides]]
+module = "examples.*"
+follow_imports = "skip"
+
 [tool.pytest.ini_options]
 markers = [
   "slow: marks tests as slow (deselect with '-m not slow')"
 ]
+
+[tool.coverage.run]
+source = ["sieves/"]
+omit = ["*__init__*"]
+
+[tool.coverage.report]
+show_missing = true
+precision = 2
+sort = "Miss"
