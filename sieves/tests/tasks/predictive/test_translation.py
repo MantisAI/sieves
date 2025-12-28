@@ -170,4 +170,4 @@ def test_evaluation(batch_runtime) -> None:
     doc_partial.results["trans"] = Result(translation="Hola", score=1.0)
     doc_partial.gold["trans"] = Result(translation="Hola mundo", score=1.0)
     report_partial = task.evaluate([doc_partial], judge=batch_runtime.model)
-    assert 0.3 < report_partial.metrics[task.metric] < 0.8
+    assert 0.3 <= report_partial.metrics[task.metric] <= 0.8

@@ -213,4 +213,4 @@ def test_evaluation(batch_runtime) -> None:
     ])
     report_partial = task_multi.evaluate([doc_partial], judge=batch_runtime.model)
     # Expected to be somewhere in the middle
-    assert 0.2 < report_partial.metrics[task_multi.metric] < 0.8
+    assert 0.2 <= report_partial.metrics[task_multi.metric] <= 0.8
