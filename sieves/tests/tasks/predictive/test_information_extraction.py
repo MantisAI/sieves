@@ -22,10 +22,6 @@ class PersonNotFrozen(pydantic.BaseModel):
     age: pydantic.PositiveInt
     score: pydantic.NonNegativeFloat | None = None
 
-PersonGliner = gliner2.inference.engine.Schema().structure(
-    "Person"
-).field("name", dtype="str").field("age", dtype="str")
-
 @flaky(max_runs=3, min_passes=1)
 @pytest.mark.parametrize(
     "batch_runtime",
@@ -46,6 +42,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
                 entities=[Person(name="Alan Watts", age=58)],
             ),
     ]
+
     else:
         fewshot_examples = [
             information_extraction.FewshotExampleSingle(
@@ -58,7 +55,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
             ),
         ]
 
-    entity_type = PersonGliner if isinstance(batch_runtime.model, gliner2.GLiNER2) else Person
+    entity_type = Person
     fewshot_args = {"fewshot_examples": fewshot_examples} if fewshot else {}
     task = tasks.predictive.InformationExtraction(
         entity_type=entity_type,
@@ -68,30 +65,9 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
         mode=mode,
         **fewshot_args
     )
+
     pipe = Pipeline(task)
     docs = list(pipe(information_extraction_docs))
-
-    # Ensure entity type checks work as expected.
-    if entity_type is not PersonGliner:
-        with pytest.raises(TypeError):
-            tasks.predictive.InformationExtraction(
-                entity_type=PersonGliner,
-                model=batch_runtime.model,
-                model_settings=batch_runtime.model_settings,
-                batch_size=batch_runtime.batch_size,
-                mode=mode,
-                **fewshot_args
-            )
-    else:
-        with pytest.raises(TypeError):
-            tasks.predictive.InformationExtraction(
-                entity_type=Person,
-                model=batch_runtime.model,
-                model_settings=batch_runtime.model_settings,
-                batch_size=batch_runtime.batch_size,
-                mode=mode,
-                **fewshot_args
-            )
 
     assert len(docs) == 2
     for doc in docs:
@@ -116,6 +92,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
         print(f"Raw output: {doc.meta['InformationExtraction']['raw']}")
         print(f"Usage: {doc.meta['InformationExtraction']['usage']}")
         print(f"Total Usage: {doc.meta['usage']}")
+
         if mode == "single":
             assert (
                 doc.results["InformationExtraction"].entity is None or
@@ -123,6 +100,7 @@ def test_run(information_extraction_docs, batch_runtime, fewshot, mode) -> None:
             )
         else:
             assert isinstance(doc.results["InformationExtraction"].entities, list)
+
     with pytest.raises(NotImplementedError):
         pipe["InformationExtraction"].distill(None, None, None, None, None, None, None, None)
 
@@ -236,7 +214,7 @@ def test_inference_mode_override(batch_runtime) -> None:
     dummy = "dummy_inference_mode"
 
     task = tasks.predictive.InformationExtraction(
-        entity_type=PersonGliner if isinstance(batch_runtime.model, gliner2.GLiNER2) else Person,
+        entity_type=Person,
         model=batch_runtime.model,
         model_settings=ModelSettings(inference_mode=dummy),
         batch_size=batch_runtime.batch_size,

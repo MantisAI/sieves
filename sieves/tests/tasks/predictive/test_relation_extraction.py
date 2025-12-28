@@ -30,13 +30,13 @@ def test_run(relation_extraction_docs, batch_runtime, fewshot) -> None:
                 RelationTriplet(
                     head=RelationEntity(text="Henri Dunant", entity_type="PERSON"),
                     relation="founded",
-                    tail=RelationEntity(text="Red Cross", entity_type="ORG"),
+                    tail=RelationEntity(text="Red Cross", entity_type="ORGANIZATION"),
                     score=1.0,
                 ),
                 RelationTriplet(
-                    head=RelationEntity(text="Red Cross", entity_type="ORG"),
+                    head=RelationEntity(text="Red Cross", entity_type="ORGANIZATION"),
                     relation="located_in",
-                    tail=RelationEntity(text="Geneva", entity_type="LOC"),
+                    tail=RelationEntity(text="Geneva", entity_type="LOCATION"),
                     score=1.0,
                 ),
             ],
@@ -47,13 +47,13 @@ def test_run(relation_extraction_docs, batch_runtime, fewshot) -> None:
                 RelationTriplet(
                     head=RelationEntity(text="Eglantyne Jebb", entity_type="PERSON"),
                     relation="founded",
-                    tail=RelationEntity(text="Save the Children", entity_type="ORG"),
+                    tail=RelationEntity(text="Save the Children", entity_type="ORGANIZATION"),
                     score=1.0,
                 ),
                 RelationTriplet(
-                    head=RelationEntity(text="Save the Children", entity_type="ORG"),
+                    head=RelationEntity(text="Save the Children", entity_type="ORGANIZATION"),
                     relation="located_in",
-                    tail=RelationEntity(text="London", entity_type="LOC"),
+                    tail=RelationEntity(text="London", entity_type="LOCATION"),
                     score=1.0,
                 ),
             ],
@@ -271,12 +271,12 @@ def test_evaluation(batch_runtime) -> None:
         RelationTriplet(
             head=RelationEntity(text="Henri", entity_type="PERSON"),
             relation="founded",
-            tail=RelationEntity(text="Red Cross", entity_type="ORG")
+            tail=RelationEntity(text="Red Cross", entity_type="ORGANIZATION")
         ),
         RelationTriplet(
-            head=RelationEntity(text="Red Cross", entity_type="ORG"),
+            head=RelationEntity(text="Red Cross", entity_type="ORGANIZATION"),
             relation="located_in",
-            tail=RelationEntity(text="Geneva", entity_type="LOC")
+            tail=RelationEntity(text="Geneva", entity_type="LOCATION")
         )
     ])
     doc_full.results["re"] = res_full
@@ -293,7 +293,7 @@ def test_evaluation(batch_runtime) -> None:
         RelationTriplet(
             head=RelationEntity(text="Henri", entity_type="PERSON"),
             relation="founded",
-            tail=RelationEntity(text="Red Cross", entity_type="ORG")
+            tail=RelationEntity(text="Red Cross", entity_type="ORGANIZATION")
         )
     ])
     doc_partial.results["re"] = res_pred
@@ -308,14 +308,14 @@ def test_evaluation(batch_runtime) -> None:
         RelationTriplet(
             head=RelationEntity(text="Henri", entity_type="PERSON"),
             relation="founded",
-            tail=RelationEntity(text="Red Cross", entity_type="ORG")
+            tail=RelationEntity(text="Red Cross", entity_type="ORGANIZATION")
         )
     ])
     res_none_gold = Result(triplets=[
         RelationTriplet(
             head=RelationEntity(text="Eglantyne", entity_type="PERSON"),
             relation="founded",
-            tail=RelationEntity(text="Save the Children", entity_type="ORG")
+            tail=RelationEntity(text="Save the Children", entity_type="ORGANIZATION")
         )
     ])
     doc_none.results["re"] = res_none_pred
