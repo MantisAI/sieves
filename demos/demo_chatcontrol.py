@@ -245,8 +245,8 @@ def _(mo):
 
 @app.cell
 def _(result):
-    for article in result["InformationExtraction"]:
-        print(article)
+    for article in result["InformationExtraction"].entities:
+        print(article.topic)
         print(f"{article.link}")
         print("#######")
     return
