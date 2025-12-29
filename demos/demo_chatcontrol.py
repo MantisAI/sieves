@@ -1,15 +1,13 @@
 """Chat Control demo for Marimo."""
+
 import marimo
 
-__generated_with = "0.18.3"
-app = marimo.App(
-    width="full",
-    layout_file="layouts/demo_chatcontrol.slides.json",
-)
+__generated_with = "0.18.4"
+app = marimo.App(width="full")
 
 with app.setup:
-    # Initialization code that runs before all other cells
-    pass
+    from dotenv import load_dotenv
+    load_dotenv()
 
 
 @app.cell(hide_code=True)
@@ -25,7 +23,6 @@ def _(mo):
 @app.cell
 def _():
     import marimo as mo
-
     return (mo,)
 
 
@@ -146,7 +143,6 @@ def _():
 
         topic: str = pydantic.Field(description="Topic or title of the article on this.")
         link: str = pydantic.Field(description="Link to the article.")
-
     return (RelatedLiterature,)
 
 
@@ -207,7 +203,7 @@ def _(mo):
 
 @app.cell
 def _(pprint, result):
-    pprint(result["QuestionAnswering"][0])
+    pprint(result["QuestionAnswering"].qa_pairs[0])
     return
 
 
@@ -221,7 +217,7 @@ def _(mo):
 
 @app.cell
 def _(pprint, result):
-    pprint(result["QuestionAnswering"][1])
+    pprint(result["QuestionAnswering"].qa_pairs[1])
     return
 
 
@@ -250,7 +246,7 @@ def _(mo):
 @app.cell
 def _(result):
     for article in result["InformationExtraction"]:
-        print(article.topic)
+        print(article)
         print(f"{article.link}")
         print("#######")
     return
