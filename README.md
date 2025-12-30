@@ -24,7 +24,7 @@
 
 <br>
 
-## A Unified Interface for Document AI.
+## A Unified Interface for Structured Document AI.
 
 `sieves` provides a **framework-agnostic abstraction for building document AI pipelines**.
 
