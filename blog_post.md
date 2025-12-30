@@ -81,6 +81,8 @@ We are releasing v1.0 to signal API stability. We have used `sieves` in producti
 
 We are committed to stability. The underlying models and frameworks will change. Your `sieves` pipelines should remain a stable part of your infrastructure.
 
+We also presented an earlier version of `sieves` at PyData Amsterdam 2025, where we walked through the design rationale, core abstractions, and examples. The recording is available [here](https://www.youtube.com/watch?v=5i8tEvrYEyQ).
+
 ## When to Use sieves
 
 `sieves` is for teams building document-centric NLP pipelines.
