@@ -93,3 +93,5 @@ nav:
       - guides/optimization.md
       - guides/distillation.md
       - guides/observability.md
+  - Examples:
+      - examples/crisis_tweets.md
