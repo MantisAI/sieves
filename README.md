@@ -1,8 +1,14 @@
-<img src="https://raw.githubusercontent.com/mantisai/sieves/main/docs/assets/sieve.png" width="230" align="left" style="margin-right:60px" />
-<img src="https://raw.githubusercontent.com/mantisai/sieves/main/docs/assets/sieves_sieve_style.png" width="350" align="left" style="margin-right:60px" />
+<p>
+  <img src="https://raw.githubusercontent.com/mantisai/sieves/main/docs/assets/sieve.png" width="150" align="left" />
+  <span>
+        <br>
+        <h1>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>sieves<br></code>&nbsp;&nbsp;&nbsp;<br>
+              &nbsp;
+        </h1>
+  </span>
+</p>
 
-<br clear="all"/>
-<br>
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test.yml)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/mantisai/sieves)
@@ -15,6 +21,8 @@
 [![Version](https://img.shields.io/pypi/v/sieves)]((https://pypi.org/project/sieves/))
 ![Status](https://img.shields.io/pypi/status/sieves)
 -->
+
+<br>
 
 ## A Unified Interface for Document AI.
 
