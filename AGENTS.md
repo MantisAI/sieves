@@ -49,7 +49,7 @@ AGENTS.md                  # This file (Claude Code guidelines)
 
 ## Installation & Setup
 
-**Python requirement:** 3.12 (exact version required)
+**Python requirement:** 3.12 or 3.13 (3.14 not supported yet due to dependency wheels missing)
 
 ### Using `uv` (preferred)
 
@@ -377,7 +377,6 @@ Before proposing changes, ensure:
 - **All model libraries** (Outlines, DSPy, LangChain, Transformers, GLiNER2) are **core dependencies**
 - Serialization excludes complex third-party objects (models, converters); must pass at load time
 - Ingestion tasks may require system packages (Tesseract for OCR, etc.)
-- Python 3.12 exact version required (not 3.12+)
 
 ---
 
