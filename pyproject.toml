@@ -15,7 +15,7 @@ authors = [
     { name = "Angelo Di Gianvito", email = "hi@mantisnlp.com" },
 ]
 dynamic = ["version"]
-requires-python = "==3.12.*"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "chonkie>=1,<2",
     "datasets>=3,<4",
@@ -45,7 +45,8 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12"
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
 
 [project.urls]

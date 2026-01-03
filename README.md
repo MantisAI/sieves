@@ -24,7 +24,7 @@
 
 <br>
 
-## A Unified Interface for Document AI.
+## A Unified Interface for Structured Document AI.
 
 `sieves` provides a **framework-agnostic abstraction for building document AI pipelines**.
 
@@ -89,7 +89,6 @@ to skip having to define tasks from scratch.
 ```bash
 pip install sieves
 ```
-*Requires Python 3.12 (due to dependency constraints in `docling` and `pyarrow`).*
 
 **2. Basic: text classification with a small local model**
 
