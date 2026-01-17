@@ -57,7 +57,7 @@ You focus on the data you need and the **structure it should conform to**, while
 4.  **Prediction**: Structured generation across `outlines`, `dspy`, `langchain`, `gliner2`, and `transformers` zero-shot classification pipelines.
 5.  **Persistence**: Save and load pipelines with their configurations to ensure reproducibility across environments.
 
-## Evaluation and Optimization
+## Evaluation, Optimization, Distillation
 
 A production pipeline is not static. You need to know if it works and how to make it better. `sieves` builds these needs into the core workflow.
 
