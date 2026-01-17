@@ -54,7 +54,7 @@ class DSPy(ModelWrapper[PromptSignature, Result, Model, InferenceMode]):
         """
         super().__init__(model, model_settings)
         cfg = model_settings.config_kwargs or {}
-        dspy.configure(lm=model, track_usage=True, **cfg)
+        dspy.configure(lm=model, **({"track_usage": True} | cfg))
 
         # Disable noisy LiteLLM logging.
         dspy.disable_litellm_logging()
