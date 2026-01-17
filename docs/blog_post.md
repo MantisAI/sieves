@@ -21,11 +21,6 @@ To mitigate this, we built `sieves`. `sieves` is a framework-agnostic abstractio
 
 It allows you to mix and match language model frameworks, so you can build a pipeline like this:
 ```mermaid
-%%{init: {'themeVariables': {
-  'nodeBorder': 'transparent',
-  'primaryColor': 'transparent'
-}}}%%
-
 flowchart LR
     Ingestion@{ img: "https://repository-images.githubusercontent.com/826168160/d3c8a8f9-af99-449f-856b-4ab9c897cce2", label: "**Ingestion**:\nDocling", pos: "t", w: 100, h: 100, constraint: "on" }
     Chunking@{ img: "https://avatars.githubusercontent.com/u/205278415?s=280&v=4", label: "**Chunking**:\nChonkie", pos: "t", w: 0, h: 100, constraint: "on" }
