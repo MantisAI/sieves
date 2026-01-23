@@ -17,13 +17,12 @@ The missing piece was a stable, schema-first layer that sits above these tools a
 
 To mitigate this, we built `sieves`. `sieves` is a framework-agnostic abstraction for building these workflows. It replaces imperative glue code with declarative design. Its modularity allows complex pipelines to be built from simple, reusable tasks.
 
-`sieves` lets you mix and match language model frameworks within a single pipeline. That means you can assign the best
-tool for each task instead of being locked into one framework.
-For example, you might use a fast local `transformers` model for document classification, and a frontier LLM for challenging information extraction.
-You might also want to experiment with different models and model types to see which work best for you.
+`sieves` makes it easy to mix and match language model frameworks in one pipeline. You can pick the best tool for each
+task instead of being locked into a single one. Use a fast local `transformers` model for classification, a frontier
+LLM for complex extraction, or swap in different models to see what works best.
 
-With `sieves`, you can define and orchestrate this heterogeneous pipeline without rewriting your business logic.
-You control how to execute your pipeline.
+With `sieves`, you define and orchestrate these heterogeneous workflows without rewriting your business logic. You stay
+in control of how your pipeline executes.
 
 ![Pipeline diagram](assets/pipeline.png)
 
