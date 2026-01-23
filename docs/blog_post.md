@@ -19,8 +19,9 @@ To mitigate this, we built `sieves`. `sieves` is a framework-agnostic abstractio
 
 `sieves` lets you mix and match language model frameworks within a single pipeline. That means you can assign the best
 tool for each task instead of being locked into one framework.
-For example, you might use a fast local model for document classification, and a more expressive LLM framework like
-`langchain` for challenging information extraction.
+For example, you might use a fast local `transformers` model for document classification, and a frontier LLM for challenging information extraction.
+You might also want to experiment with different models and model types to see which work best for you.
+
 With `sieves`, you can define and orchestrate this heterogeneous pipeline without rewriting your business logic.
 You control how to execute your pipeline.
 
