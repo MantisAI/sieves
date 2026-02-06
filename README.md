@@ -105,7 +105,9 @@ model = outlines.models.from_transformers(
 )
 
 # Define task.
-task = tasks.Classification(labels=["science", "politics"], model=model)
+task = tasks.Classification(
+  labels=["science", "politics"], mode='single', model=model
+)
 
 # Define pipeline with the classification task.
 pipeline = Pipeline(task)
@@ -115,13 +117,16 @@ doc = Doc(text="The new telescope captures images of distant galaxies.")
 
 # Run pipeline and print results.
 docs = list(pipeline([doc]))
+
 # The `results` field contains the structured task output as a unified Pydantic model.
-print(docs[0].results["Classification"]) # ResultMultiLabel(label_scores=[('science', 1.0), ('politics', 0.0)])
+print(docs[0].results["Classification"])
+# -> ResultSingleLabel(label='science', score=1.0)
 # The `meta` field contains more information helpful for observability and debugging, such as raw model output and token count information.
-print(docs[0].meta)    # {'Classification': {
-                       #    'raw': ['{ "science": 1.0, "politics": 0 }'],
-                       #    'usage': {'input_tokens': 2, 'output_tokens': 2, 'chunks': [{'input_tokens': 2, 'output_tokens': 2}]}}, 'usage': {'input_tokens': 2, 'output_tokens': 2}
-                       #  }
+print(docs[0].meta)
+# -> {'Classification': {
+#       'raw': ['{ "label": "science" }'], 'usage': {'input_tokens': 83, 'output_tokens': 8, 'chunks': [{'input_tokens': 83, 'output_tokens': 8}]}}, 'usage': {'input_tokens': 83, 'output_tokens': 8},
+#       'cached': False
+#    }
 ```
 
 **3. Advanced: End-to-end document AI with a hosted LLM**
