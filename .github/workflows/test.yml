@@ -44,7 +44,7 @@ jobs:
 
     - name: Install Python dependencies
       run: |
-        uv venv .venv --python 3.12
+        uv venv .venv --python 3.12 --clear
         uv build
         source .venv/bin/activate
         uv pip install ./dist/sieves-*.whl

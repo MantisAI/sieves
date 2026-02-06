@@ -11,7 +11,7 @@
 
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mantisai/sieves/test.yml)](https://github.com/mantisai/sieves/actions/workflows/test.yml)
-![GitHub top language](https://img.shields.io/github/languages/top/mantisai/sieves)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sieves)
 [![Version](https://img.shields.io/github/v/release/mantisai/sieves?include_prereleases&label=version)](https://github.com/mantisai/sieves/releases)
 ![Status](https://img.shields.io/badge/status-beta-blue)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
@@ -24,7 +24,7 @@
 
 <br>
 
-## A Unified Interface for Document AI.
+## A Unified Interface for Structured Document AI.
 
 `sieves` provides a **framework-agnostic abstraction for building document AI pipelines**.
 
@@ -89,7 +89,6 @@ to skip having to define tasks from scratch.
 ```bash
 pip install sieves
 ```
-*Requires Python 3.12 (due to dependency constraints in `docling` and `pyarrow`).*
 
 **2. Basic: text classification with a small local model**
 

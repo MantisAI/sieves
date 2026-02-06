@@ -1,8 +1,8 @@
-site_name: sieves
+site_name: Sieves
 site_url: https://sieves.ai/docs
 docs_dir: docs
 repo_url: https://github.com/mantisai/sieves
-repo_name: "sieves on GitHub"
+repo_name: "<code>sieves</code> on GitHub"
 
 theme:
   name: material
@@ -93,3 +93,5 @@ nav:
       - guides/optimization.md
       - guides/distillation.md
       - guides/observability.md
+  - Examples:
+      - examples/crisis_tweets.md
