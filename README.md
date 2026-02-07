@@ -14,7 +14,6 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sieves)
 [![Version](https://img.shields.io/pypi/v/sieves)]((https://pypi.org/project/sieves/))
 ![Status](https://img.shields.io/pypi/status/sieves)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
 [![codecov](https://codecov.io/gh/mantisai/sieves/branch/main/graph/badge.svg)](https://codecov.io/gh/mantisai/sieves)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18517810.svg)](https://doi.org/10.5281/zenodo.18517810)
 
