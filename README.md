@@ -46,9 +46,6 @@ This approach recognizes that different LM frameworks excel at different aspects
 Define your task pipeline once, then swap execution engines without rewriting your pipeline logic. Use the task library
 to skip having to define tasks from scratch.
 
-> [!WARNING]
-> `sieves` is in active development (Beta). The API is stable within minor versions, but we recommend pinning your version for production use.
-
 ## Features
 
 - :dart: **Zero Training Required:** Immediate inference using zero-/few-shot models
