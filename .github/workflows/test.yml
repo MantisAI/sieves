@@ -51,14 +51,6 @@ jobs:
         # Optional dependencies need to be installed in separate command.
         uv pip install 'sieves[ingestion,distill,test]'
 
-    - name: Create and enable 4 GB swap
-      run: |
-        sudo fallocate -l 4G /swapfile
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
-        free -h
-
     - name: Build docs
       run: |
         source .venv/bin/activate

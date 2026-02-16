@@ -2,8 +2,12 @@
 from pathlib import Path
 
 import pytest
-from marker.converters.pdf import PdfConverter
-from marker.models import create_model_dict
+
+try:
+    from marker.converters.pdf import PdfConverter
+    from marker.models import create_model_dict
+except ImportError:
+    pass
 
 from sieves import Doc, Pipeline, tasks
 from sieves.serialization import Config
