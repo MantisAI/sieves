@@ -236,8 +236,9 @@ pip install sieves
 
 **Optional extras:**
 ```bash
-pip install "sieves[ingestion]"  # PDF/DOCX parsing (docling, marker)
-pip install "sieves[distill]"    # Model distillation (setfit, model2vec)
+pip install "sieves[ingestion]"    # PDF/DOCX parsing (docling, marker)
+pip install "sieves[distill]"      # Model distillation (setfit, model2vec)
+pip install "sieves[optimization]" # Prompt optimization with DSPy (optuna)
 ```
 
 ## Community & Support
