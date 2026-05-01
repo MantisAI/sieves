@@ -26,7 +26,7 @@ dependencies = [
     # Model wrappers
     "outlines>=1,<2",
     "gliner2>=1.2,<2",
-    "transformers[torch]>=4,<5",
+    "transformers[torch]>=4,<6",
     "dspy-ai>=3,<4",
     "dspy>=3,<4",
     "accelerate>1.2,<2",
@@ -54,6 +54,9 @@ Homepage = "https://github.com/MantisAI/sieves"
 Repository = "https://github.com/MantisAI/sieves"
 
 [project.optional-dependencies]
+optimization = [
+    "optuna>=4,<5",
+]
 ingestion = [
     "docling>=2,<3",
     "nltk>=3.9.1",
@@ -61,6 +64,10 @@ ingestion = [
 distill = [
     "setfit>=1.1,<2",
     "model2vec[train]>0.4,<0.5",
+    # setfit 1.1.3 (latest, Nov 2024) imports `default_logdir` from
+    # transformers.training_args, which was removed in transformers v5.
+    # Cap distill to transformers v4 until setfit ships v5 support.
+    "transformers[torch]>=4,<5",
 ]
 test = [
     "anthropic>=0.45,<1",
@@ -129,6 +136,9 @@ ignore = ["D203", "D212"]
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = ["F401"]
+
+[tool.uv]
+exclude-newer = "3 days"
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

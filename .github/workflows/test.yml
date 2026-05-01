@@ -49,7 +49,10 @@ jobs:
         source .venv/bin/activate
         uv pip install ./dist/sieves-*.whl
         # Optional dependencies need to be installed in separate command.
-        uv pip install 'sieves[ingestion,distill,test]'
+        # Note: due to `setfit` not supporting `transformers` v5 yet, installing the `distill` extra runs with v4 of
+        # `transformers`. As we're installing all packages for tests, we're running the test suite with `transformers`
+        # v4. This is an ok tradeoff for now, given the minimal integration surface of `transformers` within `sieves`.
+        uv pip install 'sieves[ingestion,distill,optimization,test]'
 
     - name: Build docs
       run: |
