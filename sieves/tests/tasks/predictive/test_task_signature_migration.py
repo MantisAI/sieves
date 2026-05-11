@@ -2,7 +2,7 @@
 from typing import Literal, Union, Any
 
 import dspy
-import gliner2.inference.engine
+from sieves.model_wrappers.gliner_ import Schema as _GlinerSchema
 import pydantic
 import pytest
 
@@ -55,7 +55,7 @@ def test_classification_migration():
         score = dspy.OutputField(desc="Confidence score")
 
     # GliNER (classification mode)
-    expected_gliner = gliner2.inference.engine.Schema().classification(
+    expected_gliner = _GlinerSchema().classification(
         task="classification",
         labels=["science", "politics", "sports"]
     )
@@ -92,7 +92,7 @@ def test_classification_multi_label_migration():
         sports = dspy.OutputField(desc="Score for sports category")
 
     # GliNER (classification mode)
-    expected_gliner = gliner2.inference.engine.Schema().classification(
+    expected_gliner = _GlinerSchema().classification(
         task="classification",
         labels=["science", "politics", "sports"]
     )
@@ -127,7 +127,7 @@ def test_information_extraction_migration():
         age = dspy.OutputField(desc="Age in years")
 
     # GliNER (structure mode)
-    expected_gliner = gliner2.inference.engine.Schema().structure("Person")
+    expected_gliner = _GlinerSchema().structure("Person")
     expected_gliner.field("name", dtype="str")
     expected_gliner.field("age", dtype="str")
 
@@ -145,7 +145,7 @@ def test_ner_migration():
     # 2. Define Expected Output Signatures
 
     # GliNER (entities mode)
-    expected_gliner = gliner2.inference.engine.Schema().entities(
+    expected_gliner = _GlinerSchema().entities(
         entity_types=["PER", "LOC", "ORG"]
     )
 
@@ -204,7 +204,7 @@ def test_relation_extraction_migration():
     # 2. Define Expected Output Signatures
 
     # GliNER (relations mode)
-    expected_gliner = gliner2.inference.engine.Schema().relations(
+    expected_gliner = _GlinerSchema().relations(
         relation_types=["head", "relation", "tail"] # Per instruction: all but score
     )
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import dspy
-import gliner2.inference.engine
 import pydantic
 
 from sieves.model_wrappers import dspy_, gliner_, huggingface_, langchain_, outlines_
@@ -98,10 +97,6 @@ class ResultMultiLabel(pydantic.BaseModel):
 
 TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | huggingface_.Model | outlines_.Model
 TaskPromptSignature = (
-    type[dspy.Signature]
-    | type[pydantic.BaseModel]
-    | gliner2.inference.engine.Schema
-    | gliner2.inference.engine.StructureBuilder
-    | list[str]
+    type[dspy.Signature] | type[pydantic.BaseModel] | gliner_.Schema | gliner_.StructureBuilder | list[str]
 )
 TaskResult = ResultSingleLabel | ResultMultiLabel

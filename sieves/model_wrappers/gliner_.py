@@ -12,7 +12,19 @@ import pydantic
 from sieves.model_wrappers.core import Executable, ModelWrapper
 from sieves.model_wrappers.types import TokenUsage
 
-PromptSignature = gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder
+# gliner2 1.3 removed the `gliner2.inference.engine` submodule and re-exports
+# `Schema`/`StructureBuilder` at the package root. Resolve them in a way that
+# works for both 1.2 (engine submodule) and 1.3+ (top-level re-export).
+try:
+    Schema = gliner2.Schema
+    StructureBuilder = gliner2.StructureBuilder
+except AttributeError:  # pragma: no cover - gliner2 < 1.3 fallback
+    from gliner2.inference import engine as _gliner2_engine
+
+    Schema = _gliner2_engine.Schema
+    StructureBuilder = _gliner2_engine.StructureBuilder
+
+PromptSignature = Schema | StructureBuilder
 Model = gliner2.GLiNER2
 Result = dict[str, str | list[str | dict[str, Any]]]
 

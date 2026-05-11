@@ -2,7 +2,7 @@
 from typing import Literal, Union, Any
 
 import dspy
-import gliner2.inference.engine
+from sieves.model_wrappers.gliner_ import Schema as _GlinerSchema
 import pydantic
 import pytest
 
@@ -70,7 +70,7 @@ def test_convert_to_dspy_full():
 
 def test_convert_to_gliner_structure_full():
     # Expected manually constructed GliNER2 structure
-    expected = gliner2.inference.engine.Schema().structure("SimpleExtraction")
+    expected = _GlinerSchema().structure("SimpleExtraction")
     expected.field("name", dtype="str")
     expected.field("age", dtype="str")
 
@@ -80,7 +80,7 @@ def test_convert_to_gliner_structure_full():
 
 def test_convert_to_gliner_classification_full():
     # Expected manually constructed GliNER2 classification
-    expected = gliner2.inference.engine.Schema().classification(
+    expected = _GlinerSchema().classification(
         task="classification",
         labels=["A", "B", "C"]
     )
@@ -106,7 +106,7 @@ def test_convert_to_outlines_choice_full():
     assert actual == expected
 
 def test_convert_to_gliner_entities_full():
-    expected = gliner2.inference.engine.Schema().entities(
+    expected = _GlinerSchema().entities(
         entity_types=["science", "politics", "sports"]
     )
 
@@ -118,7 +118,7 @@ def test_convert_to_gliner_structure_choices_full():
     class ChoiceModel(pydantic.BaseModel):
         category: Literal["X", "Y"]
 
-    expected = gliner2.inference.engine.Schema().structure("ChoiceModel")
+    expected = _GlinerSchema().structure("ChoiceModel")
     expected.field("category", dtype="str", choices=["X", "Y"])
 
     actual = convert_to_signature(ChoiceModel, ModelType.gliner, mode="structure")

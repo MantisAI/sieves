@@ -8,10 +8,11 @@ from collections.abc import Iterable, Sequence
 from typing import Any, Literal, TypeVar, Union
 
 import dspy
-import gliner2.inference.engine
 import pydantic
 
 from sieves.model_wrappers import ModelType, dspy_, gliner_, huggingface_, outlines_
+from sieves.model_wrappers.gliner_ import Schema as _GlinerSchema
+from sieves.model_wrappers.gliner_ import StructureBuilder as _GlinerStructureBuilder
 
 _EntityType = TypeVar("_EntityType", bound=pydantic.BaseModel)
 
@@ -54,7 +55,7 @@ def _extract_labels_from_model(model_cls: type[pydantic.BaseModel]) -> list[str]
 
 def _pydantic_to_gliner(
     model_cls: type[pydantic.BaseModel], mode: str, **kwargs: Any
-) -> gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder:
+) -> _GlinerSchema | _GlinerStructureBuilder:
     """Convert Pydantic model to GliNER2 signature.
 
     :param model_cls: Pydantic model to convert.
@@ -62,7 +63,7 @@ def _pydantic_to_gliner(
     :param kwargs: Additional arguments for GliNER2 schema methods.
     :return: GliNER2 schema or structure builder.
     """
-    schema = gliner2.inference.engine.Schema()
+    schema = _GlinerSchema()
 
     if mode in ("classification", "entities", "relations"):
         labels = _extract_labels_from_model(model_cls)
