@@ -79,7 +79,7 @@ class Config(pydantic.BaseModel):
 
         :return str: Version string from setup.cfg metadata.
         """
-        return "1.0.3"
+        return "1.0.4"
 
     version: str = get_version()
     cls_name: str
