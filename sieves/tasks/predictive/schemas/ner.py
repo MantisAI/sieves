@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import dspy
-import gliner2.inference.engine
 import pydantic
 
 from sieves.model_wrappers import dspy_, gliner_, langchain_, outlines_
@@ -111,10 +110,5 @@ class FewshotExample(BaseFewshotExample):
 
 
 TaskModel = dspy_.Model | gliner_.Model | langchain_.Model | outlines_.Model
-TaskPromptSignature = (
-    type[dspy.Signature]
-    | type[pydantic.BaseModel]
-    | gliner2.inference.engine.Schema
-    | gliner2.inference.engine.StructureBuilder
-)
+TaskPromptSignature = type[dspy.Signature] | type[pydantic.BaseModel] | gliner_.Schema | gliner_.StructureBuilder
 TaskResult = Result

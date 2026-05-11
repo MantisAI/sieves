@@ -8,7 +8,6 @@ from collections import defaultdict
 from collections.abc import Sequence
 from typing import Any, Literal, override
 
-import gliner2
 import pydantic
 
 from sieves.data import Doc
@@ -36,7 +35,7 @@ from sieves.tasks.predictive.schemas.relation_extraction import (
 from sieves.tasks.predictive.utils import convert_to_signature
 
 
-class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gliner_.InferenceMode]):
+class GliNERBridge(Bridge[gliner_.Schema, gliner_.Result, gliner_.InferenceMode]):
     """Bridge for GLiNER2 models."""
 
     def __init__(
@@ -78,7 +77,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
 
     @override
     @property
-    def prompt_signature(self) -> gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder:
+    def prompt_signature(self) -> gliner_.Schema | gliner_.StructureBuilder:
         # Map internal inference mode to GliNER utility mode.
         mode_map = {
             gliner_.InferenceMode.classification: "classification",
@@ -117,7 +116,7 @@ class GliNERBridge(Bridge[gliner2.inference.engine.Schema, gliner_.Result, gline
             model_type=ModelType.gliner,
             **kwargs,
         )
-        assert isinstance(prompt_signature, gliner2.inference.engine.Schema | gliner2.inference.engine.StructureBuilder)
+        assert isinstance(prompt_signature, gliner_.Schema | gliner_.StructureBuilder)
 
         return prompt_signature
 
